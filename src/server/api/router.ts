@@ -1,0 +1,202 @@
+import { NextResponse } from "next/server";
+import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
+import * as authLogin from "./auth/login";
+import * as authLogout from "./auth/logout";
+import * as authMe from "./auth/me";
+import * as authSignup from "./auth/signup";
+import * as billingCheckout from "./billing/checkout";
+import * as oauthCallback from "./oauth/callback";
+import * as workspaceAgent from "./workspaces/agent";
+import * as workspaceAgents from "./workspaces/agents";
+import * as workspaceAgentsLaunch from "./workspaces/agents-launch";
+import * as workspaceArtifact from "./workspaces/artifact";
+import * as workspaceArtifacts from "./workspaces/artifacts";
+import * as workspaceBrandKit from "./workspaces/brand-kit";
+import * as workspaceCalendar from "./workspaces/calendar";
+import * as workspaceChat from "./workspaces/chat";
+import * as workspacesCollection from "./workspaces/collection";
+import * as workspaceJob from "./workspaces/job";
+import * as workspaceJobs from "./workspaces/jobs";
+import * as workspaceMarketplace from "./workspaces/marketplace";
+import * as workspaceMarketplaceBots from "./workspaces/marketplace-bots";
+import * as workspacePluginConnect from "./workspaces/plugin-connect";
+import * as workspacePluginOauthStart from "./workspaces/plugin-oauth-start";
+import * as workspacePlugins from "./workspaces/plugins";
+import * as workspaceSkillRun from "./workspaces/skill-run";
+import * as workspaceSkills from "./workspaces/skills";
+import * as workspaceTask from "./workspaces/task";
+import * as workspaceTasks from "./workspaces/tasks";
+import * as workspaceItem from "./workspaces/workspace";
+
+export const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+export type HttpMethod = (typeof HTTP_METHODS)[number];
+
+export type { RouteParams };
+export type RouteContext = { params: Promise<RouteParams> };
+export type RouteHandler = (
+  request: Request,
+  context: RouteContext,
+) => Promise<Response> | Response;
+export type HandlerModule = Partial<Record<HttpMethod, RouteHandler>>;
+
+export type RouteSpec = {
+  pattern: string[];
+  handlers: HandlerModule;
+};
+
+function asHandlers(mod: object): HandlerModule {
+  return mod as HandlerModule;
+}
+
+/**
+ * One Route Handler file on Vercel = one serverless function. Keep every
+ * public /api/* URL here so Hobby stays under the 12-function cap.
+ * More literal segments win when two patterns could match (e.g. /agents/launch
+ * vs /agents/:agentId).
+ */
+export const API_ROUTES: RouteSpec[] = [
+  { pattern: ["api", "auth", "login"], handlers: asHandlers(authLogin) },
+  { pattern: ["api", "auth", "signup"], handlers: asHandlers(authSignup) },
+  { pattern: ["api", "auth", "me"], handlers: asHandlers(authMe) },
+  { pattern: ["api", "auth", "logout"], handlers: asHandlers(authLogout) },
+  { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
+  { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
+  { pattern: ["api", "workspaces"], handlers: asHandlers(workspacesCollection) },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "artifacts", ":artifactId"],
+    handlers: asHandlers(workspaceArtifact),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "artifacts"],
+    handlers: asHandlers(workspaceArtifacts),
+  },
+  {
+    pattern: [
+      "api",
+      "workspaces",
+      ":workspaceId",
+      "plugins",
+      ":pluginId",
+      "oauth",
+      "start",
+    ],
+    handlers: asHandlers(workspacePluginOauthStart),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "plugins", ":pluginId", "connect"],
+    handlers: asHandlers(workspacePluginConnect),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "plugins"],
+    handlers: asHandlers(workspacePlugins),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "calendar"],
+    handlers: asHandlers(workspaceCalendar),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "skills", ":skillId", "run"],
+    handlers: asHandlers(workspaceSkillRun),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "skills"],
+    handlers: asHandlers(workspaceSkills),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "agents", "launch"],
+    handlers: asHandlers(workspaceAgentsLaunch),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "agents", ":agentId"],
+    handlers: asHandlers(workspaceAgent),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "agents"],
+    handlers: asHandlers(workspaceAgents),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "tasks", ":taskId"],
+    handlers: asHandlers(workspaceTask),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "tasks"],
+    handlers: asHandlers(workspaceTasks),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
+    handlers: asHandlers(workspaceJob),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "jobs"],
+    handlers: asHandlers(workspaceJobs),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "chat"],
+    handlers: asHandlers(workspaceChat),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "brand-kit"],
+    handlers: asHandlers(workspaceBrandKit),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "marketplace", "bots"],
+    handlers: asHandlers(workspaceMarketplaceBots),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "marketplace"],
+    handlers: asHandlers(workspaceMarketplace),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId"],
+    handlers: asHandlers(workspaceItem),
+  },
+];
+
+export { pathToSegments };
+
+export type MatchedRoute = {
+  score: number;
+  params: RouteParams;
+  handlers: HandlerModule;
+  pattern: string[];
+};
+
+export function matchApiRoute(segments: string[]): MatchedRoute | null {
+  const hit = matchBestPattern(
+    API_ROUTES.map((route) => route.pattern),
+    segments,
+  );
+  if (!hit) return null;
+  const spec = API_ROUTES.find(
+    (route) => route.pattern.join("/") === hit.pattern.join("/"),
+  );
+  if (!spec) return null;
+  return { ...hit, handlers: spec.handlers };
+}
+
+export function allowedMethods(handlers: HandlerModule): HttpMethod[] {
+  return HTTP_METHODS.filter((method) => typeof handlers[method] === "function");
+}
+
+export async function dispatchApi(
+  request: Request,
+  path: string[] | undefined,
+): Promise<Response> {
+  const segments = ["api", ...(path ?? [])];
+  const matched = matchApiRoute(segments);
+  if (!matched) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  const method = request.method.toUpperCase();
+  const handler = matched.handlers[method as HttpMethod];
+  if (!handler) {
+    return NextResponse.json(
+      { error: "Method not allowed." },
+      {
+        status: 405,
+        headers: { Allow: allowedMethods(matched.handlers).join(", ") },
+      },
+    );
+  }
+  return handler(request, { params: Promise.resolve(matched.params) });
+}

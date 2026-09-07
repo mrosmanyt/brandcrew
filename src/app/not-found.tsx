@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-static";
+
 export default function NotFound() {
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-5 py-20">

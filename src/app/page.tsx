@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { ArrowRight, Bot, Plug, ShieldCheck, Sparkles, SquareTerminal, Users } from "lucide-react";
+import { Bot, Plug, ShieldCheck, Sparkles, SquareTerminal, Users } from "lucide-react";
 import { ProductShot } from "@/components/marketing/product-shot";
 import { SiteNav } from "@/components/marketing/site-nav";
-import { Button } from "@/components/ui/button";
+import { HomeFooterCta, HomeHeroCtas, HomePlanCta } from "@/components/marketing/home-ctas";
 import { PLANS } from "@/lib/constants";
-import { getCurrentUser } from "@/lib/auth";
+
+export const dynamic = "force-static";
 
 const FEATURES = [
   {
@@ -39,13 +39,10 @@ const FEATURES = [
   },
 ];
 
-export default async function HomePage() {
-  const user = await getCurrentUser();
-  const cta = user ? "/desk" : "/signup";
-
+export default function HomePage() {
   return (
     <div className="min-h-full bg-background">
-      <SiteNav signedIn={Boolean(user)} />
+      <SiteNav />
 
       <main>
         <section className="relative overflow-hidden">
@@ -62,13 +59,7 @@ export default async function HomePage() {
               named cast. No fake Connected plugins.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button size="lg" nativeButton={false} render={<Link href={cta} />}>
-                {user ? "Open Mission Control" : "Start free desk"}
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/#pricing" />}>
-                Starter $79 · Growth $199
-              </Button>
+              <HomeHeroCtas />
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
               Server-side model keys only. Drafts stay drafts until you say so.
@@ -138,14 +129,7 @@ export default async function HomePage() {
                     <li>Your agents + Marketplace + shared Brand Kit</li>
                     <li>{id === "growth" ? "Room for a 5-person desk" : "Founder + collaborator"}</li>
                   </ul>
-                  <Button
-                    className="mt-6"
-                    variant={featured ? "default" : "outline"}
-                    nativeButton={false}
-                    render={<Link href={cta} />}
-                  >
-                    {user ? "Open desk" : `Start ${plan.name}`}
-                  </Button>
+                  <HomePlanCta planName={plan.name} featured={featured} />
                 </article>
               );
             })}
@@ -160,10 +144,7 @@ export default async function HomePage() {
                 Create New Agent, connect a plugin, give a job. Approve what leaves.
               </p>
             </div>
-            <Button size="lg" nativeButton={false} render={<Link href={cta} />}>
-              {user ? "Open Mission Control" : "Start free desk"}
-              <ArrowRight className="size-4" />
-            </Button>
+            <HomeFooterCta />
           </div>
         </section>
       </main>

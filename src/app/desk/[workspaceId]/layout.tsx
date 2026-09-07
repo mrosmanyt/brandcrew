@@ -9,6 +9,8 @@ import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
 import { getLlmStatus } from "@/lib/llm";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
+export const dynamic = "force-dynamic";
+
 export default async function WorkspaceLayout({
   children,
   params,
