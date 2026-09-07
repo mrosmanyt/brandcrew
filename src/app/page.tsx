@@ -1,5 +1,5 @@
 import { MarketingShell } from "@/components/marketing/marketing-shell";
-import { ProductShot } from "@/components/marketing/product-shot";
+import { HeroDemo } from "@/components/marketing/hero-demo";
 import { Reveal } from "@/components/marketing/reveal";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { HomeFooterCta, HomeHeroCtas } from "@/components/marketing/home-ctas";
@@ -24,28 +24,31 @@ export default function HomePage() {
       <SiteNav />
 
       <main>
-        <section className="mx-auto w-full max-w-5xl px-6 pt-20 pb-16 md:pt-28 md:pb-24">
-          <p className="mkt-hero-kicker text-sm text-muted-foreground">
-            CINEM Pro · AI employee desk
-          </p>
-          <h1 className="mkt-hero-title font-heading mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
-            Hire agents.
-            <br />
-            Approve the work.
-          </h1>
-          <p className="mkt-hero-lead mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
-            Most AI tools dump a draft and walk away. CINEM Pro is a desk: staff
-            you create, jobs that use tools, and a pause before anything leaves.
-          </p>
-          <div className="mkt-hero-cta mt-10">
-            <HomeHeroCtas />
+        <section className="mx-auto w-full max-w-6xl px-6 pt-16 pb-16 md:pt-24 md:pb-20">
+          <div className="max-w-5xl">
+            <p className="mkt-hero-kicker text-sm text-muted-foreground">
+              CINEM Pro · AI employee desk
+            </p>
+            <h1 className="mkt-hero-title font-heading mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
+              Hire agents.
+              <br />
+              Approve the work.
+            </h1>
+            <p className="mkt-hero-lead mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
+              Most AI tools dump a draft and walk away. CINEM Pro is a desk: staff
+              you create, jobs that use tools, and a pause before anything leaves.
+            </p>
+            <div className="mkt-hero-cta mt-10">
+              <HomeHeroCtas />
+            </div>
           </div>
-        </section>
 
-        <section id="product" className="mx-auto w-full max-w-5xl scroll-mt-20 px-6 pb-24">
-          <Reveal>
-            <ProductShot />
-          </Reveal>
+          <div id="product" className="mkt-hero-demo scroll-mt-20 mt-10 md:mt-12">
+            <HeroDemo />
+            <p className="mt-5 text-sm leading-6 text-muted-foreground">
+              Agents plan, tools run, you approve. The loop resets — nothing posts.
+            </p>
+          </div>
         </section>
 
         <FeaturesSection />
