@@ -1,5 +1,6 @@
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { HeroDemo } from "@/components/marketing/hero-demo";
+import { IntegrationsShowcase } from "@/components/marketing/integrations-showcase";
 import { Reveal } from "@/components/marketing/reveal";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { HomeFooterCta, HomeHeroCtas } from "@/components/marketing/home-ctas";
@@ -51,6 +52,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        <IntegrationsShowcase />
         <FeaturesSection />
         <AgentsSection />
         <HowItWorksSection />
