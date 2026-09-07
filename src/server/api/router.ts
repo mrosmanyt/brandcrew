@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
+import * as authGoogle from "./auth/google";
+import * as authGoogleCallback from "./auth/google-callback";
 import * as authLogin from "./auth/login";
 import * as authLogout from "./auth/logout";
 import * as authMe from "./auth/me";
@@ -90,6 +92,11 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "auth", "signup"], handlers: asHandlers(authSignup) },
   { pattern: ["api", "auth", "me"], handlers: asHandlers(authMe) },
   { pattern: ["api", "auth", "logout"], handlers: asHandlers(authLogout) },
+  {
+    pattern: ["api", "auth", "google", "callback"],
+    handlers: asHandlers(authGoogleCallback),
+  },
+  { pattern: ["api", "auth", "google"], handlers: asHandlers(authGoogle) },
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },

@@ -14,7 +14,10 @@ datasource db {
 model User {
   id           String            @id @default(cuid())
   email        String            @unique
-  passwordHash String
+  /// Null for Google-only accounts. Email/password users always have a hash.
+  passwordHash String?
+  /// Google account `sub`. Distinct from Marketplace Gmail plugin tokens.
+  googleId     String?           @unique
   name         String
   createdAt    DateTime          @default(now())
   memberships  WorkspaceMember[]

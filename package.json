@@ -29,6 +29,7 @@
     "test:product": "tsx scripts/check-product-pack.ts",
     "test:desk-chat": "tsx scripts/check-desk-chat.ts",
     "test:desk-settings": "tsx scripts/check-desk-settings.ts",
+    "test:google-auth": "tsx scripts/check-google-auth.ts",
     "test:desk-theme": "tsx scripts/check-desk-theme.ts",
     "test:hero-demo": "tsx scripts/check-hero-demo.ts",
     "test:build-prompt": "tsx scripts/check-build-prompt.ts",

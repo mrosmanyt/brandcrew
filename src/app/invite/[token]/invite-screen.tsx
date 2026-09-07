@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { GoogleContinueButton } from "@/components/auth/google-continue";
 import { BrandMark } from "@/components/brand/logo";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
@@ -89,13 +90,16 @@ export function InviteAcceptScreen({ token }: { token: string }) {
                 {info.email}.
               </p>
             ) : (
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Button nativeButton={false} render={<Link href={signupHref} />}>
-                  Create account
-                </Button>
-                <Button variant="outline" nativeButton={false} render={<Link href={loginHref} />}>
-                  Sign in
-                </Button>
+              <div className="mt-6 space-y-3">
+                <GoogleContinueButton intent="signup" invite={token} next={`/invite/${token}`} />
+                <div className="flex flex-wrap gap-2">
+                  <Button nativeButton={false} render={<Link href={signupHref} />}>
+                    Create account
+                  </Button>
+                  <Button variant="outline" nativeButton={false} render={<Link href={loginHref} />}>
+                    Sign in
+                  </Button>
+                </div>
               </div>
             )}
           </>

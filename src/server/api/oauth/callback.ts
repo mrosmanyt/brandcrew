@@ -8,6 +8,7 @@ import {
   readOAuthState,
 } from "@/lib/plugins";
 
+/** Marketplace plugin OAuth only. User Google sign-in is `/api/auth/google/callback`. */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code") || "";

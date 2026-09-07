@@ -58,11 +58,13 @@ console.log("ok: Settings hub lists Plugins, Bots, Marketplace, Plans, and Jobs 
 
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", email: "a@b.com" }).success);
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", newPassword: "newpass99" }).success);
-assert.equal(accountPatchSchema.safeParse({ email: "a@b.com" }).success, false);
+assert.ok(accountPatchSchema.safeParse({ name: "Ada" }).success);
+assert.ok(accountPatchSchema.safeParse({ newPassword: "newpass99" }).success);
+assert.equal(accountPatchSchema.safeParse({}).success, false);
 assert.equal(
   accountPatchSchema.safeParse({ currentPassword: "x", newPassword: "short" }).success,
   false,
 );
-console.log("ok: account patch requires current password and a real change");
+console.log("ok: account patch needs a real change; password is optional for Google-only users");
 
 console.log("Desk settings checks passed.");

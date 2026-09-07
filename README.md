@@ -10,7 +10,7 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 
 ## What you can do
 
-1. Sign up. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
+1. Sign up with **Continue with Google** or email/password. Landing **Account** goes to `/login` when signed out and to desk settings when signed in. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
 2. Open **Mission Control** (`/desk/[workspaceId]`). A 3-step first-run card (New Agent → first job → Approve) can be dismissed; completion is stored per workspace member.
 3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft).
 4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed.
@@ -62,6 +62,31 @@ v1 Connect that actually works:
 
 Connected **Web Search** exposes `web_search`. Connected **Gmail** exposes `gmail_list_recent` and `gmail_create_draft` (never send). Connected **Slack** exposes `slack_list_channels`, `slack_draft_message`, and `slack_post_message` (post only after `ask_user`). Missing OAuth client ids → Connect stays disconnected. Notion / Calendar / Drive still store tokens after callback; they do not auto-post.
 
+### Google sign-in (user session)
+
+**Continue with Google** on `/login` and `/signup` creates or links a `User` and sets the same `brandcrew_session` cookie as email/password. This is **not** Marketplace Gmail connect.
+
+| Purpose | Scopes | Callback |
+| --- | --- | --- |
+| **User login** | `openid email profile` | `/api/auth/google/callback` |
+| **Gmail plugin** | `gmail.readonly` + `gmail.compose` | `/api/oauth/callback` |
+
+Reuse `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`. On the same Google Cloud **Web application** client, add **all** of these Authorized redirect URIs (exact match, including `127.0.0.1` vs `localhost`):
+
+- `http://127.0.0.1:43180/api/auth/google/callback`
+- `https://brandcrew.vercel.app/api/auth/google/callback`
+- `http://127.0.0.1:43180/api/oauth/callback`
+- `https://brandcrew.vercel.app/api/oauth/callback`
+
+Authorized JavaScript origins:
+
+- `http://127.0.0.1:43180`
+- `https://brandcrew.vercel.app`
+
+Set `OAUTH_REDIRECT_BASE` (or `APP_URL` / `NEXT_PUBLIC_APP_URL`) to the origin you are serving. Missing client id/secret shows a setup tip on the login/signup button — CINEM Pro does **not** fake a signed-in session or a Connected plugin.
+
+Optional dedicated login client: `GOOGLE_LOGIN_CLIENT_ID` / `GOOGLE_LOGIN_CLIENT_SECRET`. Consent screen must include the OpenID scopes (`openid`, `email`, `profile`) in addition to any Gmail plugin scopes.
+
 ### Gmail OAuth (Google Cloud) — live Connect
 
 1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → enable **Gmail API**.
@@ -71,7 +96,8 @@ Connected **Web Search** exposes `web_search`. Connected **Gmail** exposes `gmai
 3. Credentials → Create OAuth client ID → **Web application**.
 4. Authorized redirect URI (must match env origin exactly, including `127.0.0.1` vs `localhost`):
    `{OAUTH_REDIRECT_BASE or APP_URL or NEXT_PUBLIC_APP_URL}/api/oauth/callback`  
-   Local default: `http://127.0.0.1:43180/api/oauth/callback`
+   Local default: `http://127.0.0.1:43180/api/oauth/callback`  
+   Also add the **user login** URI from [Google sign-in](#google-sign-in-user-session) on the same client.
 5. Copy Client ID / secret into `.env` as `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or `GMAIL_CLIENT_*`).
 6. Set `OAUTH_REDIRECT_BASE` (or `APP_URL` / `NEXT_PUBLIC_APP_URL`) to that same origin.
 7. Restart `npm run dev`. Marketplace → Plugins → **Connect** on Gmail → Google consent → redirect back. **Connected** only after token exchange. **Reconnect** repeats consent. **Disconnect** clears encrypted tokens.

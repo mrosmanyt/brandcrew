@@ -8,18 +8,29 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { googleLoginPublicStatus } from "@/lib/google-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
 export async function GET() {
   const user = await getCurrentUser();
+  const googleLogin = googleLoginPublicStatus();
   if (!user) {
-    return jsonOk({ user: null, workspaces: [] });
+    return jsonOk({ user: null, workspaces: [], googleLogin });
   }
+  const row = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { passwordHash: true, googleId: true },
+  });
   const workspaces = await listUserWorkspaces(user.id);
   return jsonOk({
-    user,
+    user: {
+      ...user,
+      hasPassword: Boolean(row?.passwordHash),
+      googleLinked: Boolean(row?.googleId),
+    },
     workspaces: workspaces.map(serializeWorkspace),
+    googleLogin,
   });
 }
 
@@ -28,11 +39,19 @@ export async function PATCH(request: Request) {
     const session = await requireUser();
     const body = accountPatchSchema.parse(await request.json());
     const user = await prisma.user.findUnique({ where: { id: session.id } });
-    if (!user || !(await verifyPassword(body.currentPassword, user.passwordHash))) {
-      return NextResponse.json(
-        { error: "Current password is incorrect." },
-        { status: 401 },
-      );
+    if (!user) {
+      return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+    }
+    if (user.passwordHash) {
+      if (
+        !body.currentPassword ||
+        !(await verifyPassword(body.currentPassword, user.passwordHash))
+      ) {
+        return NextResponse.json(
+          { error: "Current password is incorrect." },
+          { status: 401 },
+        );
+      }
     }
 
     const data: { email?: string; name?: string; passwordHash?: string } = {};
@@ -62,7 +81,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Current password is required. Email must be valid. New password needs 8+ characters." },
+        { error: "Email must be valid. New password needs 8+ characters. Password accounts must include the current password." },
         { status: 400 },
       );
     }

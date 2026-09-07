@@ -152,6 +152,11 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
   });
   if (!workspace) redirect("/desk");
 
+  const account = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { passwordHash: true, googleId: true },
+  });
+
   const [jobs, agents] = await Promise.all([
     prisma.job.findMany({
       where: { workspaceId },
@@ -172,7 +177,11 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
     <SettingsHub
       workspaceId={workspace.id}
       workspaceName={workspace.name}
-      user={user}
+      user={{
+        ...user,
+        hasPassword: Boolean(account?.passwordHash),
+        googleLinked: Boolean(account?.googleId),
+      }}
       initialJobs={jobs.map(serializeJob)}
       agents={agents.map(serializeAgent)}
     />

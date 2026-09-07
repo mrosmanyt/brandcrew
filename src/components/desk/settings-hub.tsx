@@ -23,7 +23,13 @@ import type { AgentDTO, JobDTO } from "@/lib/job-types";
 import { jobStatusLabel } from "@/lib/live-progress";
 import { cn } from "@/lib/utils";
 
-type AccountUser = { id: string; email: string; name: string };
+type AccountUser = {
+  id: string;
+  email: string;
+  name: string;
+  hasPassword?: boolean;
+  googleLinked?: boolean;
+};
 
 export function SettingsHub({
   workspaceId,
@@ -47,11 +53,15 @@ export function SettingsHub({
   const [busy, setBusy] = useState<string | null>(null);
   const links = settingsDeskLinks(workspaceId);
 
+  const hasPassword = user.hasPassword !== false;
+
   async function patchAccount(body: Record<string, string>) {
+    const payload = { ...body };
+    if (!payload.currentPassword) delete payload.currentPassword;
     const res = await fetch("/api/auth/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Could not update account.");
@@ -152,7 +162,11 @@ export function SettingsHub({
           Account
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Changes that touch email or password need your current password.
+          {user.googleLinked
+            ? hasPassword
+              ? "Signed in with Google. Email or password changes still need your current password."
+              : "Signed in with Google. You can set a password if you also want email sign-in."
+            : "Changes that touch email or password need your current password."}
         </p>
         <form onSubmit={saveName} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <Field label="Name">
@@ -193,17 +207,19 @@ export function SettingsHub({
             </Button>
           </div>
         </form>
-        <div className="mt-4 max-w-sm">
-          <Field label="Current password">
-            <Input
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Required for account changes"
-            />
-          </Field>
-        </div>
+        {hasPassword ? (
+          <div className="mt-4 max-w-sm">
+            <Field label="Current password">
+              <Input
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Required for account changes"
+              />
+            </Field>
+          </div>
+        ) : null}
       </section>
 
       <div className="mt-6">
