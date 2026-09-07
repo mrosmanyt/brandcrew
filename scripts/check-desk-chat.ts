@@ -87,6 +87,14 @@ const events: JobEventDTO[] = [
     createdAt: "2026-01-01T00:00:08.000Z",
   }),
   event({
+    id: "e9b",
+    type: "tool_result",
+    message: "Wrote another post.",
+    stepId: "s3b",
+    data: { tool: "write_artifact" },
+    createdAt: "2026-01-01T00:00:08.500Z",
+  }),
+  event({
     id: "e10",
     type: "ask_user",
     message: "Pause for your approval",
@@ -103,6 +111,7 @@ assert.equal(labels.includes("Planned 5 steps."), true);
 assert.equal(labels.includes("Read the Brand Kit."), true);
 assert.equal(labels.some((label) => /Opened northline\.example/.test(label)), true);
 assert.equal(labels.includes("Wrote draft."), true);
+assert.equal(labels.filter((label) => label === "Wrote draft.").length, 1);
 assert.equal(labels.includes("Waiting for your approval…"), true);
 assert.equal(labels.some((label) => label.startsWith("browser_navigate")), false);
 assert.equal(labels.filter((label) => label === "Now reading Brand Kit…").length, 0);

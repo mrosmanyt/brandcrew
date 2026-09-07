@@ -117,14 +117,20 @@ export function ResizeHandle({
         }
       }}
       className={cn(
-        "group relative z-20 w-2 shrink-0 cursor-col-resize touch-none items-stretch justify-center",
+        "group relative z-20 w-2.5 shrink-0 cursor-col-resize touch-none items-stretch justify-center",
         className,
       )}
     >
       <span
         className={cn(
-          "my-auto h-10 w-1 rounded-full bg-border transition-colors group-hover:bg-foreground/45",
-          active && "bg-foreground/70",
+          "absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:w-0.5 group-hover:bg-foreground/50",
+          active && "w-0.5 bg-foreground/80",
+        )}
+      />
+      <span
+        className={cn(
+          "relative z-10 my-auto h-8 w-1 rounded-full bg-zinc-500/80 transition-colors group-hover:bg-zinc-200",
+          active && "bg-zinc-100",
         )}
       />
     </div>

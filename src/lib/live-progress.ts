@@ -232,9 +232,27 @@ export function liveProgressFromEvents(events: JobEventDTO[]): LiveProgressLine[
   }
 
   const stepped = order.map((key) => byStep.get(key)!).filter(Boolean);
-  return [...standalone, ...stepped].sort(
+  const merged = [...standalone, ...stepped].sort(
     (a, b) => createdAtMs(a.createdAt) - createdAtMs(b.createdAt),
   );
+  const compact: LiveProgressLine[] = [];
+  for (const line of merged) {
+    const prev = compact.at(-1);
+    const prevCount = prev?.detail?.match(/^×(\d+)$/)?.[1];
+    const canStack =
+      prev &&
+      prev.label === line.label &&
+      prev.tone === line.tone &&
+      (!prev.detail || prevCount) &&
+      !line.detail;
+    if (canStack && prev) {
+      const count = Number(prevCount || 1) + 1;
+      prev.detail = `×${count}`;
+      continue;
+    }
+    compact.push({ ...line });
+  }
+  return compact;
 }
 
 export function currentLiveHeadline(job: JobDTO | null): {

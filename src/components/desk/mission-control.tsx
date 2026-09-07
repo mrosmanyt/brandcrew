@@ -447,8 +447,8 @@ export function MissionControl({
     artifacts[artifacts.length - 1];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         <section className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border lg:min-w-[18rem] lg:border-b-0">
           <header className="shrink-0 border-b border-border px-4 py-2.5">
             {selected ? (
@@ -691,7 +691,7 @@ export function MissionControl({
         />
       </div>
 
-      <div className="grid shrink-0 gap-4 border-t border-border px-4 py-2.5 lg:grid-cols-[minmax(0,1fr)_16rem]">
+      <div className="grid shrink-0 gap-3 border-t border-border px-4 py-2 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">Jobs</p>

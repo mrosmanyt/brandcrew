@@ -51,8 +51,8 @@ export function ChatBubble({
         className={cn(
           "max-w-[min(40rem,86%)] rounded-2xl px-3.5 py-2 text-sm leading-6",
           isUser
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md border border-border bg-card",
+            ? "rounded-br-md bg-zinc-100 text-zinc-950"
+            : "rounded-bl-md border border-border bg-zinc-900",
         )}
       >
         <p
@@ -109,7 +109,9 @@ export function ProgressCard({ line }: { line: LiveProgressLine }) {
         <div className="min-w-0">
           <p className="text-foreground/90">{line.label}</p>
           {line.detail && line.detail !== line.label ? (
-            <p className="truncate text-[11px] text-muted-foreground">{line.detail}</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {line.detail.startsWith("×") ? `${line.detail} times` : line.detail}
+            </p>
           ) : null}
         </div>
       </div>
