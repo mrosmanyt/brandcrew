@@ -1,0 +1,17 @@
+{
+  "name": "Brandcrew",
+  "install": "{ [ -f .env ] || cp .env.example .env; } && npm ci && npx prisma generate && npx prisma db push",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev",
+      "description": "Next.js dev server (Turbopack) on http://127.0.0.1:43180. `predev` ensures .env exists, runs `prisma generate`, and pushes the SQLite schema before starting."
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 43180
+    }
+  ]
+}
