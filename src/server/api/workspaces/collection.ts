@@ -5,7 +5,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { createDemoWorkspace, listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
 const schema = z.object({
-  name: z.string().min(1).max(80),
+  name: z.string().trim().min(1).max(80),
 });
 
 export async function GET() {
@@ -21,7 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
-    const body = schema.parse(await request.json());
+    const body = schema.parse(await request.json().catch(() => ({})));
     const workspace = await createDemoWorkspace(user.id, body.name);
     return jsonOk({ workspace: serializeWorkspace(workspace) }, 201);
   } catch (error) {
