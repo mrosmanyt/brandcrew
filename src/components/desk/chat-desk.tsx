@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +10,13 @@ import { CalendarView } from "@/components/desk/calendar-view";
 import { KanbanBoard } from "@/components/desk/kanban-board";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { AGENT_META, type AgentRole, type GenerateAction } from "@/lib/constants";
+import {
+  AGENT_META,
+  employeeDisplayName,
+  type AgentRole,
+  type GenerateAction,
+} from "@/lib/constants";
+import type { JobDTO } from "@/lib/job-types";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
 export function ChatDesk({
@@ -39,10 +45,42 @@ export function ChatDesk({
   const [budgetMessage, setBudgetMessage] = useState(
     "This workspace has reached its generation budget. Upgrade to Starter or Growth to continue.",
   );
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobEvents, setJobEvents] = useState<{ id: string; message: string; type: string }[]>([]);
 
   const latest = artifacts[0] ?? null;
   const remaining = Math.max(0, usage.tokenBudget - usage.tokenUsed);
   const atCap = remaining <= 0;
+
+  useEffect(() => {
+    if (!activeJobId) return;
+    let cancelled = false;
+    async function poll() {
+      const res = await fetch(`/api/workspaces/${workspaceId}/jobs/${activeJobId}`);
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      const job = data.job as JobDTO;
+      setJobEvents(job.events.map((event) => ({ id: event.id, message: event.message, type: event.type })));
+      if (job.artifacts?.length) {
+        setArtifacts((prev) => {
+          const merged = [...job.artifacts];
+          for (const artifact of prev) {
+            if (!merged.some((row) => row.id === artifact.id)) merged.push(artifact);
+          }
+          return merged;
+        });
+      }
+      if (job.status === "done" || job.status === "failed" || job.status === "needs_you") {
+        setBusy(false);
+      }
+    }
+    void poll();
+    const timer = setInterval(() => void poll(), 1100);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeJobId, workspaceId]);
 
   async function generate(action: GenerateAction = "default", preset?: string) {
     if (atCap) {
@@ -52,38 +90,38 @@ export function ChatDesk({
     const message =
       preset ??
       (action === "generate_week"
-        ? "Generate a week of 7 LinkedIn posts from the Brand Kit."
+        ? "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval."
         : action === "sales_pack"
-          ? "Write a sales pack: 5 emails and 5 LinkedIn DMs."
-          : action === "regenerate"
-            ? input.trim() || meta.starter
-            : input.trim());
+          ? "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs."
+          : action === "research_pack"
+            ? "Give Omar a research-pack job. Fetch the company website from the Brand Kit."
+            : action === "regenerate"
+              ? input.trim() || meta.starter
+              : input.trim());
     if (!message || busy) return;
     setBusy(true);
-    const res = await fetch(`/api/workspaces/${workspaceId}/chat`, {
+    const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentRole: agent, message, action }),
     });
     const data = await res.json();
-    setBusy(false);
     if (!res.ok) {
+      setBusy(false);
       if (data.code === "BUDGET" || res.status === 429) {
         setBudgetMessage(data.error || budgetMessage);
         setBudgetOpen(true);
         return;
       }
-      toast.error(data.error || "Generation failed.");
+      toast.error(data.error || "Could not start the job.");
       return;
     }
     setMessages((prev) => [...prev, ...data.messages]);
-    setArtifacts((prev) => [data.artifact, ...prev]);
-    if (data.usage) setUsage(data.usage);
-    if (data.demo) {
-      toast.message("Offline demo draft saved.");
-    } else {
-      toast.success(`Drafted with ${data.provider} · ${data.model}.`);
+    if (data.job) {
+      setActiveJobId(data.job.id);
+      toast.success(`${employeeDisplayName(agent)} started ${data.job.title}.`);
     }
+    if (data.usage) setUsage(data.usage);
     router.refresh();
   }
 
@@ -109,8 +147,8 @@ export function ChatDesk({
 
   const emptyCopy = useMemo(() => {
     if (messages.length) return null;
-    return `Nothing here yet. One click drafts ${meta.artifact.toLowerCase()} from the Brand Kit.`;
-  }, [messages.length, meta.artifact]);
+    return `Nothing here yet. Give ${meta.name} a job — they will plan, use tools, and pause for approval.`;
+  }, [messages.length, meta.name]);
 
   return (
     <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_24rem]">
@@ -119,27 +157,34 @@ export function ChatDesk({
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
             {meta.title}
           </p>
-          <h1 className="font-heading text-xl tracking-tight">{meta.label}</h1>
+          <h1 className="font-heading text-xl tracking-tight">
+            {employeeDisplayName(agent)}
+          </h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">{meta.blurb}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {agent === "writer" ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => generate("generate_week")}
-              >
-                Generate week
+              <>
+                <Button size="sm" disabled={busy} onClick={() => generate("generate_week")}>
+                  Give Maya a job
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => generate("generate_week")}
+                >
+                  Generate week
+                </Button>
+              </>
+            ) : null}
+            {agent === "researcher" ? (
+              <Button size="sm" disabled={busy} onClick={() => generate("research_pack")}>
+                Give Omar a research pack
               </Button>
             ) : null}
             {agent === "sales" ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => generate("sales_pack")}
-              >
-                Sales pack
+              <Button size="sm" disabled={busy} onClick={() => generate("sales_pack")}>
+                Give Sam a job
               </Button>
             ) : null}
           </div>
@@ -153,11 +198,34 @@ export function ChatDesk({
               <Button
                 className="mt-4"
                 disabled={busy}
-                onClick={() => generate("default", meta.starter)}
+                onClick={() =>
+                  generate(
+                    agent === "writer"
+                      ? "generate_week"
+                      : agent === "researcher"
+                        ? "research_pack"
+                        : agent === "sales"
+                          ? "sales_pack"
+                          : "default",
+                    meta.starter,
+                  )
+                }
               >
                 {busy ? <Loader2 className="animate-spin" /> : null}
                 {meta.generateLabel}
               </Button>
+            </div>
+          ) : null}
+          {jobEvents.length ? (
+            <div className="rounded-xl border border-border bg-card px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                Job activity
+              </p>
+              <ol className="mt-1 space-y-1 text-xs text-muted-foreground">
+                {jobEvents.slice(-8).map((event) => (
+                  <li key={event.id}>{event.message}</li>
+                ))}
+              </ol>
             </div>
           ) : null}
           {messages.map((message) => (
@@ -170,7 +238,7 @@ export function ChatDesk({
               }
             >
               <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                {message.role === "user" ? "You" : meta.label}
+                {message.role === "user" ? "You" : employeeDisplayName(agent)}
               </p>
               <div className="mt-1 whitespace-pre-wrap leading-6">{message.content}</div>
             </article>
@@ -216,7 +284,7 @@ export function ChatDesk({
           {!latest ? (
             <div className="rounded-xl border border-dashed border-border px-4 py-6">
               <p className="text-sm text-muted-foreground">
-                Empty. Generate {meta.artifact.toLowerCase()} to fill this panel.
+                Empty. Give {meta.name} a job to fill this panel.
               </p>
               <Button
                 className="mt-3"

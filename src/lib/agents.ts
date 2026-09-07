@@ -1,7 +1,7 @@
 import type { AgentRole, GenerateAction } from "@/lib/constants";
 import { AGENT_META } from "@/lib/constants";
 import { brandKitBrief, type BrandKit } from "@/lib/brand-kit";
-import { demoArtifact, demoGenerateWeek, demoSalesPack } from "@/lib/demo";
+import { demoArtifact, demoGenerateWeek, demoResearchPack, demoSalesPack } from "@/lib/demo";
 import { llm, type TaskMode } from "@/lib/llm";
 import type { GeneratedArtifact } from "@/lib/agents-types";
 
@@ -10,6 +10,7 @@ export type { GeneratedArtifact } from "@/lib/agents-types";
 const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
   strategist: `Return one strategy brief. Sections: Ideal customer (ICP), Offer, three monthly content pillars, and What not to say. This is the shared brief — not a slide deck.`,
   writer: `Return one voice pack: two LinkedIn posts and one email newsletter draft. Match the Brand Kit voice. Do not use forbidden words.`,
+  researcher: `Return one research pack: source URL, what the site actually says, messaging implications, and what not to copy. No invented quotes.`,
   distributor: `Return a 30-day content calendar starting tomorrow. Include a Markdown table and a "calendar" array of 30 objects: {date (YYYY-MM-DD), channel (linkedin|email), title, content}. Ready to paste into Google Docs.`,
   sales: `Return 8 outbound scripts mixing email and LinkedIn DMs. No CRM fields. Each script is short enough to send today.`,
   ads: `Return 5 ad angles with primary text. Explicitly state that Brandcrew does not buy media or connect ad accounts.`,
@@ -17,16 +18,21 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 };
 
 export function agentMode(role: AgentRole, action: GenerateAction = "default"): TaskMode {
-  if (action === "generate_week" || action === "sales_pack") return "draft";
+  if (action === "generate_week" || action === "sales_pack" || action === "research_pack") {
+    return "draft";
+  }
   return role === "strategist" || role === "ads" ? "final" : "draft";
 }
 
 function actionInstructions(action: GenerateAction, role: AgentRole) {
   if (action === "generate_week") {
-    return `Write exactly 7 LinkedIn posts for the next week in Brand Kit voice. Return Markdown with ## 1. … through ## 7. Also return a "calendar" array of 7 objects: {date (YYYY-MM-DD starting tomorrow), channel: "linkedin", title, content}.`;
+    return `Write exactly 5 LinkedIn posts for the next week in Brand Kit voice. Return Markdown with ## 1. … through ## 5. Also return a "calendar" array of 5 objects: {date (YYYY-MM-DD starting tomorrow), channel: "linkedin", title, content}.`;
   }
   if (action === "sales_pack") {
     return `Write a sales pack: 5 outbound emails and 5 LinkedIn DMs. Markdown headings ## Email 1 … ## Email 5 and ## LinkedIn DM 1 … ## LinkedIn DM 5. No CRM fields.`;
+  }
+  if (action === "research_pack") {
+    return `Write a research pack from the Brand Kit and any fetched page text in the user message. Sections: Source, What the site says, Messaging implications, What not to copy.`;
   }
   return ROLE_INSTRUCTIONS[role];
 }
@@ -63,6 +69,7 @@ function fallbackArtifact(
 ): GeneratedArtifact {
   if (action === "generate_week") return demoGenerateWeek(kit);
   if (action === "sales_pack") return demoSalesPack(kit);
+  if (action === "research_pack") return demoResearchPack(kit);
   return demoArtifact(role, kit);
 }
 

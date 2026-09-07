@@ -32,6 +32,8 @@ model Workspace {
   tasks         Task[]
   calendarItems CalendarItem[]
   usageEvents   UsageEvent[]
+  jobs          Job[]
+  skills        Skill[]
 }
 
 model WorkspaceMember {
@@ -46,11 +48,11 @@ model WorkspaceMember {
 }
 
 model Conversation {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   workspaceId String
   agentRole   String
-  createdAt   DateTime  @default(now())
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   messages    Message[]
   artifacts   Artifact[]
 
@@ -70,6 +72,7 @@ model Artifact {
   id             String        @id @default(cuid())
   workspaceId    String
   conversationId String?
+  jobId          String?
   agentRole      String
   type           String
   title          String
@@ -81,6 +84,7 @@ model Artifact {
   updatedAt      DateTime      @updatedAt
   workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  job            Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
   tasks          Task[]
 }
 
@@ -117,4 +121,53 @@ model UsageEvent {
   agentRole   String
   createdAt   DateTime  @default(now())
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id          String     @id @default(cuid())
+  workspaceId String
+  agentRole   String
+  title       String
+  prompt      String
+  status      String     @default("queued")
+  plan        String     @default("[]")
+  context     String     @default("{}")
+  playbookKey String?
+  skillId     String?
+  askPrompt   String     @default("")
+  runnerLock  String     @default("")
+  error       String     @default("")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  skill       Skill?     @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  events      JobEvent[]
+  artifacts   Artifact[]
+
+  @@index([workspaceId, status])
+}
+
+model JobEvent {
+  id        String   @id @default(cuid())
+  jobId     String
+  type      String
+  message   String
+  stepId    String?
+  data      String   @default("{}")
+  createdAt DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}
+
+model Skill {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  agentRole   String
+  playbook    String
+  sourceJobId String?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs        Job[]
 }

@@ -94,6 +94,13 @@ export function BrandKitForm({
           title="Who you sound like"
           hint="Voice, audience, and offer. Agents read these first."
         />
+        <Field label="Website" hint="Omar fetches this for research packs. Public http(s) only.">
+          <Input
+            value={kit.website ?? ""}
+            onChange={(e) => setKit({ ...kit, website: e.target.value })}
+            placeholder="https://example.com"
+          />
+        </Field>
         <Field label="Voice">
           <Textarea
             rows={4}

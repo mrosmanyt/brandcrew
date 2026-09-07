@@ -20,18 +20,18 @@ export function OnboardingChecklist({
     },
     {
       done: checklist.strategist,
-      label: "Generate a Strategist brief",
-      href: `/desk/${workspaceId}/strategist`,
+      label: "Give Strategist a job",
+      href: `/desk/${workspaceId}?agent=strategist`,
     },
     {
       done: checklist.writer,
-      label: "Generate a Writer pack",
-      href: `/desk/${workspaceId}/writer`,
+      label: "Give Maya a LinkedIn-week job",
+      href: `/desk/${workspaceId}?agent=writer`,
     },
     {
       done: checklist.approved,
       label: "Approve one artifact",
-      href: `/desk/${workspaceId}/writer`,
+      href: `/desk/${workspaceId}?agent=writer`,
     },
   ];
 

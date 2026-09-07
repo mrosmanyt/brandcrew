@@ -26,8 +26,8 @@ export default async function OnboardingPage() {
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
         Hi {user.name.split(" ")[0]}. We loaded <strong>Northline Studio</strong> —
         a hospitality brand system — so Strategist, Writer, Sales, and Ads have
-        something to write from. Edit it now or keep the sample and walk the
-        agents.
+        something to write from. Edit it now or skip to Mission Control and give
+        Maya a job.
       </p>
       <div className="mt-8 rounded-2xl border border-border bg-card p-6">
         <BrandKitForm
@@ -38,7 +38,7 @@ export default async function OnboardingPage() {
       </div>
       <div className="mt-6">
         <Button variant="outline" render={<Link href={`/desk/${workspace.id}`} />}>
-          Skip to the desk
+          Skip to Mission Control
         </Button>
       </div>
     </div>

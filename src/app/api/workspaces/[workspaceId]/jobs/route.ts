@@ -4,50 +4,52 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { CHAT_TARGETS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
-import { createJobFromChat } from "@/lib/job-runtime";
+import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
+import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { BudgetError } from "@/lib/usage";
 
 export const maxDuration = 60;
 
-const ACTION_MESSAGES = {
-  generate_week:
-    "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval.",
-  sales_pack: "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs.",
-  research_pack:
-    "Give Omar a research-pack job. Fetch the company website from the Brand Kit.",
-  regenerate: "Regenerate the last artifact with the same brief.",
-  default: "",
-} as const;
-
 const postSchema = z.object({
-  agentRole: z.enum(CHAT_TARGETS),
+  agentRole: z.enum(CHAT_TARGETS).optional(),
   message: z.string().max(4000).optional(),
+  playbookKey: z.string().max(80).optional(),
+  skillId: z.string().optional(),
   action: z
     .enum(["default", "generate_week", "sales_pack", "research_pack", "regenerate"])
     .optional(),
 });
 
 export async function GET(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
-    const url = new URL(request.url);
-    const agentRole = url.searchParams.get("agent") || "writer";
-    const conversation = await prisma.conversation.findUnique({
-      where: {
-        workspaceId_agentRole: { workspaceId, agentRole },
-      },
-      include: {
-        messages: { orderBy: { createdAt: "asc" } },
-        artifacts: { orderBy: { createdAt: "desc" }, take: 8 },
-      },
-    });
+    await kickQueuedJobs(workspaceId);
+
+    const [jobs, skills] = await Promise.all([
+      prisma.job.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        include: {
+          events: { orderBy: { createdAt: "asc" }, take: 80 },
+          artifacts: { orderBy: { createdAt: "asc" } },
+        },
+      }),
+      prisma.skill.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      }),
+    ]);
+
     return jsonOk({
-      messages: conversation?.messages ?? [],
-      artifacts: conversation?.artifacts ?? [],
+      jobs: jobs.map(serializeJob),
+      skills: skills.map(serializeSkill),
+      employeeStatus: employeeStatusFromJobs(jobs),
     });
   } catch (error) {
     return jsonError(error);
@@ -63,35 +65,36 @@ export async function POST(
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
     const action = body.action ?? "default";
-    let agentRole = body.agentRole;
+    let agentRole = body.agentRole ?? "writer";
     if (action === "generate_week") agentRole = "writer";
     if (action === "sales_pack") agentRole = "sales";
     if (action === "research_pack") agentRole = "researcher";
 
     const message =
       body.message?.trim() ||
-      ACTION_MESSAGES[action] ||
-      "Give this employee a job from the Brand Kit.";
-    if (!message) {
-      return NextResponse.json({ error: "Write a short job." }, { status: 400 });
+      (action === "generate_week"
+        ? "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval."
+        : action === "sales_pack"
+          ? "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs."
+          : action === "research_pack"
+            ? "Give Omar a research-pack job. Fetch the company website from the Brand Kit."
+            : "");
+    if (!message && !body.skillId) {
+      return NextResponse.json({ error: "Write a short job for the employee." }, { status: 400 });
     }
 
     const result = await createJobFromChat({
       workspaceId,
       agentRole,
-      message,
+      message: message || "Run the saved skill.",
+      playbookKey: body.playbookKey,
+      skillId: body.skillId,
       action,
     });
 
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-    });
-
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
     return jsonOk({
-      job: result.job,
-      messages: result.messages,
-      artifact: result.job.artifacts[0] ?? null,
-      demo: result.job.artifacts[0]?.provider === "demo" || !result.job.artifacts.length,
+      ...result,
       usage: {
         tokenUsed: workspace?.tokenUsed ?? 0,
         tokenBudget: workspace?.tokenBudget ?? 0,
@@ -105,10 +108,7 @@ export async function POST(
       );
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Choose an employee and write a short job." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Choose an employee and write a short job." }, { status: 400 });
     }
     return jsonError(error);
   }

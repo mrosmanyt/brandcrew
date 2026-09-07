@@ -29,6 +29,7 @@ export type PlanId = keyof typeof PLANS;
 export const AGENT_ROLES = [
   "strategist",
   "writer",
+  "researcher",
   "distributor",
   "sales",
   "ads",
@@ -37,71 +38,117 @@ export const AGENT_ROLES = [
 
 export type AgentRole = (typeof AGENT_ROLES)[number];
 
+export const MISSION_ROLES = [
+  "writer",
+  "researcher",
+  "sales",
+  "ads",
+  "ops",
+  "strategist",
+] as const;
+
+export type MissionRole = (typeof MISSION_ROLES)[number];
+
+export const CHAT_TARGETS = [...MISSION_ROLES, "team"] as const;
+export type ChatTarget = (typeof CHAT_TARGETS)[number];
+
 export const AGENT_META: Record<
   AgentRole,
   {
+    name: string;
     label: string;
     title: string;
     blurb: string;
     artifact: string;
     generateLabel: string;
     starter: string;
+    jobCta: string;
   }
 > = {
   strategist: {
+    name: "Strategist",
     label: "Strategist",
     title: "Positioning desk",
-    blurb: "ICP, offer, and monthly content pillars — one brief the rest of the crew can share.",
+    blurb: "ICP, offer, and monthly content pillars — the shared brief the rest of the crew reads.",
     artifact: "Strategy brief",
-    generateLabel: "Draft strategy brief",
+    generateLabel: "Give Strategist a job",
     starter: "Write our ICP, sharpen the offer, and propose three monthly content pillars.",
+    jobCta: "Give Strategist a job",
   },
   writer: {
+    name: "Maya",
     label: "Writer",
     title: "Brand voice drafts",
-    blurb: "LinkedIn posts and a newsletter draft in the Brand Kit voice. One pack to approve.",
+    blurb: "Maya writes LinkedIn posts and letters in Brand Kit voice, then pauses for your approval.",
     artifact: "Voice pack",
-    generateLabel: "Draft voice pack",
-    starter: "Write two LinkedIn posts and one newsletter draft in our brand voice.",
+    generateLabel: "Give Maya a job",
+    starter: "Write a week of LinkedIn posts in our brand voice.",
+    jobCta: "Give Maya a LinkedIn-week job",
+  },
+  researcher: {
+    name: "Omar",
+    label: "Researcher",
+    title: "Source pack",
+    blurb: "Omar fetches a company site and writes a research pack the Writer and SDR can share.",
+    artifact: "Research pack",
+    generateLabel: "Give Omar a job",
+    starter: "Fetch our company website and write a research pack.",
+    jobCta: "Give Omar a research-pack job",
   },
   distributor: {
+    name: "Distributor",
     label: "Distributor",
     title: "30-day calendar",
     blurb: "A publishable month of posts, ready to export as Markdown or paste into Docs.",
     artifact: "Content calendar",
     generateLabel: "Build 30-day calendar",
     starter: "Build a 30-day content calendar from our pillars and draft posts.",
+    jobCta: "Build a 30-day calendar",
   },
   sales: {
-    label: "Sales",
+    name: "Sam",
+    label: "SDR",
     title: "Outbound scripts",
-    blurb: "Five to ten email and LinkedIn DM scripts. No CRM — just language you can send.",
+    blurb: "Sam writes email and LinkedIn DM scripts. No CRM — language you can send.",
     artifact: "Outbound pack",
-    generateLabel: "Draft outbound scripts",
+    generateLabel: "Give Sam a job",
     starter: "Write 8 outbound email and LinkedIn DM scripts for our offer.",
+    jobCta: "Give Sam a sales-pack job",
   },
   ads: {
+    name: "Lex",
     label: "Ads",
     title: "Angles, not spend",
-    blurb: "Five ad angles plus primary text. Brandcrew does not connect ad accounts or spend.",
+    blurb: "Lex drafts ad angles plus primary text. Brandcrew does not connect ad accounts or spend.",
     artifact: "Ad angle pack",
-    generateLabel: "Draft ad angles",
+    generateLabel: "Give Lex a job",
     starter: "Give me 5 ad angles and primary text for paid social. No media plan.",
+    jobCta: "Give Lex an angles job",
   },
   ops: {
+    name: "Ops",
     label: "Ops",
     title: "Simple task board",
-    blurb: "Turn approved work into a three-column board: approve → schedule → done.",
+    blurb: "Ops turns approved work into a three-column board: approve → schedule → done.",
     artifact: "Ops board",
-    generateLabel: "Refresh task board",
+    generateLabel: "Give Ops a job",
     starter: "Turn our latest drafts into an approve → schedule → done board.",
+    jobCta: "Give Ops a job",
   },
 };
+
+export function employeeDisplayName(role: AgentRole | "team") {
+  if (role === "team") return "@team";
+  const meta = AGENT_META[role];
+  if (meta.name === meta.label) return meta.label;
+  return `${meta.name} ${meta.label}`;
+}
 
 export const GENERATE_ACTIONS = [
   "default",
   "generate_week",
   "sales_pack",
+  "research_pack",
   "regenerate",
 ] as const;
 
