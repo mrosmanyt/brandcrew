@@ -15,6 +15,10 @@
 /.next/
 /out/
 
+# electron-builder
+/dist/
+/dist-desktop/
+
 # production
 /build
 
