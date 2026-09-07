@@ -193,12 +193,12 @@ Or: `powershell -File scripts/install-desktop.ps1`
 
 ### Installers (.exe / .dmg)
 
-Hosted Windows builds (GitHub Release `v0.1.0` and `latest`):
+Hosted Windows builds (public repo `cinem-pro-releases`, GitHub Release `v0.1.0` and `latest`):
 
-- NSIS setup: https://github.com/mrosmanyt/brandcrew/releases/latest/download/CINEM-Pro-Setup.exe
-- Portable: https://github.com/mrosmanyt/brandcrew/releases/latest/download/CINEM-Pro-Portable.exe
+- NSIS setup: https://github.com/mrosmanyt/cinem-pro-releases/releases/latest/download/CINEM-Pro-Setup.exe
+- Portable: https://github.com/mrosmanyt/cinem-pro-releases/releases/latest/download/CINEM-Pro-Portable.exe
 
-The marketing Download buttons use those exact asset URLs — not README anchors. **brandcrew is private**, so GitHub may require a sign-in before the file is served. There is no hosted Mac `.dmg` (Linux cannot produce a usable one).
+The marketing Download buttons use those exact asset URLs — not README anchors. Installers are public, so anonymous visitors get a real file without GitHub login. There is no hosted Mac `.dmg` (Linux cannot produce a usable one).
 
 ```bash
 npm run desktop:build:win   # NSIS CINEM-Pro-Setup.exe + portable .exe (x64)

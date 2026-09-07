@@ -314,11 +314,11 @@ export function DownloadSection() {
         </article>
       </div>
       <p className="mt-6 text-sm leading-7 text-muted-foreground">
-        The source repo is private, so GitHub may ask you to sign in before the
-        file is served. The link is a release asset (
+        Windows builds are hosted on a public releases repo, so the download
+        starts without a GitHub login. The link is a release asset (
         <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>
-        ), not the repo tree. Prefer the web desk if you do not have GitHub
-        access.
+        ), not the source tree. Prefer the web desk if you want to skip the
+        installer.
       </p>
       <div className="mt-8 flex flex-col items-start justify-between gap-6 rounded-xl border border-border px-6 py-5 md:flex-row md:items-center">
         <p className="max-w-xl text-sm leading-7 text-muted-foreground">
@@ -452,7 +452,7 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe from GitHub Releases (latest/download). The repo is private, so GitHub may ask you to sign in. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe from the public cinem-pro-releases GitHub Releases (latest/download). No GitHub sign-in is required. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
   },
   {
     q: "How does pricing work?",
