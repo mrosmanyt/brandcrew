@@ -4,7 +4,7 @@ import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { employeeStatusFromJobs } from "@/lib/job-serialize";
+import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
 import { getLlmStatus } from "@/lib/llm";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
@@ -29,6 +29,10 @@ export default async function WorkspaceLayout({
             where: { status: { in: ["queued", "running", "needs_you"] } },
             orderBy: { updatedAt: "desc" },
           },
+          agents: {
+            where: { status: { not: "archived" } },
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
         },
       },
     },
@@ -40,8 +44,9 @@ export default async function WorkspaceLayout({
     ...employeeStatusFromJobs(member.workspace.jobs),
   };
   for (const artifact of member.workspace.artifacts) {
-    if (!agentStatus[artifact.agentRole] || agentStatus[artifact.agentRole] === "idle") {
-      agentStatus[artifact.agentRole] = artifact.status;
+    const key = artifact.agentId || artifact.agentRole;
+    if (!agentStatus[key] || agentStatus[key] === "idle") {
+      agentStatus[key] = artifact.status;
     }
   }
 
@@ -50,6 +55,7 @@ export default async function WorkspaceLayout({
       <DeskSidebar
         workspace={serializeWorkspace(member.workspace)}
         workspaces={workspaces}
+        agents={member.workspace.agents.map(serializeAgent)}
         agentStatus={agentStatus}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">

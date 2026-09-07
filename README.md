@@ -1,30 +1,43 @@
 # Brandcrew
 
-**Mission Control** for an AI marketing/sales crew. Named employees — Maya Writer, Omar Researcher, Sam SDR, Lex Ads, Ops, Strategist — **plan → use tools → produce artifacts**. You **approve** what leaves.
+**Mission Control** for agents you create. Default display name is always **New Agent**. Role is a label. You rename freely. Jobs **plan → use tools → produce artifacts**. You **approve** what leaves.
 
-This is a vertical slice, not a Strawberry clone: no remote browsers, no LinkedIn auto-post, no live email send. The point is a real **agent job runtime** with a shared Brand Kit, skills, and a roster — not a single-companion chat tab.
+This is a vertical slice, not a Strawberry clone: no remote browsers, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results.
 
 ## What you can do
 
-1. Sign up. Onboarding creates a demo workspace with the Northline Studio Brand Kit (including a sample website URL).
-2. Open **Mission Control** (`/desk/[workspaceId]`).
-3. Talk to an employee or **@team**. Starting work creates a **Job** (not a one-shot generate).
-4. Watch the **live activity feed** as steps persist: plan, `read_brand_kit`, `fetch_url` / `write_artifact`, then `ask_user`.
-5. Approve artifacts. That completes the waiting job step and creates an Ops schedule card.
-6. Save an approved (or paused) job as a **Skill**, then **Run skill** to replay the playbook.
+1. Sign up. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
+2. Open **Mission Control** (`/desk/[workspaceId]`). Create **New Agent**, or **Launch full business team** (10+ roles, explicit **Approve & create**).
+3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins** and **Bots**, search, category chips, Featured + list.
+4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed.
+5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
+6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `fetch_url` / `web_search` / `write_artifact`, then `ask_user`.
+7. Approve artifacts. Save a job as a **Skill**, then **Run skill**.
 
-### Core jobs in this slice
+Natural language such as “poori team banao” or “create agents for my whole business” opens the same approve sheet — it does not silently spawn a roster.
 
-| Shortcut | Employee | What happens |
+### Live vs offline demo
+
+| Server keys | What jobs persist |
+| --- | --- |
+| Any of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Model text, or tool-captured page/search text. **Never** canned Northline “tasting menu” copy. |
+| None | Labeled **offline demo** templates from the Brand Kit. Banner says so. |
+
+`PLAYWRIGHT` is not required. `fetch_url` is a public HTTP GET.
+
+## Marketplace
+
+| Tab | Action | Persistence |
 | --- | --- | --- |
-| **Give Maya a job** / Generate week | Maya Writer | Brand Kit → five LinkedIn post artifacts → `needs_you` |
-| **Give Omar a research pack** | Omar Researcher | Brand Kit → `fetch_url` on the kit website or a URL you paste → summary artifact |
-| **Give Sam a job** | Sam SDR | Brand Kit → outbound pack → approval |
-| **Run skill** | whoever owns it | New job from the saved playbook (demo workspaces include **LinkedIn week**) |
+| **Bots** | Add / Added | `Agent` with `templateId`. Capability only — no fake artifacts. |
+| **Plugins** | Connect / Connected | `PluginConnection` (`pluginId`, `status`, non-secret metadata). Secrets encrypted with `SESSION_SECRET`, never returned to the client, never committed. |
 
-Generate week is still in the UI. It **starts the Writer LinkedIn-week job** — it is not a separate dead path.
+v1 Connect that actually works:
 
-Without `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` the app still boots. Jobs run in demo mode from the Brand Kit (Omar still attempts `fetch_url`, then writes a pack from whatever came back).
+1. **API key** (Web Search / Tavily, Stripe, GitHub): form saves the secret server-side. You can also Connect Web Search with server `TAVILY_API_KEY` when that env is set. Empty form → still disconnected.
+2. **OAuth** (Gmail, Slack, Notion, Google Calendar, Google Drive): start + callback at `/api/oauth/callback`. If client ids are missing, the UI says so and **does not** fake Connected.
+
+Connected **Web Search** exposes the `web_search` job tool (Tavily). Other plugins store credentials for later tools; they do not auto-send mail or Slack.
 
 ## Stack
 
@@ -50,11 +63,10 @@ The desk listens on [http://127.0.0.1:43180](http://127.0.0.1:43180).
 
 1. Open `/signup` and create an email/password account.
 2. Skip or save the Brand Kit, then open Mission Control.
-3. Click **Give Maya a job** (or type a request and send).
-4. Watch the right-hand **Live activity** feed: plan → Brand Kit → five `write_artifact` steps → **needs you**.
-5. Approve the posts. Ops gets schedule cards; the job moves to **done** when every artifact from that job is approved.
-6. Optionally **Save** the job as a skill, then **Run skill** to replay it.
-7. Select **Omar Researcher** and run a research pack (uses Brand Kit `website`, default `https://example.com`, or a URL in your message).
+3. Click **New Agent** or **Launch team** (approve the roster), or **Marketplace → Bots → Add**.
+4. Select the agent, type a job, send. Watch **Live activity**.
+5. Approve drafts. Optionally save a skill.
+6. Marketplace → Plugins → Connect **Web Search** with a Tavily key if you want `web_search` in jobs.
 
 ## Environment variables
 
@@ -63,48 +75,50 @@ See [`.env.example`](./.env.example). Summary:
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | yes (defaults in example) | SQLite file. Swap Prisma `provider` to `postgresql` for Postgres. |
-| `SESSION_SECRET` | yes (dev default provided) | Signs the httpOnly session cookie. |
+| `SESSION_SECRET` | yes (dev default provided) | Signs the session cookie **and** encrypts plugin secrets. |
 | `OPENAI_API_KEY` | no | OpenAI. Cheap drafts (`gpt-4o-mini`) and GPT-4.1-class finals when Claude is unset. |
 | `ANTHROPIC_API_KEY` | no | Claude. Preferred for strong finals (`claude-sonnet-5`). |
 | `GEMINI_API_KEY` | no | Gemini. Preferred cheap drafts (`gemini-2.5-flash`). Sole provider uses Flash + Pro. |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | no | Alias for `GEMINI_API_KEY`. |
-| `OPENAI_DRAFT_MODEL` / `OPENAI_FINAL_MODEL` | no | Defaults: `gpt-4o-mini` / `gpt-4.1`. |
-| `ANTHROPIC_DRAFT_MODEL` / `ANTHROPIC_FINAL_MODEL` | no | Defaults: `claude-haiku-4-5` / `claude-sonnet-5`. |
-| `GEMINI_DRAFT_MODEL` / `GEMINI_FINAL_MODEL` | no | Defaults: `gemini-2.5-flash` / `gemini-2.5-pro`. |
+| `TAVILY_API_KEY` | no | Web Search plugin. Jobs call Tavily only when the plugin is **Connected**. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | OAuth for Calendar/Drive (and Gmail fallback). Redirect: `{NEXT_PUBLIC_APP_URL}/api/oauth/callback`. |
+| `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | no | Optional Gmail-specific OAuth overrides. |
+| `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | no | Slack OAuth. Missing → Connect stays disconnected. |
+| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | no | Notion OAuth. |
+| `GITHUB_TOKEN` | no | Optional GitHub plugin env; or paste a PAT in Connect. |
 | `BILLING_MOCK` | no (defaults true when Stripe is unset) | Apply Starter/Growth locally without Stripe. |
-| `STRIPE_SECRET_KEY` | no | Stripe test-mode Checkout. |
+| `STRIPE_SECRET_KEY` | no | Stripe test-mode Checkout (and optional Stripe plugin env). |
 | `STRIPE_STARTER_PRICE_ID` / `STRIPE_GROWTH_PRICE_ID` | no | Price IDs for $79 / $199 plans. |
-| `NEXT_PUBLIC_APP_URL` | no | Checkout redirect origin. |
+| `NEXT_PUBLIC_APP_URL` | no | Checkout + OAuth redirect origin. |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for test-mode Stripe. |
 
-API keys are read **only on the server**. There is no UI for user-managed model keys.
+API keys are read **only on the server**. Users never paste LLM keys. Plugin keys are workspace-scoped and encrypted.
 
 ## Model router
 
 `LLMProvider` in `src/lib/llm.ts` picks by cost and which keys are present:
 
 - **One provider only** → that provider for every task.
-- **Draft** (Writer, Researcher, Distributor, Sales, Ops, job steps) → cheap model: Gemini Flash, else OpenAI mini, else Claude Haiku.
-- **Final** (Strategist, Ads) → stronger model: Claude Sonnet, else GPT-4.1, else Gemini Pro.
+- **Draft** → cheap model: Gemini Flash, else OpenAI mini, else Claude Haiku.
+- **Final** → stronger model: Claude Sonnet, else GPT-4.1, else Gemini Pro.
 
-xAI / Grok is skipped. No keys → demo mode.
+xAI / Grok is skipped. No keys → offline demo.
 
 ```bash
-npm run test:llm    # routing + client boot checks (fake keys, no paid calls)
-npm run test:jobs   # playbooks, URL guard, HTML→text (no database)
+npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
+npm run test:jobs          # playbooks, live-output gate, URL guard (no database)
+npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
 ```
 
 ## Job runtime
 
-Jobs live in SQLite (`Job`, `JobEvent`, `Skill`). Each job has a JSON **plan** of steps. The runner ticks one step at a time, persists an activity event, and is kicked by:
-
-- `after()` after create (Next.js background work)
-- polling `GET /api/workspaces/:id/jobs` from Mission Control
+Jobs live in SQLite (`Job`, `JobEvent`, `Skill`, `Agent`). Each job has a JSON **plan** of steps. The runner ticks one step at a time.
 
 v1 tools:
 
 - `read_brand_kit`
 - `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
+- `web_search` (Tavily; requires Connected Web Search plugin)
 - `write_artifact` (markdown artifact on the workspace)
 - `ask_user` (job status → `needs_you`)
 
@@ -131,4 +145,4 @@ npx prisma studio    # inspect rows
 
 ## Out of scope (this slice)
 
-Per-agent VMs, browser automation, auto-post to LinkedIn/Meta, full CRM, audit suite, user-managed LLM keys, mobile apps, claiming feature-complete parity with Strawberry.
+Per-agent VMs, browser automation, auto-post to LinkedIn/Meta, auto WhatsApp/Gmail send, full CRM, audit suite, user-managed LLM keys, mobile apps, claiming feature-complete parity with Strawberry.

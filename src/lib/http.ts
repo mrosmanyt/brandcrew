@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { AuthError, ForbiddenError } from "@/lib/auth";
 
+export class ClientError extends Error {
+  status = 400;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = "ClientError";
+    this.status = status;
+  }
+}
+
 export function jsonError(error: unknown) {
-  if (error instanceof AuthError || error instanceof ForbiddenError) {
+  if (
+    error instanceof AuthError ||
+    error instanceof ForbiddenError ||
+    error instanceof ClientError
+  ) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }
   const message = error instanceof Error ? error.message : "Unexpected error";

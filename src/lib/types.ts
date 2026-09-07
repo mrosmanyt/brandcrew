@@ -21,6 +21,7 @@ export type MessageDTO = {
 
 export type ArtifactDTO = {
   id: string;
+  agentId?: string | null;
   agentRole: string;
   type: string;
   title: string;

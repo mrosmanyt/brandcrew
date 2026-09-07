@@ -40,10 +40,17 @@ export async function recordUsage(input: {
   tokens: number;
   model: string;
   agentRole: string;
+  agentId?: string | null;
 }) {
   await prisma.$transaction([
     prisma.usageEvent.create({
-      data: input,
+      data: {
+        workspaceId: input.workspaceId,
+        tokens: input.tokens,
+        model: input.model,
+        agentRole: input.agentRole,
+        agentId: input.agentId || null,
+      },
     }),
     prisma.workspace.update({
       where: { id: input.workspaceId },

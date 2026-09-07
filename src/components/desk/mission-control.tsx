@@ -1,30 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Bot,
   Check,
   Circle,
   Loader2,
+  Pencil,
   Play,
+  Plus,
   Sparkles,
+  Store,
+  Trash2,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ArtifactPanel } from "@/components/desk/artifact-panel";
 import { BudgetStopDialog } from "@/components/desk/budget-stop";
+import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  AGENT_META,
-  MISSION_ROLES,
-  employeeDisplayName,
-  type ChatTarget,
-  type GenerateAction,
-  type MissionRole,
-} from "@/lib/constants";
-import type { JobDTO, JobEventDTO, SkillDTO } from "@/lib/job-types";
+import { DEFAULT_AGENT_NAME, displayAgentName, type GenerateAction } from "@/lib/constants";
+import type { AgentDTO, JobDTO, JobEventDTO, SkillDTO } from "@/lib/job-types";
+import type { ProposedAgent } from "@/lib/team-launch";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +38,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function MissionControl({
   workspaceId,
-  initialAgent,
+  initialAgentId,
+  initialAgents,
   initialJobs,
   initialSkills,
   initialMessages,
@@ -45,7 +48,8 @@ export function MissionControl({
   tokenBudget,
 }: {
   workspaceId: string;
-  initialAgent?: string;
+  initialAgentId?: string;
+  initialAgents: AgentDTO[];
   initialJobs: JobDTO[];
   initialSkills: SkillDTO[];
   initialMessages: Record<string, MessageDTO[]>;
@@ -54,14 +58,17 @@ export function MissionControl({
   tokenBudget: number;
 }) {
   const router = useRouter();
-  const [target, setTarget] = useState<ChatTarget>(
-    isChatTarget(initialAgent) ? initialAgent : "writer",
+  const [agents, setAgents] = useState(initialAgents);
+  const [selectedId, setSelectedId] = useState(
+    initialAgentId && initialAgents.some((agent) => agent.id === initialAgentId)
+      ? initialAgentId
+      : initialAgents[0]?.id ?? null,
   );
   const [jobs, setJobs] = useState(initialJobs);
   const [skills, setSkills] = useState(initialSkills);
   const [messagesByAgent, setMessagesByAgent] = useState(initialMessages);
   const [artifactsByAgent, setArtifactsByAgent] = useState(initialArtifacts);
-  const [input, setInput] = useState(AGENT_META.writer.starter);
+  const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [usage, setUsage] = useState({ tokenUsed, tokenBudget });
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -72,41 +79,44 @@ export function MissionControl({
     initialJobs[0]?.id ?? null,
   );
   const [skillName, setSkillName] = useState("");
+  const [launchOpen, setLaunchOpen] = useState(false);
+  const [launchProposal, setLaunchProposal] = useState<ProposedAgent[]>([]);
+  const [renameValue, setRenameValue] = useState("");
   const feedRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  const employeeStatus = useMemo(() => {
+  const selected = agents.find((agent) => agent.id === selectedId) ?? null;
+
+  const agentStatus = useMemo(() => {
     const status: Record<string, "idle" | "working" | "needs-you"> = {};
-    for (const role of MISSION_ROLES) status[role] = "idle";
+    for (const agent of agents) status[agent.id] = "idle";
     for (const job of jobs) {
-      const current = status[job.agentRole] ?? "idle";
-      if (job.status === "needs_you") status[job.agentRole] = "needs-you";
+      const key = job.agentId || "";
+      if (!key) continue;
+      const current = status[key] ?? "idle";
+      if (job.status === "needs_you") status[key] = "needs-you";
       else if (
         (job.status === "running" || job.status === "queued") &&
         current !== "needs-you"
       ) {
-        status[job.agentRole] = "working";
+        status[key] = "working";
       }
     }
     return status;
-  }, [jobs]);
+  }, [agents, jobs]);
 
   const selectedJob =
     jobs.find((job) => job.id === selectedJobId) ??
-    jobs.find((job) =>
-      target === "team" ? true : job.agentRole === target,
-    ) ??
+    jobs.find((job) => (selected ? job.agentId === selected.id : true)) ??
     jobs[0] ??
     null;
 
-  const messages =
-    messagesByAgent[target] ??
-    (target === "team" ? messagesByAgent.team : messagesByAgent[target]) ??
-    [];
-  const artifacts =
-    selectedJob?.artifacts?.length
-      ? selectedJob.artifacts
-      : (artifactsByAgent[target === "team" ? "writer" : target] ?? []);
+  const messages = selected ? (messagesByAgent[selected.id] ?? []) : [];
+  const artifacts = selectedJob?.artifacts?.length
+    ? selectedJob.artifacts
+    : selected
+      ? (artifactsByAgent[selected.id] ?? [])
+      : [];
 
   const remaining = Math.max(0, usage.tokenBudget - usage.tokenUsed);
   const atCap = remaining <= 0;
@@ -121,12 +131,12 @@ export function MissionControl({
   }, [workspaceId]);
 
   const refreshChat = useCallback(
-    async (agent: string) => {
-      const res = await fetch(`/api/workspaces/${workspaceId}/chat?agent=${agent}`);
+    async (agentId: string) => {
+      const res = await fetch(`/api/workspaces/${workspaceId}/chat?agentId=${agentId}`);
       if (!res.ok) return;
       const data = await res.json();
-      setMessagesByAgent((prev) => ({ ...prev, [agent]: data.messages ?? [] }));
-      setArtifactsByAgent((prev) => ({ ...prev, [agent]: data.artifacts ?? [] }));
+      setMessagesByAgent((prev) => ({ ...prev, [agentId]: data.messages ?? [] }));
+      setArtifactsByAgent((prev) => ({ ...prev, [agentId]: data.artifacts ?? [] }));
     },
     [workspaceId],
   );
@@ -149,95 +159,185 @@ export function MissionControl({
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages.length]);
 
-  function selectEmployee(next: ChatTarget) {
-    setTarget(next);
-    setInput(
-      next === "team"
-        ? "Give the crew a job. Try: LinkedIn week, or research our website."
-        : AGENT_META[next].starter,
-    );
+  useEffect(() => {
+    if (selected) {
+      setInput(selected.instructions ? `Give this ${selected.role || "agent"} a job.` : "");
+      setRenameValue(displayAgentName(selected.name));
+      void refreshChat(selected.id);
+    }
+  }, [selected?.id, refreshChat]);
+
+  function selectAgent(id: string) {
+    setSelectedId(id);
+    router.replace(`/desk/${workspaceId}?agentId=${id}`, { scroll: false });
   }
 
-  async function startJob(action: GenerateAction = "default", preset?: string) {
-    if (atCap) {
-      setBudgetOpen(true);
+  async function createBlankAgent() {
+    setBusy(true);
+    const res = await fetch(`/api/workspaces/${workspaceId}/agents`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: DEFAULT_AGENT_NAME, role: "" }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) {
+      toast.error(data.error || "Could not create an agent.");
       return;
     }
-    const message = (preset ?? input).trim();
-    if (!message || busy) return;
+    setAgents((prev) => [...prev, data.agent]);
+    selectAgent(data.agent.id);
+    toast.success("New Agent created. Rename it anytime.");
+    router.refresh();
+  }
+
+  async function openLaunch() {
+    const res = await fetch(`/api/workspaces/${workspaceId}/agents/launch`);
+    const data = await res.json();
+    setLaunchProposal(data.proposal ?? []);
+    setLaunchOpen(true);
+  }
+
+  async function approveLaunch(rows: ProposedAgent[], startOnboardingJobs: boolean) {
     setBusy(true);
-    const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
+    const res = await fetch(`/api/workspaces/${workspaceId}/agents/launch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        agentRole: target,
-        message,
-        action,
+        agents: rows,
+        startOnboardingJobs,
       }),
     });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
-      if (data.code === "BUDGET" || res.status === 429) {
-        setBudgetMessage(data.error || budgetMessage);
-        setBudgetOpen(true);
-        return;
-      }
-      toast.error(data.error || "Could not start the job.");
+      toast.error(data.error || "Could not create the team.");
+      return;
+    }
+    setLaunchOpen(false);
+    const next: AgentDTO[] = data.agents ?? [];
+    setAgents(next);
+    if (next[0]) selectAgent(next[0].id);
+    toast.success(`Created ${data.created?.length ?? next.length} agents.`);
+    if (data.onboardingJob) {
+      setJobs((prev) => [data.onboardingJob, ...prev]);
+      setSelectedJobId(data.onboardingJob.id);
+    }
+    router.refresh();
+    void refreshJobs();
+  }
+
+  async function renameSelected() {
+    if (!selected) return;
+    const name = renameValue.trim() || DEFAULT_AGENT_NAME;
+    const res = await fetch(`/api/workspaces/${workspaceId}/agents/${selected.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Could not rename.");
+      return;
+    }
+    setAgents((prev) => prev.map((agent) => (agent.id === selected.id ? data.agent : agent)));
+    toast.success("Renamed.");
+  }
+
+  async function archiveSelected() {
+    if (!selected) return;
+    const res = await fetch(`/api/workspaces/${workspaceId}/agents/${selected.id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      toast.error("Could not remove that agent.");
+      return;
+    }
+    const next = agents.filter((agent) => agent.id !== selected.id);
+    setAgents(next);
+    setSelectedId(next[0]?.id ?? null);
+    toast.success("Agent archived.");
+    router.refresh();
+  }
+
+  async function startJob(action: GenerateAction = "default", message?: string) {
+    if (!selected) {
+      toast.error("Create or select an agent first.");
+      return;
+    }
+    const text = (message ?? input).trim();
+    if (!text && action === "default") return;
+    setBusy(true);
+    const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: selected.id,
+        message: text || undefined,
+        action,
+      }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (res.status === 402 || data.code === "BUDGET") {
+      setBudgetMessage(data.error || budgetMessage);
+      setBudgetOpen(true);
+      return;
+    }
+    if (!res.ok) {
+      toast.error(data.error || "Could not start that job.");
+      return;
+    }
+    if (data.teamLaunch) {
+      await openLaunch();
       return;
     }
     const job = data.job as JobDTO;
     setJobs((prev) => [job, ...prev.filter((row) => row.id !== job.id)]);
     setSelectedJobId(job.id);
-    const chatKey = target === "team" ? "team" : job.agentRole;
-    setMessagesByAgent((prev) => ({
-      ...prev,
-      [chatKey]: [...(prev[chatKey] ?? []), ...(data.messages ?? [])],
-      [job.agentRole]: [...(prev[job.agentRole] ?? []), ...(data.messages ?? [])],
-    }));
     if (data.usage) setUsage(data.usage);
-    toast.success(`${employeeDisplayName(job.agentRole as MissionRole)} is on it.`);
+    setInput("");
+    toast.success(`${displayAgentName(selected.name)} is on it.`);
+    void refreshChat(selected.id);
     void refreshJobs();
-    router.refresh();
   }
 
-  async function approve(id: string) {
-    const res = await fetch(`/api/workspaces/${workspaceId}/artifacts/${id}`, {
+  async function approve(artifactId: string) {
+    const res = await fetch(`/api/workspaces/${workspaceId}/artifacts/${artifactId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "approved" }),
     });
-    const data = await res.json();
     if (!res.ok) {
-      toast.error(data.error || "Could not approve.");
+      toast.error("Could not approve.");
       return;
     }
-    toast.success("Approved. Ops has a schedule card.");
+    toast.success("Approved.");
     void refreshJobs();
-    void refreshChat(target === "team" ? "writer" : target);
-    router.refresh();
+    if (selected) void refreshChat(selected.id);
   }
 
   async function saveSkill() {
     if (!selectedJob) return;
-    const name = skillName.trim() || selectedJob.title;
     const res = await fetch(`/api/workspaces/${workspaceId}/skills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, jobId: selectedJob.id }),
+      body: JSON.stringify({
+        jobId: selectedJob.id,
+        name: skillName.trim() || selectedJob.title,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
       toast.error(data.error || "Could not save skill.");
       return;
     }
-    setSkills((prev) => [data.skill, ...prev]);
     setSkillName("");
-    toast.success(`Saved skill: ${data.skill.name}`);
+    toast.success("Skill saved.");
+    void refreshJobs();
   }
 
   async function runSkill(skill: SkillDTO) {
-    if (busy) return;
     setBusy(true);
     const res = await fetch(
       `/api/workspaces/${workspaceId}/skills/${skill.id}/run`,
@@ -252,13 +352,14 @@ export function MissionControl({
     const job = data.job as JobDTO;
     setJobs((prev) => [job, ...prev]);
     setSelectedJobId(job.id);
-    if (isChatTarget(job.agentRole)) selectEmployee(job.agentRole);
+    if (job.agentId) selectAgent(job.agentId);
     toast.success(`Running ${skill.name}`);
     void refreshJobs();
   }
 
-  const meta = target === "team" ? null : AGENT_META[target];
-  const latestDraft = [...artifacts].reverse().find((a) => a.status !== "approved") ?? artifacts[artifacts.length - 1];
+  const latestDraft =
+    [...artifacts].reverse().find((a) => a.status !== "approved") ??
+    artifacts[artifacts.length - 1];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -268,152 +369,134 @@ export function MissionControl({
             <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               Mission Control
             </p>
-            <h1 className="font-heading text-xl tracking-tight">Crew</h1>
+            <h1 className="font-heading text-xl tracking-tight">Agents</h1>
+          </div>
+          <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2">
+            <Button size="xs" onClick={createBlankAgent} disabled={busy}>
+              <Plus className="size-3" />
+              New Agent
+            </Button>
+            <Button size="xs" variant="secondary" onClick={openLaunch} disabled={busy}>
+              <Users className="size-3" />
+              Launch team
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              render={<Link href={`/desk/${workspaceId}/marketplace`} />}
+            >
+              <Store className="size-3" />
+              Marketplace
+            </Button>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
-            <button
-              type="button"
-              onClick={() => selectEmployee("team")}
-              className={cn(
-                "mb-1 flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left",
-                target === "team" ? "bg-secondary" : "hover:bg-muted/70",
-              )}
-            >
-              <span className="grid size-8 place-items-center rounded-full bg-foreground text-background">
-                <Bot className="size-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">@team</span>
-                <span className="block text-xs text-muted-foreground">
-                  Route a job to the right employee
-                </span>
-              </span>
-            </button>
-            {MISSION_ROLES.map((role) => {
-              const info = AGENT_META[role];
-              const live = employeeStatus[role] ?? "idle";
-              return (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => selectEmployee(role)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left",
-                    target === role ? "bg-secondary" : "hover:bg-muted/70",
-                  )}
-                >
-                  <EmployeeAvatar name={info.name} role={role} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">
-                        {employeeDisplayName(role)}
+            {agents.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border px-3 py-6 text-sm text-muted-foreground">
+                No agents yet. Create one, add a bot from Marketplace, or launch a
+                full business team (10+ roles, explicit approve).
+              </div>
+            ) : (
+              agents.map((agent) => {
+                const live = agentStatus[agent.id] ?? "idle";
+                return (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => selectAgent(agent.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left",
+                      selectedId === agent.id ? "bg-secondary" : "hover:bg-muted/70",
+                    )}
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                      {displayAgentName(agent.name).slice(0, 1)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium">
+                          {displayAgentName(agent.name)}
+                        </span>
+                        <StatusChip status={live} />
                       </span>
-                      <StatusChip status={live} />
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {agent.role || "No role label yet"}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {info.artifact}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })
+            )}
           </div>
         </aside>
 
         <section className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
           <header className="border-b border-border px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              {target === "team" ? "Team desk" : meta?.title}
-            </p>
-            <h2 className="font-heading text-xl tracking-tight">
-              {target === "team" ? "Talk to the crew" : employeeDisplayName(target)}
-            </h2>
-            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              {target === "team"
-                ? "Name the job. Brandcrew routes it to Maya, Omar, Sam, Lex, Ops, or Strategist — they plan, use tools, and wait for you."
-                : meta?.blurb}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {target === "writer" || target === "team" ? (
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  onClick={() =>
-                    startJob(
-                      "generate_week",
-                      "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval.",
-                    )
-                  }
-                >
-                  Give Maya a job
-                </Button>
-              ) : null}
-              {target === "researcher" || target === "team" ? (
-                <Button
-                  size="sm"
-                  variant={target === "researcher" ? "default" : "secondary"}
-                  disabled={busy}
-                  onClick={() => startJob("research_pack")}
-                >
-                  Give Omar a research pack
-                </Button>
-              ) : null}
-              {target === "writer" ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => startJob("generate_week")}
-                >
-                  Generate week
-                </Button>
-              ) : null}
-              {target === "sales" ? (
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => startJob("sales_pack")}
-                >
-                  Give Sam a job
-                </Button>
-              ) : null}
-              {target !== "writer" &&
-              target !== "researcher" &&
-              target !== "sales" &&
-              target !== "team" ? (
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => startJob("default", meta?.starter)}
-                >
-                  {meta?.jobCta}
-                </Button>
-              ) : null}
-            </div>
+            {selected ? (
+              <>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {selected.role || "Agent"}
+                </p>
+                <h2 className="font-heading text-xl tracking-tight">
+                  {displayAgentName(selected.name)}
+                </h2>
+                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                  Give this agent a real job. It plans, uses tools, and waits for
+                  you. Default name is “New Agent” — rename below.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Input
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    className="h-8 w-44"
+                    aria-label="Agent name"
+                  />
+                  <Button size="sm" variant="secondary" onClick={renameSelected}>
+                    <Pencil className="size-3.5" />
+                    Rename
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={archiveSelected}>
+                    <Trash2 className="size-3.5" />
+                    Archive
+                  </Button>
+                  <Button size="sm" disabled={busy} onClick={() => startJob("default", input || "Write a short draft from the Brand Kit. Do not publish.")}>
+                    Give a job
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="font-heading text-xl tracking-tight">Your desk</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Create agents you own. Marketplace bots install real Agent rows.
+                  Launching a full business team needs an explicit approve.
+                </p>
+              </>
+            )}
           </header>
 
           <div ref={chatRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {messages.length === 0 ? (
+            {!selected ? (
               <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8">
                 <Sparkles className="size-5 text-primary" />
                 <p className="mt-3 max-w-md text-sm text-muted-foreground">
-                  Activity-first desk. Give Maya a LinkedIn-week job, watch steps
-                  land in the feed, then approve what leaves.
+                  Start with New Agent, Marketplace, or Launch team. Jobs only run
+                  when you pick an agent.
                 </p>
-                <Button
-                  className="mt-4"
-                  disabled={busy}
-                  onClick={() =>
-                    startJob(
-                      target === "researcher" ? "research_pack" : "generate_week",
-                    )
-                  }
-                >
-                  {busy ? <Loader2 className="animate-spin" /> : null}
-                  {target === "researcher"
-                    ? "Give Omar a research pack"
-                    : "Give Maya a job"}
-                </Button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button onClick={createBlankAgent}>New Agent</Button>
+                  <Button variant="secondary" onClick={openLaunch}>
+                    Launch full business team
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {selected && messages.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8">
+                <Bot className="size-5 text-primary" />
+                <p className="mt-3 max-w-md text-sm text-muted-foreground">
+                  Name the job. This agent will plan, use tools (Brand Kit, fetch
+                  URL, Web Search if Connected), and pause for approval.
+                </p>
               </div>
             ) : null}
             {messages.map((message) => (
@@ -428,9 +511,7 @@ export function MissionControl({
                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                   {message.role === "user"
                     ? "You"
-                    : target === "team"
-                      ? "Crew"
-                      : employeeDisplayName(target)}
+                    : displayAgentName(selected?.name)}
                 </p>
                 <div className="mt-1 whitespace-pre-wrap leading-6">{message.content}</div>
               </article>
@@ -475,22 +556,20 @@ export function MissionControl({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               rows={2}
-              disabled={busy}
+              disabled={busy || !selected}
               placeholder={
-                target === "team"
-                  ? "@team — LinkedIn week, research pack, outbound…"
-                  : meta?.starter
+                selected
+                  ? "Give this agent a job — or type “launch a full business team”."
+                  : "Create an agent first"
               }
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">
                 {atCap ? "Budget reached." : `${remaining.toLocaleString()} tokens left`}
               </p>
-              <Button type="submit" disabled={busy || !input.trim()}>
+              <Button type="submit" disabled={busy || !selected || !input.trim()}>
                 {busy ? <Loader2 className="animate-spin" /> : null}
-                {target === "team"
-                  ? "Give the crew a job"
-                  : meta?.generateLabel ?? "Start job"}
+                Start job
               </Button>
             </div>
           </form>
@@ -579,29 +658,31 @@ export function MissionControl({
             <p className="text-sm text-muted-foreground">No jobs yet.</p>
           ) : (
             <ul className="flex gap-2 overflow-x-auto pb-1">
-              {jobs.map((job) => (
-                <li key={job.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedJobId(job.id);
-                      if (isChatTarget(job.agentRole)) selectEmployee(job.agentRole);
-                    }}
-                    className={cn(
-                      "min-w-[12rem] rounded-xl border px-3 py-2 text-left",
-                      job.id === selectedJob?.id
-                        ? "border-primary bg-accent/60"
-                        : "border-border bg-background",
-                    )}
-                  >
-                    <p className="truncate text-sm font-medium">{job.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {employeeDisplayName(job.agentRole as MissionRole)} ·{" "}
-                      {jobStatusLabel(job.status)}
-                    </p>
-                  </button>
-                </li>
-              ))}
+              {jobs.map((job) => {
+                const owner = agents.find((agent) => agent.id === job.agentId);
+                return (
+                  <li key={job.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedJobId(job.id);
+                        if (job.agentId) selectAgent(job.agentId);
+                      }}
+                      className={cn(
+                        "min-w-[12rem] rounded-xl border px-3 py-2 text-left",
+                        job.id === selectedJob?.id
+                          ? "border-primary bg-accent/60"
+                          : "border-border bg-background",
+                      )}
+                    >
+                      <p className="truncate text-sm font-medium">{job.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {displayAgentName(owner?.name)} · {jobStatusLabel(job.status)}
+                      </p>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -648,14 +729,14 @@ export function MissionControl({
         workspaceId={workspaceId}
         message={budgetMessage}
       />
+      <TeamLaunchDialog
+        open={launchOpen}
+        onOpenChange={setLaunchOpen}
+        proposal={launchProposal}
+        busy={busy}
+        onApprove={approveLaunch}
+      />
     </div>
-  );
-}
-
-function isChatTarget(value: string | undefined): value is ChatTarget {
-  return Boolean(
-    value &&
-      (value === "team" || (MISSION_ROLES as readonly string[]).includes(value)),
   );
 }
 
@@ -689,27 +770,6 @@ function StatusChip({ status }: { status: string }) {
       )}
     >
       {STATUS_LABEL[status] ?? status}
-    </span>
-  );
-}
-
-function EmployeeAvatar({ name, role }: { name: string; role: string }) {
-  const colors: Record<string, string> = {
-    writer: "bg-primary text-primary-foreground",
-    researcher: "bg-emerald-800 text-emerald-50",
-    sales: "bg-sky-800 text-sky-50",
-    ads: "bg-amber-800 text-amber-50",
-    ops: "bg-stone-700 text-stone-50",
-    strategist: "bg-indigo-900 text-indigo-50",
-  };
-  return (
-    <span
-      className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-full text-xs font-medium",
-        colors[role] || "bg-secondary",
-      )}
-    >
-      {name.slice(0, 1)}
     </span>
   );
 }

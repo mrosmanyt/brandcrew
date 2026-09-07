@@ -15,14 +15,13 @@ export function workspaceChecklist(input: {
 }): ChecklistState {
   const kit = parseBrandKit(input.brandKit);
   const brandKit = Boolean(kit.voice.trim() && kit.audience.trim() && kit.offer.trim());
-  const strategist = input.artifacts.some((a) => a.agentRole === "strategist");
-  const writer = input.artifacts.some((a) => a.agentRole === "writer");
+  const hasJob = input.artifacts.length > 0;
   const approved = input.artifacts.some((a) => a.status === "approved");
-  const flags = [brandKit, strategist, writer, approved];
+  const flags = [brandKit, hasJob, hasJob, approved];
   return {
     brandKit,
-    strategist,
-    writer,
+    strategist: hasJob,
+    writer: hasJob,
     approved,
     doneCount: flags.filter(Boolean).length,
     total: flags.length,

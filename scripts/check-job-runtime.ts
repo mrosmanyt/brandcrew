@@ -1,5 +1,5 @@
 /**
- * Playbook / fetch-url guards. No database, no paid LLM calls.
+ * Playbook / fetch-url / live-output guards. No database, no paid LLM calls.
  */
 import assert from "node:assert/strict";
 import {
@@ -13,8 +13,11 @@ import {
   linkedinWeekPlaybook,
   parsePlan,
   researchPackPlaybook,
-  routeTeamMessage,
+  webSearchPlaybook,
 } from "../src/lib/job-playbooks";
+import { resolveRunOutput } from "../src/lib/live-output";
+import { isTeamLaunchIntent, proposeBusinessTeam, TEAM_LAUNCH_ROLES } from "../src/lib/team-launch";
+import { DEFAULT_AGENT_NAME } from "../src/lib/constants";
 
 const week = linkedinWeekPlaybook();
 assert.equal(week.agentRole, "writer");
@@ -31,11 +34,14 @@ assert.equal(research.agentRole, "researcher");
 assert.equal(research.steps.some((step) => step.tool === "fetch_url"), true);
 console.log("ok: research pack includes fetch_url");
 
+const search = webSearchPlaybook("brandcrew competitors");
+assert.equal(search.steps.some((step) => step.tool === "web_search"), true);
+assert.equal(inferPlaybookKey("researcher", "search the web for comps"), "web_search");
+console.log("ok: web_search playbook");
+
 assert.equal(inferPlaybookKey("writer", "Generate week"), "linkedin_week");
 assert.equal(inferPlaybookKey("researcher", "fetch the site"), "research_pack");
-assert.equal(routeTeamMessage("research our website"), "researcher");
-assert.equal(routeTeamMessage("LinkedIn week for Maya"), "writer");
-console.log("ok: intent routing");
+console.log("ok: playbook inference");
 
 const roundTrip = parsePlan(JSON.stringify(week.steps));
 assert.equal(roundTrip.length, week.steps.length);
@@ -62,5 +68,41 @@ assert.deepEqual(extractUrls("see https://example.com/x and http://example.org/y
   "http://example.org/y",
 ]);
 console.log("ok: public URL guard + extractUrls");
+
+assert.equal(TEAM_LAUNCH_ROLES.length >= 10, true);
+const proposal = proposeBusinessTeam();
+assert.equal(proposal.length, TEAM_LAUNCH_ROLES.length);
+assert.ok(proposal.every((row) => row.name === DEFAULT_AGENT_NAME));
+assert.equal(isTeamLaunchIntent("poori team banao"), true);
+assert.equal(isTeamLaunchIntent("launch a full business team"), true);
+assert.equal(isTeamLaunchIntent("write a linkedin post"), false);
+console.log("ok: team launch proposal ≥10, names stay New Agent");
+
+const tasting = "A tasting menu is a brand system.";
+assert.throws(
+  () =>
+    resolveRunOutput({
+      live: true,
+      demoTitle: "Northline",
+      demoContent: tasting,
+    }),
+  /no model or tool output/i,
+);
+const fromFetch = resolveRunOutput({
+  live: true,
+  fetched: { url: "https://example.com", ok: true, text: "Hello from the page." },
+  demoTitle: "Northline",
+  demoContent: tasting,
+});
+assert.equal(fromFetch.source, "tools");
+assert.equal(fromFetch.content.includes(tasting), false);
+assert.equal(fromFetch.content.includes("Hello from the page."), true);
+const offline = resolveRunOutput({
+  live: false,
+  demoTitle: "Northline",
+  demoContent: tasting,
+});
+assert.equal(offline.source, "demo");
+console.log("ok: live output never persists canned demo copy");
 
 console.log("Job runtime checks passed.");

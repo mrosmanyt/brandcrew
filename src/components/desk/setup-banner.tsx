@@ -12,8 +12,7 @@ export function SetupBanner() {
       <p>
         {!llm.configured ? (
           <>
-            <strong>Models are offline.</strong> The desk still boots and
-            writes demo artifacts from the Brand Kit. Add{" "}
+            <strong>Offline demo.</strong> No model keys on the server. Jobs that run will use labeled Brand Kit templates, not live model output. Add{" "}
             <code className="rounded bg-card px-1 py-0.5 text-xs">OPENAI_API_KEY</code>
             ,{" "}
             <code className="rounded bg-card px-1 py-0.5 text-xs">ANTHROPIC_API_KEY</code>

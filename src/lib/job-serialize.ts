@@ -1,6 +1,7 @@
 import type { Artifact } from "@prisma/client";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 import type {
+  AgentDTO,
   EmployeeLiveStatus,
   JobContext,
   JobDTO,
@@ -9,7 +10,31 @@ import type {
   SkillDTO,
 } from "@/lib/job-types";
 import { parsePlan, parsePlaybookJson } from "@/lib/job-playbooks";
-import { MISSION_ROLES } from "@/lib/constants";
+import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+
+export function serializeAgent(agent: {
+  id: string;
+  workspaceId: string;
+  name: string;
+  role: string;
+  instructions: string;
+  templateId?: string | null;
+  status: string;
+  sortOrder: number;
+  createdAt: Date;
+}): AgentDTO {
+  return {
+    id: agent.id,
+    workspaceId: agent.workspaceId,
+    name: agent.name?.trim() || DEFAULT_AGENT_NAME,
+    role: agent.role,
+    instructions: agent.instructions,
+    templateId: agent.templateId ?? null,
+    status: agent.status,
+    sortOrder: agent.sortOrder,
+    createdAt: agent.createdAt.toISOString(),
+  };
+}
 
 export function parseJobContext(raw: string | null | undefined): JobContext {
   if (!raw) return {};
@@ -33,6 +58,7 @@ export function parseEventData(raw: string | null | undefined): Record<string, u
 export function serializeArtifact(artifact: Artifact): ArtifactDTO {
   return {
     id: artifact.id,
+    agentId: artifact.agentId,
     agentRole: artifact.agentRole,
     type: artifact.type,
     title: artifact.title,
@@ -48,6 +74,7 @@ export function serializeArtifact(artifact: Artifact): ArtifactDTO {
 export function serializeJob(job: {
   id: string;
   workspaceId: string;
+  agentId?: string | null;
   agentRole: string;
   title: string;
   prompt: string;
@@ -72,6 +99,7 @@ export function serializeJob(job: {
   return {
     id: job.id,
     workspaceId: job.workspaceId,
+    agentId: job.agentId ?? null,
     agentRole: job.agentRole,
     title: job.title,
     prompt: job.prompt,
@@ -101,6 +129,7 @@ export function serializeSkill(skill: {
   id: string;
   workspaceId: string;
   name: string;
+  agentId?: string | null;
   agentRole: string;
   playbook: string;
   sourceJobId: string | null;
@@ -110,6 +139,7 @@ export function serializeSkill(skill: {
     id: skill.id,
     workspaceId: skill.workspaceId,
     name: skill.name,
+    agentId: skill.agentId ?? null,
     agentRole: skill.agentRole,
     playbook:
       parsePlaybookJson(skill.playbook) ?? {
@@ -124,19 +154,19 @@ export function serializeSkill(skill: {
 }
 
 export function employeeStatusFromJobs(
-  jobs: { agentRole: string; status: string }[],
+  jobs: { agentId?: string | null; agentRole: string; status: string }[],
 ): Record<string, EmployeeLiveStatus> {
   const status: Record<string, EmployeeLiveStatus> = {};
-  for (const role of MISSION_ROLES) status[role] = "idle";
   for (const job of jobs) {
-    const current = status[job.agentRole] ?? "idle";
+    const key = job.agentId || job.agentRole;
+    const current = status[key] ?? "idle";
     if (job.status === "needs_you") {
-      status[job.agentRole] = "needs-you";
+      status[key] = "needs-you";
     } else if (
       (job.status === "running" || job.status === "queued") &&
       current !== "needs-you"
     ) {
-      status[job.agentRole] = "working";
+      status[key] = "working";
     }
   }
   return status;

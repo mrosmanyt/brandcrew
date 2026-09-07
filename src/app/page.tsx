@@ -1,10 +1,23 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { AGENT_META, MISSION_ROLES, PLANS, employeeDisplayName } from "@/lib/constants";
+import { PLANS } from "@/lib/constants";
 import { getCurrentUser } from "@/lib/auth";
 
-const AGENT_ICONS = ["01", "02", "03", "04", "05", "06"];
+const HIGHLIGHTS = [
+  {
+    title: "Your agents",
+    body: "Create agents named “New Agent” by default. Role is a label. Rename freely.",
+  },
+  {
+    title: "Marketplace",
+    body: "Bots install real Agent rows. Plugins persist connections — Connected only with a real key or OAuth callback.",
+  },
+  {
+    title: "A budget you can see",
+    body: "Token meter in the header. Hit the cap and the desk stops with a clear upgrade path.",
+  },
+];
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -15,9 +28,9 @@ export default async function HomePage() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5">
         <BrandMark />
         <div className="flex items-center gap-2">
-            {user ? (
-              <Button render={<Link href="/desk" />}>Open Mission Control</Button>
-            ) : (
+          {user ? (
+            <Button render={<Link href="/desk" />}>Open Mission Control</Button>
+          ) : (
             <>
               <Button variant="ghost" render={<Link href="/login" />}>
                 Sign in
@@ -31,16 +44,16 @@ export default async function HomePage() {
       <main>
         <section className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6 md:pb-16 md:pt-10">
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Mission Control · named AI employees
+            Mission Control · your agents
           </p>
           <h1 className="font-heading mt-3 max-w-3xl text-4xl leading-[1.08] tracking-tight md:text-6xl">
-            Give Maya a job. Watch the crew work. Approve what leaves.
+            Create agents. Give them jobs. Approve what leaves.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-            Brandcrew is a desk of named employees — Maya Writer, Omar Researcher,
-            Sam SDR, Lex Ads, Ops, and Strategist — who plan, use tools, and
-            pause for you. Shared Brand Kit and skills. Not a single-companion
-            chat tab.
+            Brandcrew is a desk you staff yourself. Launch a full business team
+            (10+ roles) after an explicit approve, or add bots from Marketplace.
+            Jobs plan, use tools, and pause. No named cast. No fake Connected
+            plugins.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" render={<Link href={cta} />}>
@@ -55,38 +68,8 @@ export default async function HomePage() {
           </p>
         </section>
 
-        <section className="border-y border-border bg-card/70">
-          <div className="mx-auto grid w-full max-w-6xl gap-0 sm:grid-cols-2 lg:grid-cols-6">
-            {MISSION_ROLES.map((role, index) => (
-              <article
-                key={role}
-                className="border-border px-5 py-5 sm:border-r sm:last:border-r-0 lg:border-r"
-              >
-                <p className="font-mono text-[11px] text-primary">{AGENT_ICONS[index]}</p>
-                <h2 className="mt-2 text-sm font-medium">{employeeDisplayName(role)}</h2>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {AGENT_META[role].artifact}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="mx-auto grid w-full max-w-6xl gap-4 px-5 py-14 md:grid-cols-3">
-          {[
-            {
-              title: "Jobs, not one-shot generate",
-              body: "Give Maya a LinkedIn-week job. She reads the Brand Kit, writes five posts, and waits. Generate week is still there — it starts that job.",
-            },
-            {
-              title: "Shared memory",
-              body: "Voice, audience, offer, samples, and forbidden words live once. Every agent reads the same kit.",
-            },
-            {
-              title: "A budget you can see",
-              body: "Token meter in the header. Hit the cap and the desk stops with a clear upgrade path.",
-            },
-          ].map((item) => (
+          {HIGHLIGHTS.map((item) => (
             <article key={item.title} className="rounded-2xl border border-border bg-card p-5">
               <h2 className="font-heading text-xl">{item.title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
@@ -118,7 +101,7 @@ export default async function HomePage() {
                   </p>
                   <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                     <li>{plan.tokenBudget.toLocaleString()} tokens per cycle</li>
-                    <li>Six agents + shared Brand Kit</li>
+                    <li>Your agents + Marketplace + shared Brand Kit</li>
                     <li>{id === "growth" ? "Room for a 5-person desk" : "Founder + collaborator"}</li>
                   </ul>
                   <Button className="mt-6" render={<Link href={cta} />}>

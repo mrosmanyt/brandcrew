@@ -20,9 +20,15 @@ export async function POST(
     if (!skill) {
       return NextResponse.json({ error: "Skill not found." }, { status: 404 });
     }
+    if (!skill.agentId) {
+      return NextResponse.json(
+        { error: "This skill is not bound to an agent." },
+        { status: 400 },
+      );
+    }
     const result = await createJobFromChat({
       workspaceId,
-      agentRole: skill.agentRole as "writer",
+      agentId: skill.agentId,
       message: `Run skill: ${skill.name}`,
       skillId: skill.id,
     });

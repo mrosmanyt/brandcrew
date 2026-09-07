@@ -3,21 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Bot,
   CalendarDays,
-  Compass,
   CreditCard,
   LayoutGrid,
   ListChecks,
   LogOut,
-  Mail,
-  Megaphone,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  PenLine,
   Plus,
-  Search,
   Sparkles,
+  Store,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/brand/logo";
@@ -30,19 +27,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { MISSION_ROLES, employeeDisplayName, type AgentRole } from "@/lib/constants";
+import { displayAgentName } from "@/lib/constants";
+import type { AgentDTO } from "@/lib/job-types";
 import type { WorkspaceDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const AGENT_ICONS: Record<AgentRole, typeof Compass> = {
-  strategist: Compass,
-  writer: PenLine,
-  researcher: Search,
-  distributor: CalendarDays,
-  sales: Mail,
-  ads: Megaphone,
-  ops: ListChecks,
-};
 
 function StatusDot({ status }: { status?: string }) {
   const color =
@@ -61,6 +49,7 @@ function StatusDot({ status }: { status?: string }) {
 function NavBody({
   workspace,
   workspaces,
+  agents,
   agentStatus,
   collapsed,
   onToggle,
@@ -68,6 +57,7 @@ function NavBody({
 }: {
   workspace: WorkspaceDTO;
   workspaces: WorkspaceDTO[];
+  agents: AgentDTO[];
   agentStatus: Record<string, string>;
   collapsed: boolean;
   onToggle: () => void;
@@ -160,39 +150,43 @@ function NavBody({
         <div>
           {!collapsed ? (
             <p className="px-2 text-[11px] uppercase tracking-[0.14em] text-sidebar-foreground/45">
-              Employees
+              Agents
             </p>
           ) : null}
-          <ul className="mt-1 space-y-0.5">
-            {MISSION_ROLES.map((role) => {
-              const href = `/desk/${workspace.id}?agent=${role}`;
-              const onPage = pathname === `/desk/${workspace.id}/${role}`;
-              const Icon = AGENT_ICONS[role];
-              return (
-                <li key={role}>
-                  <Link
-                    href={href}
-                    title={employeeDisplayName(role)}
-                    className={cn(
-                      "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                      collapsed && "justify-center px-0",
-                      onPage
-                        ? "bg-sidebar-accent text-sidebar-foreground"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" />
-                    {!collapsed ? (
-                      <>
-                        <span className="flex-1 truncate">{employeeDisplayName(role)}</span>
-                        <StatusDot status={agentStatus[role]} />
-                      </>
-                    ) : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {agents.length === 0 && !collapsed ? (
+            <p className="px-2 pt-1 text-xs text-sidebar-foreground/50">
+              None yet — New Agent, Marketplace, or Launch team.
+            </p>
+          ) : (
+            <ul className="mt-1 space-y-0.5">
+              {agents.map((agent) => {
+                const href = `/desk/${workspace.id}?agentId=${agent.id}`;
+                return (
+                  <li key={agent.id}>
+                    <Link
+                      href={href}
+                      title={displayAgentName(agent.name)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                        collapsed && "justify-center px-0",
+                        "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      )}
+                    >
+                      <Bot className="size-4 shrink-0" />
+                      {!collapsed ? (
+                        <>
+                          <span className="flex-1 truncate">
+                            {displayAgentName(agent.name)}
+                          </span>
+                          <StatusDot status={agentStatus[agent.id]} />
+                        </>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
 
         <div>
@@ -209,6 +203,14 @@ function NavBody({
               icon={<LayoutGrid className="size-4" />}
             >
               Mission Control
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/marketplace`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Store className="size-4" />}
+            >
+              Marketplace
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/brand-kit`}
@@ -301,6 +303,7 @@ function SideLink({
 export function DeskSidebar(props: {
   workspace: WorkspaceDTO;
   workspaces: WorkspaceDTO[];
+  agents: AgentDTO[];
   agentStatus: Record<string, string>;
 }) {
   const router = useRouter();

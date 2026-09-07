@@ -1,0 +1,285 @@
+import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
+
+export const MARKETPLACE_BOT_CATEGORIES = [
+  "All",
+  "Featured",
+  "From Brandcrew",
+  "Engineering",
+  "Sales",
+  "Marketing",
+  "Design",
+  "Personal",
+  "Finance",
+  "Ops",
+  "Customer Support",
+  "Data & Analytics",
+] as const;
+
+export type MarketplaceBotCategory =
+  (typeof MARKETPLACE_BOT_CATEGORIES)[number];
+
+const FEATURED_BOT_IDS = new Set([
+  "bot-sales",
+  "bot-content",
+  "bot-research",
+  "bot-marketing",
+  "bot-whatsapp",
+  "bot-main",
+]);
+
+const BOT_COLORS: Record<string, string> = {
+  "bot-main": "#c45c26",
+  "bot-research": "#3f6b58",
+  "bot-manager": "#1f3d4c",
+  "bot-ads": "#b45309",
+  "bot-sales": "#9f1239",
+  "bot-marketing": "#6d28d9",
+  "bot-finance": "#0f766e",
+  "bot-whatsapp": "#15803d",
+  "bot-ops": "#57534e",
+  "bot-dev": "#1d4ed8",
+  "bot-content": "#be185d",
+  "bot-support": "#0369a1",
+};
+
+export type MarketplaceBot = {
+  id: string;
+  name: string;
+  role: string;
+  creator: string;
+  description: string;
+  instructions: string;
+  starter: string;
+  category: string;
+  featured: boolean;
+  color: string;
+};
+
+export const MARKETPLACE_BOTS: MarketplaceBot[] = TEAM_LAUNCH_ROLES.map(
+  (row) => ({
+    id: row.id,
+    name: row.role,
+    role: row.role,
+    creator: "Brandcrew",
+    description: row.blurb,
+    instructions: row.instructions,
+    starter: row.starter,
+    category: row.category,
+    featured: FEATURED_BOT_IDS.has(row.id),
+    color: BOT_COLORS[row.id] || "#c45c26",
+  }),
+);
+
+export function getMarketplaceBot(id: string) {
+  return MARKETPLACE_BOTS.find((bot) => bot.id === id) ?? null;
+}
+
+export function newAgentFromTemplate(templateId: string) {
+  const bot = getMarketplaceBot(templateId);
+  if (!bot) return null;
+  return {
+    templateId: bot.id,
+    name: DEFAULT_AGENT_NAME,
+    role: bot.role,
+    instructions: bot.instructions,
+    starter: bot.starter,
+  };
+}
+
+export const PLUGIN_CATEGORIES = [
+  "All",
+  "Featured",
+  "Agent Orchestration",
+  "Canvas",
+  "Customer Support",
+  "Data & Analytics",
+  "Productivity",
+  "Billing",
+  "Engineering",
+] as const;
+
+export type PluginAuth = "api_key" | "oauth";
+
+export type PluginDef = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  featured: boolean;
+  auth: PluginAuth;
+  oauthProvider?: "google" | "slack" | "notion";
+  scopes?: string[];
+  secretLabel?: string;
+  envKeys: string[];
+  docsUrl?: string;
+  tools: string[];
+  letter: string;
+  color: string;
+};
+
+export const MARKETPLACE_PLUGINS: PluginDef[] = [
+  {
+    id: "web-search",
+    name: "Web Search",
+    description: "Search the public web via Tavily. Jobs can call web_search when Connected.",
+    category: "Data & Analytics",
+    featured: true,
+    auth: "api_key",
+    secretLabel: "Tavily API key",
+    envKeys: ["TAVILY_API_KEY"],
+    docsUrl: "https://docs.tavily.com/documentation/api-reference/endpoint/search",
+    tools: ["web_search"],
+    letter: "W",
+    color: "#1d4ed8",
+  },
+  {
+    id: "gmail",
+    name: "Gmail",
+    description: "Search, read, draft, and manage email. OAuth — never marked Connected without a real callback.",
+    category: "Customer Support",
+    featured: true,
+    auth: "oauth",
+    oauthProvider: "google",
+    scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+    envKeys: ["GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET"],
+    tools: [],
+    letter: "G",
+    color: "#ea4335",
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    description: "Search channels and read workspace metadata. Brandcrew does not send Slack messages.",
+    category: "Customer Support",
+    featured: true,
+    auth: "oauth",
+    oauthProvider: "slack",
+    scopes: ["channels:read", "users:read", "search:read"],
+    envKeys: ["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"],
+    tools: [],
+    letter: "S",
+    color: "#4a154b",
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    description: "Connect a Notion workspace. Tokens are stored encrypted; Brandcrew does not invent page content.",
+    category: "Canvas",
+    featured: true,
+    auth: "oauth",
+    oauthProvider: "notion",
+    envKeys: ["NOTION_CLIENT_ID", "NOTION_CLIENT_SECRET"],
+    tools: [],
+    letter: "N",
+    color: "#111111",
+  },
+  {
+    id: "google-calendar",
+    name: "Google Calendar",
+    description: "Search events. Does not create or send calendar invites until you approve outside Brandcrew.",
+    category: "Productivity",
+    featured: true,
+    auth: "oauth",
+    oauthProvider: "google",
+    scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+    envKeys: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+    tools: [],
+    letter: "C",
+    color: "#0b8043",
+  },
+  {
+    id: "google-drive",
+    name: "Google Drive",
+    description: "Read file metadata after OAuth. No silent uploads.",
+    category: "Productivity",
+    featured: true,
+    auth: "oauth",
+    oauthProvider: "google",
+    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+    envKeys: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+    tools: [],
+    letter: "D",
+    color: "#188038",
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    description: "Store a restricted Stripe key for this workspace. Brandcrew never spends or creates charges.",
+    category: "Billing",
+    featured: false,
+    auth: "api_key",
+    secretLabel: "Stripe secret key",
+    envKeys: ["STRIPE_SECRET_KEY"],
+    docsUrl: "https://docs.stripe.com/keys",
+    tools: [],
+    letter: "$",
+    color: "#635bff",
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    description: "Personal access token for repo metadata. No commits, deploys, or secret scans from the desk.",
+    category: "Engineering",
+    featured: false,
+    auth: "api_key",
+    secretLabel: "GitHub personal access token",
+    envKeys: ["GITHUB_TOKEN"],
+    tools: [],
+    letter: "GH",
+    color: "#24292f",
+  },
+];
+
+export function getMarketplacePlugin(id: string) {
+  return MARKETPLACE_PLUGINS.find((plugin) => plugin.id === id) ?? null;
+}
+
+export type ApiKeyConnectInput = {
+  apiKey?: string;
+  useEnv?: boolean;
+};
+
+export type ApiKeyConnectResult =
+  | { ok: true; source: "workspace" | "env"; secret: string }
+  | { ok: false; error: string };
+
+export function envValuePresent(keys: string[]) {
+  return keys.some((key) => Boolean(process.env[key]?.trim()));
+}
+
+export function firstEnvValue(keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+/** Empty key + missing env → not connected. Never invent a Connected state. */
+export function resolveApiKeyConnect(
+  plugin: PluginDef,
+  input: ApiKeyConnectInput,
+): ApiKeyConnectResult {
+  if (plugin.auth !== "api_key") {
+    return { ok: false, error: "This plugin uses OAuth, not an API key form." };
+  }
+  const pasted = input.apiKey?.trim() || "";
+  if (pasted) {
+    return { ok: true, source: "workspace", secret: pasted };
+  }
+  if (input.useEnv) {
+    const fromEnv = firstEnvValue(plugin.envKeys);
+    if (!fromEnv) {
+      return {
+        ok: false,
+        error: `${plugin.envKeys.join(" or ")} is not set on the server. Paste a key or add the env var.`,
+      };
+    }
+    return { ok: true, source: "env", secret: "" };
+  }
+  return {
+    ok: false,
+    error: `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Connect cannot be empty.`,
+  };
+}

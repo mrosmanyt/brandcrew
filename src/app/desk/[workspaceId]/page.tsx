@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { MissionControl } from "@/components/desk/mission-control";
 import { getCurrentUser } from "@/lib/auth";
-import { CHAT_TARGETS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
-import { serializeJob, serializeSkill } from "@/lib/job-serialize";
+import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
 export default async function WorkspaceHomePage({
@@ -11,7 +10,7 @@ export default async function WorkspaceHomePage({
   searchParams,
 }: {
   params: Promise<{ workspaceId: string }>;
-  searchParams: Promise<{ agent?: string }>;
+  searchParams: Promise<{ agent?: string; agentId?: string }>;
 }) {
   const { workspaceId } = await params;
   const query = await searchParams;
@@ -23,7 +22,11 @@ export default async function WorkspaceHomePage({
   });
   if (!workspace) redirect("/desk");
 
-  const [jobs, skills, conversations] = await Promise.all([
+  const [agents, jobs, skills, conversations] = await Promise.all([
+    prisma.agent.findMany({
+      where: { workspaceId, status: { not: "archived" } },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
     prisma.job.findMany({
       where: { workspaceId },
       orderBy: { createdAt: "desc" },
@@ -48,19 +51,21 @@ export default async function WorkspaceHomePage({
 
   const initialMessages: Record<string, MessageDTO[]> = {};
   const initialArtifacts: Record<string, ArtifactDTO[]> = {};
-  for (const target of CHAT_TARGETS) {
-    initialMessages[target] = [];
-    initialArtifacts[target] = [];
+  for (const agent of agents) {
+    initialMessages[agent.id] = [];
+    initialArtifacts[agent.id] = [];
   }
   for (const conversation of conversations) {
-    initialMessages[conversation.agentRole] = conversation.messages;
-    initialArtifacts[conversation.agentRole] = conversation.artifacts;
+    const key = conversation.agentId || conversation.agentRole;
+    initialMessages[key] = conversation.messages;
+    initialArtifacts[key] = conversation.artifacts;
   }
 
   return (
     <MissionControl
       workspaceId={workspace.id}
-      initialAgent={query.agent}
+      initialAgentId={query.agentId || query.agent}
+      initialAgents={agents.map(serializeAgent)}
       initialJobs={jobs.map(serializeJob)}
       initialSkills={skills.map(serializeSkill)}
       initialMessages={initialMessages}

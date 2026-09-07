@@ -1,9 +1,8 @@
 import {
   AGENT_ROLES,
-  AGENT_META,
+  playbookHintFromRole,
   type AgentRole,
   type GenerateAction,
-  type MissionRole,
 } from "@/lib/constants";
 import { extractUrls } from "@/lib/fetch-url";
 import { JOB_TOOLS, type JobPlaybook, type JobStep, type JobTool } from "@/lib/job-types";
@@ -40,6 +39,10 @@ export function resetPlaybook(playbook: JobPlaybook): JobPlaybook {
   };
 }
 
+function approveStep(prompt: string): JobStep {
+  return makeStep("ask_user", "Pause for your approval", { prompt }, "approve");
+}
+
 export function linkedinWeekPlaybook(): JobPlaybook {
   return {
     key: "linkedin_week",
@@ -55,14 +58,8 @@ export function linkedinWeekPlaybook(): JobPlaybook {
           `post-${index}`,
         ),
       ),
-      makeStep(
-        "ask_user",
-        "Pause for your approval",
-        {
-          prompt:
-            "Approve Maya's five LinkedIn posts before they leave the desk. Ops will get a schedule card.",
-        },
-        "approve",
+      approveStep(
+        "Approve these five LinkedIn posts before they leave the desk. Nothing is published yet.",
       ),
     ],
   };
@@ -71,7 +68,7 @@ export function linkedinWeekPlaybook(): JobPlaybook {
 export function researchPackPlaybook(url?: string): JobPlaybook {
   return {
     key: "research_pack",
-    title: "Research pack",
+    title: "Research notes",
     agentRole: "researcher",
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
@@ -83,16 +80,11 @@ export function researchPackPlaybook(url?: string): JobPlaybook {
       ),
       makeStep(
         "write_artifact",
-        "Write research summary",
+        "Write sourced notes",
         { kind: "research_pack" },
         "summary",
       ),
-      makeStep(
-        "ask_user",
-        "Pause for your approval",
-        { prompt: "Approve Omar's research pack before it is shared with the crew." },
-        "approve",
-      ),
+      approveStep("Approve these sourced notes before they are shared."),
     ],
   };
 }
@@ -100,7 +92,7 @@ export function researchPackPlaybook(url?: string): JobPlaybook {
 export function salesPackPlaybook(): JobPlaybook {
   return {
     key: "sales_pack",
-    title: "Sales pack",
+    title: "Outbound drafts",
     agentRole: "sales",
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
@@ -110,44 +102,50 @@ export function salesPackPlaybook(): JobPlaybook {
         { kind: "sales_pack" },
         "pack",
       ),
-      makeStep(
-        "ask_user",
-        "Pause for your approval",
-        { prompt: "Approve Sam's outbound pack before anyone sends it." },
-        "approve",
-      ),
+      approveStep("Approve these outbound drafts. Brandcrew will not send them."),
     ],
   };
 }
 
-export function genericPlaybook(role: AgentRole, title?: string): JobPlaybook {
-  const meta = AGENT_META[role];
+export function genericPlaybook(role: AgentRole, title?: string, url?: string): JobPlaybook {
+  const fetchSteps = url
+    ? [makeStep("fetch_url", `Fetch ${url}`, { url }, "fetch")]
+    : [];
   return {
     key: "generic",
-    title: title || meta.artifact,
+    title: title || "Draft",
     agentRole: role,
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
-      makeStep(
-        "write_artifact",
-        `Write ${meta.artifact.toLowerCase()}`,
-        { kind: "generic" },
-        "artifact",
-      ),
-      makeStep(
-        "ask_user",
-        "Pause for your approval",
-        { prompt: `Approve ${employeePossessive(role)} draft before it leaves the desk.` },
-        "approve",
-      ),
+      ...fetchSteps,
+      makeStep("write_artifact", "Write the draft", { kind: "generic" }, "artifact"),
+      approveStep("Approve this draft before it leaves the desk. Nothing is sent or published."),
     ],
   };
 }
 
-function employeePossessive(role: AgentRole) {
-  const meta = AGENT_META[role];
-  if (meta.name === meta.label) return `the ${meta.label}`;
-  return `${meta.name}'s`;
+export function webSearchPlaybook(query?: string): JobPlaybook {
+  return {
+    key: "web_search",
+    title: "Web search",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "web_search",
+        query ? `Search: ${query}` : "Search the web",
+        { query: query || "" },
+        "search",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write notes from search",
+        { kind: "research_pack" },
+        "summary",
+      ),
+      approveStep("Approve these search notes before they are shared."),
+    ],
+  };
 }
 
 export function playbookFromKey(
@@ -155,16 +153,16 @@ export function playbookFromKey(
   role: AgentRole,
   message = "",
 ): JobPlaybook {
+  const url = extractUrls(message)[0];
   if (key === "linkedin_week") return linkedinWeekPlaybook();
-  if (key === "research_pack") {
-    return researchPackPlaybook(extractUrls(message)[0]);
-  }
+  if (key === "research_pack") return researchPackPlaybook(url);
   if (key === "sales_pack") return salesPackPlaybook();
-  return genericPlaybook(role);
+  if (key === "web_search") return webSearchPlaybook(message.trim());
+  return genericPlaybook(role, undefined, url);
 }
 
 export function inferPlaybookKey(
-  role: AgentRole | "team",
+  role: AgentRole | string,
   message: string,
   action?: GenerateAction,
 ): string {
@@ -172,31 +170,28 @@ export function inferPlaybookKey(
   if (action === "sales_pack") return "sales_pack";
   if (action === "research_pack") return "research_pack";
   const text = message.toLowerCase();
+  const hint = AGENT_ROLES.includes(role as AgentRole)
+    ? (role as AgentRole)
+    : playbookHintFromRole(String(role));
+  if (/web search|search the web|tavily/.test(text)) {
+    return "web_search";
+  }
   if (/linkedin week|week of (linkedin )?posts|generate week/.test(text)) {
     return "linkedin_week";
   }
   if (
-    role === "researcher" ||
-    /research pack|fetch_url|research (the )?(site|company)|competitor/.test(text)
+    /research pack|fetch_url|research (the )?(site|company|page)|competitor|https?:\/\//.test(
+      text,
+    ) ||
+    (hint === "researcher" && /site|url|company|competitor|fetch|browse/.test(text))
   ) {
     return "research_pack";
   }
-  if (role === "sales" && /sales pack|outbound|linkedin dm/.test(text)) {
+  if (hint === "sales" && /outbound|linkedin dm|email script/.test(text)) {
     return "sales_pack";
   }
-  if (role === "writer" && /linkedin|posts?/.test(text)) return "linkedin_week";
+  if (hint === "writer" && /linkedin|posts?/.test(text)) return "linkedin_week";
   return "generic";
-}
-
-export function routeTeamMessage(message: string): MissionRole {
-  const text = message.toLowerCase();
-  if (/omar|research|website|competitor|fetch/.test(text)) return "researcher";
-  if (/sam|sdr|outbound|email|dm/.test(text)) return "sales";
-  if (/lex|ad angle|paid social/.test(text)) return "ads";
-  if (/\bops\b|schedule|kanban/.test(text)) return "ops";
-  if (/strateg|icp|pillar/.test(text)) return "strategist";
-  if (/maya|writer|linkedin|post|week/.test(text)) return "writer";
-  return "writer";
 }
 
 export function isJobTool(value: string): value is JobTool {
@@ -233,24 +228,6 @@ function normalizeStep(input: unknown, index: number): JobStep {
     args,
     result: row.result ? String(row.result) : undefined,
   };
-}
-
-export function playbookFromJobPlan(
-  title: string,
-  agentRole: AgentRole,
-  plan: JobStep[],
-  key = "custom",
-): JobPlaybook {
-  return resetPlaybook({
-    key,
-    title,
-    agentRole,
-    steps: plan.map((step) => ({
-      ...step,
-      status: "pending",
-      result: undefined,
-    })),
-  });
 }
 
 export function parsePlaybookJson(raw: string): JobPlaybook | null {

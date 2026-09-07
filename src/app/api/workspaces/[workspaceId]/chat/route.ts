@@ -1,30 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { CHAT_TARGETS } from "@/lib/constants";
+import { GENERATE_ACTIONS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat } from "@/lib/job-runtime";
+import { isTeamLaunchIntent } from "@/lib/team-launch";
 import { BudgetError } from "@/lib/usage";
 
 export const maxDuration = 60;
 
-const ACTION_MESSAGES = {
-  generate_week:
-    "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval.",
-  sales_pack: "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs.",
-  research_pack:
-    "Give Omar a research-pack job. Fetch the company website from the Brand Kit.",
-  regenerate: "Regenerate the last artifact with the same brief.",
-  default: "",
-} as const;
-
 const postSchema = z.object({
-  agentRole: z.enum(CHAT_TARGETS),
+  agentId: z.string().min(1),
   message: z.string().max(4000).optional(),
-  action: z
-    .enum(["default", "generate_week", "sales_pack", "research_pack", "regenerate"])
-    .optional(),
+  action: z.enum(GENERATE_ACTIONS).optional(),
 });
 
 export async function GET(
@@ -35,11 +24,12 @@ export async function GET(
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     const url = new URL(request.url);
-    const agentRole = url.searchParams.get("agent") || "writer";
-    const conversation = await prisma.conversation.findUnique({
-      where: {
-        workspaceId_agentRole: { workspaceId, agentRole },
-      },
+    const agentId = url.searchParams.get("agentId") || "";
+    if (!agentId) {
+      return jsonOk({ messages: [], artifacts: [] });
+    }
+    const conversation = await prisma.conversation.findFirst({
+      where: { workspaceId, agentId },
       include: {
         messages: { orderBy: { createdAt: "asc" } },
         artifacts: { orderBy: { createdAt: "desc" }, take: 8 },
@@ -63,22 +53,14 @@ export async function POST(
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
     const action = body.action ?? "default";
-    let agentRole = body.agentRole;
-    if (action === "generate_week") agentRole = "writer";
-    if (action === "sales_pack") agentRole = "sales";
-    if (action === "research_pack") agentRole = "researcher";
-
-    const message =
-      body.message?.trim() ||
-      ACTION_MESSAGES[action] ||
-      "Give this employee a job from the Brand Kit.";
-    if (!message) {
-      return NextResponse.json({ error: "Write a short job." }, { status: 400 });
+    const message = body.message?.trim() || "Give this agent a job from the Brand Kit.";
+    if (isTeamLaunchIntent(message)) {
+      return jsonOk({ teamLaunch: true });
     }
 
     const result = await createJobFromChat({
       workspaceId,
-      agentRole,
+      agentId: body.agentId,
       message,
       action,
     });
@@ -106,7 +88,7 @@ export async function POST(
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Choose an employee and write a short job." },
+        { error: "Choose an agent and write a short job." },
         { status: 400 },
       );
     }

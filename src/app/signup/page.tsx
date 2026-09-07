@@ -42,7 +42,7 @@ export default function SignupPage() {
         <h1 className="font-heading mt-5 text-2xl">Start a desk</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           We will create a demo workspace with the Northline Studio Brand Kit so
-          you can open Mission Control and give Maya a job immediately.
+          you can open Mission Control, create agents, and give a real job.
         </p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">

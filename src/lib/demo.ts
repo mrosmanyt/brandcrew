@@ -273,7 +273,7 @@ export function demoResearchMarkdown(
   const source = fetched?.url || kit.website || "(no URL)";
   const excerpt = fetched?.text
     ? fetched.text.slice(0, 600)
-    : "No live page text. This pack is inferred from the Brand Kit so Maya and Sam still have a source of truth.";
+    : "No live page text. This pack is inferred from the Brand Kit so the agent still has a source of truth (offline demo).";
   return `# Research pack
 
 ## Source
@@ -296,7 +296,7 @@ The public page should sound as specific as the floor. If it reads like a chain,
 3. Forbidden: ${kit.forbiddenWords.slice(0, 4).join(", ") || "hype words"}.
 
 ## What not to copy
-Do not invent testimonials or traffic numbers. Omar only reports what was fetched plus the Brand Kit.
+Do not invent testimonials or traffic numbers. Report only what was fetched plus the Brand Kit.
 `;
 }
 
