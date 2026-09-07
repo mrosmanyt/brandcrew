@@ -548,7 +548,7 @@ export function MissionControl({
                     <div>
                       <p className="leading-5">{event.message}</p>
                       <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                        {event.type}
+                        {eventTypeLabel(event.type)}
                       </p>
                     </div>
                   </li>
@@ -657,6 +657,20 @@ function isChatTarget(value: string | undefined): value is ChatTarget {
     value &&
       (value === "team" || (MISSION_ROLES as readonly string[]).includes(value)),
   );
+}
+
+function eventTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    created: "queued",
+    plan: "plan",
+    step_start: "step",
+    tool_call: "tool",
+    tool_result: "result",
+    ask_user: "needs you",
+    status: "status",
+    error: "error",
+  };
+  return labels[type] ?? type.replaceAll("_", " ");
 }
 
 function jobStatusLabel(status: string) {
