@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
-import { encryptSecret, decryptSecret, appOrigin } from "@/lib/crypto-secret";
+import { encryptSecret, decryptSecret, oauthRedirectBase } from "@/lib/crypto-secret";
 import { ClientError } from "@/lib/http";
 import {
   envValuePresent,
@@ -268,8 +268,53 @@ export async function readOAuthState(token: string) {
   return { workspaceId, pluginId, userId };
 }
 
+export type OAuthTokens = {
+  accessToken: string;
+  refreshToken?: string;
+  tokenType?: string;
+  expiresAt?: number;
+  teamId?: string;
+  userId?: string;
+  botUserId?: string;
+};
+
+export function parseOAuthTokens(raw: string): OAuthTokens | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const accessToken = String(parsed.accessToken || parsed.access_token || "").trim();
+    if (!accessToken) return null;
+    const refreshToken = String(parsed.refreshToken || parsed.refresh_token || "").trim();
+    const expiresAt = Number(parsed.expiresAt || parsed.expires_at || 0);
+    return {
+      accessToken,
+      refreshToken: refreshToken || undefined,
+      tokenType: String(parsed.tokenType || parsed.token_type || "Bearer") || "Bearer",
+      expiresAt: expiresAt > 0 ? expiresAt : undefined,
+      teamId: String(parsed.teamId || "").trim() || undefined,
+      userId: String(parsed.userId || "").trim() || undefined,
+      botUserId: String(parsed.botUserId || "").trim() || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Google only sends refresh_token on the first consent — keep the previous one. */
+export function mergeOAuthTokens(
+  previous: OAuthTokens | null | undefined,
+  next: OAuthTokens,
+): OAuthTokens {
+  return {
+    ...previous,
+    ...next,
+    accessToken: next.accessToken,
+    refreshToken: next.refreshToken || previous?.refreshToken,
+    expiresAt: next.expiresAt || previous?.expiresAt,
+  };
+}
+
 export function oauthRedirectUri() {
-  return `${appOrigin()}/api/oauth/callback`;
+  return `${oauthRedirectBase()}/api/oauth/callback`;
 }
 
 export function oauthAuthorizeUrl(plugin: PluginDef, state: string) {
@@ -371,6 +416,9 @@ export async function exchangeOAuthCode(plugin: PluginDef, code: string) {
       ok?: boolean;
       error?: string;
       access_token?: string;
+      refresh_token?: string;
+      expires_in?: number;
+      bot_user_id?: string;
       team?: { name?: string; id?: string };
       authed_user?: { id?: string };
     };
@@ -380,13 +428,17 @@ export async function exchangeOAuthCode(plugin: PluginDef, code: string) {
     return {
       tokens: {
         accessToken: data.access_token,
+        refreshToken: data.refresh_token || "",
+        expiresAt: data.expires_in ? Date.now() + Number(data.expires_in) * 1000 : undefined,
         teamId: data.team?.id || "",
         userId: data.authed_user?.id || "",
+        botUserId: data.bot_user_id || "",
       },
       metadata: {
         source: "oauth",
         provider: "slack",
         teamName: data.team?.name || "",
+        botUserId: data.bot_user_id || "",
         connectedAt: new Date().toISOString(),
       },
     };
@@ -433,6 +485,27 @@ export async function persistOAuthConnection(input: {
   tokens: Record<string, unknown>;
   metadata: Record<string, unknown>;
 }) {
+  const incoming = parseOAuthTokens(JSON.stringify(input.tokens));
+  if (!incoming?.accessToken) {
+    throw new Error("OAuth succeeded but no access token was returned. Not marked Connected.");
+  }
+  const existing = await prisma.pluginConnection.findUnique({
+    where: {
+      workspaceId_pluginId: {
+        workspaceId: input.workspaceId,
+        pluginId: input.plugin.id,
+      },
+    },
+  });
+  const previous = (() => {
+    if (!existing?.secretEnc) return null;
+    try {
+      return parseOAuthTokens(decryptSecret(existing.secretEnc));
+    } catch {
+      return null;
+    }
+  })();
+  const tokens = mergeOAuthTokens(previous, incoming);
   const row = await prisma.pluginConnection.upsert({
     where: {
       workspaceId_pluginId: {
@@ -445,13 +518,131 @@ export async function persistOAuthConnection(input: {
       pluginId: input.plugin.id,
       status: "connected",
       metadata: JSON.stringify(input.metadata),
-      secretEnc: encryptSecret(JSON.stringify(input.tokens)),
+      secretEnc: encryptSecret(JSON.stringify(tokens)),
     },
     update: {
       status: "connected",
       metadata: JSON.stringify(input.metadata),
-      secretEnc: encryptSecret(JSON.stringify(input.tokens)),
+      secretEnc: encryptSecret(JSON.stringify(tokens)),
     },
   });
   return serializePluginConnection(input.plugin, row);
+}
+
+export async function getOAuthTokens(workspaceId: string, pluginId: string) {
+  const row = await prisma.pluginConnection.findUnique({
+    where: { workspaceId_pluginId: { workspaceId, pluginId } },
+  });
+  if (!row || row.status !== "connected" || !row.secretEnc) return null;
+  try {
+    return parseOAuthTokens(decryptSecret(row.secretEnc));
+  } catch {
+    return null;
+  }
+}
+
+async function writeOAuthTokens(
+  workspaceId: string,
+  pluginId: string,
+  tokens: OAuthTokens,
+  metadataPatch?: Record<string, unknown>,
+) {
+  const plugin = getMarketplacePlugin(pluginId);
+  if (!plugin) throw new Error("Unknown plugin.");
+  const row = await prisma.pluginConnection.findUnique({
+    where: { workspaceId_pluginId: { workspaceId, pluginId } },
+  });
+  if (!row || row.status !== "connected") {
+    throw new Error(`${plugin.name} is not connected.`);
+  }
+  let metadata = publicPluginMetadata(row.metadata);
+  if (metadataPatch) metadata = { ...metadata, ...metadataPatch };
+  await prisma.pluginConnection.update({
+    where: { id: row.id },
+    data: {
+      secretEnc: encryptSecret(JSON.stringify(tokens)),
+      metadata: JSON.stringify(metadata),
+    },
+  });
+  return tokens;
+}
+
+export async function refreshGoogleAccessToken(
+  workspaceId: string,
+  pluginId: string,
+  tokens: OAuthTokens,
+): Promise<OAuthTokens> {
+  if (!tokens.refreshToken) {
+    throw new Error(
+      "Gmail access expired and no refresh token is stored. Reconnect Gmail in Marketplace (Google only sends refresh_token on consent).",
+    );
+  }
+  const plugin = getMarketplacePlugin(pluginId);
+  if (!plugin) throw new Error("Unknown plugin.");
+  const client = oauthClient(plugin);
+  const body = new URLSearchParams({
+    client_id: client.id,
+    client_secret: client.secret,
+    refresh_token: tokens.refreshToken,
+    grant_type: "refresh_token",
+  });
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok || !data.access_token) {
+    throw new Error(String(data.error_description || data.error || "Google token refresh failed. Reconnect Gmail."));
+  }
+  const next = mergeOAuthTokens(tokens, {
+    accessToken: String(data.access_token),
+    refreshToken: String(data.refresh_token || ""),
+    tokenType: String(data.token_type || "Bearer"),
+    expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000,
+  });
+  return writeOAuthTokens(workspaceId, pluginId, next, {
+    refreshedAt: new Date().toISOString(),
+  });
+}
+
+export async function refreshSlackAccessToken(
+  workspaceId: string,
+  tokens: OAuthTokens,
+): Promise<OAuthTokens> {
+  if (!tokens.refreshToken) {
+    return tokens;
+  }
+  const plugin = getMarketplacePlugin("slack");
+  if (!plugin) throw new Error("Unknown plugin.");
+  const client = oauthClient(plugin);
+  const body = new URLSearchParams({
+    client_id: client.id,
+    client_secret: client.secret,
+    grant_type: "refresh_token",
+    refresh_token: tokens.refreshToken,
+  });
+  const res = await fetch("https://slack.com/api/oauth.v2.access", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const data = (await res.json()) as {
+    ok?: boolean;
+    error?: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+  if (!data.ok || !data.access_token) {
+    throw new Error(data.error || "Slack token refresh failed. Reconnect Slack.");
+  }
+  const next = mergeOAuthTokens(tokens, {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || "",
+    expiresAt: data.expires_in ? Date.now() + Number(data.expires_in) * 1000 : undefined,
+  });
+  return writeOAuthTokens(workspaceId, "slack", next, {
+    refreshedAt: new Date().toISOString(),
+  });
 }

@@ -44,6 +44,15 @@ for (const id of plugins) {
 const web = getMarketplacePlugin("web-search");
 assert.equal(web?.auth, "api_key");
 assert.deepEqual(web?.tools, ["web_search"]);
+assert.deepEqual(getMarketplacePlugin("gmail")?.tools, [
+  "gmail_list_recent",
+  "gmail_create_draft",
+]);
+assert.deepEqual(getMarketplacePlugin("slack")?.tools, [
+  "slack_list_channels",
+  "slack_draft_message",
+  "slack_post_message",
+]);
 assert.equal(getMarketplacePlugin("gmail")?.auth, "oauth");
 assert.equal(getMarketplacePlugin("slack")?.auth, "oauth");
 console.log(`ok: ${MARKETPLACE_PLUGINS.length} plugins`);

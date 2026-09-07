@@ -24,7 +24,11 @@ import {
   webSearchPlaybook,
   adAnglesFromUrlPlaybook,
   ensureAskUser,
+  gmailDraftPlaybook,
+  gmailInboxPlaybook,
+  slackPostPlaybook,
 } from "../src/lib/job-playbooks";
+import { slackPostAllowed } from "../src/lib/slack";
 import { resolveRunOutput } from "../src/lib/live-output";
 import { isTeamLaunchIntent, proposeBusinessTeam, TEAM_LAUNCH_ROLES } from "../src/lib/team-launch";
 import {
@@ -86,7 +90,28 @@ assert.equal(
   "outreach_from_research",
 );
 assert.equal(inferPlaybookKey("ads", "ad angles from the landing page"), "ad_angles_from_url");
+assert.equal(inferPlaybookKey("ops", "list recent gmail"), "gmail_inbox");
+assert.equal(inferPlaybookKey("sales", "create a gmail draft to alex@example.com"), "gmail_draft");
+assert.equal(inferPlaybookKey("ops", "post this to slack"), "slack_post");
 console.log("ok: playbook inference");
+
+const gmailInbox = gmailInboxPlaybook();
+assert.equal(gmailInbox.steps.some((step) => step.tool === "gmail_list_recent"), true);
+assert.equal(gmailInbox.steps.at(-1)?.tool, "ask_user");
+const gmailDraft = gmailDraftPlaybook();
+assert.equal(gmailDraft.steps.some((step) => step.tool === "gmail_create_draft"), true);
+assert.equal(gmailDraft.steps.some((step) => step.tool === "gmail_list_recent"), false);
+const slackPost = slackPostPlaybook();
+assert.equal(slackPost.steps.some((step) => step.tool === "slack_draft_message"), true);
+assert.equal(slackPost.steps.some((step) => step.tool === "ask_user"), true);
+assert.equal(slackPost.steps.at(-1)?.tool, "slack_post_message");
+const postStep = slackPost.steps.find((step) => step.tool === "slack_post_message")!;
+assert.equal(slackPostAllowed(slackPost.steps, postStep.id), false);
+const approvedPlan = slackPost.steps.map((step) =>
+  step.tool === "ask_user" ? { ...step, status: "done" as const } : step,
+);
+assert.equal(slackPostAllowed(approvedPlan, postStep.id), true);
+console.log("ok: Gmail/Slack playbooks; post requires completed ask_user");
 
 const roundTrip = parsePlan(JSON.stringify(week.steps));
 assert.equal(roundTrip.length, week.steps.length);

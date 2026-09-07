@@ -181,14 +181,10 @@ export function MarketplaceDesk({
     await refresh();
   }
 
-  function onPluginAction(plugin: PluginRow) {
-    if (plugin.connected) {
-      void disconnect(plugin);
-      return;
-    }
+  function startConnect(plugin: PluginRow, reconnect = false) {
     if (plugin.auth === "oauth") {
       if (!plugin.connection?.oauthReady) {
-        toast.error(plugin.connection?.setupHint || "OAuth is not configured.");
+        toast.error(plugin.connection?.setupHint || "OAuth is not configured. Connect stays disconnected.");
         return;
       }
       window.location.href = `/api/workspaces/${workspaceId}/plugins/${plugin.id}/oauth/start`;
@@ -196,6 +192,7 @@ export function MarketplaceDesk({
     }
     setApiKey("");
     setConnectPlugin(plugin);
+    void reconnect;
   }
 
   return (
@@ -352,7 +349,9 @@ export function MarketplaceDesk({
                     key={plugin.id}
                     plugin={plugin}
                     busy={busyId === plugin.id}
-                    onAction={() => onPluginAction(plugin)}
+                    onConnect={() => startConnect(plugin)}
+                    onReconnect={() => startConnect(plugin, true)}
+                    onDisconnect={() => disconnect(plugin)}
                   />
                 ))}
               </div>
@@ -381,7 +380,9 @@ export function MarketplaceDesk({
                       key={plugin.id}
                       plugin={plugin}
                       busy={busyId === plugin.id}
-                      onAction={() => onPluginAction(plugin)}
+                      onConnect={() => startConnect(plugin)}
+                      onReconnect={() => startConnect(plugin, true)}
+                      onDisconnect={() => disconnect(plugin)}
                     />
                   ))}
                 </div>
@@ -569,11 +570,15 @@ function ListBotCard({
 function PluginCard({
   plugin,
   busy,
-  onAction,
+  onConnect,
+  onReconnect,
+  onDisconnect,
 }: {
   plugin: PluginRow;
   busy: boolean;
-  onAction: () => void;
+  onConnect: () => void;
+  onReconnect: () => void;
+  onDisconnect: () => void;
 }) {
   return (
     <article className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-3">
@@ -586,16 +591,29 @@ function PluginCard({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{plugin.name}</p>
         <p className="line-clamp-2 text-xs text-muted-foreground">{plugin.description}</p>
+        {plugin.connected ? (
+          <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-primary">Connected</p>
+        ) : plugin.auth === "oauth" && !plugin.connection?.oauthReady ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {plugin.connection?.setupHint || "OAuth client id missing — Connect stays disconnected."}
+          </p>
+        ) : null}
       </div>
-      <Button
-        size="sm"
-        variant={plugin.connected ? "secondary" : "outline"}
-        disabled={busy}
-        onClick={onAction}
-      >
-        {busy ? <Loader2 className="animate-spin" /> : plugin.connected ? <Check /> : null}
-        {plugin.connected ? "Connected" : "Connect"}
-      </Button>
+      {plugin.connected ? (
+        <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+          <Button size="sm" variant="outline" disabled={busy} onClick={onReconnect}>
+            Reconnect
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={onDisconnect}>
+            Disconnect
+          </Button>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" disabled={busy} onClick={onConnect}>
+          {busy ? <Loader2 className="animate-spin" /> : null}
+          Connect
+        </Button>
+      )}
     </article>
   );
 }

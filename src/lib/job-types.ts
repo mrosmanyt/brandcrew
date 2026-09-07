@@ -11,6 +11,11 @@ export const JOB_TOOLS = [
   "browser_type",
   "crawl_links",
   "read_artifact",
+  "gmail_list_recent",
+  "gmail_create_draft",
+  "slack_list_channels",
+  "slack_draft_message",
+  "slack_post_message",
   "write_artifact",
   "ask_user",
 ] as const;
@@ -83,6 +88,10 @@ export type JobContext = {
   weekPosts?: { title: string; body: string }[];
   userUrl?: string;
   competitorUrls?: string[];
+  gmailMessages?: { id: string; threadId?: string; from: string; subject: string; date: string }[];
+  gmailDraft?: { id: string; to: string; subject: string };
+  slackChannels?: { id: string; name: string; isPrivate?: boolean }[];
+  slackDraft?: { channel: string; channelName?: string; text: string };
 };
 
 export type JobEventDTO = {

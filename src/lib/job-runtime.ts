@@ -27,6 +27,11 @@ import {
   demoResearchMarkdown,
 } from "@/lib/demo";
 import { extractUrls, fetchUrlText } from "@/lib/fetch-url";
+import {
+  formatGmailList,
+  gmailCreateDraft,
+  gmailListRecent,
+} from "@/lib/gmail";
 import { resolveLivePosts, resolveRunOutput } from "@/lib/live-output";
 import {
   defaultCompetitorUrls,
@@ -54,6 +59,12 @@ import type {
 } from "@/lib/job-types";
 import { llm } from "@/lib/llm";
 import { connectedToolNames, getConnectedPlugin } from "@/lib/plugins";
+import {
+  formatSlackChannels,
+  slackListChannels,
+  slackPostAllowed,
+  slackPostMessage,
+} from "@/lib/slack";
 import { assertWorkspaceBudget, recordUsage } from "@/lib/usage";
 import { tavilySearch } from "@/lib/web-search";
 
@@ -469,7 +480,7 @@ async function planSteps(input: {
             agentRoleLabel: input.agentRoleLabel,
             role: input.role,
             agentInstructions: input.agentInstructions,
-            webSearchAvailable: connected.includes("web_search"),
+            connectedTools: connected,
           }),
         },
         {
@@ -771,6 +782,137 @@ async function executeTool(input: {
     };
   }
 
+  if (step.tool === "gmail_list_recent") {
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: "gmail_list_recent",
+      stepId: step.id,
+      data: { tool: "gmail_list_recent" },
+    });
+    const messages = await gmailListRecent({
+      workspaceId: input.workspaceId,
+      max: Number(step.args.max || 8),
+    });
+    context.gmailMessages = messages;
+    return {
+      summary: messages.length
+        ? `gmail_list_recent — ${messages.length} message${messages.length === 1 ? "" : "s"}`
+        : "gmail_list_recent — inbox empty",
+      context,
+      excerpt: formatGmailList(messages).slice(0, 280),
+    };
+  }
+
+  if (step.tool === "gmail_create_draft") {
+    const to =
+      String(step.args.to || "").trim() ||
+      extractEmail(input.prompt) ||
+      "";
+    const subject =
+      String(step.args.subject || "").trim() ||
+      `Note from ${input.agentName}`;
+    const body =
+      String(step.args.body || "").trim() ||
+      input.prompt.trim() ||
+      "Draft from Brandcrew. Not sent.";
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `gmail_create_draft to ${to || "(missing)"}`,
+      stepId: step.id,
+      data: { tool: "gmail_create_draft", to },
+    });
+    const draft = await gmailCreateDraft({
+      workspaceId: input.workspaceId,
+      to,
+      subject,
+      body,
+    });
+    context.gmailDraft = draft;
+    return {
+      summary: `gmail_create_draft ${draft.id} to ${draft.to} (not sent)`,
+      context,
+    };
+  }
+
+  if (step.tool === "slack_list_channels") {
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: "slack_list_channels",
+      stepId: step.id,
+      data: { tool: "slack_list_channels" },
+    });
+    const channels = await slackListChannels(input.workspaceId);
+    context.slackChannels = channels;
+    return {
+      summary: channels.length
+        ? `slack_list_channels — ${channels.length} channel${channels.length === 1 ? "" : "s"}`
+        : "slack_list_channels — none visible",
+      context,
+      excerpt: formatSlackChannels(channels).slice(0, 280),
+    };
+  }
+
+  if (step.tool === "slack_draft_message") {
+    const channelArg = String(step.args.channel || "").trim();
+    const named = context.slackChannels?.find(
+      (channel) =>
+        channel.id === channelArg ||
+        channel.name === channelArg.replace(/^#/, ""),
+    );
+    const picked = named || context.slackChannels?.[0];
+    const channel = picked?.id || channelArg;
+    const channelName = picked?.name || channelArg;
+    const text =
+      String(step.args.text || "").trim() ||
+      input.prompt.trim() ||
+      "";
+    if (!channel || !text) {
+      throw new Error("slack_draft_message needs a channel and message text.");
+    }
+    context.slackDraft = { channel, channelName, text };
+    const written = await writeJobArtifact(
+      { ...input, step: { ...step, args: { ...step.args, kind: "slack_draft" } } },
+      context,
+    );
+    return {
+      summary: `Drafted Slack message for #${channelName} (not posted)`,
+      context: written.context,
+      artifactId: written.id,
+    };
+  }
+
+  if (step.tool === "slack_post_message") {
+    const job = await prisma.job.findUnique({ where: { id: input.jobId } });
+    const plan = parsePlan(job?.plan || []);
+    if (!slackPostAllowed(plan, step.id)) {
+      throw new Error(
+        "Refused: slack_post_message requires a completed ask_user approval step first.",
+      );
+    }
+    const draft = context.slackDraft;
+    const channel = String(step.args.channel || draft?.channel || "").trim();
+    const text = String(step.args.text || draft?.text || "").trim();
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `slack_post_message ${channel}`,
+      stepId: step.id,
+      data: { tool: "slack_post_message", channel },
+    });
+    const posted = await slackPostMessage({
+      workspaceId: input.workspaceId,
+      channel,
+      text,
+    });
+    return {
+      summary: `Posted to Slack ${posted.channel} (ts ${posted.ts})`,
+      context,
+    };
+  }
+
   if (step.tool === "write_artifact") {
     const written = await writeJobArtifact(input, context);
     return {
@@ -822,6 +964,11 @@ function rememberPage(context: JobContext, page: BrowsedPage) {
   context.currentPage = page;
   context.pageCount = (context.pageCount || 0) + 1;
   context.fetched = { url: page.url, ok: page.ok, text: page.text };
+}
+
+function extractEmail(text: string) {
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match?.[0] || "";
 }
 
 async function writeJobArtifact(
@@ -922,6 +1069,36 @@ async function writeJobArtifact(
     model = pack.model;
     provider = pack.provider;
     tokens = pack.tokens;
+  } else if (kind === "gmail_inbox") {
+    title = "Recent Gmail";
+    content = `# Recent Gmail\n\n${formatGmailList(context.gmailMessages || [])}\n`;
+    type = "gmail_inbox";
+    model = "gmail";
+    provider = "gmail";
+  } else if (kind === "gmail_draft") {
+    const draft = context.gmailDraft;
+    title = draft ? `Gmail draft to ${draft.to}` : "Gmail draft";
+    content = `# Gmail draft (not sent)\n\n${
+      draft
+        ? `Draft id: ${draft.id}\nTo: ${draft.to}\nSubject: ${draft.subject}\n`
+        : "No draft id captured."
+    }\nRequest:\n${input.prompt}\n`;
+    type = "gmail_draft";
+    model = "gmail";
+    provider = "gmail";
+  } else if (kind === "slack_channels") {
+    title = "Slack channels";
+    content = `# Slack channels\n\n${formatSlackChannels(context.slackChannels || [])}\n`;
+    type = "slack_channels";
+    model = "slack";
+    provider = "slack";
+  } else if (kind === "slack_draft") {
+    const draft = context.slackDraft;
+    title = draft ? `Slack draft for #${draft.channelName || draft.channel}` : "Slack draft";
+    content = `# Slack draft (not posted)\n\nChannel: ${draft?.channelName || draft?.channel || "(none)"}\nId: ${draft?.channel || ""}\n\n${draft?.text || ""}\n`;
+    type = "slack_draft";
+    model = "slack";
+    provider = "slack";
   } else {
     const generated = await generateAgentArtifact({
       role: input.agentRole,
@@ -1400,6 +1577,20 @@ export async function completeJobIfApproved(jobId: string) {
     step.status === "paused" ? { ...step, status: "done" as const } : step,
   );
   await savePlan(jobId, steps);
+  const remaining = steps.filter((step) => step.status === "pending");
+  if (remaining.length) {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { status: "queued", askPrompt: "", runnerLock: "" },
+    });
+    await appendEvent({
+      jobId,
+      type: "status",
+      message: "Approval received — continuing the plan.",
+    });
+    scheduleJobRun(jobId);
+    return loadJob(jobId);
+  }
   await prisma.job.update({
     where: { id: jobId },
     data: { status: "done", askPrompt: "" },

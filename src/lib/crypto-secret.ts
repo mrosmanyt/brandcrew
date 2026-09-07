@@ -31,8 +31,15 @@ export function decryptSecret(payload: string) {
 }
 
 export function appOrigin() {
-  return (process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:43180").replace(
-    /\/$/,
-    "",
-  );
+  return oauthRedirectBase();
+}
+
+/** OAuth callback origin. Prefer OAUTH_REDIRECT_BASE, then APP_URL, then NEXT_PUBLIC_APP_URL. */
+export function oauthRedirectBase() {
+  const raw =
+    process.env.OAUTH_REDIRECT_BASE ||
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://127.0.0.1:43180";
+  return raw.replace(/\/$/, "");
 }

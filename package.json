@@ -14,6 +14,7 @@
     "test:llm": "tsx scripts/check-llm-router.ts",
     "test:jobs": "tsx scripts/check-job-runtime.ts",
     "test:marketplace": "tsx scripts/check-marketplace.ts",
+    "test:oauth": "tsx scripts/check-oauth-plugins.ts",
     "test:browse": "tsx scripts/check-browse.ts"
   },
   "dependencies": {
