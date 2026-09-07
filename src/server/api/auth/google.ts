@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       );
     }
     return NextResponse.redirect(
-      bounceUrl(url.searchParams.get("intent"), "google_not_configured", hint),
+      bounceUrl(url.searchParams.get("intent"), "google_not_configured"),
     );
   }
 
