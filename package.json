@@ -16,7 +16,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "node scripts/prisma-generate.mjs",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "node scripts/prisma-generate.mjs --with-migrate && next build",
     "test:llm": "tsx scripts/check-llm-router.ts",
     "test:jobs": "tsx scripts/check-job-runtime.ts",
     "test:marketplace": "tsx scripts/check-marketplace.ts",
