@@ -332,7 +332,11 @@ export function MissionControl({
     router.refresh();
   }
 
-  async function startJob(action: GenerateAction = "default", message?: string) {
+  async function startJob(
+    action: GenerateAction = "default",
+    message?: string,
+    playbookKey?: string,
+  ) {
     if (!selected) {
       toast.error("Create or select an agent first.");
       return;
@@ -348,6 +352,7 @@ export function MissionControl({
         agentId: selected.id,
         message: text || undefined,
         action,
+        playbookKey,
       }),
     });
     const data = await res.json();
@@ -596,8 +601,9 @@ export function MissionControl({
                 <div className="max-w-md">
                   <Bot className="size-4 text-muted-foreground" />
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    Name the job. Progress shows in this thread — reading the kit,
-                    opening URLs, writing drafts — then the agent waits for you.
+                    Name the job below, or pick a category. Progress shows in
+                    this thread — reading the kit, writing drafts — then the
+                    agent waits for you.
                   </p>
                 </div>
               ) : null}
@@ -630,14 +636,12 @@ export function MissionControl({
             workspaceId={workspaceId}
             value={input}
             onChange={setInput}
-            onSubmit={(message) => startJob("default", message)}
+            onSubmit={(message, intent) =>
+              startJob(intent.action, message, intent.playbookKey)
+            }
             busy={busy}
             disabled={!selected}
-            placeholder={
-              selected
-                ? "Add a message, or hit send."
-                : "Create an agent first"
-            }
+            showHero={!thread.length && !latestDraft}
             usageLabel={
               atCap
                 ? "Budget reached."

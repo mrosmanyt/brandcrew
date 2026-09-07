@@ -296,6 +296,44 @@ export function appBuilderPlaybook(): JobPlaybook {
   };
 }
 
+export function deckBuilderPlaybook(): JobPlaybook {
+  return {
+    key: "deck_builder",
+    title: "Pitch deck",
+    agentRole: "builder",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "write_artifact",
+        "Write the deck HTML",
+        { kind: "deck" },
+        "deck",
+      ),
+      approveStep(
+        "Approve this deck. Preview is local — nothing is published.",
+      ),
+    ],
+  };
+}
+
+export function brandKitDraftPlaybook(): JobPlaybook {
+  return {
+    key: "brand_kit_draft",
+    title: "Brand Kit creative",
+    agentRole: "strategist",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "write_artifact",
+        "Write Brand Kit creative",
+        { kind: "brand_kit_draft" },
+        "draft",
+      ),
+      approveStep("Approve this Brand Kit creative before it leaves the desk."),
+    ],
+  };
+}
+
 export function genericPlaybook(role: AgentRole, title?: string, url?: string): JobPlaybook {
   const browse = url
     ? [
@@ -517,6 +555,8 @@ export function playbookFromKey(
   if (key === "slack_post") return slackPostPlaybook();
   if (key === "website_builder") return websiteBuilderPlaybook();
   if (key === "app_builder") return appBuilderPlaybook();
+  if (key === "deck_builder") return deckBuilderPlaybook();
+  if (key === "brand_kit_draft") return brandKitDraftPlaybook();
   return genericPlaybook(role, undefined, url);
 }
 
@@ -533,6 +573,8 @@ export function inferPlaybookKey(
   if (action === "ad_angles_from_url") return "ad_angles_from_url";
   if (action === "build_website") return "website_builder";
   if (action === "build_app") return "app_builder";
+  if (action === "build_deck") return "deck_builder";
+  if (action === "brand_kit_draft") return "brand_kit_draft";
   if (action === "inbox_replies") return "inbox_replies";
   if (action === "whatsapp_drafts") return "whatsapp_drafts";
   const text = message.toLowerCase();
@@ -617,6 +659,18 @@ export function inferPlaybookKey(
     return "app_builder";
   }
   if (
+    /pitch deck|slide deck|presentation deck|build (an? |the )?(deck|slides|presentation)/.test(
+      text,
+    )
+  ) {
+    return "deck_builder";
+  }
+  if (
+    /brand kit (creative|draft)|creative draft|visual direction/.test(text)
+  ) {
+    return "brand_kit_draft";
+  }
+  if (
     /build (an? |the )?(website|landing|site)|website builder|one-page site/.test(
       text,
     )
@@ -624,6 +678,7 @@ export function inferPlaybookKey(
     return "website_builder";
   }
   if (hint === "builder") {
+    if (/deck|slides|presentation/.test(text)) return "deck_builder";
     if (/^app$|app builder/.test(String(role).toLowerCase())) return "app_builder";
     return "website_builder";
   }

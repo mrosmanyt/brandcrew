@@ -31,6 +31,8 @@ import {
   whatsappDraftsPlaybook,
   websiteBuilderPlaybook,
   appBuilderPlaybook,
+  brandKitDraftPlaybook,
+  deckBuilderPlaybook,
 } from "../src/lib/job-playbooks";
 import { slackPostAllowed } from "../src/lib/slack";
 import { resolveRunOutput } from "../src/lib/live-output";
@@ -101,6 +103,10 @@ assert.equal(inferPlaybookKey("sales", "create a gmail draft to alex@example.com
 assert.equal(inferPlaybookKey("ops", "post this to slack"), "slack_post");
 assert.equal(inferPlaybookKey("Website", "Build a website"), "website_builder");
 assert.equal(inferPlaybookKey("App", "Build an app"), "app_builder");
+assert.equal(inferPlaybookKey("builder", "Build a pitch deck"), "deck_builder");
+assert.equal(inferPlaybookKey("strategist", "Brand Kit creative draft"), "brand_kit_draft");
+assert.equal(inferPlaybookKey("writer", "", "build_deck"), "deck_builder");
+assert.equal(inferPlaybookKey("writer", "", "brand_kit_draft"), "brand_kit_draft");
 console.log("ok: playbook inference");
 
 const website = websiteBuilderPlaybook();
@@ -109,7 +115,15 @@ assert.equal(website.steps.some((step) => step.args.kind === "website"), true);
 assert.equal(website.steps.at(-1)?.tool, "ask_user");
 const appJob = appBuilderPlaybook();
 assert.equal(appJob.steps.some((step) => step.args.kind === "app"), true);
-console.log("ok: website/app builder playbooks");
+const deck = deckBuilderPlaybook();
+assert.equal(deck.agentRole, "builder");
+assert.equal(deck.steps.some((step) => step.args.kind === "deck"), true);
+assert.equal(deck.steps.at(-1)?.tool, "ask_user");
+const kitDraft = brandKitDraftPlaybook();
+assert.equal(kitDraft.agentRole, "strategist");
+assert.equal(kitDraft.steps.some((step) => step.args.kind === "brand_kit_draft"), true);
+assert.equal(kitDraft.steps.at(-1)?.tool, "ask_user");
+console.log("ok: website/app/deck/brand-kit builder playbooks");
 
 const gmailInbox = gmailInboxPlaybook();
 assert.equal(gmailInbox.steps.some((step) => step.tool === "gmail_list_recent"), true);

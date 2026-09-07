@@ -625,6 +625,104 @@ export function demoWebsiteHtml(kit: BrandKit) {
 </html>`;
 }
 
+export function demoBrandKitDraft(kit: BrandKit) {
+  const { offer, audience, voice } = company(kit);
+  const samples = kit.samplePosts.slice(0, 2);
+  return {
+    type: "brand_kit_draft",
+    title: `${brandLabel(kit)} creative draft`,
+    summary: "Voice lines, visual direction, and headlines from the Brand Kit. Not published.",
+    content: `# Brand Kit creative
+
+## Voice
+${voice}
+
+## Who it is for
+${audience}
+
+## Offer, said plainly
+${offer}
+
+## Visual direction
+Warm paper, one dark mark, no coral gradients. Type stays large and specific. Photography should look like the floor — not a stock lobby.
+
+## Headline options
+1. The rooms already know who you are.
+2. If the floor can say it, the site can too.
+3. One property. Eight weeks. A look the staff can brief.
+
+## Lines that already work
+${samples.length ? samples.map((line) => `- ${line}`).join("\n") : "- Write the sentence the GM says at pre-shift."}
+
+## What not to say
+Avoid ${kit.forbiddenWords.slice(0, 5).join(", ") || "generic agency adjectives"}.
+`,
+  };
+}
+
+export function demoDeckHtml(kit: BrandKit) {
+  const name = escapeHtml(brandLabel(kit));
+  const offer = escapeHtml(kit.offer || "A clear offer, written in your voice.");
+  const audience = escapeHtml(kit.audience || "the people you already serve");
+  const voice = escapeHtml(kit.voice || "clear and specific");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${name} deck</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: #111110; color: #f4f1ea; }
+    .deck { display: grid; gap: 0; }
+    section { min-height: 100vh; padding: 2.5rem 2rem; border-bottom: 1px solid #2a2926; display: flex; flex-direction: column; justify-content: center; }
+    .kicker { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: #c4b49a; margin: 0 0 0.75rem; }
+    h1, h2 { letter-spacing: -0.04em; line-height: 1.1; margin: 0 0 0.75rem; }
+    h1 { font-size: clamp(2rem, 6vw, 3.2rem); }
+    h2 { font-size: clamp(1.5rem, 4vw, 2.2rem); }
+    p { line-height: 1.6; color: #d8d2c6; max-width: 36rem; }
+    ol { margin: 0; padding-left: 1.1rem; color: #d8d2c6; line-height: 1.7; }
+    .note { margin-top: 1.5rem; font-size: 0.75rem; color: #8a8478; }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <section>
+      <p class="kicker">Offline demo · not published</p>
+      <h1>${name}</h1>
+      <p>${offer}</p>
+    </section>
+    <section>
+      <p class="kicker">Audience</p>
+      <h2>Built for people who already know the product is good</h2>
+      <p>${audience}</p>
+    </section>
+    <section>
+      <p class="kicker">Voice</p>
+      <h2>How it should sound</h2>
+      <p>${voice}</p>
+    </section>
+    <section>
+      <p class="kicker">The work</p>
+      <h2>Eight weeks, one property</h2>
+      <ol>
+        <li>Positioning the floor already believes.</li>
+        <li>A look the staff can brief in 20 minutes.</li>
+        <li>A launch kit — not a slide that dies in email.</li>
+      </ol>
+    </section>
+    <section>
+      <p class="kicker">Next</p>
+      <h2>Approve the deck, then we write the site</h2>
+      <p>CINEM Pro does not publish this. Preview stays on the desk.</p>
+      <p class="note">Generated from the Brand Kit. Local iframe only.</p>
+    </section>
+  </div>
+</body>
+</html>`;
+}
+
 export function demoAppHtml(kit: BrandKit) {
   const name = escapeHtml(brandLabel(kit));
   const offer = escapeHtml(kit.offer || "the offer");

@@ -55,6 +55,17 @@ export const FEATURED_JOB_TEMPLATES: JobTemplate[] = [
     roleHint: "Sales",
     featured: true,
   },
+  {
+    id: "tpl-deck",
+    title: "Pitch deck",
+    blurb: "Short Brand Kit slide deck as local HTML. Preview in the desk. Not published.",
+    playbookKey: "deck_builder",
+    action: "build_deck",
+    message:
+      "Build a short pitch deck from the Brand Kit. Return a complete HTML slide deck the desk can preview. Do not publish.",
+    roleHint: "Website",
+    featured: true,
+  },
 ];
 
 export function getJobTemplate(id: string) {

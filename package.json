@@ -31,6 +31,7 @@
     "test:desk-settings": "tsx scripts/check-desk-settings.ts",
     "test:desk-theme": "tsx scripts/check-desk-theme.ts",
     "test:hero-demo": "tsx scripts/check-hero-demo.ts",
+    "test:build-prompt": "tsx scripts/check-build-prompt.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:build": "node scripts/desktop-build.mjs",
     "desktop:build:win": "node scripts/desktop-build.mjs --win",

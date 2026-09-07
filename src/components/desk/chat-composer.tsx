@@ -3,14 +3,22 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  AppWindow,
   ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
   FileText,
   LayoutGrid,
+  Layers,
   Loader2,
   Mic,
   Paperclip,
   Plug,
   Plus,
+  RefreshCw,
+  Smartphone,
+  SquareDashedMousePointer,
   Video,
   X,
 } from "lucide-react";
@@ -35,6 +43,17 @@ import {
   isComposerTextFile,
   type ComposerAttachment,
 } from "@/lib/composer";
+import {
+  BUILD_PROMPT_CATEGORIES,
+  BUILD_PROMPT_HEADLINE,
+  BUILD_PROMPT_SUBCOPY,
+  chipPage,
+  composerPlaceholder,
+  nextChipSetIndex,
+  resolveBuildPromptIntent,
+  type BuildPromptCategoryId,
+  type BuildPromptIntent,
+} from "@/lib/build-prompt";
 import { marketplaceBotsHref, type JobChip } from "@/lib/constants";
 import type { SkillDTO } from "@/lib/job-types";
 import { MARKETPLACE_PLUGINS } from "@/lib/marketplace";
@@ -46,6 +65,14 @@ type ConnectorRow = {
   connected: boolean;
 };
 
+const CATEGORY_ICONS = {
+  website: AppWindow,
+  mobile: Smartphone,
+  design: SquareDashedMousePointer,
+  slides: Layers,
+  animation: Clapperboard,
+} as const;
+
 export function ChatComposer({
   workspaceId,
   value,
@@ -53,7 +80,7 @@ export function ChatComposer({
   onSubmit,
   busy,
   disabled,
-  placeholder,
+  showHero,
   usageLabel,
   skills,
   roleChips,
@@ -65,10 +92,10 @@ export function ChatComposer({
   workspaceId: string;
   value: string;
   onChange: (value: string) => void;
-  onSubmit: (message: string) => void;
+  onSubmit: (message: string, intent: BuildPromptIntent) => void;
   busy?: boolean;
   disabled?: boolean;
-  placeholder: string;
+  showHero?: boolean;
   usageLabel: string;
   skills: SkillDTO[];
   roleChips: JobChip[];
@@ -79,7 +106,11 @@ export function ChatComposer({
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const categoryScroller = useRef<HTMLDivElement>(null);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [categoryId, setCategoryId] = useState<BuildPromptCategoryId>("website");
+  const [chipId, setChipId] = useState<string | null>(null);
+  const [chipSet, setChipSet] = useState(0);
   const [connectors, setConnectors] = useState<ConnectorRow[]>(
     MARKETPLACE_PLUGINS.map((plugin) => ({
       id: plugin.id,
@@ -133,11 +164,26 @@ export function ChatComposer({
     setAttachments((prev) => [...prev, ...next]);
   }
 
+  const intent = resolveBuildPromptIntent({ categoryId, chipId });
+  const placeholder = composerPlaceholder({ disabled, categoryId });
+  const readyMessage = composeJobMessage(value, attachments);
+  const canSend = Boolean(readyMessage || intent.action !== "default");
+  const exampleChips = chipPage(chipSet);
+
   function send() {
-    const message = composeJobMessage(value, attachments);
-    if (!message || disabled || busy) return;
-    onSubmit(message);
+    if (disabled || busy || !canSend) return;
+    onSubmit(readyMessage, intent);
     setAttachments([]);
+    setChipId(null);
+  }
+
+  function selectCategory(id: BuildPromptCategoryId) {
+    setCategoryId(id);
+    setChipId(null);
+  }
+
+  function scrollCategories(direction: -1 | 1) {
+    categoryScroller.current?.scrollBy({ left: direction * 160, behavior: "smooth" });
   }
 
   return (
@@ -155,7 +201,20 @@ export function ChatComposer({
       }}
     >
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-[28px] border border-composer-border bg-composer text-composer-foreground shadow-[var(--composer-shadow)]">
+        {showHero !== false ? (
+          <div className="mb-4 px-1 text-center">
+            <h2 className="font-heading text-[1.65rem] leading-tight tracking-tight text-foreground sm:text-3xl">
+              {BUILD_PROMPT_HEADLINE}
+            </h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">{BUILD_PROMPT_SUBCOPY}</p>
+          </div>
+        ) : null}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-6 -top-8 h-24 rounded-full bg-composer-send/12 blur-3xl dark:bg-white/6"
+          />
+          <div className="relative rounded-[28px] border border-composer-border bg-composer text-composer-foreground shadow-[var(--composer-shadow)]">
           {attachments.length ? (
             <ul className="flex flex-wrap gap-1.5 px-3 pt-3">
               {attachments.map((file, index) => (
@@ -311,7 +370,7 @@ export function ChatComposer({
               </button>
               <button
                 type="submit"
-                disabled={busy || disabled || !composeJobMessage(value, attachments)}
+                disabled={busy || disabled || !canSend}
                 className="grid size-8 place-items-center rounded-full bg-composer-send text-composer-send-foreground hover:opacity-90 disabled:opacity-35"
                 aria-label="Send"
               >
@@ -324,7 +383,103 @@ export function ChatComposer({
             </div>
           </div>
         </div>
-        <p className="mt-2 px-1 text-xs text-muted-foreground">{usageLabel}</p>
+        </div>
+
+        <div className="mt-4 flex items-center gap-1">
+          <button
+            type="button"
+            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Previous categories"
+            onClick={() => scrollCategories(-1)}
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <div
+            ref={categoryScroller}
+            role="tablist"
+            aria-label="Playbook categories"
+            className="flex min-w-0 flex-1 items-start justify-between gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {BUILD_PROMPT_CATEGORIES.map((category) => {
+              const selected = category.id === categoryId;
+              const Icon = CATEGORY_ICONS[category.id];
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  disabled={disabled}
+                  onClick={() => selectCategory(category.id)}
+                  className={cn(
+                    "flex min-w-[4.5rem] flex-1 flex-col items-center gap-1.5 rounded-xl px-1 py-1 text-center text-[11px] text-muted-foreground transition-colors",
+                    selected
+                      ? "text-foreground"
+                      : "hover:text-foreground",
+                    disabled && "opacity-50",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid size-10 place-items-center rounded-xl border bg-composer-control",
+                      selected
+                        ? "border-foreground/35 text-foreground"
+                        : "border-transparent text-muted-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                  {category.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Next categories"
+            onClick={() => scrollCategories(1)}
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 px-1">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span>Try an example prompt</span>
+            <button
+              type="button"
+              className="grid size-6 place-items-center rounded-full hover:bg-muted hover:text-foreground"
+              aria-label="Refresh example prompts"
+              onClick={() => setChipSet((index) => nextChipSetIndex(index))}
+            >
+              <RefreshCw className="size-3" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {exampleChips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  setChipId(chip.id);
+                  if (chip.categoryId) setCategoryId(chip.categoryId);
+                  onChange(chip.fill);
+                }}
+                className={cn(
+                  "rounded-full border border-border bg-muted/70 px-3 py-1.5 text-xs text-foreground hover:bg-muted",
+                  chipId === chip.id && "border-foreground/30 bg-composer-control",
+                  disabled && "opacity-50",
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="mt-3 px-1 text-xs text-muted-foreground">{usageLabel}</p>
       </div>
       <input
         ref={fileRef}
