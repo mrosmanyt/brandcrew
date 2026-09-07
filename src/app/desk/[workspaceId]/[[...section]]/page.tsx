@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { ApiConsole } from "@/components/desk/api-console";
 import { BillingPlans } from "@/components/desk/billing-plans";
 import { BrandKitForm } from "@/components/desk/brand-kit-form";
 import { CalendarView } from "@/components/desk/calendar-view";
@@ -119,6 +120,31 @@ async function BillingPage({
   );
 }
 
+async function DevelopersPage({ workspaceId }: { workspaceId: string }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { id: true },
+  });
+  if (!workspace) redirect("/desk");
+
+  return (
+    <div className="desk-page max-w-5xl">
+      <p className="page-kicker">Developers</p>
+      <h1 className="font-heading mt-1 text-2xl">API Console</h1>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        Mint a workspace key and call CINEM Pro over HTTPS. Bearer tokens never
+        include model provider secrets. Jobs use the live runtime — Slack/Gmail
+        send still waits for you in the desk.
+      </p>
+      <div className="mt-6">
+        <ApiConsole workspaceId={workspace.id} />
+      </div>
+    </div>
+  );
+}
+
 async function BrandKitPage({ workspaceId }: { workspaceId: string }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -208,6 +234,9 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "brand-kit") {
     return <BrandKitPage workspaceId={workspaceId} />;
+  }
+  if (head === "developers") {
+    return <DevelopersPage workspaceId={workspaceId} />;
   }
   redirect(`/desk/${workspaceId}?agentId=${encodeURIComponent(head)}`);
 }

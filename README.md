@@ -17,6 +17,7 @@ The marketing site and app chrome are a **dark Cursor-style** system (tight sans
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
 6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Browse events show the **tool name + URL**.
 7. Approve artifacts. Save a job as a **Skill**, then **Run skill**.
+8. Open **API Console** (`/desk/[workspaceId]/developers`): mint a workspace key, call `/api/v1` from the in-app console or curl.
 
 Quick-start chips follow the **selected agent’s role label** (Research → Competitor scan, Sales → Outreach from research). If you have no Research agent, the chip says **Add Research bot from Marketplace** — chips never invent a named roster.
 
@@ -96,6 +97,52 @@ Job tools when Connected: `slack_list_channels`, `slack_draft_message` (artifact
 Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon or Docker) · session cookies · OpenAI + Anthropic + Gemini · Stripe Checkout stubs · optional Electron desktop
 
 xAI / Grok is skipped.
+
+## Developer API
+
+Workspace-scoped REST at `/api/v1`. Mint keys in **API Console** (`/desk/[workspaceId]/developers`). Secrets are shown **once**; only SHA-256 hashes are stored. Keys never include model provider secrets.
+
+Auth: `Authorization: Bearer cinem_live_…` (session cookies are ignored). Errors are JSON `{ "error": "…", "code": "unauthorized" }`. Rate limit: 60 requests / minute / key.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/api/v1` | Workspace + endpoint catalog |
+| `GET` | `/api/v1/workspace` | Key’s workspace |
+| `GET` | `/api/v1/agents` | List agents |
+| `POST` | `/api/v1/agents` | Create agent (`name` still defaults to **New Agent**) |
+| `GET` | `/api/v1/agents/:agentId` | One agent |
+| `GET` | `/api/v1/jobs` | Recent jobs (`?agentId=`) |
+| `POST` | `/api/v1/jobs` | Queue a job `{ agentId, message }` — same runtime as Mission Control |
+| `GET` | `/api/v1/jobs/:jobId` | Status, events, artifacts |
+| `GET` | `/api/v1/artifacts` | List (`?jobId=` / `?agentId=`) |
+| `GET` | `/api/v1/artifacts/:artifactId` | One artifact |
+
+Jobs do **not** auto-publish. Slack `chat.postMessage` still requires a prior `ask_user` in the desk. Gmail creates drafts only.
+
+```bash
+curl -sS http://127.0.0.1:43180/api/v1 \
+  -H "Authorization: Bearer cinem_live_YOUR_KEY"
+
+curl -sS -X POST http://127.0.0.1:43180/api/v1/agents \
+  -H "Authorization: Bearer cinem_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"role":"Research"}'
+
+curl -sS -X POST http://127.0.0.1:43180/api/v1/jobs \
+  -H "Authorization: Bearer cinem_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"agentId":"AGENT_ID","message":"Competitor scan of the Brand Kit site."}'
+
+curl -sS http://127.0.0.1:43180/api/v1/jobs/JOB_ID \
+  -H "Authorization: Bearer cinem_live_YOUR_KEY"
+```
+
+Key create/list/revoke (session cookie, desk UI):
+
+- `GET` / `POST` `/api/workspaces/:workspaceId/api-keys`
+- `DELETE` `/api/workspaces/:workspaceId/api-keys/:keyId`
+
+These routes live on the existing catch-all `/api/[...path]` handler (Hobby function budget).
 
 ## Local setup
 
@@ -301,6 +348,8 @@ npm run test:jobs          # playbooks, live-output gate, URL guard, browse stub
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
 npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persistence (DB smoke skipped if Postgres is down)
 npm run test:browse        # optional: Playwright against example.com (needs Chrome)
+npm run test:api-router    # catch-all matcher still resolves every public /api URL
+npm run test:developer-api # hashed keys, catalog, JSON 401 shape
 ```
 
 ## Job runtime
@@ -354,6 +403,8 @@ npm run lint
 npm run test:jobs
 npm run test:oauth
 npm run test:browse  # Playwright smoke test (Chrome + network)
+npm run test:api-router
+npm run test:developer-api
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS
