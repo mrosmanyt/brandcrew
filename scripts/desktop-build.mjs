@@ -68,7 +68,7 @@ console.log("Generating placeholder icon…");
 run(process.execPath, [path.join(root, "scripts/make-icon.mjs")]);
 
 console.log("Building Next.js standalone (DESKTOP=1)…");
-run(process.platform === "win32" ? "npx.cmd" : "npx", ["prisma", "generate"]);
+run(process.execPath, [path.join(root, "scripts/prisma-generate.mjs")]);
 npx(["next", "build"], { DESKTOP: "1" });
 
 const standalone = path.join(root, ".next", "standalone");
@@ -94,12 +94,6 @@ materializeSymlinks(standalone);
 const resources = path.join(root, "electron", "resources");
 mkdirSync(resources, { recursive: true });
 cpSync(path.join(root, ".env.example"), path.join(resources, "env.example"));
-const emptyDb = path.join(resources, "brandcrew.empty.db");
-if (existsSync(emptyDb)) rmSync(emptyDb);
-console.log("Seeding empty SQLite schema for first launch…");
-npx(["prisma", "db", "push", "--skip-generate"], {
-  DATABASE_URL: `file:${emptyDb.replace(/\\/g, "/")}`,
-});
 
 const targets = [];
 if (args.includes("--win")) targets.push("--win");

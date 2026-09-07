@@ -2,7 +2,7 @@
  * Brandcrew desktop shell.
  * Dev: spawn `npm run dev` (or attach if :port is already up) and load it.
  * Packaged: fork Next standalone server.js with ELECTRON_RUN_AS_NODE,
- * SQLite + .env in the OS userData directory.
+ * Postgres + .env in the OS userData directory (same DATABASE_URL as web).
  */
 const { app, BrowserWindow, shell, dialog } = require("electron");
 const { spawn, fork } = require("node:child_process");
@@ -34,8 +34,12 @@ function packaged() {
   return app.isPackaged;
 }
 
-function sqliteUrl(filePath) {
-  return `file:${filePath.replace(/\\/g, "/")}`;
+const LOCAL_POSTGRES =
+  "postgresql://brandcrew:brandcrew@127.0.0.1:5432/brandcrew?schema=public";
+
+function isFileDatabaseUrl(url) {
+  const value = (url || "").trim();
+  return !value || value.startsWith("file:") || value.startsWith("sqlite:");
 }
 
 function parseEnvFile(filePath) {
@@ -62,6 +66,7 @@ function parseEnvFile(filePath) {
 function writeEnvFile(filePath, values) {
   const lines = [
     "# Brandcrew desktop environment",
+    "# DATABASE_URL must be Postgres (local Docker or Neon). SQLite file: URLs no longer work.",
     "# Add API keys and OAuth client ids here, then restart the app.",
     "# OAuth redirect URI must be:",
     `#   ${ORIGIN}/api/oauth/callback`,
@@ -78,11 +83,11 @@ function applyUserEnv() {
   const userData = app.getPath("userData");
   fs.mkdirSync(userData, { recursive: true });
   const envPath = path.join(userData, ".env");
-  const dbPath = path.join(userData, "brandcrew.db");
 
   if (!fs.existsSync(envPath)) {
     writeEnvFile(envPath, {
-      DATABASE_URL: sqliteUrl(dbPath),
+      DATABASE_URL: LOCAL_POSTGRES,
+      DIRECT_URL: LOCAL_POSTGRES,
       SESSION_SECRET: crypto.randomBytes(32).toString("hex"),
       OAUTH_REDIRECT_BASE: ORIGIN,
       APP_URL: ORIGIN,
@@ -92,20 +97,32 @@ function applyUserEnv() {
     });
   }
 
-  const parsed = parseEnvFile(envPath);
+  let parsed = parseEnvFile(envPath);
+  if (isFileDatabaseUrl(parsed.DATABASE_URL)) {
+    parsed.DATABASE_URL = LOCAL_POSTGRES;
+    if (isFileDatabaseUrl(parsed.DIRECT_URL)) parsed.DIRECT_URL = LOCAL_POSTGRES;
+    if (!parsed.DIRECT_URL) parsed.DIRECT_URL = LOCAL_POSTGRES;
+    writeEnvFile(envPath, parsed);
+  }
+
   for (const [key, value] of Object.entries(parsed)) {
     if (process.env[key] == null || process.env[key] === "") {
       process.env[key] = value;
     }
   }
 
-  if (!process.env.DATABASE_URL) process.env.DATABASE_URL = sqliteUrl(dbPath);
+  if (isFileDatabaseUrl(process.env.DATABASE_URL)) {
+    process.env.DATABASE_URL = LOCAL_POSTGRES;
+  }
+  if (isFileDatabaseUrl(process.env.DIRECT_URL)) {
+    process.env.DIRECT_URL = process.env.DATABASE_URL;
+  }
   if (!process.env.OAUTH_REDIRECT_BASE) process.env.OAUTH_REDIRECT_BASE = ORIGIN;
   if (!process.env.APP_URL) process.env.APP_URL = ORIGIN;
   if (!process.env.NEXT_PUBLIC_APP_URL) process.env.NEXT_PUBLIC_APP_URL = ORIGIN;
   process.env.PORT = String(PORT);
   process.env.HOSTNAME = HOST;
-  return { userData, envPath, dbPath };
+  return { userData, envPath };
 }
 
 function ping() {
@@ -133,16 +150,6 @@ async function waitForServer(timeoutMs = 90_000) {
 
 function npmCmd() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
-}
-
-function seedDatabaseIfNeeded(dbPath) {
-  if (fs.existsSync(dbPath)) return;
-  const seed = packaged()
-    ? path.join(process.resourcesPath, "brandcrew", "brandcrew.empty.db")
-    : path.join(projectRoot(), "electron", "resources", "brandcrew.empty.db");
-  if (fs.existsSync(seed)) {
-    fs.copyFileSync(seed, dbPath);
-  }
 }
 
 function startDevServer() {
@@ -217,8 +224,7 @@ function createWindow() {
 
 async function boot() {
   if (packaged()) {
-    const paths = applyUserEnv();
-    seedDatabaseIfNeeded(paths.dbPath);
+    applyUserEnv();
   } else {
     process.env.PORT = String(PORT);
     process.env.HOSTNAME = HOST;

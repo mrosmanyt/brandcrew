@@ -91,21 +91,23 @@ Job tools when Connected: `slack_list_channels`, `slack_draft_message` (artifact
 
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind · SQLite via Prisma · session cookies · OpenAI + Anthropic + Gemini · Stripe Checkout stubs
+Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon or Docker) · session cookies · OpenAI + Anthropic + Gemini · Stripe Checkout stubs · optional Electron desktop
 
 xAI / Grok is skipped.
 
 ## Local setup
 
+Postgres is required (Prisma provider is `postgresql`). Local Docker is the default; a Neon free database also works. SQLite `file:./dev.db` is **not** supported anymore — existing files are not migrated.
+
 ```bash
+docker compose up -d
 npm install
 cp .env.example .env
-npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 npm run dev
 ```
 
-`npm run dev` also copies `.env.example` → `.env` when missing and pushes the SQLite schema, so `npm install && npm run dev` is enough on a clean checkout.
+`npm run dev` copies `.env.example` → `.env` when missing, rewrites leftover SQLite URLs, and runs `prisma migrate deploy`. If Postgres is down it tries `docker compose up -d` first.
 
 The desk listens on [http://127.0.0.1:43180](http://127.0.0.1:43180).
 
@@ -152,10 +154,10 @@ Artifacts land in `dist/desktop/`.
 
 **Where keys live**
 
-| Mode | `.env` | SQLite |
+| Mode | `.env` | Postgres |
 | --- | --- | --- |
-| `desktop:dev` / `npm run dev` | project `.env` | `dev.db` (see `DATABASE_URL`) |
-| Packaged app | **macOS** `~/Library/Application Support/Brandcrew/.env` · **Windows** `%APPDATA%\Brandcrew\.env` | `brandcrew.db` next to that `.env` |
+| `desktop:dev` / `npm run dev` | project `.env` | `DATABASE_URL` (Docker on `:5432` or Neon) |
+| Packaged app | **macOS** `~/Library/Application Support/Brandcrew/.env` · **Windows** `%APPDATA%\Brandcrew\.env` | same `DATABASE_URL` / `DIRECT_URL` (Docker or Neon). First launch writes the local Docker URL. Apply schema with `npx prisma migrate deploy` against that URL. |
 
 Set `OAUTH_REDIRECT_BASE=http://127.0.0.1:43180` (default). Google/Slack authorized redirect URI: `http://127.0.0.1:43180/api/oauth/callback`. Override the port with `BRANDCREW_PORT` if needed.
 
@@ -180,14 +182,15 @@ See [`.env.example`](./.env.example). Summary:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | yes (defaults in example) | SQLite file. Swap Prisma `provider` to `postgresql` for Postgres. |
-| `SESSION_SECRET` | yes (dev default provided) | Signs the session cookie **and** encrypts plugin secrets. |
+| `DATABASE_URL` | yes | Postgres connection string. Local Docker default is in `.env.example`. Neon: pooled URL (`sslmode=require`, add `pgbouncer=true` if using the pooler). |
+| `DIRECT_URL` | yes | Unpooled Postgres URL for `prisma migrate deploy`. Local Docker: same as `DATABASE_URL`. Neon: the **direct** connection string. |
+| `SESSION_SECRET` | yes (dev default provided) | Signs the session cookie **and** encrypts plugin secrets. **Change in production.** |
 | `OPENAI_API_KEY` | no | OpenAI. Cheap drafts (`gpt-4o-mini`) and GPT-4.1-class finals when Claude is unset. |
 | `ANTHROPIC_API_KEY` | no | Claude. Preferred for strong finals (`claude-sonnet-5`). |
 | `GEMINI_API_KEY` | no | Gemini. Preferred cheap drafts (`gemini-2.5-flash`). Sole provider uses Flash + Pro. |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | no | Alias for `GEMINI_API_KEY`. |
 | `TAVILY_API_KEY` | no | Web Search plugin. Jobs call Tavily only when the plugin is **Connected**. |
-| `PLAYWRIGHT_ENABLED` | no (defaults on when Chrome is found) | Headless browse for job tools. Set `false` to force fetch+crawl fallback. |
+| `PLAYWRIGHT_ENABLED` | no | Headless browse. Local: defaults on when Chrome is found. **Vercel: defaults off.** Set `false` in Production. |
 | `PLAYWRIGHT_CHROME_PATH` | no | Override Chrome/Chromium binary for Playwright. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | Google OAuth (Gmail, Calendar, Drive). Redirect: `{OAUTH_REDIRECT_BASE or APP_URL or NEXT_PUBLIC_APP_URL}/api/oauth/callback`. |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | no | Optional Gmail-specific OAuth overrides. |
@@ -203,6 +206,83 @@ See [`.env.example`](./.env.example). Summary:
 
 API keys are read **only on the server**. Users never paste LLM keys. Plugin keys are workspace-scoped and encrypted.
 
+## Deploy to Vercel + Neon
+
+This repo is deploy-prep only — it does not create cloud accounts or push a production deploy from CI.
+
+### 1. Neon (or Supabase) Postgres
+
+1. Create a project at [Neon](https://console.neon.tech/) (free tier is enough) or Supabase.
+2. Copy **two** connection strings:
+   - **Pooled** → `DATABASE_URL` (Neon “pooled”; add `?sslmode=require`. If you use the pooler host, also add `&pgbouncer=true`).
+   - **Direct / unpooled** → `DIRECT_URL` (required for `prisma migrate deploy`).
+3. From this repo (optional smoke against Neon):
+
+```bash
+export DATABASE_URL='postgresql://...'
+export DIRECT_URL='postgresql://...'   # unpooled
+npx prisma migrate deploy
+```
+
+The initial migration is `prisma/migrations/20240907120000_init`.
+
+### 2. Vercel
+
+1. Import GitHub repo `mrosmanyt/brandcrew` at [vercel.com/new](https://vercel.com/new).
+2. Framework: Next.js (auto). `vercel.json` runs `prisma generate && prisma migrate deploy && next build`.
+3. Set **Production** env vars (Preview too if you want preview DBs):
+
+| Env | Production value |
+| --- | --- |
+| `DATABASE_URL` | Neon pooled URL |
+| `DIRECT_URL` | Neon direct URL |
+| `SESSION_SECRET` | long random string (not the example) |
+| `NEXT_PUBLIC_APP_URL` | `https://<project>.vercel.app` or custom domain |
+| `APP_URL` | same origin |
+| `OAUTH_REDIRECT_BASE` | same origin |
+| `PLAYWRIGHT_ENABLED` | `false` |
+| `BILLING_MOCK` | `true` (Stripe live is out of scope) |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional; no keys → offline demo |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional; Gmail Connect |
+| `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | optional |
+
+4. Deploy. First build applies migrations.
+
+`npm run build` locally does **not** run `migrate deploy` (so it works without a live DB). Vercel’s `vercel-build` / `vercel.json` **does**.
+
+### 3. OAuth redirect URIs (production)
+
+Use the same origin as `OAUTH_REDIRECT_BASE`:
+
+```
+https://<project>.vercel.app/api/oauth/callback
+```
+
+Add that **exact** URI (plus `https://your-domain/api/oauth/callback` if you attach a domain):
+
+- Google Cloud → Credentials → OAuth client → Authorized redirect URIs (Gmail / Calendar / Drive)
+- Slack app → OAuth & Permissions → Redirect URLs
+- Notion (if used) → OAuth redirect URI
+
+Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs on the OAuth clients if you use desktop and Vercel.
+
+### 4. Smoke checklist
+
+- [ ] `https://<project>.vercel.app` loads
+- [ ] `/signup` creates an account (writes to Neon)
+- [ ] Mission Control opens; **New Agent** still the default name
+- [ ] Marketplace bots Add / plugins stay disconnected without keys
+- [ ] A job with browse uses **fetch** (not Playwright) — activity still shows a URL
+- [ ] Gmail/Slack Connect (if client ids set) returns to `/api/oauth/callback` on the Vercel origin
+- [ ] Electron `desktop:dev` still works against local Docker/Neon `DATABASE_URL`
+
+### Serverless limits (honest)
+
+- **No Chrome on Vercel.** Playwright is off. Browse tools fall back to `fetch` + a short public crawl. Not Browserbase.
+- Function timeout/size limits apply to long jobs; this slice does not add a queue worker.
+- Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
+- Stripe live Checkout is not part of this prep (`BILLING_MOCK=true`).
+
 ## Model router
 
 `LLMProvider` in `src/lib/llm.ts` picks by cost and which keys are present:
@@ -217,13 +297,13 @@ xAI / Grok is skipped. No keys → offline demo.
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
-npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persistence
+npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persistence (DB smoke skipped if Postgres is down)
 npm run test:browse        # optional: Playwright against example.com (needs Chrome)
 ```
 
 ## Job runtime
 
-Jobs live in SQLite (`Job`, `JobEvent`, `Skill`, `Agent`). Each job has a JSON **plan** of steps. The runner ticks one step at a time.
+Jobs live in Postgres (`Job`, `JobEvent`, `Skill`, `Agent`). Each job has a JSON **plan** of steps. The runner ticks one step at a time.
 
 v1 tools:
 
@@ -248,7 +328,7 @@ Brandcrew does **not** spin a VM per agent and does not require a paid browser v
 1. Install deps as usual (`npm install`). Playwright **core** is enough — it uses the Chrome already on your machine.
 2. Leave `PLAYWRIGHT_ENABLED=true` in `.env` (see `.env.example`). If Chrome is at a custom path, set `PLAYWRIGHT_CHROME_PATH`.
 3. `npm run dev`, select **your** Research agent (or Add the Research bot from Marketplace), run **Competitor scan**. The activity feed should show `browser_navigate` + URL (or fetch fallback if Playwright could not start).
-4. On hosts without Chrome (typical serverless), set `PLAYWRIGHT_ENABLED=false`. Navigate still works via fetch, and `crawl_links` follows a couple of public same-site links.
+4. On Vercel, leave `PLAYWRIGHT_ENABLED=false` (the default when `VERCEL=1`). Navigate still works via fetch, and `crawl_links` follows a couple of public same-site links. There is **no Chrome** on Vercel serverless; Browserbase is out of scope.
 
 **Limits this phase:** read-only browse. No auto-login, no password automation, no LinkedIn send, no file downloads, max 4 pages/job. Gmail creates drafts only. Slack posts only after you approve. Live keys never persist canned browse copy — if the model fails, the artifact is the captured page text.
 
@@ -275,8 +355,9 @@ npm run test:browse  # Playwright smoke test (Chrome + network)
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS
-npx prisma db push   # apply schema to SQLite
-npx prisma studio    # inspect rows
+npm run db:up            # docker compose Postgres
+npx prisma migrate deploy
+npx prisma studio        # inspect rows
 ```
 
 ## Out of scope (this slice)
