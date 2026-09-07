@@ -11,6 +11,7 @@ export type WorkspaceDTO = {
   plan: string;
   tokenUsed: number;
   tokenBudget: number;
+  modelRouting?: string;
   createdAt: string;
   brandKit?: BrandKit;
   limits?: LimitsDTO;

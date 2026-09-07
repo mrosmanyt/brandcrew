@@ -36,6 +36,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AgentModesMenu,
+  applyWorkspacePlan,
+} from "@/components/desk/agent-modes-menu";
+import { JobStartingStatus } from "@/components/desk/job-starting-status";
+import {
   clipComposerText,
   composeJobMessage,
   COMPOSER_PLUS_ITEMS,
@@ -43,6 +48,7 @@ import {
   isComposerTextFile,
   type ComposerAttachment,
 } from "@/lib/composer";
+import { nextAgentModePlan, planModeName } from "@/lib/agent-modes";
 import {
   BUILD_PROMPT_CATEGORIES,
   BUILD_PROMPT_HEADLINE,
@@ -54,8 +60,9 @@ import {
   type BuildPromptCategoryId,
   type BuildPromptIntent,
 } from "@/lib/build-prompt";
-import { marketplaceBotsHref, type JobChip } from "@/lib/constants";
+import { marketplaceBotsHref, PLANS, type JobChip, type PlanId } from "@/lib/constants";
 import type { SkillDTO } from "@/lib/job-types";
+import type { LlmRoutingPreference, LlmStatus } from "@/lib/llm";
 import { MARKETPLACE_PLUGINS } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +95,13 @@ export function ChatComposer({
   onRunSkill,
   onRunChip,
   onRecordSkill,
+  plan,
+  billingMock,
+  llm,
+  modelRouting,
+  workingStatus,
+  onPlanApplied,
+  onRoutingApplied,
 }: {
   workspaceId: string;
   value: string;
@@ -103,6 +117,13 @@ export function ChatComposer({
   onRunSkill: (skill: SkillDTO) => void;
   onRunChip: (chip: JobChip) => void;
   onRecordSkill: () => void;
+  plan: string;
+  billingMock: boolean;
+  llm: LlmStatus;
+  modelRouting: string;
+  workingStatus?: "queued" | "running" | null;
+  onPlanApplied?: (next: { plan: PlanId; tokenBudget: number }) => void;
+  onRoutingApplied?: (next: LlmRoutingPreference) => void;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -198,6 +219,43 @@ export function ChatComposer({
           e.preventDefault();
           fileRef.current?.click();
         }
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          e.shiftKey &&
+          e.key.toLowerCase() === "i"
+        ) {
+          e.preventDefault();
+          const next = nextAgentModePlan(plan);
+          void applyWorkspacePlan({
+            workspaceId,
+            next,
+            current: plan,
+            billingMock,
+          })
+            .then((result) => {
+              if (result.action === "open-plans") {
+                toast.message("Open Plans to change a live subscription.");
+                router.push(`/desk/${workspaceId}/billing`);
+                return;
+              }
+              if (result.url) {
+                window.location.href = result.url;
+                return;
+              }
+              if (result.action === "noop") return;
+              onPlanApplied?.({
+                plan: result.plan,
+                tokenBudget: result.tokenBudget ?? PLANS[result.plan].tokenBudget,
+              });
+              toast.success(`Agent mode: ${planModeName(result.plan)}`);
+              router.refresh();
+            })
+            .catch((error: unknown) => {
+              toast.error(
+                error instanceof Error ? error.message : "Could not change plan.",
+              );
+            });
+        }
       }}
     >
       <div className="mx-auto max-w-3xl">
@@ -208,6 +266,9 @@ export function ChatComposer({
             </h2>
             <p className="mt-1.5 text-sm text-muted-foreground">{BUILD_PROMPT_SUBCOPY}</p>
           </div>
+        ) : null}
+        {workingStatus ? (
+          <JobStartingStatus status={workingStatus} className="mb-2 px-1" />
         ) : null}
         <div className="relative">
           <div
@@ -357,6 +418,15 @@ export function ChatComposer({
             </DropdownMenu>
 
             <div className="flex items-center gap-1.5">
+              <AgentModesMenu
+                workspaceId={workspaceId}
+                plan={plan}
+                billingMock={billingMock}
+                llm={llm}
+                modelRouting={modelRouting}
+                onPlanApplied={onPlanApplied}
+                onRoutingApplied={onRoutingApplied}
+              />
               <button
                 type="button"
                 className="grid size-8 place-items-center rounded-full bg-composer-control text-composer-foreground hover:opacity-80"

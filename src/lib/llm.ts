@@ -1,8 +1,40 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
 export type TaskMode = "draft" | "final";
+
+export const LLM_ROUTING_PREFERENCES = [
+  "auto",
+  "gemini",
+  "anthropic",
+  "openai",
+] as const;
+
+export type LlmRoutingPreference = (typeof LLM_ROUTING_PREFERENCES)[number];
+
+const routingAls = new AsyncLocalStorage<LlmRoutingPreference>();
+
+export function normalizeModelRouting(
+  value?: string | null,
+): LlmRoutingPreference {
+  if (value === "gemini" || value === "anthropic" || value === "openai") {
+    return value;
+  }
+  return "auto";
+}
+
+export function currentRoutingPreference(): LlmRoutingPreference {
+  return routingAls.getStore() ?? "auto";
+}
+
+export function runWithRoutingPreference<T>(
+  prefer: LlmRoutingPreference | string | null | undefined,
+  fn: () => T,
+): T {
+  return routingAls.run(normalizeModelRouting(prefer), fn);
+}
 
 /** Job-family routing. General keeps the existing cheap-draft / strong-final policy. */
 export type LlmJobKind = "website" | "coding" | "posts" | "apps" | "general";
@@ -182,10 +214,7 @@ function xaiRoute(): LlmRoute | null {
  * - General drafts: Gemini Flash → OpenAI mini → Haiku → xAI.
  * - General finals: Claude Sonnet → GPT-4.1 → Gemini Pro → xAI.
  */
-export function pickRoute(
-  mode: TaskMode,
-  kind: LlmJobKind = "general",
-): LlmRoute | null {
+function pickRouteDefault(mode: TaskMode, kind: LlmJobKind): LlmRoute | null {
   if (kind === "website") {
     return firstRoute([geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft"), xaiRoute()]);
   }
@@ -205,6 +234,31 @@ export function pickRoute(
     return firstRoute([geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft"), xaiRoute()]);
   }
   return firstRoute([anthropicRoute("final"), openaiRoute("final"), geminiRoute("final"), xaiRoute()]);
+}
+
+function preferredRoute(
+  prefer: LlmRoutingPreference,
+  mode: TaskMode,
+): LlmRoute | null {
+  if (prefer === "gemini") return geminiRoute(mode);
+  if (prefer === "anthropic") return anthropicRoute(mode);
+  if (prefer === "openai") return openaiRoute(mode);
+  return null;
+}
+
+/**
+ * Router policy, plus an optional workspace preference.
+ * Prefer Gemini / Claude / OpenAI only when that server key exists;
+ * otherwise fall back to the default job-family router.
+ */
+export function pickRoute(
+  mode: TaskMode,
+  kind: LlmJobKind = "general",
+  prefer: LlmRoutingPreference = currentRoutingPreference(),
+): LlmRoute | null {
+  const chosen = preferredRoute(prefer, mode);
+  if (chosen) return chosen;
+  return pickRouteDefault(mode, kind);
 }
 
 export function createAnthropicClient(apiKey: string) {

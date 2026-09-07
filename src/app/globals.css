@@ -724,6 +724,54 @@
   }
 }
 
+.desk-chat-glow {
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 100%,
+    rgba(196, 72, 32, 0.22) 0%,
+    rgba(180, 64, 28, 0.1) 38%,
+    transparent 72%
+  );
+  opacity: 1;
+  transition: opacity 0.7s ease;
+}
+.dark .desk-chat-glow {
+  background: radial-gradient(
+    ellipse 82% 72% at 50% 100%,
+    rgba(232, 84, 36, 0.34) 0%,
+    rgba(190, 52, 22, 0.14) 40%,
+    transparent 74%
+  );
+}
+.desk-chat-glow-soft {
+  opacity: 0.16;
+}
+
+.desk-starting-shine {
+  background-image: linear-gradient(
+    90deg,
+    currentColor 0%,
+    currentColor 38%,
+    rgba(255, 236, 210, 0.95) 50%,
+    currentColor 62%,
+    currentColor 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: desk-starting-shine 1.7s linear infinite;
+}
+
+@keyframes desk-starting-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marketing-canvas .mkt-hero-kicker,
   .marketing-canvas .mkt-hero-title,
@@ -761,5 +809,12 @@
   .agent-avatar.is-working .agent-avatar-eyes,
   .agent-avatar.is-idle .agent-eye {
     animation: none;
+  }
+  .desk-starting-shine {
+    animation: none;
+    background: none;
+    background-clip: unset;
+    -webkit-background-clip: unset;
+    color: inherit;
   }
 }

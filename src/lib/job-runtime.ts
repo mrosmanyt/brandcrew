@@ -60,7 +60,7 @@ import type {
   JobPlaybook,
   JobStep,
 } from "@/lib/job-types";
-import { llm } from "@/lib/llm";
+import { llm, runWithRoutingPreference } from "@/lib/llm";
 import { connectedToolNames, getConnectedPlugin } from "@/lib/plugins";
 import {
   formatSlackChannels,
@@ -300,20 +300,27 @@ export async function tickJob(jobId: string): Promise<boolean> {
       return false;
     }
 
+    const routingPrefer =
+      "modelRouting" in workspace
+        ? String((workspace as { modelRouting?: string | null }).modelRouting ?? "")
+        : "";
+
     let steps = parsePlan(job.plan);
     if (!steps.length) {
       const agent = job.agentId
         ? await prisma.agent.findUnique({ where: { id: job.agentId } })
         : null;
-      steps = await planSteps({
-        workspaceId: job.workspaceId,
-        role: asAgentRole(job.agentRole),
-        prompt: job.prompt,
-        kit: parseBrandKit(workspace.brandKit),
-        agentName: displayAgentName(agent?.name),
-        agentInstructions: agent?.instructions || "",
-        agentRoleLabel: agent?.role || job.agentRole,
-      });
+      steps = await runWithRoutingPreference(routingPrefer, () =>
+        planSteps({
+          workspaceId: job.workspaceId,
+          role: asAgentRole(job.agentRole),
+          prompt: job.prompt,
+          kit: parseBrandKit(workspace.brandKit),
+          agentName: displayAgentName(agent?.name),
+          agentInstructions: agent?.instructions || "",
+          agentRoleLabel: agent?.role || job.agentRole,
+        }),
+      );
       await savePlan(jobId, steps);
       await appendEvent({
         jobId,
@@ -371,18 +378,20 @@ export async function tickJob(jobId: string): Promise<boolean> {
     const agent = job.agentId
       ? await prisma.agent.findUnique({ where: { id: job.agentId } })
       : null;
-    const result = await executeTool({
-      workspaceId: job.workspaceId,
-      jobId,
-      agentId: job.agentId,
-      agentRole: asAgentRole(job.agentRole),
-      agentName: displayAgentName(agent?.name),
-      agentInstructions: agent?.instructions || "",
-      prompt: job.prompt,
-      step: next,
-      kit,
-      context,
-    });
+    const result = await runWithRoutingPreference(routingPrefer, () =>
+      executeTool({
+        workspaceId: job.workspaceId,
+        jobId,
+        agentId: job.agentId,
+        agentRole: asAgentRole(job.agentRole),
+        agentName: displayAgentName(agent?.name),
+        agentInstructions: agent?.instructions || "",
+        prompt: job.prompt,
+        step: next,
+        kit,
+        context,
+      }),
+    );
 
     next.status = result.pause ? "paused" : "done";
     next.result = result.summary;
