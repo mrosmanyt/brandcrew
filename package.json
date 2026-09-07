@@ -76,8 +76,11 @@
     "files": [
       "electron/main.cjs",
       "electron/preload.cjs",
-      "package.json"
+      "package.json",
+      "!**/node_modules/**"
     ],
+    "asar": true,
+    "npmRebuild": false,
     "extraResources": [
       {
         "from": ".next/standalone",
