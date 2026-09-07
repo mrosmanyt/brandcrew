@@ -2,6 +2,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { serializeAgent } from "@/lib/job-serialize";
+import { FEATURED_JOB_TEMPLATES } from "@/lib/job-templates";
 import {
   MARKETPLACE_BOTS,
   MARKETPLACE_PLUGINS,
@@ -40,6 +41,7 @@ export async function GET(
       }),
       agents: agents.map(serializeAgent),
       installedPluginCount: plugins.filter((row) => row.connected).length,
+      templates: FEATURED_JOB_TEMPLATES,
     });
   } catch (error) {
     return jsonError(error);

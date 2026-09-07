@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Check, Loader2, Plug, Search } from "lucide-react";
+import { Bot, Check, FileText, Loader2, Plug, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+import { FEATURED_JOB_TEMPLATES, type JobTemplate } from "@/lib/job-templates";
 import {
   MARKETPLACE_BOT_CATEGORIES,
   PLUGIN_CATEGORIES,
@@ -41,9 +43,11 @@ export function MarketplaceDesk({
   initialTab?: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"plugins" | "bots">(
-    initialTab === "bots" ? "bots" : "plugins",
+  const [tab, setTab] = useState<"plugins" | "bots" | "playbooks">(
+    initialTab === "bots" ? "bots" : initialTab === "playbooks" ? "playbooks" : "plugins",
   );
+  const [templates, setTemplates] = useState<JobTemplate[]>(FEATURED_JOB_TEMPLATES);
+  const [agents, setAgents] = useState<{ id: string; role: string }[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [bots, setBots] = useState<BotRow[]>([]);
@@ -62,6 +66,8 @@ export function MarketplaceDesk({
     setBots(data.bots ?? []);
     setPlugins(data.plugins ?? []);
     setInstalledPluginCount(data.installedPluginCount ?? 0);
+    if (Array.isArray(data.templates)) setTemplates(data.templates);
+    if (Array.isArray(data.agents)) setAgents(data.agents);
     setLoading(false);
   }
 
@@ -140,6 +146,47 @@ export function MarketplaceDesk({
         : `Added as “New Agent” (${bot.role}). Rename it on Mission Control.`,
     );
     await refresh();
+    router.refresh();
+  }
+
+  async function runTemplate(template: JobTemplate) {
+    setBusyId(template.id);
+    let agent =
+      agents.find((row) =>
+        row.role.toLowerCase().includes(template.roleHint.toLowerCase()),
+      ) ?? agents[0];
+    if (!agent) {
+      const created = await fetch(`/api/workspaces/${workspaceId}/agents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: DEFAULT_AGENT_NAME, role: template.roleHint }),
+      });
+      const createdData = await created.json();
+      if (!created.ok) {
+        setBusyId(null);
+        toast.error(createdData.error || "Create an agent first.");
+        return;
+      }
+      agent = createdData.agent;
+    }
+    const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: agent.id,
+        message: template.message,
+        action: template.action,
+        playbookKey: template.playbookKey,
+      }),
+    });
+    const data = await res.json();
+    setBusyId(null);
+    if (!res.ok) {
+      toast.error(data.error || "Could not start that playbook.");
+      return;
+    }
+    toast.success(`${template.title} queued.`);
+    router.push(`/desk/${workspaceId}?agentId=${agent.id}&jobId=${data.job?.id ?? ""}`);
     router.refresh();
   }
 
@@ -228,10 +275,27 @@ export function MarketplaceDesk({
           >
             Bots
           </ToggleChip>
+          <ToggleChip
+            active={tab === "playbooks"}
+            icon={<FileText className="size-3.5" />}
+            onClick={() => {
+              setTab("playbooks");
+              setCategory("Featured");
+              setQuery("");
+              setViewAll(null);
+            }}
+          >
+            Playbooks
+          </ToggleChip>
         </div>
       </header>
 
-      {tab === "plugins" ? (
+      {tab === "playbooks" ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Featured jobs: LinkedIn week, Competitor scan, Website one-click, Outreach
+          draft. They create a real job on a matching agent (or New Agent).
+        </p>
+      ) : tab === "plugins" ? (
         <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
           <span className="flex -space-x-1">
             {plugins
@@ -256,6 +320,7 @@ export function MarketplaceDesk({
         </p>
       )}
 
+      {tab !== "playbooks" ? (
       <div className="relative mt-5">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -267,7 +332,9 @@ export function MarketplaceDesk({
           className="h-9 rounded-lg pl-9"
         />
       </div>
+      ) : null}
 
+      {tab !== "playbooks" ? (
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {(viewAll ? ["All", viewAll] : categories).map((chip) => (
           <button
@@ -288,12 +355,34 @@ export function MarketplaceDesk({
           </button>
         ))}
       </div>
+      ) : null}
 
       {loading ? (
         <p className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
           Loading catalog…
         </p>
+      ) : tab === "playbooks" ? (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {templates.map((template) => (
+            <article
+              key={template.id}
+              className="rounded-xl border border-border bg-card p-4"
+            >
+              <p className="text-xs text-muted-foreground">Featured · {template.roleHint}</p>
+              <h3 className="mt-1 text-sm font-medium">{template.title}</h3>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{template.blurb}</p>
+              <Button
+                className="mt-3"
+                size="sm"
+                disabled={busyId === template.id}
+                onClick={() => runTemplate(template)}
+              >
+                {busyId === template.id ? "Starting…" : "Run playbook"}
+              </Button>
+            </article>
+          ))}
+        </div>
       ) : tab === "bots" ? (
         <div className="mt-6 space-y-8">
           {category === "All" && !viewAll && featuredBots.length > 0 ? (

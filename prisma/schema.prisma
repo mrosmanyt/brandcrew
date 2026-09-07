@@ -18,6 +18,7 @@ model User {
   name         String
   createdAt    DateTime          @default(now())
   memberships  WorkspaceMember[]
+  invitesSent  WorkspaceInvite[]
 }
 
 model Workspace {
@@ -26,7 +27,7 @@ model Workspace {
   slug          String            @unique
   plan          String            @default("demo")
   tokenUsed     Int               @default(0)
-  tokenBudget   Int               @default(50000)
+  tokenBudget   Int               @default(15000)
   brandKit      String            @default("{}")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
@@ -41,6 +42,8 @@ model Workspace {
   agents             Agent[]
   pluginConnections  PluginConnection[]
   apiKeys            ApiKey[]
+  invites            WorkspaceInvite[]
+  schedules          ScheduledJob[]
 }
 
 model Agent {
@@ -60,6 +63,7 @@ model Agent {
   artifacts     Artifact[]
   skills        Skill[]
   usageEvents   UsageEvent[]
+  schedules     ScheduledJob[]
 
   @@index([workspaceId, status])
   @@index([workspaceId, templateId])
@@ -81,14 +85,54 @@ model PluginConnection {
 }
 
 model WorkspaceMember {
-  id          String    @id @default(cuid())
-  workspaceId String
-  userId      String
-  role        String    @default("owner")
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  userId               String
+  role                 String    @default("owner")
+  onboardingDismissed  Boolean   @default(false)
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
+}
+
+model WorkspaceInvite {
+  id          String     @id @default(cuid())
+  workspaceId String
+  email       String
+  token       String     @unique
+  role        String     @default("member")
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User       @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, email])
+  @@index([expiresAt])
+}
+
+model ScheduledJob {
+  id          String    @id @default(cuid())
+  workspaceId String
+  agentId     String?
+  title       String
+  message     String
+  playbookKey String?
+  cadence     String
+  timezone    String    @default("UTC")
+  nextRunAt   DateTime
+  lastRunAt   DateTime?
+  lastJobId   String?
+  enabled     Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, enabled, nextRunAt])
+  @@index([enabled, nextRunAt])
 }
 
 model Conversation {

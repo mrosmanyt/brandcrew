@@ -11,13 +11,15 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 ## What you can do
 
 1. Sign up. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
-2. Open **Mission Control** (`/desk/[workspaceId]`). Create **New Agent**, or **Launch full business team** (10+ roles, explicit **Approve & create**).
-3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins** and **Bots**, search, category chips, Featured + list.
+2. Open **Mission Control** (`/desk/[workspaceId]`). A 3-step first-run card (New Agent → first job → Approve) can be dismissed; completion is stored per workspace member.
+3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft).
 4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed.
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
 6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Browse events show the **tool name + URL**.
 7. Approve artifacts. Save a job as a **Skill**, then **Run skill**.
 8. Open **API Console** (`/desk/[workspaceId]/developers`): mint a workspace key, call `/api/v1` from the in-app console or curl.
+9. Invite a teammate from Settings/Usage (copy the magic link — this slice does not send email). Seats follow the plan.
+10. Export artifacts as Markdown or a simple PDF. Usage shows tokens remaining, jobs, and a cost stub. Schedule “every Monday LinkedIn week” — it fires on desk load or daily cron.
 
 Quick-start chips follow the **selected agent’s role label** (Research → Competitor scan, Sales → Outreach from research). If you have no Research agent, the chip says **Add Research bot from Marketplace** — chips never invent a named roster.
 
@@ -264,9 +266,10 @@ See [`.env.example`](./.env.example). Summary:
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | no | Slack OAuth. Missing → Connect stays disconnected. |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | no | Notion OAuth. |
 | `GITHUB_TOKEN` | no | Optional GitHub plugin env; or paste a PAT in Connect. |
-| `BILLING_MOCK` | no (defaults true when Stripe is unset) | Apply Starter/Growth locally without Stripe. |
+| `BILLING_MOCK` | no (defaults true when Stripe is unset) | Apply Starter/Pro locally without Stripe. |
 | `STRIPE_SECRET_KEY` | no | Stripe test-mode Checkout (and optional Stripe plugin env). |
-| `STRIPE_STARTER_PRICE_ID` / `STRIPE_GROWTH_PRICE_ID` | no | Price IDs for $79 / $199 plans. |
+| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` | no | Price IDs for $20 / $79 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro alias. |
+| `CRON_SECRET` | no | Bearer secret for `GET /api/cron/jobs`. If unset, schedules still run when the desk loads. |
 | `NEXT_PUBLIC_APP_URL` | no | Checkout + OAuth redirect origin. |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for test-mode Stripe. |
 
@@ -348,6 +351,7 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 - Function timeout/size limits apply to long jobs; this slice does not add a queue worker.
 - Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
 - Stripe live Checkout is not part of this prep (`BILLING_MOCK=true`).
+- **Scheduled jobs** enqueue when someone opens Mission Control (`GET /jobs`) or when `/api/cron/jobs` is called with `CRON_SECRET`. Vercel Hobby cron is daily (`0 12 * * *`) — not an always-on worker. Times are 09:00 UTC.
 
 ## Model routing
 
@@ -369,9 +373,11 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 
 | Plan | Price | Seats | Tokens | Jobs/hour | Concurrent |
 | --- | --- | --- | --- | --- | --- |
-| Demo (free) | $0 | 1 | 50,000 | 8 | 1 |
-| Starter | $79/mo | 2 | 200,000 | 30 | 3 |
-| Growth | $199/mo | 5 | 500,000 | 80 | 6 |
+| Demo (free) | $0 | 1 | 15,000 | 4 | 1 |
+| Starter | $20/mo | 2 | 50,000 | 8 | 1 |
+| Pro | $79/mo | 5 | 200,000 | 30 | 3 |
+
+Existing workspaces stored as `growth` map to Pro. Token budget, hourly jobs, concurrent jobs, and seats are enforced on job create and invites. The desk header shows remaining tokens.
 
 Token budget, hourly jobs, and concurrent running jobs are enforced on job create. The desk header shows remaining caps.
 
@@ -384,6 +390,7 @@ npm run test:browse        # optional: Playwright against example.com (needs Chr
 npm run test:api-router    # catch-all matcher still resolves every public /api URL
 npm run test:developer-api # hashed keys, catalog, JSON 401 shape
 npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML preview
+npm run test:product       # $20/$79 plans, onboarding, templates, schedule math, export PDF
 ```
 
 ## Job runtime

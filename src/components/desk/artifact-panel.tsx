@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Copy, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import { Check, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArtifactExportButtons } from "@/components/desk/artifact-export";
 import { MarkdownBody } from "@/components/desk/markdown";
 import { providerLabel } from "@/components/desk/provider-badges";
 import { extractPreviewHtml, isPreviewableArtifact } from "@/lib/html-preview";
@@ -23,15 +23,6 @@ export function ArtifactPanel({
   const previewHtml = isPreviewableArtifact(artifact.type, artifact.content)
     ? extractPreviewHtml(artifact.content)
     : null;
-
-  async function copyMarkdown() {
-    try {
-      await navigator.clipboard.writeText(previewHtml || artifact.content);
-      toast.success(previewHtml ? "HTML copied." : "Markdown copied.");
-    } catch {
-      toast.error("Could not copy. Select the text instead.");
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -60,10 +51,7 @@ export function ArtifactPanel({
           <RefreshCw className="size-3.5" />
           Regenerate
         </Button>
-        <Button size="sm" variant="outline" onClick={copyMarkdown}>
-          <Copy className="size-3.5" />
-          {previewHtml ? "Copy HTML" : "Copy Markdown"}
-        </Button>
+        <ArtifactExportButtons artifact={artifact} />
       </div>
       {previewHtml ? (
         <iframe

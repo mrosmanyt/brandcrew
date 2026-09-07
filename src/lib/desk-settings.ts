@@ -16,9 +16,14 @@ export function settingsDeskLinks(workspaceId: string) {
       hint: "Plugins and bots in one place.",
     },
     {
+      href: `/desk/${workspaceId}/usage`,
+      label: "Usage",
+      hint: "Tokens remaining, jobs this hour, seat count, scheduled jobs.",
+    },
+    {
       href: `/desk/${workspaceId}/billing`,
       label: "Plans",
-      hint: "Starter, Growth, and workspace limits.",
+      hint: "Starter $20 and Pro $79. Caps are enforced.",
     },
     {
       href: `/desk/${workspaceId}/brand-kit`,

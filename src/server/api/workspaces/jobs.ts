@@ -5,6 +5,7 @@ import { GENERATE_ACTIONS, JOB_ACTION_MESSAGES } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
+import { runDueSchedules } from "@/lib/schedules";
 import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { isTeamLaunchIntent } from "@/lib/team-launch";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
@@ -25,6 +26,7 @@ export async function GET(
   try {
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
+    await runDueSchedules(workspaceId);
     await kickQueuedJobs(workspaceId);
 
     const [jobs, skills] = await Promise.all([

@@ -13,31 +13,35 @@ export const PLANS = {
     name: "Demo",
     price: 0,
     seats: 1,
-    tokenBudget: 50_000,
-    jobsPerHour: 8,
+    tokenBudget: 15_000,
+    jobsPerHour: 4,
     maxConcurrentJobs: 1,
   },
   starter: {
     id: "starter",
     name: "Starter",
-    price: 79,
+    price: 20,
     seats: 2,
+    tokenBudget: 50_000,
+    jobsPerHour: 8,
+    maxConcurrentJobs: 1,
+  },
+  pro: {
+    id: "pro",
+    name: "Pro",
+    price: 79,
+    seats: 5,
     tokenBudget: 200_000,
     jobsPerHour: 30,
     maxConcurrentJobs: 3,
   },
-  growth: {
-    id: "growth",
-    name: "Growth",
-    price: 199,
-    seats: 5,
-    tokenBudget: 500_000,
-    jobsPerHour: 80,
-    maxConcurrentJobs: 6,
-  },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
+
+/** Paid plans shown in billing UI and mock checkout. */
+export const CHECKOUT_PLANS = ["starter", "pro"] as const;
+export type CheckoutPlanId = (typeof CHECKOUT_PLANS)[number];
 
 /** Tooling hint only — not a product cast. Maps an agent's role label to a playbook family. */
 export const AGENT_ROLES = [
@@ -63,6 +67,8 @@ export const GENERATE_ACTIONS = [
   "ad_angles_from_url",
   "build_website",
   "build_app",
+  "inbox_replies",
+  "whatsapp_drafts",
   "regenerate",
 ] as const;
 
@@ -85,6 +91,10 @@ export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
     "Build a one-page branded website from the Brand Kit. Return a complete HTML document. Do not publish.",
   build_app:
     "Build a small branded web app from the Brand Kit. Return a complete HTML document the desk can preview. Do not require Replit or any login.",
+  inbox_replies:
+    "List recent inbox mail if Gmail is connected, then draft replies. Pause for my approval. Do not send.",
+  whatsapp_drafts:
+    "Draft WhatsApp replies from the Brand Kit. Do not send. WhatsApp stays draft-only even if Twilio credentials are stored.",
   regenerate: "Regenerate the last artifact with the same brief.",
 };
 
@@ -145,6 +155,11 @@ export function jobChipsForHint(hint: AgentRole): JobChip[] {
       return [
         { action: "build_website", label: "Build website" },
         { action: "build_app", label: "Build app" },
+      ];
+    case "ops":
+      return [
+        { action: "inbox_replies", label: "Inbox replies" },
+        { action: "whatsapp_drafts", label: "WhatsApp drafts" },
       ];
     default:
       return [{ action: "default", label: "Give a job" }];

@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { BrandMark } from "@/components/brand/logo";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function SignupScreen() {
+function SignupForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const inviteToken = params.get("invite") || "";
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(params.get("email") || "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,7 +26,12 @@ export function SignupScreen() {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        inviteToken: inviteToken || undefined,
+      }),
     });
     const data = await res.json();
     setBusy(false);
@@ -32,7 +39,11 @@ export function SignupScreen() {
       setError(data.error || "Could not create the account.");
       return;
     }
-    router.push("/onboarding");
+    if (data.workspaceId && data.joinedViaInvite) {
+      router.push(`/desk/${data.workspaceId}`);
+    } else {
+      router.push("/onboarding");
+    }
     router.refresh();
   }
 
@@ -54,6 +65,11 @@ export function SignupScreen() {
               We create a demo workspace with the Northline Studio Brand Kit so you
               can open Mission Control, create agents, and give a real job.
             </p>
+            {inviteToken ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                You are joining a shared workspace. Use the invited email.
+              </p>
+            ) : null}
             <form onSubmit={onSubmit} className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label>Your name</Label>
@@ -97,5 +113,13 @@ export function SignupScreen() {
         </div>
       </div>
     </MarketingShell>
+  );
+}
+
+export function SignupScreen() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

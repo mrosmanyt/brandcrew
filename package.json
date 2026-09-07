@@ -26,6 +26,7 @@
     "test:workspace-create": "tsx scripts/check-workspace-create.ts",
     "test:developer-api": "tsx scripts/check-developer-api.ts",
     "test:limits": "tsx scripts/check-limits.ts",
+    "test:product": "tsx scripts/check-product-pack.ts",
     "test:desk-chat": "tsx scripts/check-desk-chat.ts",
     "test:desk-settings": "tsx scripts/check-desk-settings.ts",
     "test:desk-theme": "tsx scripts/check-desk-theme.ts",

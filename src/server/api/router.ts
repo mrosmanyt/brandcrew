@@ -5,6 +5,8 @@ import * as authLogout from "./auth/logout";
 import * as authMe from "./auth/me";
 import * as authSignup from "./auth/signup";
 import * as billingCheckout from "./billing/checkout";
+import * as cronJobs from "./cron/jobs";
+import * as inviteToken from "./invites/token";
 import * as oauthCallback from "./oauth/callback";
 import * as v1Agent from "./v1/agent";
 import * as v1Agents from "./v1/agents";
@@ -25,8 +27,13 @@ import * as workspaceBrandKit from "./workspaces/brand-kit";
 import * as workspaceCalendar from "./workspaces/calendar";
 import * as workspaceChat from "./workspaces/chat";
 import * as workspacesCollection from "./workspaces/collection";
+import * as workspaceInvite from "./workspaces/invite";
+import * as workspaceInvites from "./workspaces/invites";
 import * as workspaceJob from "./workspaces/job";
 import * as workspaceJobs from "./workspaces/jobs";
+import * as workspaceSchedule from "./workspaces/schedule";
+import * as workspaceSchedules from "./workspaces/schedules";
+import * as workspaceUsage from "./workspaces/usage";
 import * as workspaceMarketplace from "./workspaces/marketplace";
 import * as workspaceMarketplaceBots from "./workspaces/marketplace-bots";
 import * as workspacePluginConnect from "./workspaces/plugin-connect";
@@ -85,7 +92,29 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "auth", "logout"], handlers: asHandlers(authLogout) },
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
+  { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
+  { pattern: ["api", "invites", ":token"], handlers: asHandlers(inviteToken) },
   { pattern: ["api", "workspaces"], handlers: asHandlers(workspacesCollection) },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "invites", ":inviteId"],
+    handlers: asHandlers(workspaceInvite),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "invites"],
+    handlers: asHandlers(workspaceInvites),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "usage"],
+    handlers: asHandlers(workspaceUsage),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],
+    handlers: asHandlers(workspaceSchedule),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "schedules"],
+    handlers: asHandlers(workspaceSchedules),
+  },
   {
     pattern: ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
     handlers: asHandlers(workspaceApiKey),

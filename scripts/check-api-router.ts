@@ -20,7 +20,14 @@ const PATTERNS: string[][] = [
   ["api", "auth", "logout"],
   ["api", "oauth", "callback"],
   ["api", "billing", "checkout"],
+  ["api", "cron", "jobs"],
+  ["api", "invites", ":token"],
   ["api", "workspaces"],
+  ["api", "workspaces", ":workspaceId", "invites", ":inviteId"],
+  ["api", "workspaces", ":workspaceId", "invites"],
+  ["api", "workspaces", ":workspaceId", "usage"],
+  ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],
+  ["api", "workspaces", ":workspaceId", "schedules"],
   ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
   ["api", "workspaces", ":workspaceId", "api-keys"],
   ["api", "workspaces", ":workspaceId", "artifacts", ":artifactId"],
@@ -76,7 +83,38 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/auth/logout", ["api", "auth", "logout"], {}],
   ["/api/oauth/callback", ["api", "oauth", "callback"], {}],
   ["/api/billing/checkout", ["api", "billing", "checkout"], {}],
+  ["/api/cron/jobs", ["api", "cron", "jobs"], {}],
+  [
+    "/api/invites/tok_1",
+    ["api", "invites", ":token"],
+    { token: "tok_1" },
+  ],
   ["/api/workspaces", ["api", "workspaces"], {}],
+  [
+    "/api/workspaces/ws_1/invites",
+    ["api", "workspaces", ":workspaceId", "invites"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/invites/inv_1",
+    ["api", "workspaces", ":workspaceId", "invites", ":inviteId"],
+    { workspaceId: "ws_1", inviteId: "inv_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/usage",
+    ["api", "workspaces", ":workspaceId", "usage"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/schedules",
+    ["api", "workspaces", ":workspaceId", "schedules"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/schedules/sch_1",
+    ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],
+    { workspaceId: "ws_1", scheduleId: "sch_1" },
+  ],
   [
     "/api/workspaces/ws_1",
     ["api", "workspaces", ":workspaceId"],
@@ -157,8 +195,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 37);
-console.log("ok: 37 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 44);
+console.log("ok: 44 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

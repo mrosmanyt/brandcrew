@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "node scripts/prisma-generate.mjs --with-migrate && npx next build"
+  "buildCommand": "node scripts/prisma-generate.mjs --with-migrate && npx next build",
+  "crons": [
+    {
+      "path": "/api/cron/jobs",
+      "schedule": "0 12 * * *"
+    }
+  ]
 }

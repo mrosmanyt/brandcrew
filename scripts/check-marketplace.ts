@@ -39,7 +39,7 @@ for (const id of [
 assert.ok(MARKETPLACE_BOTS.every((bot) => bot.creator === "CINEM Pro"));
 console.log(`ok: ${MARKETPLACE_BOTS.length} bot templates`);
 
-const plugins = ["web-search", "gmail", "slack", "notion", "google-calendar", "google-drive", "stripe"];
+const plugins = ["web-search", "gmail", "whatsapp", "slack", "notion", "google-calendar", "google-drive", "stripe"];
 for (const id of plugins) {
   assert.ok(getMarketplacePlugin(id), `missing plugin ${id}`);
 }
@@ -55,6 +55,8 @@ assert.deepEqual(getMarketplacePlugin("slack")?.tools, [
   "slack_draft_message",
   "slack_post_message",
 ]);
+assert.equal(getMarketplacePlugin("whatsapp")?.auth, "api_key");
+assert.deepEqual(getMarketplacePlugin("whatsapp")?.tools, []);
 assert.equal(getMarketplacePlugin("gmail")?.auth, "oauth");
 assert.equal(getMarketplacePlugin("slack")?.auth, "oauth");
 console.log(`ok: ${MARKETPLACE_PLUGINS.length} plugins`);

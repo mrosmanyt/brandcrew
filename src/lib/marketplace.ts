@@ -196,6 +196,21 @@ export const MARKETPLACE_PLUGINS: PluginDef[] = [
     color: "#ea4335",
   },
   {
+    id: "whatsapp",
+    name: "WhatsApp",
+    description:
+      "Draft-only WhatsApp replies. Connect with a Twilio Auth Token if you have one — Connected never means send. Without Twilio, this plugin stays disconnected and playbooks still draft locally.",
+    category: "Customer Support",
+    featured: true,
+    auth: "api_key",
+    secretLabel: "Twilio Auth Token",
+    envKeys: ["TWILIO_AUTH_TOKEN", "TWILIO_ACCOUNT_SID"],
+    docsUrl: "https://www.twilio.com/docs/whatsapp",
+    tools: [],
+    letter: "WA",
+    color: "#25d366",
+  },
+  {
     id: "slack",
     name: "Slack",
     description:

@@ -23,9 +23,11 @@ import {
 import {
   demoAdAnglesFromUrl,
   demoCompetitorMarkdown,
+  demoInboxReplies,
   demoLinkedInPosts,
   demoOutreachFromResearch,
   demoResearchMarkdown,
+  demoWhatsAppDrafts,
 } from "@/lib/demo";
 import { extractUrls, fetchUrlText } from "@/lib/fetch-url";
 import {
@@ -168,7 +170,10 @@ export async function createJobFromChat(input: {
     inferPlaybookKey(hintRole, input.message, input.action);
 
   if (!playbook) {
-    playbook = playbookFromKey(playbookKey, hintRole, input.message, kit.website);
+    const gmail = await getConnectedPlugin(input.workspaceId, "gmail");
+    playbook = playbookFromKey(playbookKey, hintRole, input.message, kit.website, {
+      gmailConnected: Boolean(gmail),
+    });
   } else {
     playbook = resetPlaybook(playbook);
   }
@@ -1070,6 +1075,34 @@ async function writeJobArtifact(
     model = pack.model;
     provider = pack.provider;
     tokens = pack.tokens;
+  } else if (kind === "inbox_replies") {
+    const pack = await generateInboxReplies({
+      kit: input.kit,
+      prompt: input.prompt,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title;
+    content = pack.content;
+    type = "inbox_replies";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "whatsapp_drafts") {
+    const pack = await generateWhatsAppDrafts({
+      kit: input.kit,
+      prompt: input.prompt,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title;
+    content = pack.content;
+    type = "whatsapp_drafts";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
   } else if (kind === "gmail_inbox") {
     title = "Recent Gmail";
     content = `# Recent Gmail\n\n${formatGmailList(context.gmailMessages || [])}\n`;
@@ -1574,6 +1607,101 @@ Return JSON: { "title": string, "content": string }.`,
     tokens,
     model: resolved.source === "tools" ? "browse" : model,
     provider: resolved.source === "tools" ? "tools" : provider,
+  };
+}
+
+async function generateInboxReplies(input: {
+  kit: BrandKit;
+  prompt: string;
+  context: JobContext;
+  agentName: string;
+  agentInstructions: string;
+}): Promise<ArtifactPack> {
+  const fallback = demoInboxReplies(input.kit, input.context.gmailMessages);
+  const live = llm.status().configured;
+  const inboxNote = input.context.gmailMessages?.length
+    ? formatGmailList(input.context.gmailMessages)
+    : "Gmail is not connected. Draft from the Brand Kit and the user brief only.";
+  if (!live) {
+    return {
+      title: fallback.title,
+      content: fallback.content,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+  const result = await llm.complete({
+    mode: "draft",
+    json: true,
+    messages: [
+      {
+        role: "system",
+        content: `You are ${input.agentName} on CINEM Pro.
+${input.agentInstructions}
+Draft short email replies. Never claim they were sent. Last line must say CINEM Pro did not send.
+Return JSON: { "title": string, "content": string }.`,
+      },
+      {
+        role: "user",
+        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\nInbox:\n${inboxNote}\n\nRequest:\n${input.prompt}`,
+      },
+    ],
+  });
+  const json = parseLlmJson(result.text);
+  const title = String(json?.title || "").trim() || fallback.title;
+  const content = String(json?.content || "").trim() || fallback.content;
+  return {
+    title,
+    content,
+    tokens: result.tokens,
+    model: result.model,
+    provider: result.provider,
+  };
+}
+
+async function generateWhatsAppDrafts(input: {
+  kit: BrandKit;
+  prompt: string;
+  context: JobContext;
+  agentName: string;
+  agentInstructions: string;
+}): Promise<ArtifactPack> {
+  const fallback = demoWhatsAppDrafts(input.kit);
+  const live = llm.status().configured;
+  if (!live) {
+    return {
+      title: fallback.title,
+      content: fallback.content,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+  const result = await llm.complete({
+    mode: "draft",
+    json: true,
+    messages: [
+      {
+        role: "system",
+        content: `You are ${input.agentName} on CINEM Pro.
+${input.agentInstructions}
+Write 3 short WhatsApp drafts. Never send. Never claim Twilio delivered anything.
+Return JSON: { "title": string, "content": string }.`,
+      },
+      {
+        role: "user",
+        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\nRequest:\n${input.prompt}`,
+      },
+    ],
+  });
+  const json = parseLlmJson(result.text);
+  return {
+    title: String(json?.title || "").trim() || fallback.title,
+    content: String(json?.content || "").trim() || fallback.content,
+    tokens: result.tokens,
+    model: result.model,
+    provider: result.provider,
   };
 }
 

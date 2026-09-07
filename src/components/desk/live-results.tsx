@@ -10,6 +10,7 @@ import {
   PanelRightClose,
   Sparkles,
 } from "lucide-react";
+import { ArtifactExportButtons } from "@/components/desk/artifact-export";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { extractPreviewHtml } from "@/lib/html-preview";
@@ -244,7 +245,7 @@ function ArtifactResultCard({
           {excerpt}
         </p>
       ) : null}
-      <div className="mt-2">
+      <div className="mt-2 flex flex-col gap-2">
         {artifact.status !== "approved" ? (
           <Button size="xs" onClick={onApprove} disabled={busy}>
             <Check className="size-3" />
@@ -253,6 +254,7 @@ function ArtifactResultCard({
         ) : (
           <p className="text-[11px] text-muted-foreground">Approved — Ops has the card.</p>
         )}
+        <ArtifactExportButtons artifact={artifact} size="xs" />
       </div>
     </div>
   );
