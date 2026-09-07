@@ -129,8 +129,8 @@ export function ResizeHandle({
       />
       <span
         className={cn(
-          "relative z-10 my-auto h-8 w-1 rounded-full bg-zinc-500/80 transition-colors group-hover:bg-zinc-200",
-          active && "bg-zinc-100",
+          "relative z-10 my-auto h-8 w-1 rounded-full bg-muted-foreground/70 transition-colors group-hover:bg-foreground",
+          active && "bg-foreground",
         )}
       />
     </div>

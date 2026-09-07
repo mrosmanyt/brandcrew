@@ -51,16 +51,11 @@ export function ChatBubble({
         className={cn(
           "max-w-[min(40rem,86%)] rounded-2xl px-3.5 py-2 text-sm leading-6",
           isUser
-            ? "rounded-br-md bg-zinc-100 text-zinc-950"
-            : "rounded-bl-md border border-border bg-zinc-900",
+            ? "rounded-br-md bg-secondary text-secondary-foreground"
+            : "rounded-bl-md border border-border bg-card text-card-foreground",
         )}
       >
-        <p
-          className={cn(
-            "text-[11px] leading-4",
-            isUser ? "text-primary-foreground/65" : "text-muted-foreground",
-          )}
-        >
+        <p className="text-[11px] leading-4 text-muted-foreground">
           {isUser ? "You" : displayAgentName(agentName)}
         </p>
         <div className={cn("mt-0.5", isUser ? "whitespace-pre-wrap" : "")}>
@@ -93,9 +88,11 @@ export function ProgressCard({ line }: { line: LiveProgressLine }) {
       <div
         className={cn(
           "inline-flex max-w-[min(36rem,86%)] items-start gap-2 rounded-xl border px-2.5 py-1.5 text-xs leading-5",
-          line.tone === "wait" && "border-amber-500/30 bg-amber-500/8 text-amber-100",
+          line.tone === "wait" &&
+            "border-amber-500/30 bg-amber-500/8 text-amber-950 dark:text-amber-100",
           line.tone === "error" && "border-destructive/30 bg-destructive/10 text-destructive",
-          line.tone === "working" && "border-sky-500/25 bg-sky-500/8 text-sky-100",
+          line.tone === "working" &&
+            "border-sky-500/25 bg-sky-500/8 text-sky-950 dark:text-sky-100",
           (line.tone === "info" || line.tone === "success") &&
             "border-border bg-muted/40 text-muted-foreground",
         )}

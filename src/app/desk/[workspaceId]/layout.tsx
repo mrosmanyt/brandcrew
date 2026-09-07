@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { DeskChromeHeader } from "@/components/desk/desk-chrome";
 import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
 import { getCurrentUser } from "@/lib/auth";
@@ -67,6 +68,7 @@ export default async function WorkspaceLayout({
       </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <SetupBanner />
+        <DeskChromeHeader />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
     </div>

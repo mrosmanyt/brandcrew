@@ -27,6 +27,7 @@ import {
   usePersistedPaneWidth,
 } from "@/components/desk/resize-handle";
 import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
+import { DeskThemeToggle } from "@/components/desk/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DESK_LEFT_PANE } from "@/lib/desk-layout";
@@ -528,24 +529,27 @@ export function DeskSidebar(props: {
           onDoubleClick={toggle}
         />
       ) : null}
-      <div className="flex items-center justify-between border-b border-border bg-card px-3 py-2 md:hidden">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 md:hidden">
         <BrandMark />
-        <Sheet>
-          <SheetTrigger render={<Button variant="outline" size="icon-sm" />}>
-            <Menu className="size-4" />
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Navigation</SheetTitle>
-            </SheetHeader>
-            <NavBody
-              {...props}
-              collapsed={false}
-              onToggle={() => undefined}
-              onLogout={logout}
-            />
-          </SheetContent>
-        </Sheet>
+        <div className="flex items-center gap-2">
+          <DeskThemeToggle />
+          <Sheet>
+            <SheetTrigger render={<Button variant="outline" size="icon-sm" />}>
+              <Menu className="size-4" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation</SheetTitle>
+              </SheetHeader>
+              <NavBody
+                {...props}
+                collapsed={false}
+                onToggle={() => undefined}
+                onLogout={logout}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </>
   );

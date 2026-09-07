@@ -28,6 +28,7 @@
     "test:limits": "tsx scripts/check-limits.ts",
     "test:desk-chat": "tsx scripts/check-desk-chat.ts",
     "test:desk-settings": "tsx scripts/check-desk-settings.ts",
+    "test:desk-theme": "tsx scripts/check-desk-theme.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:build": "node scripts/desktop-build.mjs",
     "desktop:build:win": "node scripts/desktop-build.mjs --win",
