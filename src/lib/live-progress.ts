@@ -54,7 +54,7 @@ function eventTool(event: JobEventDTO) {
   return typeof event.data?.tool === "string" ? event.data.tool : "";
 }
 
-function doneLabel(tool: string, message: string, url?: string) {
+function doneLabel(tool: string, message: string, url?: string): string {
   const host = hostFromUrl(url);
   switch (tool) {
     case "read_brand_kit":
@@ -89,7 +89,7 @@ function doneLabel(tool: string, message: string, url?: string) {
   }
 }
 
-function friendlyRaw(message: string) {
+function friendlyRaw(message: string): string {
   const trimmed = message.trim();
   if (!trimmed) return "Working…";
   if (/^Plan ready/i.test(trimmed)) {
