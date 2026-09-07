@@ -16,11 +16,13 @@ export function getStripe() {
 
 export function asCheckoutPlan(plan: string): CheckoutPlanId {
   const id = normalizePlanId(plan);
-  return id === "pro" ? "pro" : "starter";
+  if (id === "ultra" || id === "pro" || id === "starter") return id;
+  return "starter";
 }
 
 export function priceIdForPlan(plan: Exclude<PlanId, "demo">) {
   if (plan === "starter") return process.env.STRIPE_STARTER_PRICE_ID || "";
+  if (plan === "ultra") return process.env.STRIPE_ULTRA_PRICE_ID || "";
   return process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_GROWTH_PRICE_ID || "";
 }
 

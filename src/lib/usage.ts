@@ -26,7 +26,7 @@ export async function assertWorkspaceBudget(workspaceId: string) {
     throw new BudgetError(
       caps.paid
         ? "This workspace has reached its generation budget. Wait for the next cycle or upgrade."
-        : "This workspace has reached its free generation budget. Upgrade to Starter ($20) or Pro ($79) to continue.",
+        : "This workspace has reached its free generation budget. Upgrade to Starter ($20), Pro ($79), or Ultra ($200) to continue.",
       402,
       "BUDGET",
     );

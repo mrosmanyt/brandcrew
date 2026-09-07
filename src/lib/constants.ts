@@ -35,12 +35,21 @@ export const PLANS = {
     jobsPerHour: 30,
     maxConcurrentJobs: 3,
   },
+  ultra: {
+    id: "ultra",
+    name: "Ultra",
+    price: 200,
+    seats: 12,
+    tokenBudget: 600_000,
+    jobsPerHour: 90,
+    maxConcurrentJobs: 6,
+  },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
 
 /** Paid plans shown in billing UI and mock checkout. */
-export const CHECKOUT_PLANS = ["starter", "pro"] as const;
+export const CHECKOUT_PLANS = ["starter", "pro", "ultra"] as const;
 export type CheckoutPlanId = (typeof CHECKOUT_PLANS)[number];
 
 /** Tooling hint only — not a product cast. Maps an agent's role label to a playbook family. */

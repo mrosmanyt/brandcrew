@@ -122,9 +122,9 @@ async function BillingPage({
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Plans</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Starter is $20/month for 2 seats and 50k tokens. Pro is $79/month for 5
-        seats and 200k tokens. Token budgets, jobs per hour, and concurrent jobs
-        are enforced by plan. There is no self-serve model key field — keys stay
-        on the server.
+        seats and 200k tokens. Ultra is $200/month for 12 seats and 600k tokens.
+        Token budgets, jobs per hour, and concurrent jobs are enforced by plan.
+        There is no self-serve model key field — keys stay on the server.
       </p>
       {query.status === "success" ? (
         <p className="mt-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">

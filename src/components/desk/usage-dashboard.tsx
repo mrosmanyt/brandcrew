@@ -96,7 +96,7 @@ export function UsageDashboard({
         <Stat
           label="Plan"
           value={limits?.plan ?? "…"}
-          hint="Starter $20 · Pro $79"
+          hint="Starter $20 · Pro $79 · Ultra $200"
         />
       </div>
 

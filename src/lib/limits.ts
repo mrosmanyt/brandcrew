@@ -19,14 +19,14 @@ export type WorkspaceLimits = PlanLimits & {
 };
 
 export function normalizePlanId(plan?: string | null): PlanId {
+  if (plan === "ultra") return "ultra";
   if (plan === "growth" || plan === "pro") return "pro";
   if (plan === "starter" || plan === "demo") return plan;
   return "demo";
 }
 
 export function isPaidPlan(plan?: string | null): boolean {
-  const id = normalizePlanId(plan);
-  return id === "starter" || id === "pro";
+  return normalizePlanId(plan) !== "demo";
 }
 
 export function limitsForPlan(plan?: string | null): PlanLimits {

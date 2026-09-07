@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CHECKOUT_PLANS, PLANS } from "@/lib/constants";
+import { CHECKOUT_PLANS, PLANS, type CheckoutPlanId } from "@/lib/constants";
 
 export function BillingPlans({
   workspaceId,
@@ -19,7 +19,7 @@ export function BillingPlans({
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function checkout(plan: "starter" | "pro") {
+  async function checkout(plan: CheckoutPlanId) {
     setBusy(plan);
     const res = await fetch("/api/billing/checkout", {
       method: "POST",
@@ -46,7 +46,7 @@ export function BillingPlans({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">{demo.seats} seat · free</p>
           <h2 className="font-heading mt-1 text-2xl">{demo.name}</h2>

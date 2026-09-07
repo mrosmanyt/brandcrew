@@ -266,9 +266,9 @@ See [`.env.example`](./.env.example). Summary:
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | no | Slack OAuth. Missing → Connect stays disconnected. |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | no | Notion OAuth. |
 | `GITHUB_TOKEN` | no | Optional GitHub plugin env; or paste a PAT in Connect. |
-| `BILLING_MOCK` | no (defaults true when Stripe is unset) | Apply Starter/Pro locally without Stripe. |
+| `BILLING_MOCK` | no (defaults true when Stripe is unset) | Apply Starter/Pro/Ultra locally without Stripe. |
 | `STRIPE_SECRET_KEY` | no | Stripe test-mode Checkout (and optional Stripe plugin env). |
-| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` | no | Price IDs for $20 / $79 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro alias. |
+| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` / `STRIPE_ULTRA_PRICE_ID` | no | Price IDs for $20 / $79 / $200 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro alias. |
 | `CRON_SECRET` | no | Bearer secret for `GET /api/cron/jobs`. If unset, schedules still run when the desk loads. |
 | `NEXT_PUBLIC_APP_URL` | no | Checkout + OAuth redirect origin. |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for test-mode Stripe. |
@@ -376,6 +376,7 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 | Demo (free) | $0 | 1 | 15,000 | 4 | 1 |
 | Starter | $20/mo | 2 | 50,000 | 8 | 1 |
 | Pro | $79/mo | 5 | 200,000 | 30 | 3 |
+| Ultra | $200/mo | 12 | 600,000 | 90 | 6 |
 
 Existing workspaces stored as `growth` map to Pro. Token budget, hourly jobs, concurrent jobs, and seats are enforced on job create and invites. The desk header shows remaining tokens.
 
@@ -390,7 +391,7 @@ npm run test:browse        # optional: Playwright against example.com (needs Chr
 npm run test:api-router    # catch-all matcher still resolves every public /api URL
 npm run test:developer-api # hashed keys, catalog, JSON 401 shape
 npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML preview
-npm run test:product       # $20/$79 plans, onboarding, templates, schedule math, export PDF
+npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule math, export PDF
 ```
 
 ## Job runtime

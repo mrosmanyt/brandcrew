@@ -86,7 +86,7 @@ const FEATURES = [
   },
   {
     title: "Token budget",
-    body: "Demo, Starter ($20), and Pro ($79) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
+    body: "Demo, Starter ($20), Pro ($79), and Ultra ($200) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
   },
   {
     title: "Electron desktop",
@@ -332,16 +332,16 @@ export function DownloadSection() {
 }
 
 export function PricingSection() {
-  const plans = [PLANS.starter, PLANS.pro] as const;
+  const plans = [PLANS.starter, PLANS.pro, PLANS.ultra] as const;
   return (
     <Section
       id="pricing"
       bordered
       kicker="Pricing"
-      title="Starter and Pro"
+      title="Starter, Pro, and Ultra"
       lead="Signup starts on Demo. Upgrade in the desk when you need more seats and a higher token budget. Model keys stay on the server."
     >
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
           <article key={plan.id} className="mkt-card-hover rounded-xl border border-border bg-card p-6">
             <p className="text-sm text-muted-foreground">
@@ -457,7 +457,7 @@ const FAQS = [
   },
   {
     q: "How does pricing work?",
-    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Signup starts on Demo. Upgrade in the desk.",
+    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Demo. Upgrade in the desk.",
   },
   {
     q: "Can I call this from my own app?",
