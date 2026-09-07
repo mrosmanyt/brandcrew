@@ -30,13 +30,20 @@ assert.equal(limitsForPlan("starter").seats, 2);
 assert.equal(limitsForPlan("ultra").paid, true);
 console.log("ok: Starter $20 / Pro $79 / Ultra $200 caps");
 
-assert.equal(FEATURED_JOB_TEMPLATES.length, 4);
+assert.equal(FEATURED_JOB_TEMPLATES.length, 5);
 assert.deepEqual(
   FEATURED_JOB_TEMPLATES.map((row) => row.playbookKey).sort(),
-  ["competitor_scan", "linkedin_week", "outreach_from_research", "website_builder"].sort(),
+  [
+    "competitor_scan",
+    "deck_builder",
+    "linkedin_week",
+    "outreach_from_research",
+    "website_builder",
+  ].sort(),
 );
 assert.equal(inferPlaybookKey("writer", "", "generate_week"), "linkedin_week");
 assert.equal(inferPlaybookKey("Website", "", "build_website"), "website_builder");
+assert.equal(inferPlaybookKey("Website", "", "build_deck"), "deck_builder");
 console.log("ok: featured playbook pack");
 
 const empty = workspaceOnboarding({

@@ -5,7 +5,9 @@ import {
   demoAdAnglesFromUrl,
   demoAppHtml,
   demoArtifact,
+  demoBrandKitDraft,
   demoCompetitorMarkdown,
+  demoDeckHtml,
   demoGenerateWeek,
   demoOutreachFromResearch,
   demoResearchPack,
@@ -40,7 +42,9 @@ export function agentMode(role: AgentRole, action: GenerateAction = "default"): 
     action === "outreach_from_research" ||
     action === "ad_angles_from_url" ||
     action === "build_website" ||
-    action === "build_app"
+    action === "build_app" ||
+    action === "build_deck" ||
+    action === "brand_kit_draft"
   ) {
     return "draft";
   }
@@ -71,6 +75,12 @@ function actionInstructions(action: GenerateAction, role: AgentRole) {
   }
   if (action === "build_app") {
     return `Return a complete HTML mini-app. No Replit. No external login. CSS in a style tag.`;
+  }
+  if (action === "build_deck") {
+    return `Return a complete HTML pitch deck (5–7 full-viewport slides). CSS only. Do not publish.`;
+  }
+  if (action === "brand_kit_draft") {
+    return `Write Brand Kit creative: voice, visual direction, headline options, and what not to say. Markdown. Do not publish.`;
   }
   return ROLE_INSTRUCTIONS[role];
 }
@@ -127,6 +137,15 @@ function fallbackArtifact(
       content: demoAppHtml(kit),
     };
   }
+  if (action === "build_deck") {
+    return {
+      type: "deck",
+      title: `${brandLabel(kit)} deck`,
+      summary: "Offline demo pitch deck HTML.",
+      content: demoDeckHtml(kit),
+    };
+  }
+  if (action === "brand_kit_draft") return demoBrandKitDraft(kit);
   if (action === "build_website" || role === "builder") {
     return {
       type: "website",
@@ -141,19 +160,24 @@ function fallbackArtifact(
 function parseLiveArtifact(
   text: string,
   role: AgentRole,
+  action: GenerateAction = "default",
 ): GeneratedArtifact {
   const type =
-    role === "researcher"
-      ? "research_pack"
-      : role === "sales"
-        ? "sales_pack"
-        : role === "ads"
-          ? "ad_angles"
-          : role === "ops"
-            ? "ops_board"
-            : role === "builder"
-              ? "website"
-              : "draft";
+    action === "brand_kit_draft"
+      ? "brand_kit_draft"
+      : action === "build_deck"
+        ? "deck"
+        : role === "researcher"
+          ? "research_pack"
+          : role === "sales"
+            ? "sales_pack"
+            : role === "ads"
+              ? "ad_angles"
+              : role === "ops"
+                ? "ops_board"
+                : role === "builder"
+                  ? "website"
+                  : "draft";
   const parsed = parseLlmJson(text);
   if (parsed) {
     const content = String(parsed.content || "").trim();
@@ -200,9 +224,9 @@ export async function generateAgentArtifact(input: {
   const kind = jobKindFor(input.role, action);
   const name = displayAgentName(input.agentName);
 
-  if (action === "build_website" || action === "build_app") {
+  if (action === "build_website" || action === "build_app" || action === "build_deck") {
     const built = await generateBuilderArtifact({
-      kind: action === "build_app" ? "app" : "website",
+      kind: action === "build_app" ? "app" : action === "build_deck" ? "deck" : "website",
       kit: input.kit,
       prompt: input.userMessage,
       agentName: input.agentName,
@@ -260,7 +284,7 @@ export async function generateAgentArtifact(input: {
       { role: "user", content: input.userMessage },
     ],
   });
-  const artifact = parseLiveArtifact(result.text, input.role);
+  const artifact = parseLiveArtifact(result.text, input.role, action);
   const resolved = resolveRunOutput({
     live: true,
     llmTitle: artifact.title,
@@ -284,7 +308,7 @@ export async function generateAgentArtifact(input: {
 }
 
 export function jobKindFor(role: AgentRole, action: GenerateAction = "default"): LlmJobKind {
-  if (action === "build_website") return "website";
+  if (action === "build_website" || action === "build_deck") return "website";
   if (action === "build_app") return "apps";
   if (
     action === "generate_week" ||

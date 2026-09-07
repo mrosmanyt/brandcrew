@@ -9,7 +9,7 @@ export function looksLikeHtml(text: string): boolean {
 
 export function isPreviewableArtifact(type?: string | null, content?: string | null): boolean {
   const kind = (type || "").toLowerCase();
-  if (kind === "website" || kind === "app" || kind === "html") return true;
+  if (kind === "website" || kind === "app" || kind === "deck" || kind === "html") return true;
   return looksLikeHtml(content || "");
 }
 

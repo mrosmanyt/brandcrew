@@ -1126,9 +1126,9 @@ async function writeJobArtifact(
     type = "slack_channels";
     model = "slack";
     provider = "slack";
-  } else if (kind === "website" || kind === "app") {
+  } else if (kind === "website" || kind === "app" || kind === "deck") {
     const pack = await generateBuilderArtifact({
-      kind: kind === "app" ? "app" : "website",
+      kind: kind === "app" ? "app" : kind === "deck" ? "deck" : "website",
       kit: input.kit,
       prompt: pageAwarePrompt(input.prompt, context),
       agentName: input.agentName,
@@ -1161,7 +1161,9 @@ async function writeJobArtifact(
           ? "sales_pack"
           : kind === "linkedin_week"
             ? "generate_week"
-            : "default",
+            : kind === "brand_kit_draft"
+              ? "brand_kit_draft"
+              : "default",
       agentName: input.agentName,
       agentInstructions: input.agentInstructions,
     });

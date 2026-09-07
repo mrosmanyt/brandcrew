@@ -76,6 +76,8 @@ export const GENERATE_ACTIONS = [
   "ad_angles_from_url",
   "build_website",
   "build_app",
+  "build_deck",
+  "brand_kit_draft",
   "inbox_replies",
   "whatsapp_drafts",
   "regenerate",
@@ -100,6 +102,10 @@ export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
     "Build a one-page branded website from the Brand Kit. Return a complete HTML document. Do not publish.",
   build_app:
     "Build a small branded web app from the Brand Kit. Return a complete HTML document the desk can preview. Do not require Replit or any login.",
+  build_deck:
+    "Build a short pitch deck from the Brand Kit. Return a complete HTML slide deck the desk can preview. Do not publish.",
+  brand_kit_draft:
+    "Read the Brand Kit and write a creative draft: voice lines, visual direction, and sample headlines. Pause for my approval.",
   inbox_replies:
     "List recent inbox mail if Gmail is connected, then draft replies. Pause for my approval. Do not send.",
   whatsapp_drafts:

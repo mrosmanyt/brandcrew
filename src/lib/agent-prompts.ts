@@ -36,12 +36,13 @@ WhatsApp: write_artifact kind="whatsapp_drafts" only — never send, even if Twi
 Slack channel lists when Slack is Connected. Slack post only after ask_user.`;
     case "strategist":
       return `Owns ICP, offer, and monthly pillars.
+Jobs: strategy brief, Brand Kit creative (write_artifact kind="brand_kit_draft").
 For research or competitor language, browse public pages first (browser_navigate + snapshot), then write the brief.`;
     case "distributor":
       return `Turns approved posts into a 30-day calendar export. No auto-publish.`;
     case "builder":
-      return `Builds website or app HTML from the Brand Kit.
-Jobs: website_builder (write_artifact kind="website"), app_builder (kind="app").
+      return `Builds website, app, or deck HTML from the Brand Kit.
+Jobs: website_builder (write_artifact kind="website"), app_builder (kind="app"), deck_builder (kind="deck").
 Return a complete HTML document. No external scripts. Do not publish. No Replit login.`;
   }
 }
@@ -99,6 +100,8 @@ Rules:
 - Slack post: slack_list_channels, slack_draft_message, ask_user, then slack_post_message.
 - Website builder: read_brand_kit then write_artifact kind="website".
 - App builder: read_brand_kit then write_artifact kind="app".
+- Pitch deck: read_brand_kit then write_artifact kind="deck".
+- Brand Kit creative: read_brand_kit then write_artifact kind="brand_kit_draft".
 - Do not include browser_click or browser_type unless the user explicitly asked to click — they will still refuse login/password/send.
 - Do not invent send, login, or spend tools.`;
 }
