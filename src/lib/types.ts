@@ -1,5 +1,8 @@
 import type { BrandKit } from "@/lib/brand-kit";
+import type { LimitsDTO } from "@/lib/limits";
 import type { LlmStatus } from "@/lib/llm";
+
+export type { LimitsDTO };
 
 export type WorkspaceDTO = {
   id: string;
@@ -10,6 +13,7 @@ export type WorkspaceDTO = {
   tokenBudget: number;
   createdAt: string;
   brandKit?: BrandKit;
+  limits?: LimitsDTO;
 };
 
 export type MessageDTO = {

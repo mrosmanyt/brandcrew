@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Check, Loader2, Plug, Search } from "lucide-react";
 import { toast } from "sonner";
+import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -512,12 +513,7 @@ function FeaturedBotCard({ bot }: { bot: BotRow }) {
         className="flex aspect-[4/3] items-end overflow-hidden rounded-md p-2.5"
         style={{ background: `${bot.color}22` }}
       >
-        <span
-          className="grid size-8 place-items-center rounded-md text-xs font-semibold text-white"
-          style={{ background: bot.color }}
-        >
-          {bot.name.slice(0, 1)}
-        </span>
+        <AgentAvatar id={bot.id} name={bot.name} role={bot.role} size="md" />
       </div>
       <p className="mt-2 truncate text-xs">
         <span className="text-muted-foreground">{bot.creator}&apos;s </span>
@@ -538,12 +534,7 @@ function ListBotCard({
 }) {
   return (
     <article className="flex items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-2">
-      <span
-        className="grid size-8 shrink-0 place-items-center rounded-md text-[11px] font-semibold text-white"
-        style={{ background: bot.color }}
-      >
-        {bot.name.slice(0, 1)}
-      </span>
+      <AgentAvatar id={bot.id} name={bot.name} role={bot.role} size="md" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">
           {bot.name}{" "}

@@ -17,8 +17,10 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { ArtifactPanel } from "@/components/desk/artifact-panel";
 import { BudgetStopDialog } from "@/components/desk/budget-stop";
+import { hasPreviewableArtifacts, PreviewPanel } from "@/components/desk/preview-panel";
 import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,22 +29,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   DEFAULT_AGENT_NAME,
   displayAgentName,
-  jobChipsForHint,
+  jobChipsForRole,
   JOB_ACTION_MESSAGES,
   missingRoleMarketplaceChips,
-  playbookHintFromRole,
   type GenerateAction,
 } from "@/lib/constants";
 import type { AgentDTO, JobDTO, JobEventDTO, SkillDTO } from "@/lib/job-types";
 import type { ProposedAgent } from "@/lib/team-launch";
-import type { ArtifactDTO, MessageDTO } from "@/lib/types";
+import type { ArtifactDTO, LimitsDTO, MessageDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const STATUS_LABEL: Record<string, string> = {
-  idle: "idle",
-  working: "working",
-  "needs-you": "needs you",
-};
 
 export function MissionControl({
   workspaceId,
@@ -54,6 +49,7 @@ export function MissionControl({
   initialArtifacts,
   tokenUsed,
   tokenBudget,
+  initialLimits,
 }: {
   workspaceId: string;
   initialAgentId?: string;
@@ -64,6 +60,7 @@ export function MissionControl({
   initialArtifacts: Record<string, ArtifactDTO[]>;
   tokenUsed: number;
   tokenBudget: number;
+  initialLimits?: LimitsDTO | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -79,7 +76,15 @@ export function MissionControl({
   const [artifactsByAgent, setArtifactsByAgent] = useState(initialArtifacts);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [usage, setUsage] = useState({ tokenUsed, tokenBudget });
+  const [usage, setUsage] = useState({
+    tokenUsed,
+    tokenBudget,
+    jobsThisHour: initialLimits?.jobsThisHour ?? 0,
+    jobsPerHour: initialLimits?.jobsPerHour ?? 8,
+    concurrentJobs: initialLimits?.concurrentJobs ?? 0,
+    maxConcurrentJobs: initialLimits?.maxConcurrentJobs ?? 1,
+    plan: initialLimits?.plan ?? "demo",
+  });
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetMessage, setBudgetMessage] = useState(
     "This workspace has reached its generation budget. Upgrade to Starter or Growth to continue.",
@@ -132,10 +137,11 @@ export function MissionControl({
 
   const remaining = Math.max(0, usage.tokenBudget - usage.tokenUsed);
   const atCap = remaining <= 0;
+  const jobsLeft = Math.max(0, usage.jobsPerHour - usage.jobsThisHour);
   const active = jobs.some((job) => job.status === "queued" || job.status === "running");
-  const selectedHint = playbookHintFromRole(selected?.role || "");
-  const roleChips = selected ? jobChipsForHint(selectedHint) : [];
+  const roleChips = selected ? jobChipsForRole(selected.role || "") : [];
   const marketplaceChips = missingRoleMarketplaceChips(agents, workspaceId);
+  const showPreview = hasPreviewableArtifacts(artifacts);
 
   const refreshJobs = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`);
@@ -143,6 +149,18 @@ export function MissionControl({
     const data = await res.json();
     if (Array.isArray(data.jobs)) setJobs(data.jobs);
     if (Array.isArray(data.skills)) setSkills(data.skills);
+    if (data.limits) {
+      setUsage((prev) => ({
+        ...prev,
+        tokenUsed: data.limits.tokenUsed ?? prev.tokenUsed,
+        tokenBudget: data.limits.tokenBudget ?? prev.tokenBudget,
+        jobsThisHour: data.limits.jobsThisHour ?? prev.jobsThisHour,
+        jobsPerHour: data.limits.jobsPerHour ?? prev.jobsPerHour,
+        concurrentJobs: data.limits.concurrentJobs ?? prev.concurrentJobs,
+        maxConcurrentJobs: data.limits.maxConcurrentJobs ?? prev.maxConcurrentJobs,
+        plan: data.limits.plan ?? prev.plan,
+      }));
+    }
   }, [workspaceId]);
 
   const refreshChat = useCallback(
@@ -316,6 +334,10 @@ export function MissionControl({
       setBudgetOpen(true);
       return;
     }
+    if (data.code === "RATE_LIMIT") {
+      toast.error(data.error || "Workspace rate limit reached.");
+      return;
+    }
     if (!res.ok) {
       toast.error(data.error || "Could not start that job.");
       return;
@@ -327,7 +349,19 @@ export function MissionControl({
     const job = data.job as JobDTO;
     setJobs((prev) => [job, ...prev.filter((row) => row.id !== job.id)]);
     setSelectedJobId(job.id);
-    if (data.usage) setUsage(data.usage);
+    if (data.usage || data.limits) {
+      const next = data.limits || data.usage;
+      setUsage((prev) => ({
+        ...prev,
+        tokenUsed: next.tokenUsed ?? prev.tokenUsed,
+        tokenBudget: next.tokenBudget ?? prev.tokenBudget,
+        jobsThisHour: next.jobsThisHour ?? prev.jobsThisHour + 1,
+        jobsPerHour: next.jobsPerHour ?? prev.jobsPerHour,
+        concurrentJobs: next.concurrentJobs ?? prev.concurrentJobs,
+        maxConcurrentJobs: next.maxConcurrentJobs ?? prev.maxConcurrentJobs,
+        plan: next.plan ?? prev.plan,
+      }));
+    }
     setInput("");
     toast.success(`${displayAgentName(selected.name)} is on it.`);
     void refreshChat(selected.id);
@@ -395,88 +429,36 @@ export function MissionControl({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[15rem_minmax(0,1fr)_16rem]">
-        <aside className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
-          <div className="flex items-center justify-between px-3 py-3">
-            <h1 className="text-sm font-medium">Agents</h1>
-            <div className="flex items-center gap-0.5">
-              <Button size="xs" variant="ghost" onClick={createBlankAgent} disabled={busy}>
-                <Plus className="size-3" />
-                New
-              </Button>
-              <Button size="xs" variant="ghost" onClick={openLaunch} disabled={busy} title="Launch team">
-                <Users className="size-3" />
-              </Button>
-              <Button
-                size="xs"
-                variant="ghost"
-                nativeButton={false}
-                render={<Link href={`/desk/${workspaceId}/marketplace`} />}
-                title="Marketplace"
-              >
-                <Store className="size-3" />
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-1.5 pb-2">
-            {agents.length === 0 ? (
-              <div className="px-2.5 py-6 text-xs leading-5 text-muted-foreground">
-                No agents yet. Create one, add a Marketplace bot, or launch a
-                team (you approve).
-              </div>
-            ) : (
-              agents.map((agent) => {
-                const live = agentStatus[agent.id] ?? "idle";
-                return (
-                  <button
-                    key={agent.id}
-                    type="button"
-                    onClick={() => selectAgent(agent.id)}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left",
-                      selectedId === agent.id ? "bg-secondary" : "hover:bg-muted/50",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-medium",
-                        selectedId === agent.id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {displayAgentName(agent.name).slice(0, 1)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm">
-                          {displayAgentName(agent.name)}
-                        </span>
-                        <StatusChip status={live} />
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {agent.role || "No role yet"}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </aside>
-
+      <div
+        className={cn(
+          "grid min-h-0 flex-1",
+          showPreview
+            ? "xl:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)_16rem]"
+            : "lg:grid-cols-[minmax(0,1fr)_16rem]",
+        )}
+      >
         <section className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
           <header className="px-5 py-3">
             {selected ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <h2 className="truncate text-sm font-medium">
-                      {displayAgentName(selected.name)}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      {selected.role || "Agent"}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <AgentAvatar
+                      id={selected.id}
+                      name={selected.name}
+                      role={selected.role}
+                      working={agentStatus[selected.id] === "working"}
+                      size="md"
+                    />
+                    <div className="min-w-0">
+                      <h2 className="truncate text-sm font-medium">
+                        {displayAgentName(selected.name)}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        {selected.role || "Agent"}
+                        {agentStatus[selected.id] === "working" ? " · working" : ""}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1">
                     {renaming ? (
@@ -563,9 +545,21 @@ export function MissionControl({
                   role label. Missing roles link to Marketplace.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <Button onClick={createBlankAgent}>New Agent</Button>
+                  <Button onClick={createBlankAgent}>
+                    <Plus className="size-3.5" />
+                    New Agent
+                  </Button>
                   <Button variant="secondary" onClick={openLaunch}>
+                    <Users className="size-3.5" />
                     Launch team
+                  </Button>
+                  <Button
+                    variant="outline"
+                    nativeButton={false}
+                    render={<Link href={`/desk/${workspaceId}/marketplace`} />}
+                  >
+                    <Store className="size-3.5" />
+                    Marketplace
                   </Button>
                   {marketplaceChips.map((chip) => (
                     <Button
@@ -657,7 +651,9 @@ export function MissionControl({
               />
               <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
-                  {atCap ? "Budget reached." : `${remaining.toLocaleString()} tokens left`}
+                  {atCap
+                    ? "Budget reached."
+                    : `${remaining.toLocaleString()} tokens · ${jobsLeft} jobs/hr left · ${usage.plan}`}
                 </p>
                 <Button type="submit" size="sm" disabled={busy || !selected || !input.trim()}>
                   {busy ? <Loader2 className="animate-spin" /> : null}
@@ -667,6 +663,8 @@ export function MissionControl({
             </div>
           </form>
         </section>
+
+        {showPreview ? <PreviewPanel artifacts={artifacts} /> : null}
 
         <aside className="flex min-h-0 flex-col">
           <div className="px-4 py-3">
@@ -849,17 +847,3 @@ function jobStatusLabel(status: string) {
   return status.replace("_", " ");
 }
 
-function StatusChip({ status }: { status: string }) {
-  return (
-    <span
-      className={cn(
-        "shrink-0 text-[11px]",
-        status === "working" && "text-sky-400",
-        status === "needs-you" && "text-amber-400",
-        status === "idle" && "text-muted-foreground",
-      )}
-    >
-      {STATUS_LABEL[status] ?? status}
-    </span>
-  );
-}

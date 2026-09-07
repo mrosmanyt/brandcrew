@@ -38,6 +38,10 @@ No sending. Slack post only after ask_user.`;
 For research or competitor language, browse public pages first (browser_navigate + snapshot), then write the brief.`;
     case "distributor":
       return `Turns approved posts into a 30-day calendar export. No auto-publish.`;
+    case "builder":
+      return `Builds website or app HTML from the Brand Kit.
+Jobs: website_builder (write_artifact kind="website"), app_builder (kind="app").
+Return a complete HTML document. No external scripts. Do not publish. No Replit login.`;
   }
 }
 
@@ -90,6 +94,8 @@ Rules:
 - Gmail inbox: gmail_list_recent then write_artifact kind="gmail_inbox".
 - Gmail draft: gmail_create_draft (to/subject/body in args) then write_artifact kind="gmail_draft". Never send.
 - Slack post: slack_list_channels, slack_draft_message, ask_user, then slack_post_message.
+- Website builder: read_brand_kit then write_artifact kind="website".
+- App builder: read_brand_kit then write_artifact kind="app".
 - Do not include browser_click or browser_type unless the user explicitly asked to click — they will still refuse login/password/send.
 - Do not invent send, login, or spend tools.`;
 }

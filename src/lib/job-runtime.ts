@@ -11,6 +11,7 @@ import {
 import { brandKitBrief, parseBrandKit, type BrandKit } from "@/lib/brand-kit";
 import { plannerSystemPrompt } from "@/lib/agent-prompts";
 import { generateAgentArtifact } from "@/lib/agents";
+import { generateBuilderArtifact } from "@/lib/builders";
 import {
   browseNavigate,
   browserInteractGuard,
@@ -1092,6 +1093,23 @@ async function writeJobArtifact(
     type = "slack_channels";
     model = "slack";
     provider = "slack";
+  } else if (kind === "website" || kind === "app") {
+    const pack = await generateBuilderArtifact({
+      kind: kind === "app" ? "app" : "website",
+      kit: input.kit,
+      prompt: pageAwarePrompt(input.prompt, context),
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title;
+    content = pack.content;
+    type = pack.type;
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+    if (live && pack.demo) {
+      throw new Error("Live job refused to persist a demo template.");
+    }
   } else if (kind === "slack_draft") {
     const draft = context.slackDraft;
     title = draft ? `Slack draft for #${draft.channelName || draft.channel}` : "Slack draft";
@@ -1220,6 +1238,7 @@ async function generateLinkedInPosts(input: {
   }
   const result = await llm.complete({
     mode: "draft",
+    kind: "posts",
     json: true,
     messages: [
       {

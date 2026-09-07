@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     return jsonOk({ job: result.job }, 201);
   } catch (error) {
     if (error instanceof BudgetError) {
-      return jsonFail(error.message, error.status, "BUDGET");
+      return jsonFail(error.message, error.status, error.code);
     }
     return jsonError(error);
   }

@@ -28,6 +28,8 @@ for (const id of [
   "bot-marketing",
   "bot-ads",
   "bot-main",
+  "bot-website",
+  "bot-app",
 ]) {
   const bot = getMarketplaceBot(id);
   assert.ok(bot, `missing bot ${id}`);
@@ -147,7 +149,11 @@ dbSmoke()
   .then(() => console.log("Marketplace checks passed."))
   .catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
-    if (/Can't reach database server|P1001|P1017|ECONNREFUSED/i.test(message)) {
+    if (
+      /Can't reach database server|P1001|P1017|ECONNREFUSED|Environment variable not found: DATABASE_URL/i.test(
+        message,
+      )
+    ) {
       console.log("skip: Postgres DB smoke (start docker compose or set DATABASE_URL)");
       console.log("Marketplace checks passed.");
       return;

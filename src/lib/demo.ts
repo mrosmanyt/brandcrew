@@ -1,6 +1,6 @@
 import { addDays, format } from "date-fns";
 import type { AgentRole } from "@/lib/constants";
-import type { BrandKit } from "@/lib/brand-kit";
+import { brandLabel, type BrandKit } from "@/lib/brand-kit";
 
 function company(kit: BrandKit) {
   const offer = kit.offer || "the offer";
@@ -235,6 +235,13 @@ Suggested tasks:
             status: "done",
           },
         ],
+      };
+    case "builder":
+      return {
+        type: "website",
+        title: `${brandLabel(kit)} site`,
+        summary: "Offline demo landing page. Preview in the desk.",
+        content: demoWebsiteHtml(kit),
       };
   }
 }
@@ -505,4 +512,92 @@ export function demoSalesPack(kit: BrandKit) {
     summary: "Ten scripts you can send today. No CRM fields.",
     content,
   };
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+export function demoWebsiteHtml(kit: BrandKit) {
+  const name = escapeHtml(brandLabel(kit));
+  const offer = escapeHtml(kit.offer || "A clear offer, written in your voice.");
+  const audience = escapeHtml(kit.audience || "the people you already serve");
+  const voice = escapeHtml(kit.voice || "clear and specific");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${name}</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: #111110; color: #f4f1ea; }
+    header, main, footer { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem; }
+    .kicker { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: #c4b49a; }
+    h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; letter-spacing: -0.04em; margin: 0.4em 0; }
+    p { line-height: 1.65; color: #d8d2c6; }
+    .cta { display: inline-block; margin-top: 1.25rem; padding: 0.7rem 1.1rem; border-radius: 999px; background: #f4f1ea; color: #111110; text-decoration: none; font-weight: 600; }
+    section { border-top: 1px solid #2a2926; padding-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="kicker">Offline demo · not published</p>
+    <h1>${name}</h1>
+    <p>${offer}</p>
+    <a class="cta" href="#offer">See the offer</a>
+  </header>
+  <main>
+    <section id="offer">
+      <p class="kicker">For</p>
+      <h2>Made for ${audience}</h2>
+      <p>Voice: ${voice}. This page is a Brand Kit sketch you can approve. CINEM Pro does not publish it.</p>
+    </section>
+  </main>
+  <footer>
+    <p>Generated on the desk. Preview only.</p>
+  </footer>
+</body>
+</html>`;
+}
+
+export function demoAppHtml(kit: BrandKit) {
+  const name = escapeHtml(brandLabel(kit));
+  const offer = escapeHtml(kit.offer || "the offer");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${name} app</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; min-height: 100vh; font-family: ui-sans-serif, system-ui, sans-serif; background: #101114; color: #eef0f4; display: grid; place-items: center; }
+    .card { width: min(22rem, 92vw); background: #181a1f; border: 1px solid #2a2d34; border-radius: 1rem; padding: 1.25rem; }
+    h1 { margin: 0 0 0.35rem; font-size: 1.15rem; }
+    p { margin: 0 0 1rem; color: #a8adb8; font-size: 0.9rem; line-height: 1.5; }
+    label { display: block; font-size: 0.75rem; color: #8b909a; margin-bottom: 0.35rem; }
+    input, textarea { width: 100%; box-sizing: border-box; border: 1px solid #32363e; background: #101114; color: inherit; border-radius: 0.6rem; padding: 0.55rem 0.7rem; }
+    textarea { min-height: 4.5rem; resize: vertical; }
+    button { margin-top: 0.75rem; width: 100%; border: 0; border-radius: 0.6rem; padding: 0.65rem; background: #eef0f4; color: #101114; font-weight: 600; }
+    .note { margin-top: 0.75rem; font-size: 0.75rem; color: #7d828c; }
+  </style>
+</head>
+<body>
+  <form class="card" action="#" method="get">
+    <h1>${name} intake</h1>
+    <p>Capture a lead for ${offer}. Nothing is sent — this preview stays in the desk.</p>
+    <label for="who">Name</label>
+    <input id="who" name="who" placeholder="Alex">
+    <label for="note" style="margin-top:0.7rem">What they need</label>
+    <textarea id="note" name="note" placeholder="One sentence"></textarea>
+    <button type="submit">Save locally</button>
+    <p class="note">Offline demo app. No Replit login. No network.</p>
+  </form>
+</body>
+</html>`;
 }

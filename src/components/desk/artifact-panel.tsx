@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownBody } from "@/components/desk/markdown";
 import { providerLabel } from "@/components/desk/provider-badges";
+import { extractPreviewHtml, isPreviewableArtifact } from "@/lib/html-preview";
 import type { ArtifactDTO } from "@/lib/types";
 
 export function ArtifactPanel({
@@ -19,10 +20,14 @@ export function ArtifactPanel({
   onRegenerate: () => void;
   busy?: boolean;
 }) {
+  const previewHtml = isPreviewableArtifact(artifact.type, artifact.content)
+    ? extractPreviewHtml(artifact.content)
+    : null;
+
   async function copyMarkdown() {
     try {
-      await navigator.clipboard.writeText(artifact.content);
-      toast.success("Markdown copied.");
+      await navigator.clipboard.writeText(previewHtml || artifact.content);
+      toast.success(previewHtml ? "HTML copied." : "Markdown copied.");
     } catch {
       toast.error("Could not copy. Select the text instead.");
     }
@@ -57,10 +62,19 @@ export function ArtifactPanel({
         </Button>
         <Button size="sm" variant="outline" onClick={copyMarkdown}>
           <Copy className="size-3.5" />
-          Copy Markdown
+          {previewHtml ? "Copy HTML" : "Copy Markdown"}
         </Button>
       </div>
-      <MarkdownBody content={artifact.content} />
+      {previewHtml ? (
+        <iframe
+          title={artifact.title}
+          sandbox=""
+          srcDoc={previewHtml}
+          className="h-72 w-full rounded-lg border border-border bg-white"
+        />
+      ) : (
+        <MarkdownBody content={artifact.content} />
+      )}
     </div>
   );
 }

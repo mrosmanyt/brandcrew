@@ -12,6 +12,7 @@ import { billingIsMock } from "@/lib/billing";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { prisma } from "@/lib/db";
 import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serialize";
+import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
 async function MissionControlPage({
@@ -80,6 +81,7 @@ async function MissionControlPage({
         initialArtifacts={initialArtifacts}
         tokenUsed={workspace.tokenUsed}
         tokenBudget={workspace.tokenBudget}
+        initialLimits={serializeLimits(await getWorkspaceLimits(workspace.id))}
       />
     </Suspense>
   );
@@ -103,8 +105,8 @@ async function BillingPage({
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Plans</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Starter is $79/month for 2 seats. Growth is $199/month for 5 seats.
-        Token budgets rise with the plan. There is no self-serve model key
-        field — keys stay on the server.
+        Token budgets, jobs per hour, and concurrent jobs rise with the plan.
+        There is no self-serve model key field — keys stay on the server.
       </p>
       {query.status === "success" ? (
         <p className="mt-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">

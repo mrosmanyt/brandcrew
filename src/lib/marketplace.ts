@@ -26,6 +26,8 @@ const FEATURED_BOT_IDS = new Set([
   "bot-marketing",
   "bot-whatsapp",
   "bot-main",
+  "bot-website",
+  "bot-app",
 ]);
 
 const BOT_COLORS: Record<string, string> = {
@@ -41,6 +43,8 @@ const BOT_COLORS: Record<string, string> = {
   "bot-dev": "#1d4ed8",
   "bot-content": "#be185d",
   "bot-support": "#0369a1",
+  "bot-website": "#0ea5e9",
+  "bot-app": "#7c3aed",
 };
 
 export type MarketplaceBot = {
@@ -56,8 +60,39 @@ export type MarketplaceBot = {
   color: string;
 };
 
-export const MARKETPLACE_BOTS: MarketplaceBot[] = TEAM_LAUNCH_ROLES.map(
-  (row) => ({
+const BUILDER_BOTS: MarketplaceBot[] = [
+  {
+    id: "bot-website",
+    name: "Website",
+    role: "Website",
+    creator: "CINEM Pro",
+    description:
+      "One-click landing pages from the Brand Kit. Preview in the desk. Does not publish.",
+    instructions:
+      "You are the Website Builder. Read the Brand Kit, then write a complete HTML document (CSS in a style tag, no external scripts). Do not publish or invent a live URL. Last step is ask_user.",
+    starter: "Build a one-page branded website from the Brand Kit. Do not publish.",
+    category: "Engineering",
+    featured: true,
+    color: "#0ea5e9",
+  },
+  {
+    id: "bot-app",
+    name: "App",
+    role: "App",
+    creator: "CINEM Pro",
+    description:
+      "Small branded web apps with an in-desk preview. No Replit login required.",
+    instructions:
+      "You are the App Builder. Return a complete HTML mini-app the desk can preview in an iframe. No Replit, no deploy, no login. Last step is ask_user.",
+    starter: "Build a small branded web app from the Brand Kit. Preview only.",
+    category: "Engineering",
+    featured: true,
+    color: "#7c3aed",
+  },
+];
+
+export const MARKETPLACE_BOTS: MarketplaceBot[] = [
+  ...TEAM_LAUNCH_ROLES.map((row) => ({
     id: row.id,
     name: row.role,
     role: row.role,
@@ -68,8 +103,9 @@ export const MARKETPLACE_BOTS: MarketplaceBot[] = TEAM_LAUNCH_ROLES.map(
     category: row.category,
     featured: FEATURED_BOT_IDS.has(row.id),
     color: BOT_COLORS[row.id] || "#c45c26",
-  }),
-);
+  })),
+  ...BUILDER_BOTS,
+];
 
 export function getMarketplaceBot(id: string) {
   return MARKETPLACE_BOTS.find((bot) => bot.id === id) ?? null;

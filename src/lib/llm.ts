@@ -4,18 +4,22 @@ import OpenAI from "openai";
 
 export type TaskMode = "draft" | "final";
 
-export type LlmProviderName = "openai" | "anthropic" | "gemini" | "demo";
+/** Job-family routing. General keeps the existing cheap-draft / strong-final policy. */
+export type LlmJobKind = "website" | "coding" | "posts" | "apps" | "general";
+
+export type LlmProviderName = "openai" | "anthropic" | "gemini" | "xai" | "demo";
 
 export type LlmStatus = {
   openai: boolean;
   anthropic: boolean;
   gemini: boolean;
+  xai: boolean;
   configured: boolean;
   mode: "live" | "demo";
 };
 
 export type LlmRoute = {
-  provider: "openai" | "anthropic" | "gemini";
+  provider: "openai" | "anthropic" | "gemini" | "xai";
   model: string;
   apiKey: string;
 };
@@ -44,6 +48,10 @@ export function geminiKey() {
   );
 }
 
+export function xaiKey() {
+  return process.env.XAI_API_KEY?.trim() || process.env.GROK_API_KEY?.trim() || "";
+}
+
 export function hasOpenAI() {
   return Boolean(openaiKey());
 }
@@ -56,15 +64,21 @@ export function hasGemini() {
   return Boolean(geminiKey());
 }
 
+export function hasXai() {
+  return Boolean(xaiKey());
+}
+
 export function getLlmStatus(): LlmStatus {
   const openai = hasOpenAI();
   const anthropic = hasAnthropic();
   const gemini = hasGemini();
-  const configured = openai || anthropic || gemini;
+  const xai = hasXai();
+  const configured = openai || anthropic || gemini || xai;
   return {
     openai,
     anthropic,
     gemini,
+    xai,
     configured,
     mode: configured ? "live" : "demo",
   };
@@ -94,43 +108,103 @@ export function geminiFinalModel() {
   return process.env.GEMINI_FINAL_MODEL || "gemini-2.5-pro";
 }
 
+export function xaiPostsModel() {
+  return process.env.XAI_POSTS_MODEL || process.env.XAI_MODEL || "grok-3-mini";
+}
+
+export function xaiBaseUrl() {
+  return process.env.XAI_BASE_URL?.trim() || "https://api.x.ai/v1";
+}
+
 /**
- * Router policy (xAI / Grok skipped):
- * - One provider only → that provider for drafts and finals.
- * - Drafts: cheap model. Prefer Gemini Flash, else OpenAI mini, else Claude Haiku.
- * - Finals: stronger model. Prefer Claude Sonnet, else GPT-4.1-class, else Gemini Pro.
+ * Google Antigravity Agent API is a follow-up — too heavy for this MVP.
+ * Website jobs stay on Gemini (cheap) when GEMINI_API_KEY is set.
+ * See README → Model routing.
  */
-export function pickRoute(mode: TaskMode): LlmRoute | null {
-  const openai = openaiKey();
-  const anthropic = anthropicKey();
-  const gemini = geminiKey();
-  if (!openai && !anthropic && !gemini) return null;
+export function antigravityFollowUp(): {
+  status: "follow_up";
+  reason: string;
+} {
+  return {
+    status: "follow_up",
+    reason:
+      "Google Antigravity agent sessions are out of scope for this MVP. Website jobs use Gemini when GEMINI_API_KEY is set.",
+  };
+}
+
+function firstRoute(
+  candidates: Array<LlmRoute | null>,
+): LlmRoute | null {
+  return candidates.find((row): row is LlmRoute => Boolean(row)) ?? null;
+}
+
+function geminiRoute(mode: TaskMode): LlmRoute | null {
+  const key = geminiKey();
+  if (!key) return null;
+  return {
+    provider: "gemini",
+    model: mode === "final" ? geminiFinalModel() : geminiDraftModel(),
+    apiKey: key,
+  };
+}
+
+function openaiRoute(mode: TaskMode): LlmRoute | null {
+  const key = openaiKey();
+  if (!key) return null;
+  return {
+    provider: "openai",
+    model: mode === "final" ? openaiFinalModel() : openaiDraftModel(),
+    apiKey: key,
+  };
+}
+
+function anthropicRoute(mode: TaskMode): LlmRoute | null {
+  const key = anthropicKey();
+  if (!key) return null;
+  return {
+    provider: "anthropic",
+    model: mode === "final" ? anthropicFinalModel() : anthropicDraftModel(),
+    apiKey: key,
+  };
+}
+
+function xaiRoute(): LlmRoute | null {
+  const key = xaiKey();
+  if (!key) return null;
+  return { provider: "xai", model: xaiPostsModel(), apiKey: key };
+}
+
+/**
+ * Router policy:
+ * - Website → Gemini (cheap) when present, else OpenAI / Anthropic / xAI.
+ * - Coding / apps → Anthropic when present, else Gemini / OpenAI / xAI.
+ * - Posts → xAI only if keyed, else Gemini / OpenAI / Anthropic.
+ * - General drafts: Gemini Flash → OpenAI mini → Haiku → xAI.
+ * - General finals: Claude Sonnet → GPT-4.1 → Gemini Pro → xAI.
+ */
+export function pickRoute(
+  mode: TaskMode,
+  kind: LlmJobKind = "general",
+): LlmRoute | null {
+  if (kind === "website") {
+    return firstRoute([geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft"), xaiRoute()]);
+  }
+  if (kind === "coding" || kind === "apps") {
+    return firstRoute([
+      anthropicRoute(mode === "final" ? "final" : "draft"),
+      geminiRoute("draft"),
+      openaiRoute("draft"),
+      xaiRoute(),
+    ]);
+  }
+  if (kind === "posts") {
+    return firstRoute([xaiRoute(), geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft")]);
+  }
 
   if (mode === "draft") {
-    if (gemini) {
-      return { provider: "gemini", model: geminiDraftModel(), apiKey: gemini };
-    }
-    if (openai) {
-      return { provider: "openai", model: openaiDraftModel(), apiKey: openai };
-    }
-    return {
-      provider: "anthropic",
-      model: anthropicDraftModel(),
-      apiKey: anthropic,
-    };
+    return firstRoute([geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft"), xaiRoute()]);
   }
-
-  if (anthropic) {
-    return {
-      provider: "anthropic",
-      model: anthropicFinalModel(),
-      apiKey: anthropic,
-    };
-  }
-  if (openai) {
-    return { provider: "openai", model: openaiFinalModel(), apiKey: openai };
-  }
-  return { provider: "gemini", model: geminiFinalModel(), apiKey: gemini };
+  return firstRoute([anthropicRoute("final"), openaiRoute("final"), geminiRoute("final"), xaiRoute()]);
 }
 
 export function createAnthropicClient(apiKey: string) {
@@ -143,6 +217,10 @@ export function createOpenAIClient(apiKey: string) {
 
 export function createGeminiClient(apiKey: string) {
   return new GoogleGenAI({ apiKey });
+}
+
+export function createXaiClient(apiKey: string) {
+  return new OpenAI({ apiKey, baseURL: xaiBaseUrl() });
 }
 
 function textFromAnthropic(content: Anthropic.ContentBlock[]) {
@@ -158,16 +236,21 @@ export class LLMProvider {
     return getLlmStatus();
   }
 
-  pickModel(mode: TaskMode) {
-    return pickRoute(mode);
+  pickModel(mode: TaskMode, kind: LlmJobKind = "general") {
+    return pickRoute(mode, kind);
+  }
+
+  isLiveFor(kind: LlmJobKind = "general") {
+    return pickRoute("draft", kind) !== null || pickRoute("final", kind) !== null;
   }
 
   async complete(input: {
     mode: TaskMode;
+    kind?: LlmJobKind;
     messages: { role: "system" | "user" | "assistant"; content: string }[];
     json?: boolean;
   }): Promise<LlmCompleteResult> {
-    const route = pickRoute(input.mode);
+    const route = pickRoute(input.mode, input.kind ?? "general");
     if (!route) {
       throw new Error("NO_LLM_KEYS");
     }
@@ -177,6 +260,9 @@ export class LLMProvider {
     }
     if (route.provider === "gemini") {
       return this.completeGemini(route, input);
+    }
+    if (route.provider === "xai") {
+      return this.completeXai(route, input);
     }
     return this.completeOpenAI(route, input);
   }
@@ -300,6 +386,36 @@ export class LLMProvider {
       tokens: tokens || Math.ceil(text.split(/\s+/).length * 1.3),
       model: route.model,
       provider: "gemini",
+      demo: false,
+    };
+  }
+
+  private async completeXai(
+    route: LlmRoute,
+    input: {
+      mode: TaskMode;
+      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      json?: boolean;
+    },
+  ): Promise<LlmCompleteResult> {
+    const client = createXaiClient(route.apiKey);
+    const completion = await client.chat.completions.create({
+      model: route.model,
+      messages: input.messages,
+      temperature: input.mode === "final" ? 0.4 : 0.7,
+      ...(input.json ? { response_format: { type: "json_object" as const } } : {}),
+    });
+
+    const text = completion.choices[0]?.message?.content?.trim() || "";
+    const tokens =
+      completion.usage?.total_tokens ??
+      Math.ceil(text.split(/\s+/).length * 1.3);
+
+    return {
+      text,
+      tokens,
+      model: route.model,
+      provider: "xai",
       demo: false,
     };
   }

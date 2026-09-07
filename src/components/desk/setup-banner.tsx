@@ -17,7 +17,9 @@ export function SetupBanner() {
             ,{" "}
             <code className="rounded bg-card px-1 py-0.5 text-xs">ANTHROPIC_API_KEY</code>
             , or{" "}
-            <code className="rounded bg-card px-1 py-0.5 text-xs">GEMINI_API_KEY</code>{" "}
+            <code className="rounded bg-card px-1 py-0.5 text-xs">GEMINI_API_KEY</code>
+            , or{" "}
+            <code className="rounded bg-card px-1 py-0.5 text-xs">XAI_API_KEY</code>{" "}
             on the server — users never paste keys.
           </>
         ) : (
@@ -27,6 +29,7 @@ export function SetupBanner() {
               llm.openai ? "OpenAI" : null,
               llm.anthropic ? "Anthropic Claude" : null,
               llm.gemini ? "Google Gemini" : null,
+              llm.xai ? "xAI" : null,
             ]
               .filter(Boolean)
               .join(" + ")}

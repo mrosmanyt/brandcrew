@@ -34,12 +34,14 @@ Playbooks run on the **user agent you selected** (`agentId`). Role is only a hin
 | **Competitor scan** | Research | Brand Kit → browse URLs from your message or the Brand Kit website → comparison artifact |
 | **Outreach from research** | Sales | `read_artifact` (latest research/competitor pack) → 5 LinkedIn DMs → approval |
 | **Ad angles from URL** | Ads | Browse a landing page → 5 angles. No media buy |
+| **Build website** | Website | Brand Kit → HTML landing page artifact → in-desk iframe preview. Not published |
+| **Build app** | App | Brand Kit → HTML mini-app artifact → iframe preview. No Replit login |
 
 ### Live vs offline demo
 
 | Server keys | What jobs persist |
 | --- | --- |
-| Any of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Model text, or tool-captured **browse/search** text. **Never** canned Northline “tasting menu” copy. |
+| Any of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY` | Model text, or tool-captured **browse/search** text. **Never** canned Northline “tasting menu” copy. |
 | None | Labeled **offline demo** templates from the Brand Kit. Banner says so. |
 
 `PLAYWRIGHT_ENABLED` turns on headless Chrome when a binary is present. If Playwright is off or Chrome is missing, browse tools **fall back to fetch** and still crawl a couple of public links. They never invent page text.
@@ -92,11 +94,11 @@ Job tools when Connected: `slack_list_channels`, `slack_draft_message` (artifact
 
 **Manual click-through:** with env credentials set, Connect → provider consent → return to Marketplace with `?connected=gmail` or `?connected=slack`. Without credentials, Connect stays honest (error, not Connected).
 
+Mission Control has **one** agents list (the left sidebar). Avatars are 3D geometric shapes derived from agent id/name; they animate while a job is `queued`/`running`.
+
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon or Docker) · session cookies · OpenAI + Anthropic + Gemini · Stripe Checkout stubs · optional Electron desktop
-
-xAI / Grok is skipped.
+Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon or Docker) · session cookies · OpenAI + Anthropic + Gemini + optional xAI · Stripe Checkout stubs · optional Electron desktop
 
 ## Developer API
 
@@ -347,15 +349,31 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 - Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
 - Stripe live Checkout is not part of this prep (`BILLING_MOCK=true`).
 
-## Model router
+## Model routing
 
-`LLMProvider` in `src/lib/llm.ts` picks by cost and which keys are present:
+`LLMProvider` in `src/lib/llm.ts` picks by job family and which keys are present. No keys → offline demo.
 
-- **One provider only** → that provider for every task.
-- **Draft** → cheap model: Gemini Flash, else OpenAI mini, else Claude Haiku.
-- **Final** → stronger model: Claude Sonnet, else GPT-4.1, else Gemini Pro.
+| Job family | First choice | Fallback |
+| --- | --- | --- |
+| Website | Gemini (`GEMINI_API_KEY`) | OpenAI → Anthropic → xAI |
+| Coding / apps | Anthropic (`ANTHROPIC_API_KEY`) | Gemini → OpenAI → xAI |
+| Posts (LinkedIn week, sales copy) | xAI (`XAI_API_KEY`) only if set | Gemini → OpenAI → Anthropic |
+| General drafts | Gemini Flash | OpenAI mini → Haiku → xAI |
+| General finals | Claude Sonnet | GPT-4.1 → Gemini Pro → xAI |
 
-xAI / Grok is skipped. No keys → offline demo.
+**Google Antigravity** (agent sessions / computer-use) is a follow-up — too heavy for this MVP. Website jobs use Gemini when the key is present.
+
+**Replit** is optional (`REPLIT_CONNECT_URL`). App preview is a sandboxed iframe. There is no fake Connected Replit plugin.
+
+## Survival limits
+
+| Plan | Price | Seats | Tokens | Jobs/hour | Concurrent |
+| --- | --- | --- | --- | --- | --- |
+| Demo (free) | $0 | 1 | 50,000 | 8 | 1 |
+| Starter | $79/mo | 2 | 200,000 | 30 | 3 |
+| Growth | $199/mo | 5 | 500,000 | 80 | 6 |
+
+Token budget, hourly jobs, and concurrent running jobs are enforced on job create. The desk header shows remaining caps.
 
 ```bash
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
@@ -365,6 +383,7 @@ npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persi
 npm run test:browse        # optional: Playwright against example.com (needs Chrome)
 npm run test:api-router    # catch-all matcher still resolves every public /api URL
 npm run test:developer-api # hashed keys, catalog, JSON 401 shape
+npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML preview
 ```
 
 ## Job runtime
@@ -400,13 +419,7 @@ CINEM Pro does **not** spin a VM per agent and does not require a paid browser v
 
 ## Plans
 
-| Plan | Price | Seats | Token budget |
-| --- | --- | --- | --- |
-| Demo | $0 | 1 | 50,000 |
-| Starter | $79/mo | 2 | 200,000 |
-| Growth | $199/mo | 5 | 500,000 |
-
-Each workspace also has a simple hourly generation cap (20). Crossing the token budget returns a hard stop message.
+See **Survival limits** above. Crossing the token budget, hourly job cap, or concurrent-job cap returns a hard stop.
 
 ## Scripts
 
@@ -420,6 +433,7 @@ npm run test:oauth
 npm run test:browse  # Playwright smoke test (Chrome + network)
 npm run test:api-router
 npm run test:developer-api
+npm run test:limits
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS
