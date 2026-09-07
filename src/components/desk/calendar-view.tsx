@@ -46,7 +46,7 @@ export function CalendarView({
 
   function exportMarkdown() {
     const lines = [
-      "# Brandcrew content calendar",
+      "# CINEM Pro content calendar",
       "",
       "| Date | Channel | Title | Note |",
       "| --- | --- | --- | --- |",
@@ -59,7 +59,7 @@ export function CalendarView({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "brandcrew-calendar.md";
+    a.download = "cinem-pro-calendar.md";
     a.click();
     URL.revokeObjectURL(url);
   }

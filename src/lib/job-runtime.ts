@@ -815,7 +815,7 @@ async function executeTool(input: {
     const body =
       String(step.args.body || "").trim() ||
       input.prompt.trim() ||
-      "Draft from Brandcrew. Not sent.";
+      "Draft from CINEM Pro. Not sent.";
     await appendEvent({
       jobId: input.jobId,
       type: "tool_call",
@@ -1224,7 +1224,7 @@ async function generateLinkedInPosts(input: {
     messages: [
       {
         role: "system",
-        content: `You are ${input.agentName} on Brandcrew.
+        content: `You are ${input.agentName} on CINEM Pro.
 ${input.agentInstructions}
 Write LinkedIn posts in Brand Kit voice. No forbidden words. Do not claim they were published.
 If page text is provided, ground the posts in it.
@@ -1299,7 +1299,7 @@ async function generateResearchPack(input: {
       messages: [
         {
           role: "system",
-          content: `You are ${input.agentName} on Brandcrew.
+          content: `You are ${input.agentName} on CINEM Pro.
 ${input.agentInstructions}
 Write sourced notes. Do not invent quotes or numbers.
 Return JSON: { "title": string, "content": string } Markdown with Source, What the page says, Implications, What not to copy.`,
@@ -1375,7 +1375,7 @@ async function generateCompetitorScan(input: {
       messages: [
         {
           role: "system",
-          content: `You are ${input.agentName} on Brandcrew.
+          content: `You are ${input.agentName} on CINEM Pro.
 ${input.agentInstructions}
 Write a competitor comparison from browsed pages only. No invented quotes.
 Return JSON: { "title": string, "content": string } Markdown with one section per URL plus Comparison and What not to copy.`,
@@ -1443,7 +1443,7 @@ async function generateOutreachPack(input: {
       messages: [
         {
           role: "system",
-          content: `You are ${input.agentName} on Brandcrew.
+          content: `You are ${input.agentName} on CINEM Pro.
 ${input.agentInstructions}
 Write exactly 5 LinkedIn DMs. Do not send. Ground them in the research artifact when present.
 Return JSON: { "title": string, "content": string } Markdown with ## LinkedIn DM 1 … 5.`,
@@ -1520,7 +1520,7 @@ async function generateAdAngles(input: {
       messages: [
         {
           role: "system",
-          content: `You are ${input.agentName} on Brandcrew.
+          content: `You are ${input.agentName} on CINEM Pro.
 ${input.agentInstructions}
 Write 5 ad angles with primary text from the landing page. Creative only — no media buy.
 Return JSON: { "title": string, "content": string }.`,

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Tiny Brandcrew mark: dark field + white rounded square. No extra deps. */
+/** Tiny CINEM Pro mark: dark field + white rounded square. No extra deps. */
 import { createWriteStream, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

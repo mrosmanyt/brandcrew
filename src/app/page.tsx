@@ -52,12 +52,12 @@ export default async function HomePage() {
           <div className="landing-glow pointer-events-none absolute inset-0" />
           <div className="landing-grid pointer-events-none absolute inset-0" />
           <div className="relative mx-auto w-full max-w-6xl px-5 pb-8 pt-16 md:pb-10 md:pt-24">
-            <p className="page-kicker">Mission Control</p>
+            <p className="page-kicker">AI employee desk</p>
             <h1 className="font-heading mt-4 max-w-3xl text-4xl leading-[1.05] md:text-6xl lg:text-[4.25rem]">
               The agent desk for work you approve.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-              Brandcrew is staff you hire yourself. Create agents, connect Gmail and
+              CINEM Pro is staff you hire yourself. Create agents, connect Gmail and
               Slack for real, run jobs with tools — then approve what leaves. No
               named cast. No fake Connected plugins.
             </p>
@@ -169,7 +169,7 @@ export default async function HomePage() {
       </main>
 
       <footer className="border-t border-border px-5 py-6 text-center text-xs text-muted-foreground">
-        Brandcrew is a working name. A desk, not a CRM, not an ad account, not a robot that posts for you.
+        CINEM Pro is an AI employee desk from CINEM (cinem.tech). A desk, not a CRM, not an ad account, not a robot that posts for you.
       </footer>
     </div>
   );

@@ -7,7 +7,7 @@ export function ProductShot() {
         <span className="size-2 rounded-full bg-zinc-600" />
         <span className="size-2 rounded-full bg-zinc-600" />
         <span className="ml-2 text-[11px] text-muted-foreground">
-          Mission Control · Brandcrew
+          Mission Control · CINEM Pro
         </span>
       </div>
       <div className="grid min-h-[22rem] bg-background md:grid-cols-[11.5rem_minmax(0,1fr)_12.5rem]">

@@ -18,7 +18,7 @@ export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
   {
     id: "bot-main",
     role: "Main",
-    category: "From Brandcrew",
+    category: "From CINEM Pro",
     blurb: "Coordinates the desk and turns a messy request into a job for the right agent.",
     instructions:
       "You are the Main agent. Clarify the user's goal, use the Brand Kit, and produce a short plan or brief. Never send, publish, or spend. Pause with ask_user before anything leaves the desk.",
@@ -36,7 +36,7 @@ export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
   {
     id: "bot-manager",
     role: "Manager",
-    category: "From Brandcrew",
+    category: "From CINEM Pro",
     blurb: "Breaks work into owners, deadlines, and approval gates.",
     instructions:
       "You are the Manager agent. Turn requests into a concrete task list with owners (other agents or the human). Nothing is assigned outside this desk. Ask before treating anything as done.",
@@ -48,7 +48,7 @@ export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
     category: "Marketing",
     blurb: "Drafts ad angles and primary text. Does not buy media.",
     instructions:
-      "You are the Ads agent. Write creative only. State that Brandcrew does not connect ad accounts or spend. If a URL is provided, browser_navigate + snapshot first.",
+      "You are the Ads agent. Write creative only. State that CINEM Pro does not connect ad accounts or spend. If a URL is provided, browser_navigate + snapshot first.",
     starter: "Draft 5 ad angles from the Brand Kit. No media plan.",
   },
   {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Brandcrew desktop — clone (or update) and open the Electron window.
+# CINEM Pro desktop — clone (or update) and open the Electron window.
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.sh | bash
 # Or from a checkout:  bash scripts/install-desktop.sh
@@ -36,6 +36,6 @@ cd "$DIR"
 echo "Installing dependencies…"
 npm install
 
-echo "Opening Brandcrew desktop (Mission Control on http://127.0.0.1:43180)…"
+echo "Opening CINEM Pro desktop (Mission Control on http://127.0.0.1:43180)…"
 echo "Put API keys / OAuth client ids in $DIR/.env (dev) or the app userData .env (packaged)."
 npm run desktop:dev
