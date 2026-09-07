@@ -8,7 +8,7 @@ import { normalizePlanId } from "@/lib/limits";
 
 const schema = z.object({
   workspaceId: z.string().min(1),
-  plan: z.enum(["starter", "pro", "growth"]),
+  plan: z.enum(["starter", "pro", "growth", "ultra"]),
 });
 
 export async function POST(request: Request) {
@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     const body = schema.parse(await request.json());
     const { workspace } = await requireWorkspaceMember(body.workspaceId);
     const plan = normalizePlanId(body.plan);
-    if (plan !== "starter" && plan !== "pro") {
-      return NextResponse.json({ error: "Choose Starter or Pro." }, { status: 400 });
+    if (plan !== "starter" && plan !== "pro" && plan !== "ultra") {
+      return NextResponse.json({ error: "Choose Starter, Pro, or Ultra." }, { status: 400 });
     }
 
     if (billingIsMock()) {
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     return jsonOk({ url: session.url, mock: false });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Choose Starter or Pro." }, { status: 400 });
+      return NextResponse.json({ error: "Choose Starter, Pro, or Ultra." }, { status: 400 });
     }
     return jsonError(error);
   }

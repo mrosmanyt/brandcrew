@@ -1,5 +1,5 @@
 /**
- * Plans $20/$79, onboarding, templates, invites, schedules, export PDF.
+ * Plans $20/$79/$200, onboarding, templates, invites, schedules, export PDF.
  * No database.
  */
 import assert from "node:assert/strict";
@@ -13,14 +13,22 @@ import { computeNextRunAt, isScheduleCadence } from "../src/lib/schedule-cadence
 
 assert.equal(PLANS.starter.price, 20);
 assert.equal(PLANS.pro.price, 79);
+assert.equal(PLANS.ultra.price, 200);
 assert.equal(PLANS.starter.seats, 2);
 assert.equal(PLANS.pro.seats, 5);
+assert.ok(PLANS.ultra.seats >= 10 && PLANS.ultra.seats <= 15);
 assert.ok(PLANS.starter.tokenBudget >= 40_000 && PLANS.starter.tokenBudget <= 60_000);
 assert.ok(PLANS.pro.tokenBudget >= 180_000);
+assert.ok(PLANS.ultra.tokenBudget >= 500_000 && PLANS.ultra.tokenBudget <= 750_000);
+assert.ok(PLANS.ultra.jobsPerHour >= 80 && PLANS.ultra.jobsPerHour <= 100);
+assert.ok(PLANS.ultra.maxConcurrentJobs >= 6 && PLANS.ultra.maxConcurrentJobs <= 8);
 assert.ok(PLANS.demo.tokenBudget < PLANS.starter.tokenBudget);
+assert.ok(PLANS.pro.tokenBudget < PLANS.ultra.tokenBudget);
 assert.equal(normalizePlanId("growth"), "pro");
+assert.equal(normalizePlanId("ultra"), "ultra");
 assert.equal(limitsForPlan("starter").seats, 2);
-console.log("ok: Starter $20 / Pro $79 caps");
+assert.equal(limitsForPlan("ultra").paid, true);
+console.log("ok: Starter $20 / Pro $79 / Ultra $200 caps");
 
 assert.equal(FEATURED_JOB_TEMPLATES.length, 4);
 assert.deepEqual(

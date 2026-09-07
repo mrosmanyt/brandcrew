@@ -98,7 +98,7 @@ export function MissionControl({
   });
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetMessage, setBudgetMessage] = useState(
-    "This workspace has reached its generation budget. Upgrade to Starter ($20) or Pro ($79) to continue.",
+    "This workspace has reached its generation budget. Upgrade to Starter ($20), Pro ($79), or Ultra ($200) to continue.",
   );
   const [onboarding, setOnboarding] = useState(initialOnboarding ?? null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(() => {
