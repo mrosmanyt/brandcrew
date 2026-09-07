@@ -108,21 +108,35 @@ function NavBody({
     };
   }, [workspace.id]);
 
-  async function createWorkspace(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
+  async function createWorkspace() {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast("Enter a workspace name.");
+      return;
+    }
+    if (creating) return;
     setCreating(true);
-    const res = await fetch("/api/workspaces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    const data = await res.json();
-    setCreating(false);
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        workspace?: { id?: string };
+        error?: string;
+      };
+      if (!res.ok || !data.workspace?.id) {
+        toast.error(data.error || "Could not create workspace.");
+        return;
+      }
       setName("");
       router.push(`/desk/${data.workspace.id}`);
       router.refresh();
+    } catch {
+      toast.error("Could not create workspace.");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -206,19 +220,31 @@ function NavBody({
               </option>
             ))}
           </select>
-          <form onSubmit={createWorkspace} className="mt-1.5 flex gap-1">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void createWorkspace();
+            }}
+            className="mt-1.5 flex gap-1"
+          >
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                void createWorkspace();
+              }}
               placeholder="New workspace"
               className="h-7 border-0 bg-sidebar-accent text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40"
             />
             <Button
-              type="submit"
+              type="button"
               size="icon-xs"
               variant="secondary"
               disabled={creating}
               aria-label="Create workspace"
+              onClick={() => void createWorkspace()}
             >
               <Plus className="size-3.5" />
             </Button>

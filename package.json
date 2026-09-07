@@ -23,6 +23,7 @@
     "test:oauth": "tsx scripts/check-oauth-plugins.ts",
     "test:browse": "tsx scripts/check-browse.ts",
     "test:api-router": "tsx scripts/check-api-router.ts",
+    "test:workspace-create": "tsx scripts/check-workspace-create.ts",
     "test:developer-api": "tsx scripts/check-developer-api.ts",
     "test:limits": "tsx scripts/check-limits.ts",
     "test:desk-chat": "tsx scripts/check-desk-chat.ts",
