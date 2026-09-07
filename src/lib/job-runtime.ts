@@ -124,7 +124,7 @@ async function loadJob(jobId: string) {
 }
 
 function assistantIntro(agentName: string, title: string) {
-  return `${agentName} started **${title}**. I’ll plan, use tools, and pause when something needs you. Watch the activity feed.`;
+  return `${agentName} started **${title}**. I’ll plan, use tools, and pause when something needs you.`;
 }
 
 export async function createJobFromChat(input: {
