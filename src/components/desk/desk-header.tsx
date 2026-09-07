@@ -18,7 +18,7 @@ export function DeskHeader({
   const tight = usedPct >= 90;
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/80 px-4 py-2.5">
+    <header className="flex h-12 flex-wrap items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{workspace.name}</p>
         <div className="mt-1 flex items-center gap-2">

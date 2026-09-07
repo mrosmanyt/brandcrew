@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-fraunces);
+  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +39,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-glow: var(--glow);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,55 +49,60 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: #f4efe6;
-  --foreground: #1c1814;
-  --card: #fffaf2;
-  --card-foreground: #1c1814;
-  --popover: #fffaf2;
-  --popover-foreground: #1c1814;
-  --primary: #c45c26;
-  --primary-foreground: #fff7ef;
-  --secondary: #e8dfd0;
-  --secondary-foreground: #2a241d;
-  --muted: #ece4d6;
-  --muted-foreground: #6b6258;
-  --accent: #e7d3b8;
-  --accent-foreground: #2a241d;
-  --destructive: #b42318;
-  --border: #ddd2c0;
-  --input: #ddd2c0;
-  --ring: #c45c26;
-  --chart-1: #c45c26;
-  --chart-2: #3f6b58;
-  --chart-3: #8a5a2b;
-  --chart-4: #1f3d4c;
-  --chart-5: #c4a574;
-  --radius: 0.7rem;
-  --sidebar: #1f1b17;
-  --sidebar-foreground: #f4efe6;
-  --sidebar-primary: #e37a3d;
-  --sidebar-primary-foreground: #1f1b17;
-  --sidebar-accent: #2c2620;
-  --sidebar-accent-foreground: #f4efe6;
-  --sidebar-border: #3a332c;
-  --sidebar-ring: #e37a3d;
+:root,
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #111113;
+  --card-foreground: #fafafa;
+  --popover: #141416;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #09090b;
+  --secondary: #1c1c20;
+  --secondary-foreground: #f4f4f5;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --accent: #1c1c22;
+  --accent-foreground: #fafafa;
+  --destructive: #f87171;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #3f3f46;
+  --glow: #3b6dff;
+  --chart-1: #60a5fa;
+  --chart-2: #34d399;
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+  --radius: 0.5rem;
+  --sidebar: #0c0c0e;
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: #18181b;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #1f1f23;
+  --sidebar-ring: #3f3f46;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 
 .font-heading {
-  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 560;
+  letter-spacing: -0.03em;
 }
 
 .prose-artifact {
@@ -106,8 +112,9 @@
 .prose-artifact h1,
 .prose-artifact h2,
 .prose-artifact h3 {
-  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-weight: 560;
+  letter-spacing: -0.02em;
   margin: 1.1em 0 0.4em;
 }
 .prose-artifact h1 { font-size: 1.35rem; }
@@ -131,4 +138,49 @@
 .prose-artifact code {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.85em;
+}
+
+/* Marketing + desk shared chrome */
+.page-kicker {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.desk-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 64rem;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+@media (min-width: 768px) {
+  .desk-page {
+    padding-inline: 1.5rem;
+  }
+}
+
+.landing-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 80%);
+}
+
+.landing-glow {
+  background:
+    radial-gradient(ellipse 50% 40% at 50% -10%, color-mix(in srgb, var(--glow) 28%, transparent), transparent 70%),
+    radial-gradient(ellipse 30% 20% at 80% 10%, rgb(255 255 255 / 0.06), transparent 55%);
+}
+
+.product-frame {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 88%, #000);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04),
+    0 24px 80px -24px rgb(0 0 0 / 0.8),
+    0 0 120px -40px color-mix(in srgb, var(--glow) 35%, transparent);
 }

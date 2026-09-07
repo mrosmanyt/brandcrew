@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Bot,
   CalendarDays,
   CreditCard,
   LayoutGrid,
@@ -35,15 +34,15 @@ import { cn } from "@/lib/utils";
 function StatusDot({ status }: { status?: string }) {
   const color =
     status === "needs-you" || status === "needs_you"
-      ? "bg-primary"
+      ? "bg-amber-400"
       : status === "working" || status === "running" || status === "queued"
-        ? "bg-primary animate-pulse"
+        ? "bg-sky-400 animate-pulse"
         : status === "approved"
           ? "bg-emerald-500"
           : status === "draft"
-            ? "bg-primary/60"
-            : "bg-sidebar-foreground/25";
-  return <span className={cn("size-1.5 rounded-full", color)} />;
+            ? "bg-zinc-400"
+            : "bg-sidebar-foreground/20";
+  return <span className={cn("size-1.5 shrink-0 rounded-full", color)} />;
 }
 
 function NavBody({
@@ -64,9 +63,12 @@ function NavBody({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+  const selectedAgentId = searchParams.get("agentId");
+  const onMission = pathname === `/desk/${workspace.id}`;
 
   async function createWorkspace(e: React.FormEvent) {
     e.preventDefault();
@@ -88,9 +90,9 @@ function NavBody({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-sidebar-border px-3 py-3">
+      <div className="flex h-12 items-center justify-between gap-2 border-b border-sidebar-border px-2.5">
         {collapsed ? (
-          <span className="grid size-7 place-items-center rounded-md bg-sidebar-primary text-[0.7rem] font-semibold text-sidebar-primary-foreground">
+          <span className="grid size-6 place-items-center rounded-[6px] bg-sidebar-primary text-[0.65rem] font-semibold text-sidebar-primary-foreground">
             Bc
           </span>
         ) : (
@@ -99,7 +101,7 @@ function NavBody({
         <button
           type="button"
           onClick={onToggle}
-          className="hidden rounded-md p-1 text-sidebar-foreground/60 hover:bg-sidebar-accent md:block"
+          className="hidden rounded-md p-1 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground md:block"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (
@@ -111,12 +113,10 @@ function NavBody({
       </div>
 
       {!collapsed ? (
-        <div className="border-b border-sidebar-border px-3 py-3">
-          <label className="px-1 text-[11px] uppercase tracking-[0.14em] text-sidebar-foreground/45">
-            Workspace
-          </label>
+        <div className="border-b border-sidebar-border px-2.5 py-2.5">
           <select
-            className="mt-1 w-full rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1.5 text-sm text-sidebar-foreground"
+            aria-label="Workspace"
+            className="w-full rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1.5 text-xs text-sidebar-foreground"
             value={workspace.id}
             onChange={(e) => router.push(`/desk/${e.target.value}`)}
           >
@@ -126,16 +126,16 @@ function NavBody({
               </option>
             ))}
           </select>
-          <form onSubmit={createWorkspace} className="mt-2 flex gap-1.5">
+          <form onSubmit={createWorkspace} className="mt-1.5 flex gap-1">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="New workspace"
-              className="h-8 border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-sidebar-foreground/40"
+              className="h-7 border-sidebar-border bg-sidebar-accent text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40"
             />
             <Button
               type="submit"
-              size="icon-sm"
+              size="icon-xs"
               variant="secondary"
               disabled={creating}
               aria-label="Create workspace"
@@ -146,37 +146,60 @@ function NavBody({
         </div>
       ) : null}
 
-      <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
-        <div>
+      <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
           {!collapsed ? (
-            <p className="px-2 text-[11px] uppercase tracking-[0.14em] text-sidebar-foreground/45">
+            <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/40">
               Agents
             </p>
           ) : null}
           {agents.length === 0 && !collapsed ? (
-            <p className="px-2 pt-1 text-xs text-sidebar-foreground/50">
+            <p className="px-2 pt-1 text-[11px] leading-4 text-sidebar-foreground/45">
               None yet — New Agent, Marketplace, or Launch team.
             </p>
           ) : (
-            <ul className="mt-1 space-y-0.5">
+            <ul className="space-y-px">
               {agents.map((agent) => {
                 const href = `/desk/${workspace.id}?agentId=${agent.id}`;
+                const active =
+                  onMission &&
+                  (selectedAgentId === agent.id ||
+                    (!selectedAgentId && agent.id === agents[0]?.id));
+                const initial = displayAgentName(agent.name).slice(0, 1).toUpperCase();
                 return (
                   <li key={agent.id}>
                     <Link
                       href={href}
-                      title={displayAgentName(agent.name)}
+                      title={`${displayAgentName(agent.name)}${agent.role ? ` · ${agent.role}` : ""}`}
                       className={cn(
-                        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                        "flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] transition-colors",
                         collapsed && "justify-center px-0",
-                        "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
                       )}
                     >
-                      <Bot className="size-4 shrink-0" />
+                      <span
+                        className={cn(
+                          "grid size-6 shrink-0 place-items-center rounded-md text-[10px] font-medium",
+                          active
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                            : "bg-sidebar-accent text-sidebar-foreground",
+                        )}
+                      >
+                        {initial}
+                      </span>
                       {!collapsed ? (
                         <>
-                          <span className="flex-1 truncate">
-                            {displayAgentName(agent.name)}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate leading-4">
+                              {displayAgentName(agent.name)}
+                            </span>
+                            {agent.role ? (
+                              <span className="block truncate text-[10px] leading-3 text-sidebar-foreground/40">
+                                {agent.role}
+                              </span>
+                            ) : null}
                           </span>
                           <StatusDot status={agentStatus[agent.id]} />
                         </>
@@ -189,18 +212,18 @@ function NavBody({
           )}
         </div>
 
-        <div>
+        <div className="border-t border-sidebar-border px-1.5 py-2">
           {!collapsed ? (
-            <p className="px-2 text-[11px] uppercase tracking-[0.14em] text-sidebar-foreground/45">
+            <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/40">
               Desk
             </p>
           ) : null}
-          <ul className="mt-1 space-y-0.5">
+          <ul className="space-y-px">
             <SideLink
               href={`/desk/${workspace.id}`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<LayoutGrid className="size-4" />}
+              icon={<LayoutGrid className="size-3.5" />}
             >
               Mission Control
             </SideLink>
@@ -208,7 +231,7 @@ function NavBody({
               href={`/desk/${workspace.id}/marketplace`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<Store className="size-4" />}
+              icon={<Store className="size-3.5" />}
             >
               Marketplace
             </SideLink>
@@ -216,7 +239,7 @@ function NavBody({
               href={`/desk/${workspace.id}/brand-kit`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<Sparkles className="size-4" />}
+              icon={<Sparkles className="size-3.5" />}
             >
               Brand Kit
             </SideLink>
@@ -224,7 +247,7 @@ function NavBody({
               href={`/desk/${workspace.id}/calendar`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<CalendarDays className="size-4" />}
+              icon={<CalendarDays className="size-3.5" />}
             >
               Calendar
             </SideLink>
@@ -232,7 +255,7 @@ function NavBody({
               href={`/desk/${workspace.id}/ops`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<ListChecks className="size-4" />}
+              icon={<ListChecks className="size-3.5" />}
             >
               Ops board
             </SideLink>
@@ -240,7 +263,7 @@ function NavBody({
               href={`/desk/${workspace.id}/billing`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<CreditCard className="size-4" />}
+              icon={<CreditCard className="size-3.5" />}
             >
               Plans
             </SideLink>
@@ -248,17 +271,17 @@ function NavBody({
         </div>
       </nav>
 
-      <div className="border-t border-sidebar-border p-2">
+      <div className="border-t border-sidebar-border p-1.5">
         <button
           type="button"
           onClick={onLogout}
           title="Sign out"
           className={cn(
-            "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent",
+            "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
             collapsed && "justify-center",
           )}
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-3.5" />
           {!collapsed ? "Sign out" : null}
         </button>
       </div>
@@ -286,11 +309,11 @@ function SideLink({
         href={href}
         title={typeof children === "string" ? children : undefined}
         className={cn(
-          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+          "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
           collapsed && "justify-center px-0",
           active
             ? "bg-sidebar-accent text-sidebar-foreground"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            : "text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground",
         )}
       >
         {icon}
@@ -332,8 +355,8 @@ export function DeskSidebar(props: {
     <>
       <aside
         className={cn(
-          "hidden h-dvh shrink-0 bg-sidebar text-sidebar-foreground transition-[width] md:block",
-          collapsed ? "w-16" : "w-60",
+          "hidden h-dvh shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] md:block",
+          collapsed ? "w-14" : "w-56",
         )}
       >
         <NavBody
