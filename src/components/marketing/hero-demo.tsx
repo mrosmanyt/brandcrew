@@ -16,7 +16,6 @@ import {
   HERO_DEMO_ARTIFACT,
   HERO_DEMO_CAST,
   HERO_DEMO_JOB_TITLE,
-  HERO_DEMO_LOOP_MS,
   HERO_DEMO_PLAN_COPY,
   HERO_DEMO_PLAN_STEPS,
   HERO_DEMO_PROMPT,
@@ -102,13 +101,15 @@ export function HeroDemo() {
   const fading = phase === "hold" && !staticFrame;
   const status = heroDemoJobStatus(phase);
   const now = heroDemoNowHeadline(phase);
-  const tools = heroDemoToolLines(phase);
-  const planCount = heroDemoPlanCount(elapsed);
-  const typed = heroDemoComposerText(elapsed);
   const showUser = heroDemoReached(phase, "sent");
   const showPlan = heroDemoReached(phase, "plan");
   const showArtifacts = heroDemoReached(phase, "artifacts");
   const showWebsite = heroDemoReached(phase, "website");
+  const tools = showArtifacts
+    ? heroDemoToolLines(phase).slice(-1)
+    : heroDemoToolLines(phase);
+  const planCount = heroDemoPlanCount(elapsed);
+  const typed = heroDemoComposerText(elapsed);
   const working = heroDemoWorking(phase);
   const writerActive = status !== "idle" && !showWebsite;
   const builderActive = showWebsite;
@@ -126,8 +127,8 @@ export function HeroDemo() {
         drafts, and pauses for Approve. Nothing is published.
       </p>
 
-      <div className="hero-demo-stage relative pt-11 md:pt-14" aria-hidden>
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 md:h-[4.25rem]">
+      <div className="hero-demo-stage relative pt-10 md:pt-12" aria-hidden>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 md:h-16">
           {HERO_DEMO_CAST.map((member) => (
             <span
               key={member.id}
@@ -171,7 +172,7 @@ export function HeroDemo() {
             </span>
           </div>
 
-          <div className="grid min-h-[24rem] bg-background md:grid-cols-[10.5rem_minmax(0,1fr)] lg:grid-cols-[10.5rem_minmax(0,1fr)_13.5rem]">
+          <div className="grid h-[22.5rem] bg-background sm:h-[24.5rem] md:grid-cols-[10.5rem_minmax(0,1fr)] lg:h-[26rem] lg:grid-cols-[10.5rem_minmax(0,1fr)_13.5rem]">
             <aside className="hidden border-r border-border md:block">
               <div className="flex items-center justify-between px-3 py-3">
                 <p className="text-xs font-medium text-muted-foreground">Agents</p>
@@ -234,7 +235,7 @@ export function HeroDemo() {
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col justify-end gap-2.5 overflow-hidden px-4 py-4 sm:px-5">
+              <div className="flex min-h-0 flex-1 flex-col justify-end gap-2 overflow-hidden px-4 py-3 sm:px-5">
                 {showUser ? (
                   <article className="hero-demo-pop flex justify-end">
                     <div className="max-w-[min(22rem,88%)] rounded-2xl rounded-br-md bg-secondary px-3.5 py-2 text-sm leading-6">
@@ -258,17 +259,25 @@ export function HeroDemo() {
                       <p className="text-[11px] leading-4 text-muted-foreground">
                         {HERO_DEMO_AGENT_NAME}
                       </p>
-                      <p className="mt-0.5">{HERO_DEMO_PLAN_COPY}</p>
-                      <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        {HERO_DEMO_PLAN_STEPS.slice(0, planCount).map((step, index) => (
-                          <li key={step.id} className="hero-demo-pop flex items-center gap-1.5">
-                            <Circle className="size-2 shrink-0" />
-                            <span>
-                              {index + 1}. {step.label}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
+                      {showArtifacts ? (
+                        <p className="mt-0.5">
+                          Plan ready. Brand Kit → browse → write_artifact → ask_user.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="mt-0.5">{HERO_DEMO_PLAN_COPY}</p>
+                          <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
+                            {HERO_DEMO_PLAN_STEPS.slice(0, planCount).map((step, index) => (
+                              <li key={step.id} className="hero-demo-pop flex items-center gap-1.5">
+                                <Circle className="size-2 shrink-0" />
+                                <span>
+                                  {index + 1}. {step.label}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </>
+                      )}
                     </div>
                   </article>
                 ) : null}

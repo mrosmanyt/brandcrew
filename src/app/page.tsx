@@ -24,7 +24,7 @@ export default function HomePage() {
       <SiteNav />
 
       <main>
-        <section className="mx-auto w-full max-w-6xl px-6 pt-20 pb-20 md:pt-28 md:pb-24">
+        <section className="mx-auto w-full max-w-6xl px-6 pt-16 pb-16 md:pt-24 md:pb-20">
           <div className="max-w-5xl">
             <p className="mkt-hero-kicker text-sm text-muted-foreground">
               CINEM Pro · AI employee desk
@@ -43,7 +43,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div id="product" className="mkt-hero-demo scroll-mt-20 mt-14 md:mt-16">
+          <div id="product" className="mkt-hero-demo scroll-mt-20 mt-10 md:mt-12">
             <HeroDemo />
             <p className="mt-5 text-sm leading-6 text-muted-foreground">
               Agents plan, tools run, you approve. The loop resets — nothing posts.
