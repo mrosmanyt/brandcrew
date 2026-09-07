@@ -83,7 +83,7 @@ export function browserInteractGuard(
   if (/(password|passwd|passcode|one-time|otp|credential)/.test(blob)) {
     return {
       ok: false,
-      reason: "Refused: Brandcrew never fills password or credential fields.",
+      reason: "Refused: CINEM Pro never fills password or credential fields.",
     };
   }
   if (/(log[\s-]?in|sign[\s-]?in|sign[\s-]?up|auth|sso)/.test(blob)) {
@@ -211,7 +211,7 @@ async function playwrightNavigate(url: string): Promise<BrowsePage> {
   });
   try {
     const page = await browser.newPage({
-      userAgent: "BrandcrewResearch/0.2 (+https://github.com/mrosmanyt/brandcrew)",
+      userAgent: "CINEM-Pro-Research/0.2 (+https://github.com/mrosmanyt/brandcrew)",
     });
     page.setDefaultTimeout(BROWSE_TIMEOUT_MS);
     page.setDefaultNavigationTimeout(BROWSE_TIMEOUT_MS);

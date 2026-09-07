@@ -4,7 +4,7 @@ import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
 export const MARKETPLACE_BOT_CATEGORIES = [
   "All",
   "Featured",
-  "From Brandcrew",
+  "From CINEM Pro",
   "Engineering",
   "Sales",
   "Marketing",
@@ -61,7 +61,7 @@ export const MARKETPLACE_BOTS: MarketplaceBot[] = TEAM_LAUNCH_ROLES.map(
     id: row.id,
     name: row.role,
     role: row.role,
-    creator: "Brandcrew",
+    creator: "CINEM Pro",
     description: row.blurb,
     instructions: row.instructions,
     starter: row.starter,
@@ -177,7 +177,7 @@ export const MARKETPLACE_PLUGINS: PluginDef[] = [
   {
     id: "notion",
     name: "Notion",
-    description: "Connect a Notion workspace. Tokens are stored encrypted; Brandcrew does not invent page content.",
+    description: "Connect a Notion workspace. Tokens are stored encrypted; CINEM Pro does not invent page content.",
     category: "Canvas",
     featured: true,
     auth: "oauth",
@@ -190,7 +190,7 @@ export const MARKETPLACE_PLUGINS: PluginDef[] = [
   {
     id: "google-calendar",
     name: "Google Calendar",
-    description: "Search events. Does not create or send calendar invites until you approve outside Brandcrew.",
+    description: "Search events. Does not create or send calendar invites until you approve outside CINEM Pro.",
     category: "Productivity",
     featured: true,
     auth: "oauth",
@@ -218,7 +218,7 @@ export const MARKETPLACE_PLUGINS: PluginDef[] = [
   {
     id: "stripe",
     name: "Stripe",
-    description: "Store a restricted Stripe key for this workspace. Brandcrew never spends or creates charges.",
+    description: "Store a restricted Stripe key for this workspace. CINEM Pro never spends or creates charges.",
     category: "Billing",
     featured: false,
     auth: "api_key",

@@ -28,7 +28,7 @@ Never CRM-send. Never gmail.send. Last step is ask_user unless slack_post_messag
     case "ads":
       return `Writes creative, not spend.
 Jobs: 5 ad angles, or ad angles from a landing-page URL (browse then 5 angles).
-State that Brandcrew does not buy media or connect ad accounts.`;
+State that CINEM Pro does not buy media or connect ad accounts.`;
     case "ops":
       return `Turns approved work into an approve → schedule → done board.
 Gmail inbox notes and Slack channel lists when those plugins are Connected.
@@ -68,7 +68,7 @@ export function plannerSystemPrompt(input: {
       : "Slack is not Connected — do not include slack_* tools.",
   ].join("\n");
   const extraList = extra.length ? `, ${extra.join(", ")}` : "";
-  return `You plan jobs for Brandcrew agent "${name}" (role label: ${input.agentRoleLabel || input.role}).
+  return `You plan jobs for CINEM Pro agent "${name}" (role label: ${input.agentRoleLabel || input.role}).
 ${input.agentInstructions ? `Agent instructions:\n${input.agentInstructions}\n` : ""}
 ${rolePlaybookHint(input.role)}
 

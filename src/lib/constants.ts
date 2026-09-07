@@ -1,5 +1,10 @@
 export const SESSION_COOKIE = "brandcrew_session";
 
+/** User-facing product name. Repo/package remain `brandcrew`. */
+export const PRODUCT_NAME = "CINEM Pro";
+export const COMPANY_NAME = "CINEM";
+export const PRODUCT_TAGLINE = "AI employee desk";
+
 export const DEFAULT_AGENT_NAME = "New Agent";
 
 export const PLANS = {

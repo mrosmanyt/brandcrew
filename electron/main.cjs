@@ -1,5 +1,5 @@
 /**
- * Brandcrew desktop shell.
+ * CINEM Pro desktop shell.
  * Dev: spawn `npm run dev` (or attach if :port is already up) and load it.
  * Packaged: fork Next standalone server.js with ELECTRON_RUN_AS_NODE,
  * Postgres + .env in the OS userData directory (same DATABASE_URL as web).
@@ -65,7 +65,7 @@ function parseEnvFile(filePath) {
 
 function writeEnvFile(filePath, values) {
   const lines = [
-    "# Brandcrew desktop environment",
+    "# CINEM Pro desktop environment",
     "# DATABASE_URL must be Postgres (local Docker or Neon). SQLite file: URLs no longer work.",
     "# Add API keys and OAuth client ids here, then restart the app.",
     "# OAuth redirect URI must be:",
@@ -145,7 +145,7 @@ async function waitForServer(timeoutMs = 90_000) {
     if (await ping()) return;
     await new Promise((r) => setTimeout(r, 300));
   }
-  throw new Error(`Brandcrew did not become ready at ${ORIGIN}`);
+  throw new Error(`CINEM Pro did not become ready at ${ORIGIN}`);
 }
 
 function npmCmd() {
@@ -197,7 +197,7 @@ function createWindow() {
     height: 920,
     minWidth: 960,
     minHeight: 640,
-    title: "Brandcrew",
+    title: "CINEM Pro",
     backgroundColor: "#09090b",
     autoHideMenuBar: true,
     icon: fs.existsSync(icon) ? icon : undefined,
@@ -254,13 +254,13 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
-    app.setName("Brandcrew");
+    app.setName("CINEM Pro");
     if (process.platform === "win32") {
       app.setAppUserModelId("com.brandcrew.desktop");
     }
     return boot().catch((error) => {
       console.error(error);
-      dialog.showErrorBox("Brandcrew", error instanceof Error ? error.message : String(error));
+      dialog.showErrorBox("CINEM Pro", error instanceof Error ? error.message : String(error));
       app.quit();
     });
   });

@@ -11,7 +11,7 @@ export default async function CalendarPage({
       <p className="page-kicker">Distributor</p>
       <h1 className="font-heading mt-1 text-2xl">Content calendar</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        A 30-day plan you can export as Markdown and paste into Docs. Brandcrew
+        A 30-day plan you can export as Markdown and paste into Docs. CINEM Pro
         does not auto-post to LinkedIn.
       </p>
       <div className="mt-6">

@@ -105,7 +105,7 @@ export async function fetchUrlText(rawUrl: string): Promise<FetchedPage> {
       signal: AbortSignal.timeout(8000),
       headers: {
         Accept: "text/html,text/plain;q=0.9,*/*;q=0.1",
-        "User-Agent": "BrandcrewResearch/0.2 (+https://github.com/mrosmanyt/brandcrew)",
+        "User-Agent": "CINEM-Pro-Research/0.2 (+https://github.com/mrosmanyt/brandcrew)",
       },
     });
     const buffer = await response.arrayBuffer();

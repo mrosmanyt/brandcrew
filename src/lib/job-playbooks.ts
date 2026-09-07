@@ -177,7 +177,7 @@ export function salesPackPlaybook(): JobPlaybook {
         { kind: "sales_pack" },
         "pack",
       ),
-      approveStep("Approve these outbound drafts. Brandcrew will not send them."),
+      approveStep("Approve these outbound drafts. CINEM Pro will not send them."),
     ],
   };
 }
@@ -201,7 +201,7 @@ export function outreachFromResearchPlaybook(): JobPlaybook {
         { kind: "outreach_pack" },
         "dms",
       ),
-      approveStep("Approve these 5 DMs before anyone sends them. Brandcrew will not send."),
+      approveStep("Approve these 5 DMs before anyone sends them. CINEM Pro will not send."),
     ],
   };
 }
@@ -226,7 +226,7 @@ export function adAnglesFromUrlPlaybook(url?: string): JobPlaybook {
         { kind: "ad_angles" },
         "angles",
       ),
-      approveStep("Approve these ad angles. Brandcrew does not buy media or publish ads."),
+      approveStep("Approve these ad angles. CINEM Pro does not buy media or publish ads."),
     ],
   };
 }
@@ -314,7 +314,7 @@ export function gmailInboxPlaybook(): JobPlaybook {
         { kind: "gmail_inbox" },
         "notes",
       ),
-      approveStep("Approve these inbox notes. Brandcrew did not send any mail."),
+      approveStep("Approve these inbox notes. CINEM Pro did not send any mail."),
     ],
   };
 }
@@ -338,7 +338,7 @@ export function gmailDraftPlaybook(): JobPlaybook {
         { kind: "gmail_draft" },
         "record",
       ),
-      approveStep("A Gmail draft was created. Brandcrew will not send it."),
+      approveStep("A Gmail draft was created. CINEM Pro will not send it."),
     ],
   };
 }
@@ -377,7 +377,7 @@ export function slackPostPlaybook(): JobPlaybook {
         "slack-draft",
       ),
       approveStep(
-        "Approve this Slack draft. Brandcrew will post only after you approve.",
+        "Approve this Slack draft. CINEM Pro will post only after you approve.",
       ),
       makeStep(
         "slack_post_message",
@@ -555,7 +555,7 @@ export function ensureAskUser(steps: JobStep[]): JobStep[] {
       "Pause for your approval",
       {
         prompt:
-          "Approve the drafts before they leave the desk. Brandcrew will not send or publish.",
+          "Approve the drafts before they leave the desk. CINEM Pro will not send or publish.",
       },
       "approve",
     ),

@@ -169,10 +169,10 @@ If you know a GM mid-refresh, I would rather they see one property than a case-s
         type: "ad_angles",
         title: "Five ad angles + primary text",
         summary:
-          "Creative only. Brandcrew does not connect Meta or spend media.",
+          "Creative only. CINEM Pro does not connect Meta or spend media.",
         content: `# Ad angles (creative only)
 
-Brandcrew does not buy media, connect ad accounts, or set budgets.
+CINEM Pro does not buy media, connect ad accounts, or set budgets.
 
 ## 1. The mismatch
 Primary: The rooms feel like a house. The booking page feels like a chain. Guests notice.
@@ -400,7 +400,7 @@ export function demoOutreachFromResearch(
     "",
     source,
     "",
-    "Brandcrew will not send these. Approve, then you copy/paste.",
+    "CINEM Pro will not send these. Approve, then you copy/paste.",
     "",
     ...dms.map((body, index) => `## LinkedIn DM ${index + 1}\n${body}\n`),
   ].join("\n");
@@ -423,7 +423,7 @@ export function demoAdAnglesFromUrl(
   return {
     type: "ad_angles",
     title: "Five ad angles from the landing page",
-    summary: "Creative only. Brandcrew does not connect Meta or spend media.",
+    summary: "Creative only. CINEM Pro does not connect Meta or spend media.",
     content: `# Ad angles from URL (creative only)
 
 Source: ${source}
@@ -432,7 +432,7 @@ ${fetched?.ok ? "Browsed read-only." : "Page was not fully readable."}
 What the page said:
 ${excerpt}
 
-Brandcrew does not buy media, connect ad accounts, or set budgets.
+CINEM Pro does not buy media, connect ad accounts, or set budgets.
 
 ## 1. The mismatch
 Primary: The rooms feel like a house. The booking page feels like a chain. Guests notice.

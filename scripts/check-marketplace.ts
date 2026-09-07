@@ -34,7 +34,7 @@ for (const id of [
   assert.equal(bot.role.length > 0, true);
   assert.equal(bot.instructions.length > 20, true);
 }
-assert.ok(MARKETPLACE_BOTS.every((bot) => bot.creator === "Brandcrew"));
+assert.ok(MARKETPLACE_BOTS.every((bot) => bot.creator === "CINEM Pro"));
 console.log(`ok: ${MARKETPLACE_BOTS.length} bot templates`);
 
 const plugins = ["web-search", "gmail", "slack", "notion", "google-calendar", "google-drive", "stripe"];

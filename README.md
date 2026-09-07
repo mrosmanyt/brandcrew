@@ -1,6 +1,8 @@
-# Brandcrew
+# CINEM Pro
 
-**Mission Control** for agents you create. Default display name is always **New Agent**. Role is a label. You rename freely. Jobs **plan → use tools → produce artifacts**. You **approve** what leaves.
+**AI employee desk** — Mission Control for agents you create. Default display name is always **New Agent**. Role is a label. You rename freely. Jobs **plan → use tools → produce artifacts**. You **approve** what leaves.
+
+The GitHub repo remains [`mrosmanyt/brandcrew`](https://github.com/mrosmanyt/brandcrew); the product is **CINEM Pro**. **CINEM** (cinem.tech) is the company.
 
 This is a vertical slice, not a Strawberry clone: no per-agent VMs, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results. Jobs can **browse public pages** read-only (`browser_navigate` / `browser_snapshot` / `crawl_links`).
 
@@ -82,7 +84,7 @@ Job tools when Connected: `gmail_list_recent` (subject / from / date), `gmail_cr
    - `groups:read` — list private channels the bot can see
    - `chat:write` — `chat.postMessage` after approval
 4. Copy Client ID / secret into `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET`.
-5. Install the app to a workspace when prompted. Brandcrew still only marks **Connected** after `oauth.v2.access` succeeds on the callback.
+5. Install the app to a workspace when prompted. CINEM Pro still only marks **Connected** after `oauth.v2.access` succeeds on the callback.
 6. Marketplace → Connect Slack → Slack consent → callback. Token rotation (`refresh_token` / `expires_in`) is stored when Slack returns it; long-lived bot tokens work without expiry.
 
 Job tools when Connected: `slack_list_channels`, `slack_draft_message` (artifact, not posted), `slack_post_message` **only if a prior `ask_user` step is `done`**. Approving the draft resumes the job and then posts.
@@ -113,7 +115,7 @@ The desk listens on [http://127.0.0.1:43180](http://127.0.0.1:43180).
 
 ## Desktop (Windows + Mac)
 
-Brandcrew can run in an Electron window like a local Grok Bot — not only `npm run dev` in a browser.
+CINEM Pro can run in an Electron window like a local Grok Bot — not only `npm run dev` in a browser.
 
 ### Open a window from a checkout
 
@@ -122,7 +124,7 @@ npm install
 npm run desktop:dev
 ```
 
-This starts (or attaches to) Next on `http://127.0.0.1:43180` and opens **Brandcrew**. Mission Control, agents, Marketplace, Gmail/Slack OAuth, and job tools are the same app.
+This starts (or attaches to) Next on `http://127.0.0.1:43180` and opens **CINEM Pro**. Mission Control, agents, Marketplace, Gmail/Slack OAuth, and job tools are the same app.
 
 ### Terminal one-liner (Mac / Linux)
 
@@ -157,7 +159,7 @@ Artifacts land in `dist/desktop/`.
 | Mode | `.env` | Postgres |
 | --- | --- | --- |
 | `desktop:dev` / `npm run dev` | project `.env` | `DATABASE_URL` (Docker on `:5432` or Neon) |
-| Packaged app | **macOS** `~/Library/Application Support/Brandcrew/.env` · **Windows** `%APPDATA%\Brandcrew\.env` | same `DATABASE_URL` / `DIRECT_URL` (Docker or Neon). First launch writes the local Docker URL. Apply schema with `npx prisma migrate deploy` against that URL. |
+| Packaged app | **macOS** `~/Library/Application Support/CINEM Pro/.env` · **Windows** `%APPDATA%\CINEM Pro\.env` | same `DATABASE_URL` / `DIRECT_URL` (Docker or Neon). First launch writes the local Docker URL. Apply schema with `npx prisma migrate deploy` against that URL. |
 
 Set `OAUTH_REDIRECT_BASE=http://127.0.0.1:43180` (default). Google/Slack authorized redirect URI: `http://127.0.0.1:43180/api/oauth/callback`. Override the port with `BRANDCREW_PORT` if needed.
 
@@ -323,7 +325,7 @@ Jobs bind to a user `Agent` (`agentId`). Activity events include `{ tool, url, e
 
 ## Browser tools (user agents)
 
-Brandcrew does **not** spin a VM per agent and does not require a paid browser vendor.
+CINEM Pro does **not** spin a VM per agent and does not require a paid browser vendor.
 
 1. Install deps as usual (`npm install`). Playwright **core** is enough — it uses the Chrome already on your machine.
 2. Leave `PLAYWRIGHT_ENABLED=true` in `.env` (see `.env.example`). If Chrome is at a custom path, set `PLAYWRIGHT_CHROME_PATH`.

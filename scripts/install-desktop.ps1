@@ -1,4 +1,4 @@
-# Brandcrew desktop — clone (or update) and open the Electron window.
+# CINEM Pro desktop — clone (or update) and open the Electron window.
 # Usage (PowerShell):
 #   irm https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.ps1 | iex
 # Or from a checkout:  powershell -File scripts/install-desktop.ps1
@@ -26,6 +26,6 @@ Set-Location $Dir
 Write-Host "Installing dependencies..."
 npm install
 
-Write-Host "Opening Brandcrew desktop..."
-Write-Host "Dev keys live in $Dir\.env — packaged app uses %APPDATA%\Brandcrew\.env"
+Write-Host "Opening CINEM Pro desktop..."
+Write-Host "Dev keys live in $Dir\.env — packaged app uses %APPDATA%\CINEM Pro\.env"
 npm run desktop:dev

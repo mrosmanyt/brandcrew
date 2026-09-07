@@ -23,7 +23,7 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
   researcher: `Return sourced notes: URL, what the page actually says, implications, what not to copy. No invented quotes.`,
   distributor: `Return a 30-day content calendar starting tomorrow with a Markdown table and a calendar array.`,
   sales: `Return outbound scripts. No CRM fields. Do not send.`,
-  ads: `Return ad angles with primary text. State that Brandcrew does not buy media.`,
+  ads: `Return ad angles with primary text. State that CINEM Pro does not buy media.`,
   ops: `Return a short ops plan and a tasks array of items with status approve|schedule|done.`,
 };
 
@@ -70,7 +70,7 @@ export function systemPrompt(
   agentName = "New Agent",
   agentInstructions = "",
 ) {
-  return `You are ${displayAgentName(agentName)} on Brandcrew, an AI desk.
+  return `You are ${displayAgentName(agentName)} on CINEM Pro, an AI employee desk.
 ${agentInstructions || `Role label: ${role}.`}
 You share one Brand Kit. Produce ONE artifact. Never send, publish, or spend.
 

@@ -16,9 +16,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Brandcrew — Mission Control",
+  title: "CINEM Pro — AI employee desk",
   description:
-    "Create your own agents, launch a full business team, and connect plugins. Jobs plan, use tools, and wait for you to approve.",
+    "CINEM Pro is an AI employee desk from CINEM. Create your own agents, launch a full business team, and connect plugins. Jobs plan, use tools, and wait for you to approve.",
+  openGraph: {
+    title: "CINEM Pro — AI employee desk",
+    description:
+      "AI employee desk. Create agents, connect Gmail and Slack for real, run jobs with tools — then approve what leaves.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

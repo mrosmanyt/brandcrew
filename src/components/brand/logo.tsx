@@ -18,15 +18,15 @@ export function BrandMark({
             : "bg-primary text-primary-foreground",
         )}
       >
-        Bc
+        CP
       </span>
       <span
         className={cn(
-          "text-[0.95rem] font-medium tracking-tight",
+          "text-[0.95rem] font-medium tracking-tight whitespace-nowrap",
           inverted ? "text-sidebar-foreground" : "text-foreground",
         )}
       >
-        Brandcrew
+        CINEM Pro
       </span>
     </span>
   );
