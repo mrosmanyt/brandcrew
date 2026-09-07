@@ -109,6 +109,62 @@ npm run dev
 
 The desk listens on [http://127.0.0.1:43180](http://127.0.0.1:43180).
 
+## Desktop (Windows + Mac)
+
+Brandcrew can run in an Electron window like a local Grok Bot — not only `npm run dev` in a browser.
+
+### Open a window from a checkout
+
+```bash
+npm install
+npm run desktop:dev
+```
+
+This starts (or attaches to) Next on `http://127.0.0.1:43180` and opens **Brandcrew**. Mission Control, agents, Marketplace, Gmail/Slack OAuth, and job tools are the same app.
+
+### Terminal one-liner (Mac / Linux)
+
+Needs git + Node 20+:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.sh | bash
+```
+
+Or: `bash scripts/install-desktop.sh` from a clone. Override checkout with `BRANDCREW_DIR`, `BRANDCREW_REF`, `BRANDCREW_REPO`.
+
+### Windows PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.ps1 | iex
+```
+
+Or: `powershell -File scripts/install-desktop.ps1`
+
+### Installers (.exe / .dmg)
+
+```bash
+npm run desktop:build:win   # NSIS installer + portable .exe (x64)
+npm run desktop:build:mac   # .dmg + .zip — run on macOS
+npm run desktop:build       # current platform (Linux → AppImage)
+```
+
+Artifacts land in `dist/desktop/`.
+
+**Where keys live**
+
+| Mode | `.env` | SQLite |
+| --- | --- | --- |
+| `desktop:dev` / `npm run dev` | project `.env` | `dev.db` (see `DATABASE_URL`) |
+| Packaged app | **macOS** `~/Library/Application Support/Brandcrew/.env` · **Windows** `%APPDATA%\Brandcrew\.env` | `brandcrew.db` next to that `.env` |
+
+Set `OAUTH_REDIRECT_BASE=http://127.0.0.1:43180` (default). Google/Slack authorized redirect URI: `http://127.0.0.1:43180/api/oauth/callback`. Override the port with `BRANDCREW_PORT` if needed.
+
+**Cross-build limits (honest):**
+
+- **Mac `.dmg`:** run `desktop:build:mac` on **macOS**. Linux cannot produce a usable signed/stapled dmg (electron-builder will skip or fail; that is expected).
+- **Windows `.exe`:** `desktop:build:win` on Windows is the straightforward path. On Linux it can package `win-unpacked` and often a **portable** `.exe`. The NSIS installer (Setup.exe) typically needs **Wine** (`wine64`) or a Windows runner. Code signing is off (`signAndEditExecutable: false`); ship unsigned unless you add your own cert.
+- CI is optional — there is no GitHub Actions workflow in this slice. Do not expect a Mac dmg from a Linux agent.
+
 ### First account + first job
 
 1. Open `/signup` and create an email/password account.
@@ -216,6 +272,9 @@ npm run lint
 npm run test:jobs
 npm run test:oauth
 npm run test:browse  # Playwright smoke test (Chrome + network)
+npm run desktop:dev      # Electron window against local Next (:43180)
+npm run desktop:build:win
+npm run desktop:build:mac  # needs macOS
 npx prisma db push   # apply schema to SQLite
 npx prisma studio    # inspect rows
 ```

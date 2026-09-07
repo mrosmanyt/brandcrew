@@ -2,6 +2,9 @@
   "name": "brandcrew",
   "version": "0.1.0",
   "private": true,
+  "description": "Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
+  "author": "Brandcrew",
+  "main": "electron/main.cjs",
   "scripts": {
     "predev": "node scripts/ensure-dev.mjs",
     "dev": "next dev --hostname 0.0.0.0 --port 43180",
@@ -15,7 +18,11 @@
     "test:jobs": "tsx scripts/check-job-runtime.ts",
     "test:marketplace": "tsx scripts/check-marketplace.ts",
     "test:oauth": "tsx scripts/check-oauth-plugins.ts",
-    "test:browse": "tsx scripts/check-browse.ts"
+    "test:browse": "tsx scripts/check-browse.ts",
+    "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
+    "desktop:build": "node scripts/desktop-build.mjs",
+    "desktop:build:win": "node scripts/desktop-build.mjs --win",
+    "desktop:build:mac": "node scripts/desktop-build.mjs --mac"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
@@ -50,10 +57,86 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
+    "electron": "^37.10.3",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.brandcrew.desktop",
+    "productName": "Brandcrew",
+    "copyright": "Copyright © Brandcrew",
+    "directories": {
+      "output": "dist/desktop",
+      "buildResources": "electron/resources"
+    },
+    "files": [
+      "electron/main.cjs",
+      "electron/preload.cjs",
+      "package.json",
+      "!**/node_modules/**"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone"
+      },
+      {
+        "from": "electron/resources",
+        "to": "brandcrew",
+        "filter": [
+          "icon.png",
+          "brandcrew.empty.db",
+          "env.example"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "electron/resources/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": false,
+      "identity": null
+    },
+    "win": {
+      "icon": "electron/resources/icon.png",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "icon": "electron/resources/icon.png",
+      "category": "Office",
+      "target": [
+        "AppImage"
+      ]
+    }
   }
 }
