@@ -395,6 +395,7 @@ export function MissionControl({
             <Button
               size="xs"
               variant="outline"
+              nativeButton={false}
               render={<Link href={`/desk/${workspaceId}/marketplace`} />}
             >
               <Store className="size-3" />
@@ -493,6 +494,7 @@ export function MissionControl({
                       key={chip.label}
                       size="sm"
                       variant="outline"
+                      nativeButton={false}
                       render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
                     >
                       {chip.label}
@@ -530,6 +532,7 @@ export function MissionControl({
                     <Button
                       key={chip.label}
                       variant="outline"
+                      nativeButton={false}
                       render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
                     >
                       {chip.label}
