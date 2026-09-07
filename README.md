@@ -51,7 +51,41 @@ v1 Connect that actually works:
 1. **API key** (Web Search / Tavily, Stripe, GitHub): form saves the secret server-side. You can also Connect Web Search with server `TAVILY_API_KEY` when that env is set. Empty form → still disconnected.
 2. **OAuth** (Gmail, Slack, Notion, Google Calendar, Google Drive): start + callback at `/api/oauth/callback`. If client ids are missing, the UI says so and **does not** fake Connected.
 
-Connected **Web Search** exposes the `web_search` job tool (Tavily). Other plugins store credentials for later tools; they do not auto-send mail or Slack.
+Connected **Web Search** exposes `web_search`. Connected **Gmail** exposes `gmail_list_recent` and `gmail_create_draft` (never send). Connected **Slack** exposes `slack_list_channels`, `slack_draft_message`, and `slack_post_message` (post only after `ask_user`). Missing OAuth client ids → Connect stays disconnected. Notion / Calendar / Drive still store tokens after callback; they do not auto-post.
+
+### Gmail OAuth (Google Cloud) — live Connect
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → enable **Gmail API**.
+2. OAuth consent screen: External or Internal. Add scopes:
+   - `https://www.googleapis.com/auth/gmail.readonly`
+   - `https://www.googleapis.com/auth/gmail.compose`
+3. Credentials → Create OAuth client ID → **Web application**.
+4. Authorized redirect URI (must match env origin exactly, including `127.0.0.1` vs `localhost`):
+   `{OAUTH_REDIRECT_BASE or APP_URL or NEXT_PUBLIC_APP_URL}/api/oauth/callback`  
+   Local default: `http://127.0.0.1:43180/api/oauth/callback`
+5. Copy Client ID / secret into `.env` as `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or `GMAIL_CLIENT_*`).
+6. Set `OAUTH_REDIRECT_BASE` (or `APP_URL` / `NEXT_PUBLIC_APP_URL`) to that same origin.
+7. Restart `npm run dev`. Marketplace → Plugins → **Connect** on Gmail → Google consent → redirect back. **Connected** only after token exchange. **Reconnect** repeats consent. **Disconnect** clears encrypted tokens.
+8. Without client ids, Connect shows a clear error and stays disconnected.
+
+Job tools when Connected: `gmail_list_recent` (subject / from / date), `gmail_create_draft` (creates a Gmail draft — **does not send**). Access tokens refresh via the stored refresh_token; Google only returns refresh_token on the first consent (`prompt=consent` + `access_type=offline`).
+
+### Slack OAuth — live Connect
+
+1. [api.slack.com/apps](https://api.slack.com/apps) → Create New App → From scratch.
+2. **OAuth & Permissions** → Redirect URLs:  
+   `{OAUTH_REDIRECT_BASE or APP_URL or NEXT_PUBLIC_APP_URL}/api/oauth/callback`
+3. Bot Token Scopes:
+   - `channels:read` — list public channels (`conversations.list`)
+   - `groups:read` — list private channels the bot can see
+   - `chat:write` — `chat.postMessage` after approval
+4. Copy Client ID / secret into `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET`.
+5. Install the app to a workspace when prompted. Brandcrew still only marks **Connected** after `oauth.v2.access` succeeds on the callback.
+6. Marketplace → Connect Slack → Slack consent → callback. Token rotation (`refresh_token` / `expires_in`) is stored when Slack returns it; long-lived bot tokens work without expiry.
+
+Job tools when Connected: `slack_list_channels`, `slack_draft_message` (artifact, not posted), `slack_post_message` **only if a prior `ask_user` step is `done`**. Approving the draft resumes the job and then posts.
+
+**Manual click-through:** with env credentials set, Connect → provider consent → return to Marketplace with `?connected=gmail` or `?connected=slack`. Without credentials, Connect stays honest (error, not Connected).
 
 ## Stack
 
@@ -97,8 +131,9 @@ See [`.env.example`](./.env.example). Summary:
 | `TAVILY_API_KEY` | no | Web Search plugin. Jobs call Tavily only when the plugin is **Connected**. |
 | `PLAYWRIGHT_ENABLED` | no (defaults on when Chrome is found) | Headless browse for job tools. Set `false` to force fetch+crawl fallback. |
 | `PLAYWRIGHT_CHROME_PATH` | no | Override Chrome/Chromium binary for Playwright. |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | OAuth for Calendar/Drive (and Gmail fallback). Redirect: `{NEXT_PUBLIC_APP_URL}/api/oauth/callback`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | Google OAuth (Gmail, Calendar, Drive). Redirect: `{OAUTH_REDIRECT_BASE or APP_URL or NEXT_PUBLIC_APP_URL}/api/oauth/callback`. |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | no | Optional Gmail-specific OAuth overrides. |
+| `OAUTH_REDIRECT_BASE` / `APP_URL` | no | OAuth callback origin. Falls back to `NEXT_PUBLIC_APP_URL` then `http://127.0.0.1:43180`. |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | no | Slack OAuth. Missing → Connect stays disconnected. |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | no | Notion OAuth. |
 | `GITHUB_TOKEN` | no | Optional GitHub plugin env; or paste a PAT in Connect. |
@@ -124,6 +159,7 @@ xAI / Grok is skipped. No keys → offline demo.
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
+npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persistence
 npm run test:browse        # optional: Playwright against example.com (needs Chrome)
 ```
 
@@ -138,6 +174,8 @@ v1 tools:
 - `crawl_links` (depth 1–2, hard cap of 4 pages per job)
 - `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
 - `web_search` (Tavily; requires Connected Web Search plugin)
+- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send)
+- `slack_list_channels` / `slack_draft_message` / `slack_post_message` (Connected Slack; post only after `ask_user`)
 - `read_artifact` (outreach pack reads the latest research/competitor artifact)
 - `write_artifact` (markdown artifact on the workspace)
 - `ask_user` (job status → `needs_you`)
@@ -154,7 +192,7 @@ Brandcrew does **not** spin a VM per agent and does not require a paid browser v
 3. `npm run dev`, select **your** Research agent (or Add the Research bot from Marketplace), run **Competitor scan**. The activity feed should show `browser_navigate` + URL (or fetch fallback if Playwright could not start).
 4. On hosts without Chrome (typical serverless), set `PLAYWRIGHT_ENABLED=false`. Navigate still works via fetch, and `crawl_links` follows a couple of public same-site links.
 
-**Limits this phase:** read-only. No auto-login, no password automation, no LinkedIn/Gmail send, no file downloads, max 4 pages/job. Live keys never persist canned browse copy — if the model fails, the artifact is the captured page text.
+**Limits this phase:** read-only browse. No auto-login, no password automation, no LinkedIn send, no file downloads, max 4 pages/job. Gmail creates drafts only. Slack posts only after you approve. Live keys never persist canned browse copy — if the model fails, the artifact is the captured page text.
 
 ## Plans
 
@@ -174,6 +212,7 @@ npm run build
 npm run start
 npm run lint
 npm run test:jobs
+npm run test:oauth
 npm run test:browse  # Playwright smoke test (Chrome + network)
 npx prisma db push   # apply schema to SQLite
 npx prisma studio    # inspect rows

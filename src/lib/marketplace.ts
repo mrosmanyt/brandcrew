@@ -118,6 +118,17 @@ export type PluginDef = {
   color: string;
 };
 
+export const GMAIL_OAUTH_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.compose",
+] as const;
+
+export const SLACK_BOT_SCOPES = [
+  "channels:read",
+  "groups:read",
+  "chat:write",
+] as const;
+
 export const MARKETPLACE_PLUGINS: PluginDef[] = [
   {
     id: "web-search",
@@ -136,28 +147,30 @@ export const MARKETPLACE_PLUGINS: PluginDef[] = [
   {
     id: "gmail",
     name: "Gmail",
-    description: "Search, read, draft, and manage email. OAuth — never marked Connected without a real callback.",
+    description:
+      "List recent mail and create drafts. OAuth — Connected only after a real Google token exchange. Never sends.",
     category: "Customer Support",
     featured: true,
     auth: "oauth",
     oauthProvider: "google",
-    scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
-    envKeys: ["GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET"],
-    tools: [],
+    scopes: [...GMAIL_OAUTH_SCOPES],
+    envKeys: ["GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+    tools: ["gmail_list_recent", "gmail_create_draft"],
     letter: "G",
     color: "#ea4335",
   },
   {
     id: "slack",
     name: "Slack",
-    description: "Search channels and read workspace metadata. Brandcrew does not send Slack messages.",
+    description:
+      "List channels and draft posts. chat.postMessage runs only after an ask_user approval step. Connected only after oauth.v2.access.",
     category: "Customer Support",
     featured: true,
     auth: "oauth",
     oauthProvider: "slack",
-    scopes: ["channels:read", "users:read", "search:read"],
+    scopes: [...SLACK_BOT_SCOPES],
     envKeys: ["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"],
-    tools: [],
+    tools: ["slack_list_channels", "slack_draft_message", "slack_post_message"],
     letter: "S",
     color: "#4a154b",
   },

@@ -300,6 +300,95 @@ export function webSearchPlaybook(query?: string): JobPlaybook {
   };
 }
 
+export function gmailInboxPlaybook(): JobPlaybook {
+  return {
+    key: "gmail_inbox",
+    title: "Gmail inbox",
+    agentRole: "ops",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep("gmail_list_recent", "List recent Gmail", { max: 8 }, "gmail-list"),
+      makeStep(
+        "write_artifact",
+        "Write inbox notes",
+        { kind: "gmail_inbox" },
+        "notes",
+      ),
+      approveStep("Approve these inbox notes. Brandcrew did not send any mail."),
+    ],
+  };
+}
+
+export function gmailDraftPlaybook(): JobPlaybook {
+  return {
+    key: "gmail_draft",
+    title: "Gmail draft",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "gmail_create_draft",
+        "Create a Gmail draft (do not send)",
+        { kind: "gmail_draft" },
+        "gmail-draft",
+      ),
+      makeStep(
+        "write_artifact",
+        "Record the Gmail draft",
+        { kind: "gmail_draft" },
+        "record",
+      ),
+      approveStep("A Gmail draft was created. Brandcrew will not send it."),
+    ],
+  };
+}
+
+export function slackChannelsPlaybook(): JobPlaybook {
+  return {
+    key: "slack_channels",
+    title: "Slack channels",
+    agentRole: "ops",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep("slack_list_channels", "List Slack channels", {}, "slack-list"),
+      makeStep(
+        "write_artifact",
+        "Write channel list",
+        { kind: "slack_channels" },
+        "notes",
+      ),
+      approveStep("Approve this channel list. Nothing was posted."),
+    ],
+  };
+}
+
+export function slackPostPlaybook(): JobPlaybook {
+  return {
+    key: "slack_post",
+    title: "Slack post (approval required)",
+    agentRole: "ops",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep("slack_list_channels", "List Slack channels", {}, "slack-list"),
+      makeStep(
+        "slack_draft_message",
+        "Draft a Slack message",
+        { kind: "slack_draft" },
+        "slack-draft",
+      ),
+      approveStep(
+        "Approve this Slack draft. Brandcrew will post only after you approve.",
+      ),
+      makeStep(
+        "slack_post_message",
+        "Post the approved Slack message",
+        {},
+        "slack-post",
+      ),
+    ],
+  };
+}
+
 /** Public URLs from the user message, then Brand Kit website. Never invents example.com competitors. */
 export function defaultCompetitorUrls(message: string, website?: string): string[] {
   const fromMessage = extractUrls(message).slice(0, 3);
@@ -335,6 +424,10 @@ export function playbookFromKey(
   if (key === "ad_angles_from_url") return adAnglesFromUrlPlaybook(url);
   if (key === "strategy_from_site") return strategyFromSitePlaybook(url);
   if (key === "web_search") return webSearchPlaybook(message.trim());
+  if (key === "gmail_inbox") return gmailInboxPlaybook();
+  if (key === "gmail_draft") return gmailDraftPlaybook();
+  if (key === "slack_channels") return slackChannelsPlaybook();
+  if (key === "slack_post") return slackPostPlaybook();
   return genericPlaybook(role, undefined, url);
 }
 
@@ -356,6 +449,18 @@ export function inferPlaybookKey(
     : playbookHintFromRole(String(role));
   if (/web search|search the web|tavily/.test(text)) {
     return "web_search";
+  }
+  if (/gmail draft|draft (an? )?email|create (a )?gmail draft/.test(text)) {
+    return "gmail_draft";
+  }
+  if (/gmail|inbox|recent (email|mail)/.test(text)) {
+    return "gmail_inbox";
+  }
+  if (/slack/.test(text) && /post|message|send/.test(text)) {
+    return "slack_post";
+  }
+  if (/slack/.test(text)) {
+    return "slack_channels";
   }
   if (/linkedin week|week of (linkedin )?posts|generate week/.test(text)) {
     return "linkedin_week";
