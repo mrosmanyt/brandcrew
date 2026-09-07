@@ -26,7 +26,9 @@ import {
   ensureAskUser,
   gmailDraftPlaybook,
   gmailInboxPlaybook,
+  inboxRepliesPlaybook,
   slackPostPlaybook,
+  whatsappDraftsPlaybook,
   websiteBuilderPlaybook,
   appBuilderPlaybook,
 } from "../src/lib/job-playbooks";
@@ -93,6 +95,8 @@ assert.equal(
 );
 assert.equal(inferPlaybookKey("ads", "ad angles from the landing page"), "ad_angles_from_url");
 assert.equal(inferPlaybookKey("ops", "list recent gmail"), "gmail_inbox");
+assert.equal(inferPlaybookKey("ops", "draft inbox replies"), "inbox_replies");
+assert.equal(inferPlaybookKey("ops", "whatsapp drafts do not send"), "whatsapp_drafts");
 assert.equal(inferPlaybookKey("sales", "create a gmail draft to alex@example.com"), "gmail_draft");
 assert.equal(inferPlaybookKey("ops", "post this to slack"), "slack_post");
 assert.equal(inferPlaybookKey("Website", "Build a website"), "website_builder");
@@ -123,7 +127,14 @@ const approvedPlan = slackPost.steps.map((step) =>
   step.tool === "ask_user" ? { ...step, status: "done" as const } : step,
 );
 assert.equal(slackPostAllowed(approvedPlan, postStep.id), true);
+const inbox = inboxRepliesPlaybook(true);
+assert.equal(inbox.steps.some((step) => step.tool === "gmail_list_recent"), true);
+assert.equal(inboxRepliesPlaybook(false).steps.some((step) => step.tool === "gmail_list_recent"), false);
+assert.equal(inbox.steps.at(-1)?.tool, "ask_user");
+assert.equal(whatsappDraftsPlaybook().steps.some((step) => step.args.kind === "whatsapp_drafts"), true);
+assert.equal(whatsappDraftsPlaybook().steps.at(-1)?.tool, "ask_user");
 console.log("ok: Gmail/Slack playbooks; post requires completed ask_user");
+console.log("ok: inbox + WhatsApp draft playbooks pause for approval");
 
 const roundTrip = parsePlan(JSON.stringify(week.steps));
 assert.equal(roundTrip.length, week.steps.length);

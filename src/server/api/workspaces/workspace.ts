@@ -8,9 +8,11 @@ import { serializeWorkspace } from "@/lib/workspace";
 import { getLlmStatus } from "@/lib/llm";
 import { billingIsMock } from "@/lib/billing";
 import { prisma } from "@/lib/db";
+import { workspaceOnboarding } from "@/lib/onboarding";
 
 const patchSchema = z.object({
-  name: z.string().min(1).max(80),
+  name: z.string().min(1).max(80).optional(),
+  onboardingDismissed: z.boolean().optional(),
 });
 
 export async function GET(
@@ -19,8 +21,19 @@ export async function GET(
 ) {
   try {
     const { workspaceId } = await context.params;
-    const { workspace } = await requireWorkspaceMember(workspaceId);
+    const { workspace, member } = await requireWorkspaceMember(workspaceId);
     const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
+    const [agentCount, jobCount, approvedCount] = await Promise.all([
+      prisma.agent.count({ where: { workspaceId, status: { not: "archived" } } }),
+      prisma.job.count({ where: { workspaceId } }),
+      prisma.artifact.count({ where: { workspaceId, status: "approved" } }),
+    ]);
+    const onboarding = workspaceOnboarding({
+      dismissed: member.onboardingDismissed,
+      agentCount,
+      jobCount,
+      approvedCount,
+    });
     return jsonOk({
       workspace: {
         ...serializeWorkspace(workspace),
@@ -30,6 +43,7 @@ export async function GET(
       llm: getLlmStatus(),
       billingMock: billingIsMock(),
       limits,
+      onboarding,
     });
   } catch (error) {
     return jsonError(error);
@@ -42,16 +56,26 @@ export async function PATCH(
 ) {
   try {
     const { workspaceId } = await context.params;
-    await requireWorkspaceMember(workspaceId);
+    const { user } = await requireWorkspaceMember(workspaceId);
     const body = patchSchema.parse(await request.json());
-    const workspace = await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: { name: body.name.trim() },
-    });
+    if (body.onboardingDismissed !== undefined) {
+      await prisma.workspaceMember.update({
+        where: { workspaceId_userId: { workspaceId, userId: user.id } },
+        data: { onboardingDismissed: body.onboardingDismissed },
+      });
+    }
+    if (body.name?.trim()) {
+      const workspace = await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { name: body.name.trim() },
+      });
+      return jsonOk({ workspace: serializeWorkspace(workspace) });
+    }
+    const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });
     return jsonOk({ workspace: serializeWorkspace(workspace) });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Workspace name is required." }, { status: 400 });
+      return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
     }
     return jsonError(error);
   }

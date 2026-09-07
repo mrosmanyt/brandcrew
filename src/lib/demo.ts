@@ -419,6 +419,66 @@ export function demoOutreachFromResearch(
   };
 }
 
+export function demoInboxReplies(
+  kit: BrandKit,
+  messages?: { from: string; subject: string; date: string }[],
+) {
+  const { offer, voice } = company(kit);
+  const listed = messages?.length
+    ? messages
+        .map(
+          (msg, index) =>
+            `${index + 1}. ${msg.date || "(date ?)"} — ${msg.from || "(unknown)"}\n   ${msg.subject}`,
+        )
+        .join("\n")
+    : "Gmail is not connected. These drafts use the Brand Kit and your brief only — not a live inbox.";
+  const replies = (messages?.length ? messages.slice(0, 3) : [{ from: "a guest", subject: "Question about the offer" }]).map(
+    (msg, index) =>
+      `## Reply ${index + 1}${msg.from ? ` — ${msg.from}` : ""}\nSubject: Re: ${msg.subject || "your note"}\n\nThanks for writing. ${offer.split(".")[0]}. Happy to walk through next steps — nothing is sent until you copy this out.\n`,
+  );
+  return {
+    type: "inbox_replies",
+    title: "Inbox replies (not sent)",
+    summary: "Draft replies. Approve-before-send. CINEM Pro does not send mail.",
+    content: `# Inbox replies (approve before send)
+
+Voice: ${voice}
+
+## Inbox
+${listed}
+
+CINEM Pro will not send these. Approve, then you send from Gmail (or skip).
+
+${replies.join("\n")}
+`,
+  };
+}
+
+export function demoWhatsAppDrafts(kit: BrandKit) {
+  const { offer, audience } = company(kit);
+  return {
+    type: "whatsapp_drafts",
+    title: "WhatsApp drafts (not sent)",
+    summary: "Short WhatsApp copy. CINEM Pro never sends WhatsApp.",
+    content: `# WhatsApp drafts (do not send)
+
+These are copy-paste drafts for ${audience.split(".")[0] || "your customer"}.
+CINEM Pro never logs into WhatsApp and never calls Twilio send — even if a Twilio token is stored.
+
+## Follow-up 1
+Hi — ${offer.split(".")[0]}. Want the one-pager?
+
+## Follow-up 2
+Quick check-in. Still useful to walk through the 8-week plan?
+
+## Follow-up 3
+Sharing a short brief, not a deck. Reply here if you want it.
+
+Nothing above was sent.
+`,
+  };
+}
+
 export function demoAdAnglesFromUrl(
   kit: BrandKit,
   fetched?: { url: string; ok: boolean; text: string },

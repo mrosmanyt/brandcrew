@@ -4,23 +4,28 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { billingIsMock, getStripe, planBudget, priceIdForPlan } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
+import { normalizePlanId } from "@/lib/limits";
 
 const schema = z.object({
   workspaceId: z.string().min(1),
-  plan: z.enum(["starter", "growth"]),
+  plan: z.enum(["starter", "pro", "growth"]),
 });
 
 export async function POST(request: Request) {
   try {
     const body = schema.parse(await request.json());
     const { workspace } = await requireWorkspaceMember(body.workspaceId);
+    const plan = normalizePlanId(body.plan);
+    if (plan !== "starter" && plan !== "pro") {
+      return NextResponse.json({ error: "Choose Starter or Pro." }, { status: 400 });
+    }
 
     if (billingIsMock()) {
       const updated = await prisma.workspace.update({
         where: { id: workspace.id },
         data: {
-          plan: body.plan,
-          tokenBudget: planBudget(body.plan),
+          plan,
+          tokenBudget: planBudget(plan),
         },
       });
       return jsonOk({
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = getStripe();
-    const price = priceIdForPlan(body.plan);
+    const price = priceIdForPlan(plan);
     if (!stripe || !price) {
       return NextResponse.json(
         {
@@ -42,23 +47,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const origin =
-      process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price, quantity: 1 }],
-      success_url: `${origin}/desk/${workspace.id}/billing?status=success&plan=${body.plan}`,
+      success_url: `${origin}/desk/${workspace.id}/billing?status=success&plan=${plan}`,
       cancel_url: `${origin}/desk/${workspace.id}/billing?status=cancelled`,
       metadata: {
         workspaceId: workspace.id,
-        plan: body.plan,
+        plan,
       },
     });
 
     return jsonOk({ url: session.url, mock: false });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Choose Starter or Growth." }, { status: 400 });
+      return NextResponse.json({ error: "Choose Starter or Pro." }, { status: 400 });
     }
     return jsonError(error);
   }

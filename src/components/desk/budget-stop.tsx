@@ -31,7 +31,7 @@ export function BudgetStopDialog({
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Approved artifacts stay. New drafts pause until the cycle resets or
-          you move to Starter ($79) or Growth ($199).
+          you move to Starter ($20) or Pro ($79).
         </p>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

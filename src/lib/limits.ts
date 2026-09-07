@@ -7,22 +7,26 @@ export type PlanLimits = {
   tokenBudget: number;
   jobsPerHour: number;
   maxConcurrentJobs: number;
+  seats: number;
 };
 
 export type WorkspaceLimits = PlanLimits & {
   tokenUsed: number;
   jobsThisHour: number;
   concurrentJobs: number;
+  seatUsed: number;
+  pendingInvites: number;
 };
 
 export function normalizePlanId(plan?: string | null): PlanId {
-  if (plan === "starter" || plan === "growth" || plan === "demo") return plan;
+  if (plan === "growth" || plan === "pro") return "pro";
+  if (plan === "starter" || plan === "demo") return plan;
   return "demo";
 }
 
 export function isPaidPlan(plan?: string | null): boolean {
   const id = normalizePlanId(plan);
-  return id === "starter" || id === "growth";
+  return id === "starter" || id === "pro";
 }
 
 export function limitsForPlan(plan?: string | null): PlanLimits {
@@ -34,22 +38,35 @@ export function limitsForPlan(plan?: string | null): PlanLimits {
     tokenBudget: row.tokenBudget,
     jobsPerHour: row.jobsPerHour,
     maxConcurrentJobs: row.maxConcurrentJobs,
+    seats: row.seats,
   };
 }
 
 export async function getWorkspaceLimits(workspaceId: string): Promise<WorkspaceLimits> {
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
-    select: { plan: true, tokenUsed: true, tokenBudget: true },
+    select: {
+      plan: true,
+      tokenUsed: true,
+      tokenBudget: true,
+      _count: { select: { members: true } },
+    },
   });
   const caps = limitsForPlan(workspace?.plan);
   const since = new Date(Date.now() - 60 * 60 * 1000);
-  const [jobsThisHour, concurrentJobs] = await Promise.all([
+  const [jobsThisHour, concurrentJobs, pendingInvites] = await Promise.all([
     prisma.job.count({
       where: { workspaceId, createdAt: { gte: since } },
     }),
     prisma.job.count({
       where: { workspaceId, status: { in: ["queued", "running"] } },
+    }),
+    prisma.workspaceInvite.count({
+      where: {
+        workspaceId,
+        acceptedAt: null,
+        expiresAt: { gt: new Date() },
+      },
     }),
   ]);
   return {
@@ -58,6 +75,8 @@ export async function getWorkspaceLimits(workspaceId: string): Promise<Workspace
     tokenUsed: workspace?.tokenUsed ?? 0,
     jobsThisHour,
     concurrentJobs,
+    seatUsed: workspace?._count.members ?? 0,
+    pendingInvites,
   };
 }
 
@@ -71,9 +90,13 @@ export function serializeLimits(limits: WorkspaceLimits) {
     jobsPerHour: limits.jobsPerHour,
     concurrentJobs: limits.concurrentJobs,
     maxConcurrentJobs: limits.maxConcurrentJobs,
+    seats: limits.seats,
+    seatUsed: limits.seatUsed,
+    pendingInvites: limits.pendingInvites,
     tokensLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
     jobsLeftThisHour: Math.max(0, limits.jobsPerHour - limits.jobsThisHour),
     concurrentLeft: Math.max(0, limits.maxConcurrentJobs - limits.concurrentJobs),
+    seatsLeft: Math.max(0, limits.seats - limits.seatUsed - limits.pendingInvites),
   };
 }
 

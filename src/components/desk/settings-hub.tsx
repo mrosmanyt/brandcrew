@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  BarChart3,
   Bot,
   CreditCard,
   KeyRound,
@@ -11,6 +12,7 @@ import {
   Plug,
   Store,
 } from "lucide-react";
+import { InviteTeam } from "@/components/desk/invite-team";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +134,7 @@ export function SettingsHub({
     { href: `/desk/${workspaceId}/marketplace?tab=bots`, label: "Bots", icon: Bot },
     { href: `/desk/${workspaceId}/marketplace`, label: "Marketplace", icon: Store },
     { href: `/desk/${workspaceId}/billing`, label: "Plans", icon: CreditCard },
+    { href: `/desk/${workspaceId}/usage`, label: "Usage", icon: BarChart3 },
   ];
 
   return (
@@ -202,6 +205,10 @@ export function SettingsHub({
           </Field>
         </div>
       </section>
+
+      <div className="mt-6">
+        <InviteTeam workspaceId={workspaceId} />
+      </div>
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-medium">Workspace</h2>

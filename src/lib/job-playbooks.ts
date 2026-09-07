@@ -340,6 +340,50 @@ export function webSearchPlaybook(query?: string): JobPlaybook {
   };
 }
 
+export function inboxRepliesPlaybook(gmailConnected = false): JobPlaybook {
+  const inbox = gmailConnected
+    ? [makeStep("gmail_list_recent", "List recent Gmail", { max: 8 }, "gmail-list")]
+    : [];
+  return {
+    key: "inbox_replies",
+    title: "Inbox replies (approve before send)",
+    agentRole: "ops",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      ...inbox,
+      makeStep(
+        "write_artifact",
+        "Draft inbox replies",
+        { kind: "inbox_replies" },
+        "replies",
+      ),
+      approveStep(
+        "Approve these replies before anyone sends them. CINEM Pro will not send email or WhatsApp.",
+      ),
+    ],
+  };
+}
+
+export function whatsappDraftsPlaybook(): JobPlaybook {
+  return {
+    key: "whatsapp_drafts",
+    title: "WhatsApp drafts (do not send)",
+    agentRole: "ops",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "write_artifact",
+        "Draft WhatsApp replies",
+        { kind: "whatsapp_drafts" },
+        "wa",
+      ),
+      approveStep(
+        "Approve these WhatsApp drafts. CINEM Pro never sends WhatsApp — even if Twilio credentials are stored.",
+      ),
+    ],
+  };
+}
+
 export function gmailInboxPlaybook(): JobPlaybook {
   return {
     key: "gmail_inbox",
@@ -451,6 +495,7 @@ export function playbookFromKey(
   role: AgentRole,
   message = "",
   website?: string,
+  options?: { gmailConnected?: boolean },
 ): JobPlaybook {
   const url = extractUrls(message)[0] || website || "";
   if (key === "linkedin_week") return linkedinWeekPlaybook(extractUrls(message)[0]);
@@ -464,6 +509,8 @@ export function playbookFromKey(
   if (key === "ad_angles_from_url") return adAnglesFromUrlPlaybook(url);
   if (key === "strategy_from_site") return strategyFromSitePlaybook(url);
   if (key === "web_search") return webSearchPlaybook(message.trim());
+  if (key === "inbox_replies") return inboxRepliesPlaybook(Boolean(options?.gmailConnected));
+  if (key === "whatsapp_drafts") return whatsappDraftsPlaybook();
   if (key === "gmail_inbox") return gmailInboxPlaybook();
   if (key === "gmail_draft") return gmailDraftPlaybook();
   if (key === "slack_channels") return slackChannelsPlaybook();
@@ -486,6 +533,8 @@ export function inferPlaybookKey(
   if (action === "ad_angles_from_url") return "ad_angles_from_url";
   if (action === "build_website") return "website_builder";
   if (action === "build_app") return "app_builder";
+  if (action === "inbox_replies") return "inbox_replies";
+  if (action === "whatsapp_drafts") return "whatsapp_drafts";
   const text = message.toLowerCase();
   const urls = extractUrls(message);
   const hint = AGENT_ROLES.includes(role as AgentRole)
@@ -494,11 +543,22 @@ export function inferPlaybookKey(
   if (/web search|search the web|tavily/.test(text)) {
     return "web_search";
   }
+  if (/whatsapp/.test(text) && /draft|repl(y|ies)|inbox/.test(text)) {
+    return "whatsapp_drafts";
+  }
+  if (
+    /inbox repl(y|ies)|draft repl(y|ies)|approve[- ]before[- ]send/.test(text) ||
+    ((hint === "ops" || /support|inbox/.test(text)) &&
+      /repl(y|ies)/.test(text) &&
+      !/whatsapp/.test(text))
+  ) {
+    return "inbox_replies";
+  }
   if (/gmail draft|draft (an? )?email|create (a )?gmail draft/.test(text)) {
     return "gmail_draft";
   }
   if (/gmail|inbox|recent (email|mail)/.test(text)) {
-    return "gmail_inbox";
+    return /repl(y|ies)/.test(text) ? "inbox_replies" : "gmail_inbox";
   }
   if (/slack/.test(text) && /post|message|send/.test(text)) {
     return "slack_post";

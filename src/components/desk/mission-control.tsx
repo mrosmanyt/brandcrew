@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { BudgetStopDialog } from "@/components/desk/budget-stop";
+import { FirstRunOnboarding } from "@/components/desk/first-run-onboarding";
 import { ChatComposer } from "@/components/desk/chat-composer";
 import {
   ChatBubble,
@@ -42,6 +43,8 @@ import {
 import type { AgentDTO, JobDTO, SkillDTO } from "@/lib/job-types";
 import { buildChatThread } from "@/lib/live-progress";
 import type { ProposedAgent } from "@/lib/team-launch";
+import type { OnboardingState } from "@/lib/onboarding";
+import { shouldShowOnboarding } from "@/lib/onboarding";
 import type { ArtifactDTO, LimitsDTO, MessageDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +59,7 @@ export function MissionControl({
   tokenUsed,
   tokenBudget,
   initialLimits,
+  initialOnboarding,
 }: {
   workspaceId: string;
   initialAgentId?: string;
@@ -67,6 +71,7 @@ export function MissionControl({
   tokenUsed: number;
   tokenBudget: number;
   initialLimits?: LimitsDTO | null;
+  initialOnboarding?: OnboardingState | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -93,8 +98,9 @@ export function MissionControl({
   });
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetMessage, setBudgetMessage] = useState(
-    "This workspace has reached its generation budget. Upgrade to Starter or Growth to continue.",
+    "This workspace has reached its generation budget. Upgrade to Starter ($20) or Pro ($79) to continue.",
   );
+  const [onboarding, setOnboarding] = useState(initialOnboarding ?? null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(() => {
     const fromUrl = searchParams.get("jobId");
     if (fromUrl && initialJobs.some((job) => job.id === fromUrl)) return fromUrl;
@@ -251,6 +257,7 @@ export function MissionControl({
     }
     setAgents((prev) => [...prev, data.agent]);
     selectAgent(data.agent.id);
+    setOnboarding((prev) => markOnboarding(prev, "agent"));
     toast.success("New Agent created. Rename it anytime.");
     router.refresh();
   }
@@ -379,6 +386,7 @@ export function MissionControl({
       }));
     }
     setInput("");
+    setOnboarding((prev) => markOnboarding(prev, "job"));
     toast.success(`${displayAgentName(selected.name)} is on it.`);
     void refreshChat(selected.id);
     void refreshJobs();
@@ -395,6 +403,7 @@ export function MissionControl({
       return;
     }
     toast.success("Approved.");
+    setOnboarding((prev) => markOnboarding(prev, "approve"));
     void refreshJobs();
     if (selected) void refreshChat(selected.id);
   }
@@ -452,6 +461,34 @@ export function MissionControl({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      {onboarding && shouldShowOnboarding(onboarding) ? (
+        <FirstRunOnboarding
+          state={onboarding}
+          busy={busy}
+          onDismiss={async () => {
+            await fetch(`/api/workspaces/${workspaceId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ onboardingDismissed: true }),
+            });
+            setOnboarding((prev) => (prev ? { ...prev, dismissed: true } : prev));
+          }}
+          onCreateAgent={() => void createBlankAgent()}
+          onRunJob={() =>
+            void startJob(
+              "generate_week",
+              JOB_ACTION_MESSAGES.generate_week,
+            )
+          }
+          onApprove={() => {
+            const pending = jobs
+              .flatMap((job) => job.artifacts)
+              .find((artifact) => artifact.status !== "approved");
+            if (pending) void approve(pending.id);
+            else toast.message("Finish a job first, then approve the draft.");
+          }}
+        />
+      ) : null}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         <section className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border lg:min-w-[18rem] lg:border-b-0">
           <header className="shrink-0 border-b border-border px-4 py-2.5">
@@ -659,5 +696,20 @@ export function MissionControl({
       />
     </div>
   );
+}
+
+function markOnboarding(
+  prev: OnboardingState | null,
+  id: "agent" | "job" | "approve",
+): OnboardingState | null {
+  if (!prev) return prev;
+  const steps = prev.steps.map((step) => (step.id === id ? { ...step, done: true } : step));
+  const doneCount = steps.filter((step) => step.done).length;
+  return {
+    ...prev,
+    steps,
+    doneCount,
+    completed: doneCount === steps.length,
+  };
 }
 

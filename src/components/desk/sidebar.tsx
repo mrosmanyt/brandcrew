@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  BarChart3,
   CalendarDays,
   CreditCard,
   LayoutGrid,
@@ -21,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import {
   ResizeHandle,
   usePersistedCollapsed,
@@ -403,6 +405,14 @@ function NavBody({
               API Console
             </SideLink>
             <SideLink
+              href={`/desk/${workspace.id}/usage`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<BarChart3 className="size-3.5" />}
+            >
+              Usage
+            </SideLink>
+            <SideLink
               href={`/desk/${workspace.id}/billing`}
               pathname={pathname}
               collapsed={collapsed}
@@ -486,6 +496,7 @@ export function DeskSidebar(props: {
   workspaces: WorkspaceDTO[];
   agents: AgentDTO[];
   agentStatus: Record<string, string>;
+  needsYou?: NeedsYouItem[];
 }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = usePersistedCollapsed(DESK_LEFT_PANE.collapsedKey);
@@ -532,6 +543,10 @@ export function DeskSidebar(props: {
       <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 md:hidden">
         <BrandMark />
         <div className="flex items-center gap-2">
+          <NotificationBell
+            workspaceId={props.workspace.id}
+            initialItems={props.needsYou ?? []}
+          />
           <DeskThemeToggle />
           <Sheet>
             <SheetTrigger render={<Button variant="outline" size="icon-sm" />}>

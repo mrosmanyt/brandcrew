@@ -20,16 +20,21 @@ import { isPaidPlan, limitsForPlan, normalizePlanId } from "../src/lib/limits";
 import { getMarketplaceBot, MARKETPLACE_BOTS } from "../src/lib/marketplace";
 import { antigravityFollowUp, pickRoute } from "../src/lib/llm";
 
-assert.equal(normalizePlanId("growth"), "growth");
+assert.equal(normalizePlanId("growth"), "pro");
+assert.equal(normalizePlanId("pro"), "pro");
 assert.equal(normalizePlanId("nope"), "demo");
 assert.equal(isPaidPlan("demo"), false);
 assert.equal(isPaidPlan("starter"), true);
+assert.equal(isPaidPlan("growth"), true);
 
 const demo = limitsForPlan("demo");
 assert.equal(demo.jobsPerHour, PLANS.demo.jobsPerHour);
 assert.equal(demo.maxConcurrentJobs, 1);
 assert.equal(demo.paid, false);
+assert.equal(PLANS.starter.price, 20);
+assert.equal(PLANS.pro.price, 79);
 assert.ok(limitsForPlan("starter").jobsPerHour > demo.jobsPerHour);
+assert.ok(limitsForPlan("pro").tokenBudget > limitsForPlan("starter").tokenBudget);
 assert.ok(limitsForPlan("growth").maxConcurrentJobs > limitsForPlan("starter").maxConcurrentJobs);
 console.log("ok: free vs paid job/hour and concurrent caps");
 

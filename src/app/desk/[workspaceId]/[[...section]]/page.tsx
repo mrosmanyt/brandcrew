@@ -8,7 +8,9 @@ import { KanbanBoard } from "@/components/desk/kanban-board";
 import { MarketplaceDesk } from "@/components/desk/marketplace";
 import { MissionControl } from "@/components/desk/mission-control";
 import { SettingsHub } from "@/components/desk/settings-hub";
+import { UsageDashboard } from "@/components/desk/usage-dashboard";
 import { getCurrentUser } from "@/lib/auth";
+import { workspaceOnboarding } from "@/lib/onboarding";
 import { billingIsMock } from "@/lib/billing";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { prisma } from "@/lib/db";
@@ -31,7 +33,7 @@ async function MissionControlPage({
   });
   if (!workspace) redirect("/desk");
 
-  const [agents, jobs, skills, conversations] = await Promise.all([
+  const [agents, jobs, skills, conversations, membership] = await Promise.all([
     prisma.agent.findMany({
       where: { workspaceId, status: { not: "archived" } },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -55,6 +57,10 @@ async function MissionControlPage({
         messages: { orderBy: { createdAt: "asc" } },
         artifacts: { orderBy: { createdAt: "desc" }, take: 8 },
       },
+    }),
+    prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: workspace.id, userId: user.id } },
+      select: { onboardingDismissed: true },
     }),
   ]);
 
@@ -83,6 +89,16 @@ async function MissionControlPage({
         tokenUsed={workspace.tokenUsed}
         tokenBudget={workspace.tokenBudget}
         initialLimits={serializeLimits(await getWorkspaceLimits(workspace.id))}
+        initialOnboarding={workspaceOnboarding({
+          dismissed: Boolean(membership?.onboardingDismissed),
+          agentCount: agents.length,
+          jobCount: jobs.length,
+          approvedCount: jobs.reduce(
+            (count, job) =>
+              count + job.artifacts.filter((artifact) => artifact.status === "approved").length,
+            0,
+          ),
+        })}
       />
     </Suspense>
   );
@@ -105,9 +121,10 @@ async function BillingPage({
       <p className="page-kicker">Billing</p>
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Plans</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Starter is $79/month for 2 seats. Growth is $199/month for 5 seats.
-        Token budgets, jobs per hour, and concurrent jobs rise with the plan.
-        There is no self-serve model key field — keys stay on the server.
+        Starter is $20/month for 2 seats and 50k tokens. Pro is $79/month for 5
+        seats and 200k tokens. Token budgets, jobs per hour, and concurrent jobs
+        are enforced by plan. There is no self-serve model key field — keys stay
+        on the server.
       </p>
       {query.status === "success" ? (
         <p className="mt-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">
@@ -160,6 +177,21 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
       agents={agents.map(serializeAgent)}
     />
   );
+}
+
+async function UsagePage({ workspaceId }: { workspaceId: string }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { id: true },
+  });
+  if (!workspace) redirect("/desk");
+  const agents = await prisma.agent.findMany({
+    where: { workspaceId, status: { not: "archived" } },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+  return <UsageDashboard workspaceId={workspace.id} agents={agents.map(serializeAgent)} />;
 }
 
 async function DevelopersPage({ workspaceId }: { workspaceId: string }) {
@@ -282,6 +314,9 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "settings") {
     return <SettingsPage workspaceId={workspaceId} />;
+  }
+  if (head === "usage") {
+    return <UsagePage workspaceId={workspaceId} />;
   }
   redirect(`/desk/${workspaceId}?agentId=${encodeURIComponent(head)}`);
 }

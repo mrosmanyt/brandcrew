@@ -31,8 +31,9 @@ Jobs: 5 ad angles, or ad angles from a landing-page URL (browse then 5 angles).
 State that CINEM Pro does not buy media or connect ad accounts.`;
     case "ops":
       return `Turns approved work into an approve → schedule → done board.
-Gmail inbox notes and Slack channel lists when those plugins are Connected.
-No sending. Slack post only after ask_user.`;
+Inbox replies: if Gmail is Connected, gmail_list_recent then write_artifact kind="inbox_replies". If not, draft replies from the Brand Kit and say Gmail is disconnected.
+WhatsApp: write_artifact kind="whatsapp_drafts" only — never send, even if Twilio credentials exist.
+Slack channel lists when Slack is Connected. Slack post only after ask_user.`;
     case "strategist":
       return `Owns ICP, offer, and monthly pillars.
 For research or competitor language, browse public pages first (browser_navigate + snapshot), then write the brief.`;
@@ -91,6 +92,8 @@ Rules:
 - Outreach from research: read_artifact then write_artifact kind="outreach_pack".
 - Ad angles from URL: navigate + snapshot then write_artifact kind="ad_angles".
 - If they asked to search the web and web_search is available, include it then write_artifact.
+- Inbox replies: gmail_list_recent only if Gmail is Connected, then write_artifact kind="inbox_replies". Never send.
+- WhatsApp drafts: write_artifact kind="whatsapp_drafts". Never send.
 - Gmail inbox: gmail_list_recent then write_artifact kind="gmail_inbox".
 - Gmail draft: gmail_create_draft (to/subject/body in args) then write_artifact kind="gmail_draft". Never send.
 - Slack post: slack_list_channels, slack_draft_message, ask_user, then slack_post_message.

@@ -1,5 +1,6 @@
 import Stripe from "stripe";
-import { PLANS, type PlanId } from "@/lib/constants";
+import { PLANS, type CheckoutPlanId, type PlanId } from "@/lib/constants";
+import { normalizePlanId } from "@/lib/limits";
 
 export function billingIsMock() {
   if (process.env.BILLING_MOCK === "false") return false;
@@ -13,11 +14,16 @@ export function getStripe() {
   return new Stripe(key);
 }
 
-export function priceIdForPlan(plan: Exclude<PlanId, "demo">) {
-  if (plan === "starter") return process.env.STRIPE_STARTER_PRICE_ID || "";
-  return process.env.STRIPE_GROWTH_PRICE_ID || "";
+export function asCheckoutPlan(plan: string): CheckoutPlanId {
+  const id = normalizePlanId(plan);
+  return id === "pro" ? "pro" : "starter";
 }
 
-export function planBudget(plan: PlanId) {
-  return PLANS[plan].tokenBudget;
+export function priceIdForPlan(plan: Exclude<PlanId, "demo">) {
+  if (plan === "starter") return process.env.STRIPE_STARTER_PRICE_ID || "";
+  return process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_GROWTH_PRICE_ID || "";
+}
+
+export function planBudget(plan: PlanId | string) {
+  return PLANS[normalizePlanId(plan)].tokenBudget;
 }

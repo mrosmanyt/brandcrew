@@ -26,7 +26,7 @@ export async function assertWorkspaceBudget(workspaceId: string) {
     throw new BudgetError(
       caps.paid
         ? "This workspace has reached its generation budget. Wait for the next cycle or upgrade."
-        : "This workspace has reached its free generation budget. Upgrade to Starter or Growth to continue.",
+        : "This workspace has reached its free generation budget. Upgrade to Starter ($20) or Pro ($79) to continue.",
       402,
       "BUDGET",
     );
@@ -53,6 +53,61 @@ export async function assertWorkspaceBudget(workspaceId: string) {
   }
 
   return workspace;
+}
+
+export function estimateUsdStub(tokens: number) {
+  return Math.round((tokens / 100_000) * 0.5 * 100) / 100;
+}
+
+export async function getUsageSnapshot(workspaceId: string) {
+  const limits = await getWorkspaceLimits(workspaceId);
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [jobCount, approvedCount, events] = await Promise.all([
+    prisma.job.count({ where: { workspaceId } }),
+    prisma.artifact.count({ where: { workspaceId, status: "approved" } }),
+    prisma.usageEvent.findMany({
+      where: { workspaceId, createdAt: { gte: since } },
+      orderBy: { createdAt: "desc" },
+      take: 80,
+      select: {
+        id: true,
+        tokens: true,
+        model: true,
+        agentRole: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+  return {
+    limits: {
+      plan: limits.plan,
+      paid: limits.paid,
+      tokenUsed: limits.tokenUsed,
+      tokenBudget: limits.tokenBudget,
+      tokensLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
+      jobsThisHour: limits.jobsThisHour,
+      jobsPerHour: limits.jobsPerHour,
+      jobsLeftThisHour: Math.max(0, limits.jobsPerHour - limits.jobsThisHour),
+      concurrentJobs: limits.concurrentJobs,
+      maxConcurrentJobs: limits.maxConcurrentJobs,
+      seats: limits.seats,
+      seatUsed: limits.seatUsed,
+      pendingInvites: limits.pendingInvites,
+      seatsLeft: Math.max(0, limits.seats - limits.seatUsed - limits.pendingInvites),
+    },
+    jobs: jobCount,
+    approved: approvedCount,
+    estimateUsd: estimateUsdStub(limits.tokenUsed),
+    estimateNote:
+      "Rough stub: $0.50 per 100k tokens blended. Not a bill and not provider-accurate.",
+    events: events.map((row) => ({
+      id: row.id,
+      tokens: row.tokens,
+      model: row.model,
+      agentRole: row.agentRole,
+      createdAt: row.createdAt.toISOString(),
+    })),
+  };
 }
 
 export async function recordUsage(input: {
