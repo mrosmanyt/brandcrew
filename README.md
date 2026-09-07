@@ -96,8 +96,9 @@ API keys are read **only on the server**. There is no UI for user-managed model 
 xAI / Grok is skipped. No keys → demo mode.
 
 ```bash
-npm run test:llm    # routing + client boot checks (fake keys, no paid calls)
-npm run test:jobs   # playbooks, URL guard, HTML→text (no database)
+npm run test:llm     # routing + client boot checks (fake keys, no paid calls)
+npm run test:jobs    # playbooks, URL guard, browse stubs (no database)
+npm run test:browse  # optional: Playwright against example.com (needs Chrome)
 ```
 
 ## Job runtime
@@ -153,6 +154,8 @@ npm run dev          # ensure env + db, then Next.js on :43180
 npm run build
 npm run start
 npm run lint
+npm run test:jobs
+npm run test:browse  # Playwright smoke test (Chrome + network)
 npx prisma db push   # apply schema to SQLite
 npx prisma studio    # inspect rows
 ```
