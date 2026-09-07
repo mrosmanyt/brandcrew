@@ -397,11 +397,7 @@
 }
 
 .integrations-honest {
-  margin-top: 0.35rem;
-  padding-inline: 0.2rem;
-  font-size: 0.7rem;
-  line-height: 1.45;
-  color: var(--muted-foreground);
+  display: none;
 }
 
 .integrations-prompt {
@@ -486,7 +482,7 @@
   }
 
   .integrations-cloud {
-    min-height: 26rem;
+    min-height: 22.5rem;
   }
 
   .integrations-cloud-lines {
@@ -513,6 +509,7 @@
   }
 
   .integrations-honest {
+    display: block;
     position: absolute;
     left: 0;
     right: 0;
@@ -521,6 +518,9 @@
     max-height: 0;
     overflow: hidden;
     opacity: 0;
+    font-size: 0.7rem;
+    line-height: 1.45;
+    color: var(--muted-foreground);
     transition:
       max-height 0.28s ease,
       opacity 0.28s ease;
