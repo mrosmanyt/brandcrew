@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { GetStartedButton } from "@/components/marketing/home-ctas";
+import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
 import { PLANS } from "@/lib/constants";
 import {
   COMPANY_SITE,
-  DESKTOP_INSTALLERS_DOCS,
-  DESKTOP_MAC_DOCS,
-  DESKTOP_README,
-  DESKTOP_WIN_DOCS,
-  GITHUB_RELEASES,
+  DESKTOP_WIN_DOWNLOAD,
+  DESKTOP_WIN_PORTABLE,
   GITHUB_REPO,
+  WIN_PORTABLE_FILENAME,
+  WIN_SETUP_FILENAME,
 } from "@/lib/site";
 import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
 
@@ -33,22 +33,24 @@ function Section({
       id={id}
       className={bordered ? "scroll-mt-20 border-t border-border" : "scroll-mt-20"}
     >
-      <div className="mx-auto w-full max-w-5xl px-6 py-20 md:py-24">
-        {kicker ? <p className="text-sm text-muted-foreground">{kicker}</p> : null}
-        <h2
-          className={
-            kicker
-              ? "font-heading mt-3 text-3xl tracking-tight md:text-4xl"
-              : "font-heading text-3xl tracking-tight md:text-4xl"
-          }
-        >
-          {title}
-        </h2>
-        {lead ? (
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">{lead}</p>
-        ) : null}
-        <div className={lead || kicker ? "mt-12" : "mt-10"}>{children}</div>
-      </div>
+      <Reveal>
+        <div className="mx-auto w-full max-w-5xl px-6 py-20 md:py-24">
+          {kicker ? <p className="text-sm text-muted-foreground">{kicker}</p> : null}
+          <h2
+            className={
+              kicker
+                ? "font-heading mt-3 text-3xl tracking-tight md:text-4xl"
+                : "font-heading text-3xl tracking-tight md:text-4xl"
+            }
+          >
+            {title}
+          </h2>
+          {lead ? (
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">{lead}</p>
+          ) : null}
+          <div className={lead || kicker ? "mt-12" : "mt-10"}>{children}</div>
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -100,9 +102,12 @@ export function FeaturesSection() {
       title="A desk, not another chat box"
       lead="CINEM Pro staffs work you can inspect. Tools run when they are real. Nothing posts, sends, or spends until you say so."
     >
-      <ul className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature) => (
-          <li key={feature.title}>
+          <li
+            key={feature.title}
+            className="mkt-card-hover rounded-xl border border-border bg-card p-5"
+          >
             <h3 className="text-lg font-medium tracking-tight">{feature.title}</h3>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">{feature.body}</p>
           </li>
@@ -122,7 +127,7 @@ export function AgentsSection() {
       lead="Create one New Agent, add a Marketplace bot, or launch a full business team. Installing a bot only creates Agent rows — it does not invent business results."
     >
       <div className="grid gap-6 md:grid-cols-2">
-        <article className="rounded-xl border border-border bg-card p-6">
+        <article className="mkt-card-hover rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Default</p>
           <h3 className="mt-2 text-lg font-medium tracking-tight">New Agent</h3>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -131,7 +136,7 @@ export function AgentsSection() {
             never ships a celebrity persona.
           </p>
         </article>
-        <article className="rounded-xl border border-border bg-card p-6">
+        <article className="mkt-card-hover rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">After you approve</p>
           <h3 className="mt-2 text-lg font-medium tracking-tight">
             Launch full business team
@@ -226,7 +231,7 @@ export function UseCasesSection() {
     >
       <div className="grid gap-6 md:grid-cols-2">
         {USE_CASES.map((item) => (
-          <article key={item.title} className="rounded-xl border border-border bg-card p-6">
+          <article key={item.title} className="mkt-card-hover rounded-xl border border-border bg-card p-6">
             <h3 className="text-lg font-medium tracking-tight">{item.title}</h3>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p>
           </article>
@@ -242,24 +247,29 @@ export function DownloadSection() {
       id="download"
       kicker="Download"
       title="Get the desktop, or start in the browser"
-      lead="Windows and Mac installers are built from this repo. Hosted .exe and .dmg files are not on GitHub Releases yet — these buttons open the real install docs, not a fake binary."
+      lead="Windows is a direct file download — the NSIS installer, not a README. Mac .dmg is not hosted from Linux builds; use the web desk or build on macOS."
     >
       <div className="grid gap-6 md:grid-cols-2">
-        <article className="flex flex-col rounded-xl border border-border bg-card p-6">
+        <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Windows</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">.exe installer</h3>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">CINEM Pro Setup</h3>
           <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            PowerShell one-liner clones the repo and opens the Electron window.
-            Or run <code className="font-mono text-xs">npm run desktop:build:win</code>{" "}
-            for an NSIS / portable .exe in <code className="font-mono text-xs">dist/desktop/</code>.
+            Downloads <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
+            Run it, then open CINEM Pro. First launch writes{" "}
+            <code className="font-mono text-xs">%APPDATA%\CINEM Pro\.env</code>. The
+            build is unsigned — Windows SmartScreen may ask you to keep / run
+            anyway.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button
               size="lg"
-              className="h-11 px-5"
+              className="mkt-cta-pulse h-11 px-5"
               nativeButton={false}
               render={
-                <a href={DESKTOP_WIN_DOCS} target="_blank" rel="noreferrer" />
+                <a
+                  href={DESKTOP_WIN_DOWNLOAD}
+                  download={WIN_SETUP_FILENAME}
+                />
               }
             >
               Download Windows
@@ -270,69 +280,50 @@ export function DownloadSection() {
               className="h-11 px-5"
               nativeButton={false}
               render={
-                <a href={DESKTOP_INSTALLERS_DOCS} target="_blank" rel="noreferrer" />
+                <a
+                  href={DESKTOP_WIN_PORTABLE}
+                  download={WIN_PORTABLE_FILENAME}
+                />
               }
             >
-              .exe build notes
+              Portable .exe
             </Button>
           </div>
         </article>
-        <article className="flex flex-col rounded-xl border border-border bg-card p-6">
+        <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Mac</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">.dmg installer</h3>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">Build on macOS</h3>
           <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            Terminal one-liner on Mac / Linux. Packaged{" "}
-            <code className="font-mono text-xs">.dmg</code> needs{" "}
-            <code className="font-mono text-xs">npm run desktop:build:mac</code> on
-            macOS — Linux cannot produce a usable dmg.
+            No hosted <code className="font-mono text-xs">.dmg</code> — Linux
+            cannot produce a usable one, so this button does not invent a file.
+            With a checkout on a Mac:{" "}
+            <code className="font-mono text-xs">npm run desktop:build:mac</code>.
+            Or use the browser desk below.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              className="h-11 px-5"
-              nativeButton={false}
-              render={
-                <a href={DESKTOP_MAC_DOCS} target="_blank" rel="noreferrer" />
-              }
-            >
-              Download Mac
-            </Button>
+          <div className="mt-6">
             <Button
               size="lg"
               variant="outline"
               className="h-11 px-5"
               nativeButton={false}
-              render={
-                <a href={DESKTOP_INSTALLERS_DOCS} target="_blank" rel="noreferrer" />
-              }
+              render={<Link href="/signup" />}
             >
-              .dmg build notes
+              Open in browser
             </Button>
           </div>
         </article>
       </div>
+      <p className="mt-6 text-sm leading-7 text-muted-foreground">
+        The source repo is private, so GitHub may ask you to sign in before the
+        file is served. The link is a release asset (
+        <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>
+        ), not the repo tree. Prefer the web desk if you do not have GitHub
+        access.
+      </p>
       <div className="mt-8 flex flex-col items-start justify-between gap-6 rounded-xl border border-border px-6 py-5 md:flex-row md:items-center">
         <p className="max-w-xl text-sm leading-7 text-muted-foreground">
           Prefer the browser? Create an account and open Mission Control on the
-          web. Check{" "}
-          <a
-            href={GITHUB_RELEASES}
-            className="underline underline-offset-4 hover:text-foreground"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub Releases
-          </a>{" "}
-          later if hosted binaries appear. Desktop guide:{" "}
-          <a
-            href={DESKTOP_README}
-            className="underline underline-offset-4 hover:text-foreground"
-            target="_blank"
-            rel="noreferrer"
-          >
-            README
-          </a>
-          .
+          web. Same desk, no installer.
         </p>
         <GetStartedButton />
       </div>
@@ -352,7 +343,7 @@ export function PricingSection() {
     >
       <div className="grid gap-6 md:grid-cols-2">
         {plans.map((plan) => (
-          <article key={plan.id} className="rounded-xl border border-border bg-card p-6">
+          <article key={plan.id} className="mkt-card-hover rounded-xl border border-border bg-card p-6">
             <p className="text-sm text-muted-foreground">
               {plan.seats} seats · {plan.tokenBudget.toLocaleString()} tokens / cycle
             </p>
@@ -461,7 +452,7 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Use the Download section. Packaged .exe / .dmg are not hosted on GitHub Releases yet. The buttons open README install scripts and build commands so we never ship a fake URL.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe from GitHub Releases (latest/download). The repo is private, so GitHub may ask you to sign in. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
   },
   {
     q: "How does pricing work?",

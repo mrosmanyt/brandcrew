@@ -11,7 +11,7 @@ export function HomeHeroCtas() {
     <div className="flex flex-wrap items-center gap-3">
       <Button
         size="lg"
-        className="h-11 px-5"
+        className="mkt-cta-pulse h-11 px-5"
         nativeButton={false}
         render={<Link href={href} />}
       >

@@ -6,6 +6,7 @@
  */
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -61,6 +62,32 @@ function materializeSymlinks(dir) {
     } else if (entry.isDirectory()) {
       materializeSymlinks(full);
     }
+  }
+}
+
+/** Keep release-asset names stable for marketing / GitHub latest/download URLs. */
+function ensureFriendlyWinNames() {
+  const outDir = path.join(root, "dist", "desktop");
+  if (!existsSync(outDir)) return;
+  const names = readdirSync(outDir);
+  const copies = [
+    { dest: "CINEM-Pro-Setup.exe", test: (n) => /\.exe$/i.test(n) && /setup|nsis/i.test(n) },
+    { dest: "CINEM-Pro-Portable.exe", test: (n) => /\.exe$/i.test(n) && /portable/i.test(n) },
+  ];
+  for (const { dest, test } of copies) {
+    const destPath = path.join(outDir, dest);
+    if (existsSync(destPath)) continue;
+    const found = names.find((n) => n !== dest && test(n));
+    if (found) {
+      copyFileSync(path.join(outDir, found), destPath);
+      console.log("Copied", found, "→", dest);
+    }
+  }
+  const setupPath = path.join(outDir, "CINEM-Pro-Setup.exe");
+  const portablePath = path.join(outDir, "CINEM-Pro-Portable.exe");
+  if (!existsSync(setupPath) && existsSync(portablePath)) {
+    copyFileSync(portablePath, setupPath);
+    console.log("Copied CINEM-Pro-Portable.exe → CINEM-Pro-Setup.exe (NSIS not produced)");
   }
 }
 
@@ -124,7 +151,10 @@ const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", build
   shell: process.platform === "win32",
 });
 
-if (result.status === 0) process.exit(0);
+if (result.status === 0) {
+  ensureFriendlyWinNames();
+  process.exit(0);
+}
 
 const wineMissing =
   process.platform === "linux" &&
@@ -132,13 +162,16 @@ const wineMissing =
   !existsSync("/usr/bin/wine") &&
   !existsSync("/usr/bin/wine64");
 
-if (wineMissing) {
+if (targets.includes("--win") && (wineMissing || result.status !== 0)) {
   console.warn(
-    "NSIS/.exe wrapping on Linux often needs Wine. Retrying Windows portable + unpacked dir only…",
+    wineMissing
+      ? "NSIS on Linux needs Wine (wine32/i386, not only wine64). Building portable…"
+      : "Windows NSIS step failed. Building portable so a downloadable .exe still exists…",
   );
   npx(["electron-builder", "--publish", "never", "--win", "portable"], builderEnv);
+  ensureFriendlyWinNames();
   console.warn(
-    "Produced win-unpacked / portable .exe. Full NSIS installer needs Wine or a Windows runner.",
+    "Produced win-unpacked / portable .exe. Full NSIS installer needs wine32 or a Windows runner.",
   );
   process.exit(0);
 }
