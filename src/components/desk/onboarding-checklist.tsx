@@ -36,9 +36,9 @@ export function OnboardingChecklist({
   ];
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-heading text-xl">First wow</h2>
+        <h2 className="text-sm font-medium tracking-tight">First wow</h2>
         <p className="text-xs text-muted-foreground">
           {checklist.doneCount} / {checklist.total}
         </p>

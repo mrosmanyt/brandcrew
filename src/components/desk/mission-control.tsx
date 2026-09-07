@@ -375,15 +375,15 @@ export function MissionControl({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[15.5rem_minmax(0,1fr)_20rem]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[13.75rem_minmax(0,1fr)_16.5rem]">
         <aside className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
-          <div className="border-b border-border px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Mission Control
-            </p>
-            <h1 className="font-heading text-xl tracking-tight">Agents</h1>
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <div>
+              <p className="page-kicker">Mission Control</p>
+              <h1 className="text-[15px] font-medium tracking-tight">Agents</h1>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2">
+          <div className="flex flex-wrap gap-1 border-b border-border px-2 py-1.5">
             <Button size="xs" onClick={createBlankAgent} disabled={busy}>
               <Plus className="size-3" />
               New Agent
@@ -402,9 +402,9 @@ export function MissionControl({
               Marketplace
             </Button>
           </div>
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-1.5">
             {agents.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border px-3 py-6 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-border px-3 py-5 text-xs leading-5 text-muted-foreground">
                 No agents yet. Create one, add a bot from Marketplace, or launch a
                 full business team (10+ roles, explicit approve).
               </div>
@@ -417,21 +417,28 @@ export function MissionControl({
                     type="button"
                     onClick={() => selectAgent(agent.id)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left",
-                      selectedId === agent.id ? "bg-secondary" : "hover:bg-muted/70",
+                      "flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left",
+                      selectedId === agent.id ? "bg-secondary" : "hover:bg-muted/60",
                     )}
                   >
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                    <span
+                      className={cn(
+                        "grid size-7 shrink-0 place-items-center rounded-md text-[11px] font-medium",
+                        selectedId === agent.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
                       {displayAgentName(agent.name).slice(0, 1)}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-medium">
+                        <span className="truncate text-[13px] font-medium">
                           {displayAgentName(agent.name)}
                         </span>
                         <StatusChip status={live} />
                       </span>
-                      <span className="block truncate text-xs text-muted-foreground">
+                      <span className="block truncate text-[11px] text-muted-foreground">
                         {agent.role || "No role label yet"}
                       </span>
                     </span>
@@ -443,41 +450,38 @@ export function MissionControl({
         </aside>
 
         <section className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
-          <header className="border-b border-border px-4 py-3">
+          <header className="border-b border-border px-4 py-2.5">
             {selected ? (
               <>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {selected.role || "Agent"}
-                </p>
-                <h2 className="font-heading text-xl tracking-tight">
-                  {displayAgentName(selected.name)}
-                </h2>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                  Give this agent a real job. It plans, uses tools (Brand Kit,
-                  browse, Web Search if Connected), and waits for you. Default
-                  name is “New Agent” — rename below.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Input
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    className="h-8 w-44"
-                    aria-label="Agent name"
-                  />
-                  <Button size="sm" variant="secondary" onClick={renameSelected}>
-                    <Pencil className="size-3.5" />
-                    Rename
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={archiveSelected}>
-                    <Trash2 className="size-3.5" />
-                    Archive
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="page-kicker">{selected.role || "Agent"}</p>
+                    <h2 className="truncate text-[15px] font-medium tracking-tight">
+                      {displayAgentName(selected.name)}
+                    </h2>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Input
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className="h-7 w-36 text-xs"
+                      aria-label="Agent name"
+                    />
+                    <Button size="xs" variant="secondary" onClick={renameSelected}>
+                      <Pencil className="size-3" />
+                      Rename
+                    </Button>
+                    <Button size="xs" variant="ghost" onClick={archiveSelected}>
+                      <Trash2 className="size-3" />
+                      Archive
+                    </Button>
+                  </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-2 flex flex-wrap gap-1">
                   {roleChips.map((chip) => (
                     <Button
                       key={`${chip.action}-${chip.label}`}
-                      size="sm"
+                      size="xs"
                       disabled={busy}
                       onClick={() =>
                         startJob(
@@ -492,7 +496,7 @@ export function MissionControl({
                   {marketplaceChips.map((chip) => (
                     <Button
                       key={chip.label}
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       nativeButton={false}
                       render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
@@ -504,8 +508,8 @@ export function MissionControl({
               </>
             ) : (
               <>
-                <h2 className="font-heading text-xl tracking-tight">Your desk</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <h2 className="text-[15px] font-medium tracking-tight">Your desk</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
                   Create agents you own. Marketplace bots install real Agent rows.
                   Launching a full business team needs an explicit approve.
                 </p>
@@ -515,8 +519,8 @@ export function MissionControl({
 
           <div ref={chatRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {!selected ? (
-              <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8">
-                <Sparkles className="size-5 text-primary" />
+              <div className="rounded-xl border border-dashed border-border bg-card/50 px-5 py-8">
+                <Sparkles className="size-4 text-muted-foreground" />
                 <p className="mt-3 max-w-md text-sm text-muted-foreground">
                   Start with New Agent, Marketplace, or Launch team. Jobs only run
                   when you pick an agent. Quick-start chips follow the agent’s
@@ -542,8 +546,8 @@ export function MissionControl({
               </div>
             ) : null}
             {selected && messages.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8">
-                <Bot className="size-5 text-primary" />
+              <div className="rounded-xl border border-dashed border-border bg-card/50 px-5 py-8">
+                <Bot className="size-4 text-muted-foreground" />
                 <p className="mt-3 max-w-md text-sm text-muted-foreground">
                   Name the job. This agent will plan, use tools (Brand Kit,
                   browser_navigate / snapshot, Web Search if Connected), and pause
@@ -556,11 +560,11 @@ export function MissionControl({
                 key={message.id}
                 className={
                   message.role === "user"
-                    ? "ml-6 rounded-lg bg-secondary px-3 py-2 text-sm"
-                    : "mr-4 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                    ? "ml-auto max-w-[min(36rem,88%)] rounded-2xl bg-secondary px-3.5 py-2 text-sm"
+                    : "mr-auto max-w-[min(40rem,92%)] rounded-2xl border border-border bg-card px-3.5 py-2 text-sm"
                 }
               >
-                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   {message.role === "user"
                     ? "You"
                     : displayAgentName(selected?.name)}
@@ -602,37 +606,38 @@ export function MissionControl({
               e.preventDefault();
               startJob("default");
             }}
-            className="border-t border-border bg-card p-3"
+            className="border-t border-border p-3"
           >
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              rows={2}
-              disabled={busy || !selected}
-              placeholder={
-                selected
-                  ? "Give this agent a job — or type “launch a full business team”."
-                  : "Create an agent first"
-              }
-            />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                {atCap ? "Budget reached." : `${remaining.toLocaleString()} tokens left`}
-              </p>
-              <Button type="submit" disabled={busy || !selected || !input.trim()}>
-                {busy ? <Loader2 className="animate-spin" /> : null}
-                Start job
-              </Button>
+            <div className="rounded-2xl border border-border bg-muted/30 p-2">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                rows={2}
+                disabled={busy || !selected}
+                className="min-h-16 border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+                placeholder={
+                  selected
+                    ? "Give this agent a job — or type “launch a full business team”."
+                    : "Create an agent first"
+                }
+              />
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2 px-1">
+                <p className="text-xs text-muted-foreground">
+                  {atCap ? "Budget reached." : `${remaining.toLocaleString()} tokens left`}
+                </p>
+                <Button type="submit" size="sm" disabled={busy || !selected || !input.trim()}>
+                  {busy ? <Loader2 className="animate-spin" /> : null}
+                  Start job
+                </Button>
+              </div>
             </div>
           </form>
         </section>
 
-        <aside className="flex min-h-0 flex-col bg-card/60">
-          <div className="border-b border-border px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Live activity
-            </p>
-            <h2 className="font-heading text-lg">
+        <aside className="flex min-h-0 flex-col bg-card/30">
+          <div className="border-b border-border px-3 py-2.5">
+            <p className="page-kicker">Live activity</p>
+            <h2 className="mt-0.5 text-[15px] font-medium tracking-tight">
               {selectedJob ? selectedJob.title : "No job yet"}
             </h2>
             {selectedJob ? (
@@ -701,12 +706,10 @@ export function MissionControl({
         </aside>
       </div>
 
-      <div className="grid shrink-0 gap-3 border-t border-border bg-card/80 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid shrink-0 gap-3 border-t border-border bg-background px-4 py-2.5 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Jobs
-            </p>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="page-kicker">Jobs</p>
             <span className="text-xs text-muted-foreground">
               {jobs.filter((job) => job.status !== "done").length} open
             </span>
@@ -726,10 +729,10 @@ export function MissionControl({
                         if (job.agentId) selectAgent(job.agentId);
                       }}
                       className={cn(
-                        "min-w-[12rem] rounded-xl border px-3 py-2 text-left",
+                        "min-w-[11rem] rounded-lg border px-2.5 py-1.5 text-left",
                         job.id === selectedJob?.id
-                          ? "border-primary bg-accent/60"
-                          : "border-border bg-background",
+                          ? "border-white/20 bg-secondary"
+                          : "border-border bg-card/50",
                       )}
                     >
                       <p className="truncate text-sm font-medium">{job.title}</p>
@@ -744,9 +747,7 @@ export function MissionControl({
           )}
         </div>
         <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            Skills
-          </p>
+          <p className="page-kicker">Skills</p>
           <ul className="mt-2 space-y-1.5">
             {skills.map((skill) => (
               <li key={skill.id} className="flex items-center justify-between gap-2 text-sm">

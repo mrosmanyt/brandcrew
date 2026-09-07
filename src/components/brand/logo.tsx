@@ -12,15 +12,17 @@ export function BrandMark({
       <span
         aria-hidden
         className={cn(
-          "grid size-7 place-items-center rounded-md text-[0.7rem] font-semibold tracking-tight",
-          inverted ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-primary text-primary-foreground",
+          "grid size-6 place-items-center rounded-[6px] text-[0.65rem] font-semibold tracking-tight",
+          inverted
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "bg-primary text-primary-foreground",
         )}
       >
         Bc
       </span>
       <span
         className={cn(
-          "font-heading text-lg tracking-tight",
+          "text-[0.95rem] font-medium tracking-tight",
           inverted ? "text-sidebar-foreground" : "text-foreground",
         )}
       >

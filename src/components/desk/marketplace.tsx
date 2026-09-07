@@ -196,15 +196,13 @@ export function MarketplaceDesk({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-6 md:px-6">
+    <div className="desk-page">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            Desk
-          </p>
-          <h1 className="font-heading text-3xl tracking-tight">Marketplace</h1>
+          <p className="page-kicker">Desk</p>
+          <h1 className="font-heading mt-1 text-2xl">Marketplace</h1>
         </div>
-        <div className="flex rounded-full bg-muted p-1">
+        <div className="flex rounded-lg border border-border bg-muted/40 p-0.5">
           <ToggleChip
             active={tab === "plugins"}
             icon={<Plug className="size-3.5" />}
@@ -265,7 +263,7 @@ export function MarketplaceDesk({
           placeholder={
             tab === "bots" ? "Search by creator or Bot name" : "Search plugins"
           }
-          className="h-11 rounded-xl pl-9"
+          className="h-9 rounded-lg pl-9"
         />
       </div>
 
@@ -279,10 +277,10 @@ export function MarketplaceDesk({
               if (chip === "All") setViewAll(null);
             }}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-sm",
+              "shrink-0 rounded-md px-2.5 py-1 text-xs",
               (viewAll ? chip === viewAll : category === chip)
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:text-foreground",
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/60 text-muted-foreground hover:text-foreground",
             )}
           >
             {chip}
@@ -296,11 +294,11 @@ export function MarketplaceDesk({
           Loading catalog…
         </p>
       ) : tab === "bots" ? (
-        <div className="mt-8 space-y-10">
+        <div className="mt-6 space-y-8">
           {category === "All" && !viewAll && featuredBots.length > 0 ? (
             <section>
               <SectionHead title="Featured" />
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {featuredBots.map((bot) => (
                   <FeaturedBotCard key={bot.id} bot={bot} />
                 ))}
@@ -324,7 +322,7 @@ export function MarketplaceDesk({
                       : undefined
                   }
                 />
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
                   {section.items.map((bot) => (
                     <ListBotCard
                       key={bot.id}
@@ -339,7 +337,7 @@ export function MarketplaceDesk({
           )}
         </div>
       ) : (
-        <div className="mt-8 space-y-10">
+        <div className="mt-6 space-y-8">
           {category === "All" && !viewAll && featuredPlugins.length > 0 ? (
             <section>
               <SectionHead title="Featured" />
@@ -374,7 +372,7 @@ export function MarketplaceDesk({
                       : undefined
                   }
                 />
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
                   {section.items.map((plugin) => (
                     <PluginCard
                       key={plugin.id}
@@ -467,7 +465,7 @@ function SectionHead({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <h2 className="font-heading text-xl">{title}</h2>
+      <h2 className="text-sm font-medium tracking-tight">{title}</h2>
       {onViewAll ? (
         <button
           type="button"
@@ -496,10 +494,10 @@ function ToggleChip({
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm",
-        active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
-      )}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm",
+          active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
     >
       {icon}
       {children}
@@ -509,20 +507,19 @@ function ToggleChip({
 
 function FeaturedBotCard({ bot }: { bot: BotRow }) {
   return (
-    <article className="rounded-2xl border border-border bg-card p-3">
+    <article className="rounded-lg border border-border bg-card p-2.5">
       <div
-        className="relative aspect-square overflow-hidden rounded-xl"
+        className="flex aspect-[4/3] items-end overflow-hidden rounded-md p-2.5"
         style={{ background: `${bot.color}22` }}
       >
         <span
-          className="absolute inset-6 rounded-[40%] opacity-90"
+          className="grid size-8 place-items-center rounded-md text-xs font-semibold text-white"
           style={{ background: bot.color }}
-        />
-        <span className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full bg-foreground text-[10px] font-semibold text-background">
-          {bot.creator.slice(0, 1)}
+        >
+          {bot.name.slice(0, 1)}
         </span>
       </div>
-      <p className="mt-3 text-sm">
+      <p className="mt-2 truncate text-xs">
         <span className="text-muted-foreground">{bot.creator}&apos;s </span>
         <span className="font-medium">{bot.name}</span>
       </p>
@@ -540,9 +537,9 @@ function ListBotCard({
   onAdd: () => void;
 }) {
   return (
-    <article className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-3">
+    <article className="flex items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-2">
       <span
-        className="grid size-10 shrink-0 place-items-center rounded-lg text-xs font-semibold text-white"
+        className="grid size-8 shrink-0 place-items-center rounded-md text-[11px] font-semibold text-white"
         style={{ background: bot.color }}
       >
         {bot.name.slice(0, 1)}
@@ -581,9 +578,9 @@ function PluginCard({
   onDisconnect: () => void;
 }) {
   return (
-    <article className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-3">
+    <article className="flex items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-2">
       <span
-        className="grid size-10 shrink-0 place-items-center rounded-lg text-xs font-semibold text-white"
+        className="grid size-8 shrink-0 place-items-center rounded-md text-[11px] font-semibold text-white"
         style={{ background: plugin.color }}
       >
         {plugin.letter}

@@ -19,10 +19,8 @@ export default async function BillingPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-8">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-        Billing
-      </p>
-      <h1 className="font-heading mt-1 text-3xl tracking-tight">Plans</h1>
+      <p className="page-kicker">Billing</p>
+      <h1 className="font-heading mt-1 text-2xl">Plans</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Starter is $79/month for 2 seats. Growth is $199/month for 5 seats.
         Token budgets rise with the plan. There is no self-serve model key

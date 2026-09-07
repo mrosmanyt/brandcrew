@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DeskHeader } from "@/components/desk/desk-header";
 import { DeskSidebar } from "@/components/desk/sidebar";
@@ -52,12 +53,18 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex min-h-dvh flex-col bg-background md:flex-row">
-      <DeskSidebar
-        workspace={serializeWorkspace(member.workspace)}
-        workspaces={workspaces}
-        agents={member.workspace.agents.map(serializeAgent)}
-        agentStatus={agentStatus}
-      />
+      <Suspense
+        fallback={
+          <aside className="hidden h-dvh w-56 shrink-0 border-r border-sidebar-border bg-sidebar md:block" />
+        }
+      >
+        <DeskSidebar
+          workspace={serializeWorkspace(member.workspace)}
+          workspaces={workspaces}
+          agents={member.workspace.agents.map(serializeAgent)}
+          agentStatus={agentStatus}
+        />
+      </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <SetupBanner />
         <DeskHeader workspace={serializeWorkspace(member.workspace)} llm={getLlmStatus()} />

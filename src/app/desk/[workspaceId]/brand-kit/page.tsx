@@ -19,10 +19,8 @@ export default async function BrandKitPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-8">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-        Shared memory
-      </p>
-      <h1 className="font-heading mt-1 text-3xl tracking-tight">Brand Kit</h1>
+      <p className="page-kicker">Shared memory</p>
+      <h1 className="font-heading mt-1 text-2xl">Brand Kit</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Stored as JSON on this workspace. Save, then generate — Writer, Sales,
         and the rest will use this kit immediately. There is no per-agent memory

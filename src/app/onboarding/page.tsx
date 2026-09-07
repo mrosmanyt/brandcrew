@@ -17,18 +17,14 @@ export default async function OnboardingPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-10">
       <BrandMark />
-      <p className="mt-8 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-        Onboarding
-      </p>
-      <h1 className="font-heading mt-2 text-3xl tracking-tight">
-        Your demo desk is ready.
-      </h1>
+      <p className="page-kicker mt-8">Onboarding</p>
+      <h1 className="font-heading mt-2 text-3xl">Your demo desk is ready.</h1>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
         Hi {user.name.split(" ")[0]}. We loaded <strong>Northline Studio</strong> —
         a hospitality brand system — so your agents have company facts to write
         from. Edit it now or skip to Mission Control and create an agent.
       </p>
-      <div className="mt-8 rounded-2xl border border-border bg-card p-6">
+      <div className="mt-8 rounded-xl border border-border bg-card p-6">
         <BrandKitForm
           workspaceId={workspace.id}
           workspaceName={workspace.name}

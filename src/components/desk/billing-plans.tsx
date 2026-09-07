@@ -49,7 +49,7 @@ export function BillingPlans({
         const plan = PLANS[id];
         const current = currentPlan === id;
         return (
-          <article key={id} className="rounded-2xl border border-border bg-card p-5">
+          <article key={id} className="rounded-xl border border-border bg-card p-5">
             <p className="text-sm text-muted-foreground">{plan.seats} seats</p>
             <h2 className="font-heading mt-1 text-2xl">{plan.name}</h2>
             <p className="mt-2 text-3xl tracking-tight">

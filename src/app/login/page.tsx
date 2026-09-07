@@ -80,24 +80,27 @@ function Field({
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-5 py-16">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <BrandMark />
-        <h1 className="font-heading mt-5 text-2xl">Sign in</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Open the desk you already set up.
-        </p>
-        <div className="mt-6">
-          <Suspense>
-            <LoginForm />
-          </Suspense>
+    <div className="relative flex min-h-full flex-col">
+      <div className="landing-glow pointer-events-none absolute inset-0" />
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5">
+        <Link href="/">
+          <BrandMark />
+        </Link>
+        <Button variant="ghost" size="sm" render={<Link href="/signup" />}>
+          Create a workspace
+        </Button>
+      </header>
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-5 pb-16">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card/80 p-6 backdrop-blur">
+          <p className="page-kicker">Account</p>
+          <h1 className="font-heading mt-2 text-2xl">Sign in</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Open the desk you already set up.</p>
+          <div className="mt-6">
+            <Suspense>
+              <LoginForm />
+            </Suspense>
+          </div>
         </div>
-        <p className="mt-5 text-sm text-muted-foreground">
-          New here?{" "}
-          <Link href="/signup" className="text-foreground underline underline-offset-3">
-            Create a workspace
-          </Link>
-        </p>
       </div>
     </div>
   );
