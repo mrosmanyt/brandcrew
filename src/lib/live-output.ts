@@ -18,11 +18,28 @@ ${body}
 `;
 }
 
+export function notesFromBrowsedPages(pages: FetchedPage[]): string {
+  const sections = pages.map((page) => {
+    const body = page.text.trim() || "(no text captured from this URL)";
+    return `## ${page.url}
+${page.ok ? "Browsed (read-only)." : "Partial or failed read."}
+
+${body}`;
+  });
+  return `# Source notes
+
+Read-only browse. No login. Nothing was sent.
+
+${sections.join("\n\n")}
+`;
+}
+
 export function resolveRunOutput(input: {
   live: boolean;
   llmTitle?: string;
   llmContent?: string;
   fetched?: FetchedPage;
+  pages?: FetchedPage[];
   search?: { query: string; text: string };
   demoTitle: string;
   demoContent: string;
@@ -35,6 +52,14 @@ export function resolveRunOutput(input: {
         title: llmTitle || "Draft",
         content: llmContent,
         source: "llm",
+      };
+    }
+    const pagesWithText = (input.pages || []).filter((page) => page.text?.trim());
+    if (pagesWithText.length) {
+      return {
+        title: llmTitle || "Notes from browsed pages",
+        content: notesFromBrowsedPages(pagesWithText),
+        source: "tools",
       };
     }
     if (input.fetched?.text?.trim()) {

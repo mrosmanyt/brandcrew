@@ -43,13 +43,20 @@ function approveStep(prompt: string): JobStep {
   return makeStep("ask_user", "Pause for your approval", { prompt }, "approve");
 }
 
-export function linkedinWeekPlaybook(): JobPlaybook {
+export function linkedinWeekPlaybook(url?: string): JobPlaybook {
+  const browse = url
+    ? [
+        makeStep("browser_navigate", `Open ${url}`, { url }, "nav"),
+        makeStep("browser_snapshot", "Snapshot the page", {}, "snap"),
+      ]
+    : [];
   return {
     key: "linkedin_week",
-    title: "LinkedIn week",
+    title: url ? "LinkedIn week from URL" : "LinkedIn week",
     agentRole: "writer",
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      ...browse,
       ...[1, 2, 3, 4, 5].map((index) =>
         makeStep(
           "write_artifact",
@@ -65,6 +72,31 @@ export function linkedinWeekPlaybook(): JobPlaybook {
   };
 }
 
+export function writerFromUrlPlaybook(url?: string): JobPlaybook {
+  return {
+    key: "writer_from_url",
+    title: "Draft from URL",
+    agentRole: "writer",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open the pasted URL",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep("browser_snapshot", "Snapshot the page", {}, "snap"),
+      makeStep(
+        "write_artifact",
+        "Write a draft from the page",
+        { kind: "linkedin_post", index: 1, count: 1 },
+        "draft",
+      ),
+      approveStep("Approve this draft before it leaves the desk. Nothing is published yet."),
+    ],
+  };
+}
+
 export function researchPackPlaybook(url?: string): JobPlaybook {
   return {
     key: "research_pack",
@@ -73,11 +105,18 @@ export function researchPackPlaybook(url?: string): JobPlaybook {
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
       makeStep(
-        "fetch_url",
-        url ? `Fetch ${url}` : "Fetch company website",
+        "browser_navigate",
+        url ? `Open ${url}` : "Open company website",
         { url: url || "" },
-        "fetch",
+        "nav",
       ),
+      makeStep(
+        "crawl_links",
+        "Follow a couple of public links",
+        { depth: 1, maxPages: 2 },
+        "crawl",
+      ),
+      makeStep("browser_snapshot", "Snapshot what we read", {}, "snap"),
       makeStep(
         "write_artifact",
         "Write sourced notes",
@@ -85,6 +124,42 @@ export function researchPackPlaybook(url?: string): JobPlaybook {
         "summary",
       ),
       approveStep("Approve these sourced notes before they are shared."),
+    ],
+  };
+}
+
+export function competitorScanPlaybook(urls: string[] = []): JobPlaybook {
+  const targets = urls.slice(0, 3);
+  const browse = (targets.length ? targets : [""]).flatMap((url, index) => [
+    makeStep(
+      "browser_navigate",
+      url ? `Open competitor ${index + 1}: ${url}` : "Open competitor URL",
+      { url },
+      `nav-${index + 1}`,
+    ),
+    makeStep(
+      "browser_snapshot",
+      url ? `Snapshot ${url}` : "Snapshot the page",
+      {},
+      `snap-${index + 1}`,
+    ),
+  ]);
+  return {
+    key: "competitor_scan",
+    title: "Competitor scan",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      ...browse,
+      makeStep(
+        "write_artifact",
+        "Write comparison artifact",
+        { kind: "competitor_scan" },
+        "compare",
+      ),
+      approveStep(
+        "Approve this competitor scan before it is shared. This was read-only browse — nothing was sent.",
+      ),
     ],
   };
 }
@@ -107,9 +182,86 @@ export function salesPackPlaybook(): JobPlaybook {
   };
 }
 
+export function outreachFromResearchPlaybook(): JobPlaybook {
+  return {
+    key: "outreach_from_research",
+    title: "Outreach pack from research",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "read_artifact",
+        "Read the latest research artifact",
+        { types: ["research_pack", "competitor_scan"] },
+        "research",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write 5 LinkedIn DMs from the research",
+        { kind: "outreach_pack" },
+        "dms",
+      ),
+      approveStep("Approve these 5 DMs before anyone sends them. Brandcrew will not send."),
+    ],
+  };
+}
+
+export function adAnglesFromUrlPlaybook(url?: string): JobPlaybook {
+  return {
+    key: "ad_angles_from_url",
+    title: "Ad angles from URL",
+    agentRole: "ads",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open the landing page",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep("browser_snapshot", "Snapshot the landing page", {}, "snap"),
+      makeStep(
+        "write_artifact",
+        "Write 5 ad angles from the page",
+        { kind: "ad_angles" },
+        "angles",
+      ),
+      approveStep("Approve these ad angles. Brandcrew does not buy media or publish ads."),
+    ],
+  };
+}
+
+export function strategyFromSitePlaybook(url?: string): JobPlaybook {
+  return {
+    key: "strategy_from_site",
+    title: "Strategy brief from site",
+    agentRole: "strategist",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open company website",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep("browser_snapshot", "Snapshot the page", {}, "snap"),
+      makeStep(
+        "write_artifact",
+        "Write ICP / offer / pillars brief",
+        { kind: "generic" },
+        "brief",
+      ),
+      approveStep("Approve this strategy brief before the crew uses it."),
+    ],
+  };
+}
+
 export function genericPlaybook(role: AgentRole, title?: string, url?: string): JobPlaybook {
-  const fetchSteps = url
-    ? [makeStep("fetch_url", `Fetch ${url}`, { url }, "fetch")]
+  const browse = url
+    ? [
+        makeStep("browser_navigate", `Open ${url}`, { url }, "nav"),
+        makeStep("browser_snapshot", "Snapshot the page", {}, "snap"),
+      ]
     : [];
   return {
     key: "generic",
@@ -117,7 +269,7 @@ export function genericPlaybook(role: AgentRole, title?: string, url?: string): 
     agentRole: role,
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
-      ...fetchSteps,
+      ...browse,
       makeStep("write_artifact", "Write the draft", { kind: "generic" }, "artifact"),
       approveStep("Approve this draft before it leaves the desk. Nothing is sent or published."),
     ],
@@ -148,15 +300,40 @@ export function webSearchPlaybook(query?: string): JobPlaybook {
   };
 }
 
+/** Public URLs from the user message, then Brand Kit website. Never invents example.com competitors. */
+export function defaultCompetitorUrls(message: string, website?: string): string[] {
+  const fromMessage = extractUrls(message).slice(0, 3);
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const url of [...fromMessage, website || ""]) {
+    const trimmed = url.trim();
+    if (!trimmed) continue;
+    const key = trimmed.replace(/\/$/, "").toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    urls.push(trimmed);
+    if (urls.length >= 3) break;
+  }
+  return urls;
+}
+
 export function playbookFromKey(
   key: string,
   role: AgentRole,
   message = "",
+  website?: string,
 ): JobPlaybook {
-  const url = extractUrls(message)[0];
-  if (key === "linkedin_week") return linkedinWeekPlaybook();
+  const url = extractUrls(message)[0] || website || "";
+  if (key === "linkedin_week") return linkedinWeekPlaybook(extractUrls(message)[0]);
+  if (key === "writer_from_url") return writerFromUrlPlaybook(url);
   if (key === "research_pack") return researchPackPlaybook(url);
+  if (key === "competitor_scan") {
+    return competitorScanPlaybook(defaultCompetitorUrls(message, website));
+  }
   if (key === "sales_pack") return salesPackPlaybook();
+  if (key === "outreach_from_research") return outreachFromResearchPlaybook();
+  if (key === "ad_angles_from_url") return adAnglesFromUrlPlaybook(url);
+  if (key === "strategy_from_site") return strategyFromSitePlaybook(url);
   if (key === "web_search") return webSearchPlaybook(message.trim());
   return genericPlaybook(role, undefined, url);
 }
@@ -169,7 +346,11 @@ export function inferPlaybookKey(
   if (action === "generate_week") return "linkedin_week";
   if (action === "sales_pack") return "sales_pack";
   if (action === "research_pack") return "research_pack";
+  if (action === "competitor_scan") return "competitor_scan";
+  if (action === "outreach_from_research") return "outreach_from_research";
+  if (action === "ad_angles_from_url") return "ad_angles_from_url";
   const text = message.toLowerCase();
+  const urls = extractUrls(message);
   const hint = AGENT_ROLES.includes(role as AgentRole)
     ? (role as AgentRole)
     : playbookHintFromRole(String(role));
@@ -180,15 +361,44 @@ export function inferPlaybookKey(
     return "linkedin_week";
   }
   if (
-    /research pack|fetch_url|research (the )?(site|company|page)|competitor|https?:\/\//.test(
+    /competitor scan|compare (competitors|sites|urls)|scan (of )?(competitors|sites)/.test(
       text,
     ) ||
-    (hint === "researcher" && /site|url|company|competitor|fetch|browse/.test(text))
+    (hint === "researcher" && /competitor/.test(text))
+  ) {
+    return "competitor_scan";
+  }
+  if (
+    /research pack|research (the )?(site|company|page)|browse (the )?(site|company)/.test(
+      text,
+    ) ||
+    (hint === "researcher" && /site|url|company|fetch|browse/.test(text))
   ) {
     return "research_pack";
   }
-  if (hint === "sales" && /outbound|linkedin dm|email script/.test(text)) {
+  if (
+    (hint === "sales" || /outreach/.test(text)) &&
+    /outreach (pack )?from research|from (the )?research artifact|5 dms/.test(text)
+  ) {
+    return "outreach_from_research";
+  }
+  if (hint === "sales" && /sales pack|outbound|linkedin dm|email script/.test(text)) {
     return "sales_pack";
+  }
+  if (
+    hint === "ads" &&
+    /ad angles from (url|the page|landing)|landing page/.test(text)
+  ) {
+    return "ad_angles_from_url";
+  }
+  if (
+    hint === "strategist" &&
+    (urls.length > 0 || /browse|research|competitor|website/.test(text))
+  ) {
+    return "strategy_from_site";
+  }
+  if (hint === "writer" && urls.length > 0 && !/linkedin week/.test(text)) {
+    return "writer_from_url";
   }
   if (hint === "writer" && /linkedin|posts?/.test(text)) return "linkedin_week";
   return "generic";
@@ -228,6 +438,23 @@ function normalizeStep(input: unknown, index: number): JobStep {
     args,
     result: row.result ? String(row.result) : undefined,
   };
+}
+
+export function ensureAskUser(steps: JobStep[]): JobStep[] {
+  if (!steps.length) return steps;
+  if (steps.at(-1)?.tool === "ask_user") return steps;
+  return [
+    ...steps,
+    makeStep(
+      "ask_user",
+      "Pause for your approval",
+      {
+        prompt:
+          "Approve the drafts before they leave the desk. Brandcrew will not send or publish.",
+      },
+      "approve",
+    ),
+  ];
 }
 
 export function parsePlaybookJson(raw: string): JobPlaybook | null {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { GENERATE_ACTIONS } from "@/lib/constants";
+import { GENERATE_ACTIONS, JOB_ACTION_MESSAGES } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
@@ -63,7 +63,10 @@ export async function POST(
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
-    const message = body.message?.trim() || "";
+    let message = body.message?.trim() || "";
+    if (!message && body.action && body.action !== "default") {
+      message = JOB_ACTION_MESSAGES[body.action] || "";
+    }
 
     if (isTeamLaunchIntent(message) && !body.skillId) {
       return jsonOk({ teamLaunch: true });

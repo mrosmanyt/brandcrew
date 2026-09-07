@@ -24,7 +24,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DEFAULT_AGENT_NAME, displayAgentName, type GenerateAction } from "@/lib/constants";
+import {
+  DEFAULT_AGENT_NAME,
+  displayAgentName,
+  jobChipsForHint,
+  JOB_ACTION_MESSAGES,
+  missingRoleMarketplaceChips,
+  playbookHintFromRole,
+  type GenerateAction,
+} from "@/lib/constants";
 import type { AgentDTO, JobDTO, JobEventDTO, SkillDTO } from "@/lib/job-types";
 import type { ProposedAgent } from "@/lib/team-launch";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
@@ -121,6 +129,9 @@ export function MissionControl({
   const remaining = Math.max(0, usage.tokenBudget - usage.tokenUsed);
   const atCap = remaining <= 0;
   const active = jobs.some((job) => job.status === "queued" || job.status === "running");
+  const selectedHint = playbookHintFromRole(selected?.role || "");
+  const roleChips = selected ? jobChipsForHint(selectedHint) : [];
+  const marketplaceChips = missingRoleMarketplaceChips(agents, workspaceId);
 
   const refreshJobs = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`);
@@ -265,7 +276,8 @@ export function MissionControl({
       toast.error("Create or select an agent first.");
       return;
     }
-    const text = (message ?? input).trim();
+    const text =
+      (message ?? input).trim() || JOB_ACTION_MESSAGES[action] || "";
     if (!text && action === "default") return;
     setBusy(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
@@ -440,8 +452,9 @@ export function MissionControl({
                   {displayAgentName(selected.name)}
                 </h2>
                 <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                  Give this agent a real job. It plans, uses tools, and waits for
-                  you. Default name is “New Agent” — rename below.
+                  Give this agent a real job. It plans, uses tools (Brand Kit,
+                  browse, Web Search if Connected), and waits for you. Default
+                  name is “New Agent” — rename below.
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Input
@@ -458,9 +471,33 @@ export function MissionControl({
                     <Trash2 className="size-3.5" />
                     Archive
                   </Button>
-                  <Button size="sm" disabled={busy} onClick={() => startJob("default", input || "Write a short draft from the Brand Kit. Do not publish.")}>
-                    Give a job
-                  </Button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {roleChips.map((chip) => (
+                    <Button
+                      key={`${chip.action}-${chip.label}`}
+                      size="sm"
+                      disabled={busy}
+                      onClick={() =>
+                        startJob(
+                          chip.action,
+                          chip.message || input || JOB_ACTION_MESSAGES[chip.action],
+                        )
+                      }
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
+                  {marketplaceChips.map((chip) => (
+                    <Button
+                      key={chip.label}
+                      size="sm"
+                      variant="outline"
+                      render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
                 </div>
               </>
             ) : (
@@ -480,13 +517,24 @@ export function MissionControl({
                 <Sparkles className="size-5 text-primary" />
                 <p className="mt-3 max-w-md text-sm text-muted-foreground">
                   Start with New Agent, Marketplace, or Launch team. Jobs only run
-                  when you pick an agent.
+                  when you pick an agent. Quick-start chips follow the agent’s
+                  role label (Research → Competitor scan). Missing roles link to
+                  Marketplace — they do not invent a named roster.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button onClick={createBlankAgent}>New Agent</Button>
                   <Button variant="secondary" onClick={openLaunch}>
                     Launch full business team
                   </Button>
+                  {marketplaceChips.map((chip) => (
+                    <Button
+                      key={chip.label}
+                      variant="outline"
+                      render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
                 </div>
               </div>
             ) : null}
@@ -494,8 +542,9 @@ export function MissionControl({
               <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8">
                 <Bot className="size-5 text-primary" />
                 <p className="mt-3 max-w-md text-sm text-muted-foreground">
-                  Name the job. This agent will plan, use tools (Brand Kit, fetch
-                  URL, Web Search if Connected), and pause for approval.
+                  Name the job. This agent will plan, use tools (Brand Kit,
+                  browser_navigate / snapshot, Web Search if Connected), and pause
+                  for approval.
                 </p>
               </div>
             ) : null}
@@ -626,6 +675,11 @@ export function MissionControl({
                     />
                     <div>
                       <p className="leading-5">{event.message}</p>
+                      {typeof event.data?.url === "string" && event.data.url ? (
+                        <p className="break-all text-[11px] text-muted-foreground">
+                          {event.data.url}
+                        </p>
+                      ) : null}
                       <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                         {eventTypeLabel(event.type)}
                       </p>

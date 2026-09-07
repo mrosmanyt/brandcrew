@@ -1,7 +1,15 @@
 import type { AgentRole, GenerateAction } from "@/lib/constants";
 import { displayAgentName } from "@/lib/constants";
 import { brandKitBrief, type BrandKit } from "@/lib/brand-kit";
-import { demoArtifact, demoGenerateWeek, demoResearchPack, demoSalesPack } from "@/lib/demo";
+import {
+  demoAdAnglesFromUrl,
+  demoArtifact,
+  demoCompetitorMarkdown,
+  demoGenerateWeek,
+  demoOutreachFromResearch,
+  demoResearchPack,
+  demoSalesPack,
+} from "@/lib/demo";
 import { llm, type TaskMode } from "@/lib/llm";
 import { resolveRunOutput } from "@/lib/live-output";
 import { parseLlmJson } from "@/lib/job-serialize";
@@ -20,7 +28,14 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 };
 
 export function agentMode(role: AgentRole, action: GenerateAction = "default"): TaskMode {
-  if (action === "generate_week" || action === "sales_pack" || action === "research_pack") {
+  if (
+    action === "generate_week" ||
+    action === "sales_pack" ||
+    action === "research_pack" ||
+    action === "competitor_scan" ||
+    action === "outreach_from_research" ||
+    action === "ad_angles_from_url"
+  ) {
     return "draft";
   }
   return role === "strategist" || role === "ads" ? "final" : "draft";
@@ -34,7 +49,16 @@ function actionInstructions(action: GenerateAction, role: AgentRole) {
     return `Write outbound emails and LinkedIn DMs. Do not send.`;
   }
   if (action === "research_pack") {
-    return `Write sourced notes from the Brand Kit and any fetched page text. Do not invent quotes.`;
+    return `Write sourced notes from the Brand Kit and any browsed page text. Do not invent quotes.`;
+  }
+  if (action === "competitor_scan") {
+    return `Write a competitor comparison from browsed pages only. One section per URL. No invented quotes.`;
+  }
+  if (action === "outreach_from_research") {
+    return `Write 5 LinkedIn DMs grounded in the research artifact when present. Do not send.`;
+  }
+  if (action === "ad_angles_from_url") {
+    return `Write 5 ad angles from the landing page. Creative only — no media buy.`;
   }
   return ROLE_INSTRUCTIONS[role];
 }
@@ -73,6 +97,16 @@ function fallbackArtifact(
   if (action === "generate_week") return demoGenerateWeek(kit);
   if (action === "sales_pack") return demoSalesPack(kit);
   if (action === "research_pack") return demoResearchPack(kit);
+  if (action === "competitor_scan") {
+    return {
+      type: "competitor_scan",
+      title: "Competitor scan",
+      summary: "Read-only comparison of public pages.",
+      content: demoCompetitorMarkdown(kit),
+    };
+  }
+  if (action === "outreach_from_research") return demoOutreachFromResearch(kit);
+  if (action === "ad_angles_from_url") return demoAdAnglesFromUrl(kit);
   return demoArtifact(role, kit);
 }
 
