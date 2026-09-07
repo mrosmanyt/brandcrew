@@ -8,11 +8,13 @@ import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { showcaseSignupHint } from "@/lib/integrations-showcase";
 
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const inviteToken = params.get("invite") || "";
+  const chipHint = showcaseSignupHint(params.get("chip"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState(params.get("email") || "");
   const [password, setPassword] = useState("");
@@ -69,6 +71,9 @@ function SignupForm() {
               <p className="mt-3 text-sm text-muted-foreground">
                 You are joining a shared workspace. Use the invited email.
               </p>
+            ) : null}
+            {chipHint ? (
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{chipHint}</p>
             ) : null}
             <form onSubmit={onSubmit} className="mt-8 space-y-5">
               <div className="space-y-2">

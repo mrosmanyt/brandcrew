@@ -98,6 +98,7 @@ export function FeaturesSection() {
   return (
     <Section
       id="features"
+      bordered
       kicker="Features"
       title="A desk, not another chat box"
       lead="CINEM Pro staffs work you can inspect. Tools run when they are real. Nothing posts, sends, or spends until you say so."
@@ -486,6 +487,7 @@ export function FaqSection() {
 
 const FOOTER_LINKS = [
   { href: "/#features", label: "Features" },
+  { href: "/#integrations", label: "Connectors" },
   { href: "/#agents", label: "Agents" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#download", label: "Download" },
