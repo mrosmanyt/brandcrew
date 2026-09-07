@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Bot,
-  Check,
-  Loader2,
   Pencil,
-  Play,
   Plus,
   Sparkles,
   Store,
@@ -18,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { BudgetStopDialog } from "@/components/desk/budget-stop";
+import { ChatComposer } from "@/components/desk/chat-composer";
 import {
   ChatBubble,
   ProgressCard,
@@ -32,7 +30,6 @@ import {
 import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { DESK_RIGHT_PANE } from "@/lib/desk-layout";
 import {
   DEFAULT_AGENT_NAME,
@@ -43,7 +40,7 @@ import {
   type GenerateAction,
 } from "@/lib/constants";
 import type { AgentDTO, JobDTO, SkillDTO } from "@/lib/job-types";
-import { buildChatThread, jobStatusLabel } from "@/lib/live-progress";
+import { buildChatThread } from "@/lib/live-progress";
 import type { ProposedAgent } from "@/lib/team-launch";
 import type { ArtifactDTO, LimitsDTO, MessageDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -98,10 +95,11 @@ export function MissionControl({
   const [budgetMessage, setBudgetMessage] = useState(
     "This workspace has reached its generation budget. Upgrade to Starter or Growth to continue.",
   );
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(
-    initialJobs[0]?.id ?? null,
-  );
-  const [skillName, setSkillName] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(() => {
+    const fromUrl = searchParams.get("jobId");
+    if (fromUrl && initialJobs.some((job) => job.id === fromUrl)) return fromUrl;
+    return initialJobs[0]?.id ?? null;
+  });
   const [launchOpen, setLaunchOpen] = useState(false);
   const [launchProposal, setLaunchProposal] = useState<ProposedAgent[]>([]);
   const [renameValue, setRenameValue] = useState("");
@@ -227,7 +225,6 @@ export function MissionControl({
 
   useEffect(() => {
     if (selected) {
-      setInput(selected.instructions ? `Give this ${selected.role || "agent"} a job.` : "");
       setRenameValue(displayAgentName(selected.name));
       setRenaming(false);
       void refreshChat(selected.id);
@@ -403,13 +400,21 @@ export function MissionControl({
   }
 
   async function saveSkill() {
-    if (!selectedJob) return;
+    const job =
+      selectedJob &&
+      (selectedJob.status === "done" || selectedJob.status === "needs_you")
+        ? selectedJob
+        : jobs.find((row) => row.status === "done" || row.status === "needs_you");
+    if (!job) {
+      toast.error("Finish a job first, then record it as a skill.");
+      return;
+    }
     const res = await fetch(`/api/workspaces/${workspaceId}/skills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        jobId: selectedJob.id,
-        name: skillName.trim() || selectedJob.title,
+        jobId: job.id,
+        name: job.title,
       }),
     });
     const data = await res.json();
@@ -417,7 +422,6 @@ export function MissionControl({
       toast.error(data.error || "Could not save skill.");
       return;
     }
-    setSkillName("");
     toast.success("Skill saved.");
     void refreshJobs();
   }
@@ -504,37 +508,6 @@ export function MissionControl({
                     </Button>
                   </div>
                 </div>
-                {roleChips.length || marketplaceChips.length ? (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {roleChips.map((chip) => (
-                      <Button
-                        key={`${chip.action}-${chip.label}`}
-                        size="xs"
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          startJob(
-                            chip.action,
-                            chip.message || input || JOB_ACTION_MESSAGES[chip.action],
-                          )
-                        }
-                      >
-                        {chip.label}
-                      </Button>
-                    ))}
-                    {marketplaceChips.map((chip) => (
-                      <Button
-                        key={chip.label}
-                        size="xs"
-                        variant="ghost"
-                        nativeButton={false}
-                        render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
-                      >
-                        {chip.label}
-                      </Button>
-                    ))}
-                  </div>
-                ) : null}
               </>
             ) : (
               <>
@@ -559,8 +532,8 @@ export function MissionControl({
                   <Sparkles className="size-4 text-muted-foreground" />
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     Start with New Agent, Marketplace, or Launch team. Jobs only run
-                    when you pick an agent. Quick-start chips follow the agent’s
-                    role label. Missing roles link to Marketplace.
+                    when you pick an agent. Skills and connectors live in the composer
+                    + menu. Missing roles still link to Marketplace.
                   </p>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <Button onClick={createBlankAgent}>
@@ -626,45 +599,35 @@ export function MissionControl({
             </div>
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              startJob("default");
-            }}
-            className="shrink-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm"
-          >
-            <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card px-3 py-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                rows={2}
-                disabled={busy || !selected}
-                className="min-h-12 border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
-                placeholder={
-                  selected
-                    ? "Message this agent — or type “launch a full business team”."
-                    : "Create an agent first"
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (!busy && selected && input.trim()) startJob("default");
-                  }
-                }}
-              />
-              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {atCap
-                    ? "Budget reached."
-                    : `${remaining.toLocaleString()} tokens · ${jobsLeft} jobs/hr left · ${usage.plan}`}
-                </p>
-                <Button type="submit" size="sm" disabled={busy || !selected || !input.trim()}>
-                  {busy ? <Loader2 className="animate-spin" /> : null}
-                  Send
-                </Button>
-              </div>
-            </div>
-          </form>
+          <ChatComposer
+            workspaceId={workspaceId}
+            value={input}
+            onChange={setInput}
+            onSubmit={(message) => startJob("default", message)}
+            busy={busy}
+            disabled={!selected}
+            placeholder={
+              selected
+                ? "Add a message, or hit send."
+                : "Create an agent first"
+            }
+            usageLabel={
+              atCap
+                ? "Budget reached."
+                : `${remaining.toLocaleString()} tokens · ${jobsLeft} jobs/hr left · ${usage.plan}`
+            }
+            skills={skills}
+            roleChips={roleChips}
+            marketplaceChips={marketplaceChips}
+            onRunSkill={runSkill}
+            onRunChip={(chip) =>
+              startJob(
+                chip.action,
+                chip.message || input || JOB_ACTION_MESSAGES[chip.action],
+              )
+            }
+            onRecordSkill={() => void saveSkill()}
+          />
         </section>
 
         <ResizeHandle
@@ -689,79 +652,6 @@ export function MissionControl({
           onExpand={() => setRightCollapsed(false)}
           onCollapse={() => setRightCollapsed(true)}
         />
-      </div>
-
-      <div className="grid shrink-0 gap-3 border-t border-border px-4 py-2 lg:grid-cols-[minmax(0,1fr)_16rem]">
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">Jobs</p>
-            <span className="text-xs text-muted-foreground">
-              {jobs.filter((job) => job.status !== "done").length} open
-            </span>
-          </div>
-          {jobs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No jobs yet.</p>
-          ) : (
-            <ul className="flex gap-2 overflow-x-auto pb-1">
-              {jobs.map((job) => {
-                const owner = agents.find((agent) => agent.id === job.agentId);
-                return (
-                  <li key={job.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedJobId(job.id);
-                        if (job.agentId) selectAgent(job.agentId);
-                      }}
-                      className={cn(
-                        "min-w-[10.5rem] rounded-lg px-2.5 py-1.5 text-left",
-                        job.id === selectedJob?.id ? "bg-secondary" : "hover:bg-muted/50",
-                      )}
-                    >
-                      <p className="truncate text-sm">{job.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {displayAgentName(owner?.name)} · {jobStatusLabel(job.status)}
-                      </p>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Skills</p>
-          <ul className="mt-1.5 space-y-1">
-            {skills.map((skill) => (
-              <li key={skill.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">{skill.name}</span>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => runSkill(skill)}
-                >
-                  <Play className="size-3" />
-                  Run
-                </Button>
-              </li>
-            ))}
-          </ul>
-          {selectedJob && (selectedJob.status === "done" || selectedJob.status === "needs_you") ? (
-            <div className="mt-2 flex gap-1.5">
-              <input
-                value={skillName}
-                onChange={(e) => setSkillName(e.target.value)}
-                placeholder="Save as skill"
-                className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-xs"
-              />
-              <Button size="xs" variant="secondary" onClick={saveSkill}>
-                <Check className="size-3" />
-                Save
-              </Button>
-            </div>
-          ) : null}
-        </div>
       </div>
 
       <BudgetStopDialog

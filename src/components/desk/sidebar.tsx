@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Settings,
   Sparkles,
   Store,
   Terminal,
@@ -378,6 +379,14 @@ function NavBody({
               icon={<CreditCard className="size-3.5" />}
             >
               Plans
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/settings`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Settings className="size-3.5" />}
+            >
+              Settings
             </SideLink>
           </ul>
         </div>

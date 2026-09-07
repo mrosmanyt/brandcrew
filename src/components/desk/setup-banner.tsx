@@ -8,7 +8,7 @@ export function SetupBanner() {
   if (llm.configured && !mockBilling) return null;
 
   return (
-    <div className="border-b border-border px-4 py-2 text-sm text-muted-foreground">
+    <div className="border-b border-border px-4 py-1.5 text-xs leading-5 text-muted-foreground">
       <p>
         {!llm.configured ? (
           <>
