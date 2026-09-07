@@ -46,13 +46,14 @@ export function resolveChromePath(): string | undefined {
 
 /**
  * Playwright is preferred for local `npm run dev` when Chrome is installed.
- * Set PLAYWRIGHT_ENABLED=false on serverless hosts without a browser.
- * When enabled but Chrome/Playwright fails, tools fall back to fetch + crawl.
+ * Vercel / serverless: default off (no Chrome). Set PLAYWRIGHT_ENABLED=false
+ * explicitly in production. When off or Chrome fails, tools fall back to fetch.
  */
 export function playwrightEnabled(): boolean {
   const flag = (process.env.PLAYWRIGHT_ENABLED || "").trim().toLowerCase();
   if (flag === "false" || flag === "0" || flag === "off") return false;
   if (flag === "true" || flag === "1" || flag === "on") return true;
+  if (process.env.VERCEL || process.env.VERCEL_ENV) return false;
   return Boolean(resolveChromePath());
 }
 
