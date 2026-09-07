@@ -1,13 +1,10 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { DeskHeader } from "@/components/desk/desk-header";
 import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
-import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
-import { getLlmStatus } from "@/lib/llm";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +41,6 @@ export default async function WorkspaceLayout({
   if (!member) redirect("/desk");
 
   const workspaces = (await listUserWorkspaces(user.id)).map(serializeWorkspace);
-  const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
   const agentStatus: Record<string, string> = {
     ...employeeStatusFromJobs(member.workspace.jobs),
   };
@@ -71,11 +67,6 @@ export default async function WorkspaceLayout({
       </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <SetupBanner />
-        <DeskHeader
-          workspace={serializeWorkspace(member.workspace)}
-          llm={getLlmStatus()}
-          limits={limits}
-        />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
     </div>

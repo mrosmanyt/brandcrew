@@ -7,6 +7,7 @@ import { CalendarView } from "@/components/desk/calendar-view";
 import { KanbanBoard } from "@/components/desk/kanban-board";
 import { MarketplaceDesk } from "@/components/desk/marketplace";
 import { MissionControl } from "@/components/desk/mission-control";
+import { SettingsHub } from "@/components/desk/settings-hub";
 import { getCurrentUser } from "@/lib/auth";
 import { billingIsMock } from "@/lib/billing";
 import { parseBrandKit } from "@/lib/brand-kit";
@@ -122,6 +123,42 @@ async function BillingPage({
         />
       </div>
     </div>
+  );
+}
+
+async function SettingsPage({ workspaceId }: { workspaceId: string }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+  });
+  if (!workspace) redirect("/desk");
+
+  const [jobs, agents] = await Promise.all([
+    prisma.job.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      include: {
+        events: { orderBy: { createdAt: "asc" }, take: 80 },
+        artifacts: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.agent.findMany({
+      where: { workspaceId, status: { not: "archived" } },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
+
+  return (
+    <SettingsHub
+      workspaceId={workspace.id}
+      workspaceName={workspace.name}
+      user={user}
+      initialJobs={jobs.map(serializeJob)}
+      agents={agents.map(serializeAgent)}
+    />
   );
 }
 
@@ -242,6 +279,9 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "developers") {
     return <DevelopersPage workspaceId={workspaceId} />;
+  }
+  if (head === "settings") {
+    return <SettingsPage workspaceId={workspaceId} />;
   }
   redirect(`/desk/${workspaceId}?agentId=${encodeURIComponent(head)}`);
 }
