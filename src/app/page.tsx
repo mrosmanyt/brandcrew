@@ -62,11 +62,11 @@ export default async function HomePage() {
               named cast. No fake Connected plugins.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button size="lg" render={<Link href={cta} />}>
+              <Button size="lg" nativeButton={false} render={<Link href={cta} />}>
                 {user ? "Open Mission Control" : "Start free desk"}
                 <ArrowRight className="size-4" />
               </Button>
-              <Button size="lg" variant="outline" render={<Link href="/#pricing" />}>
+              <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/#pricing" />}>
                 Starter $79 · Growth $199
               </Button>
             </div>
@@ -141,6 +141,7 @@ export default async function HomePage() {
                   <Button
                     className="mt-6"
                     variant={featured ? "default" : "outline"}
+                    nativeButton={false}
                     render={<Link href={cta} />}
                   >
                     {user ? "Open desk" : `Start ${plan.name}`}
@@ -159,7 +160,7 @@ export default async function HomePage() {
                 Create New Agent, connect a plugin, give a job. Approve what leaves.
               </p>
             </div>
-            <Button size="lg" render={<Link href={cta} />}>
+            <Button size="lg" nativeButton={false} render={<Link href={cta} />}>
               {user ? "Open Mission Control" : "Start free desk"}
               <ArrowRight className="size-4" />
             </Button>

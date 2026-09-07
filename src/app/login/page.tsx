@@ -86,7 +86,7 @@ export default function LoginPage() {
         <Link href="/">
           <BrandMark />
         </Link>
-        <Button variant="ghost" size="sm" render={<Link href="/signup" />}>
+        <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/signup" />}>
           Create a workspace
         </Button>
       </header>

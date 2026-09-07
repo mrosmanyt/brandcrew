@@ -10,7 +10,7 @@ export default function NotFound() {
       <p className="mt-2 text-sm text-muted-foreground">
         Check the workspace link or go back to the overview.
       </p>
-      <Button className="mt-6" render={<Link href="/" />}>
+      <Button className="mt-6" nativeButton={false} render={<Link href="/" />}>
         Home
       </Button>
     </div>

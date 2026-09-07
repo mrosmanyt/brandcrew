@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
         />
       </div>
       <div className="mt-6">
-        <Button variant="outline" render={<Link href={`/desk/${workspace.id}`} />}>
+        <Button variant="outline" nativeButton={false} render={<Link href={`/desk/${workspace.id}`} />}>
           Skip to Mission Control
         </Button>
       </div>

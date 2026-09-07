@@ -37,7 +37,7 @@ export function BudgetStopDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Stay on the desk
           </Button>
-          <Button render={<Link href={`/desk/${workspaceId}/billing`} />}>
+          <Button nativeButton={false} render={<Link href={`/desk/${workspaceId}/billing`} />}>
             View plans
           </Button>
         </DialogFooter>

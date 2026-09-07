@@ -22,15 +22,15 @@ export function SiteNav({ signedIn }: { signedIn: boolean }) {
         </nav>
         <div className="flex items-center gap-1.5">
           {signedIn ? (
-            <Button size="sm" render={<Link href="/desk" />}>
+            <Button size="sm" nativeButton={false} render={<Link href="/desk" />}>
               Open Mission Control
             </Button>
           ) : (
             <>
-              <Button variant="ghost" size="sm" render={<Link href="/login" />}>
+              <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login" />}>
                 Sign in
               </Button>
-              <Button size="sm" render={<Link href="/signup" />}>
+              <Button size="sm" nativeButton={false} render={<Link href="/signup" />}>
                 Start free desk
               </Button>
             </>
