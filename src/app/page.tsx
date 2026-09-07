@@ -2,26 +2,20 @@ import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { ProductShot } from "@/components/marketing/product-shot";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { HomeFooterCta, HomeHeroCtas } from "@/components/marketing/home-ctas";
+import {
+  AgentsSection,
+  DeveloperApiSection,
+  DownloadSection,
+  FaqSection,
+  FeaturesSection,
+  HowItWorksSection,
+  PricingSection,
+  SiteFooter,
+  TrustSection,
+  UseCasesSection,
+} from "@/components/marketing/home-sections";
 
 export const dynamic = "force-static";
-
-const STEPS = [
-  {
-    n: "1",
-    title: "Create an agent",
-    body: "New Agent is the default name. Add a Marketplace bot or launch a team — you approve the roster.",
-  },
-  {
-    n: "2",
-    title: "Give it a job",
-    body: "It plans, uses tools, and writes an artifact. Browse and plugins only run when they are real.",
-  },
-  {
-    n: "3",
-    title: "Approve what leaves",
-    body: "Drafts stay drafts. Jobs pause at ask_user. You decide what goes out.",
-  },
-];
 
 export default function HomePage() {
   return (
@@ -45,22 +39,19 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="product" className="mx-auto w-full max-w-5xl px-6 pb-24">
+        <section id="product" className="mx-auto w-full max-w-5xl scroll-mt-20 px-6 pb-24">
           <ProductShot />
         </section>
 
-        <section id="how-it-works" className="mx-auto w-full max-w-5xl px-6 pb-24">
-          <h2 className="font-heading text-3xl tracking-tight md:text-4xl">How it works</h2>
-          <ol className="mt-12 grid gap-12 md:grid-cols-3 md:gap-10">
-            {STEPS.map((step) => (
-              <li key={step.n}>
-                <p className="text-sm text-muted-foreground">{step.n}</p>
-                <h3 className="mt-3 text-lg font-medium tracking-tight">{step.title}</h3>
-                <p className="mt-2 text-sm leading-7 text-muted-foreground">{step.body}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <FeaturesSection />
+        <AgentsSection />
+        <HowItWorksSection />
+        <UseCasesSection />
+        <DownloadSection />
+        <PricingSection />
+        <DeveloperApiSection />
+        <TrustSection />
+        <FaqSection />
 
         <section className="border-t border-border">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center">
@@ -75,10 +66,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="px-6 py-10 text-center text-sm text-muted-foreground">
-        CINEM Pro is from CINEM. A desk — not a CRM, not an ad account, not a robot
-        that posts for you.
-      </footer>
+      <SiteFooter />
     </MarketingShell>
   );
 }

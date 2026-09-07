@@ -5,6 +5,14 @@ import { BrandMark } from "@/components/brand/logo";
 import { useSignedIn } from "@/components/marketing/use-signed-in";
 import { Button } from "@/components/ui/button";
 
+const NAV = [
+  { href: "/#features", label: "Features" },
+  { href: "/#agents", label: "Agents" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#download", label: "Download" },
+  { href: "/#pricing", label: "Pricing" },
+] as const;
+
 export function SiteNav() {
   const signedIn = useSignedIn();
   return (
@@ -13,13 +21,16 @@ export function SiteNav() {
         <Link href="/" className="shrink-0">
           <BrandMark />
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-muted-foreground sm:flex">
-          <Link href="/#product" className="transition-colors hover:text-foreground">
-            Product
-          </Link>
-          <Link href="/#how-it-works" className="transition-colors hover:text-foreground">
-            How it works
-          </Link>
+        <nav className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="transition-colors hover:text-foreground"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
         <div className="flex items-center gap-2">
           {signedIn ? (
