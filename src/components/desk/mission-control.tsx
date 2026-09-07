@@ -552,16 +552,6 @@ export function MissionControl({
                       <Store className="size-3.5" />
                       Marketplace
                     </Button>
-                    {marketplaceChips.map((chip) => (
-                      <Button
-                        key={chip.label}
-                        variant="outline"
-                        nativeButton={false}
-                        render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
-                      >
-                        {chip.label}
-                      </Button>
-                    ))}
                   </div>
                 </div>
               ) : null}

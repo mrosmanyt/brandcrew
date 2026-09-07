@@ -155,19 +155,19 @@ export function ChatComposer({
       }}
     >
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-[28px] border border-white/12 bg-[#2c2c30] shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
+        <div className="rounded-[28px] border border-[#d6d2ca] bg-[#eceae4] text-zinc-900 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
           {attachments.length ? (
             <ul className="flex flex-wrap gap-1.5 px-3 pt-3">
               {attachments.map((file, index) => (
                 <li
                   key={`${file.name}-${index}`}
-                  className="flex items-center gap-1 rounded-full bg-black/25 px-2 py-0.5 text-[11px] text-zinc-200"
+                  className="flex items-center gap-1 rounded-full bg-zinc-900/8 px-2 py-0.5 text-[11px] text-zinc-800"
                 >
                   <span className="max-w-[10rem] truncate">{file.name}</span>
                   <button
                     type="button"
                     aria-label={`Remove ${file.name}`}
-                    className="rounded-full p-0.5 text-zinc-400 hover:text-white"
+                    className="rounded-full p-0.5 text-zinc-500 hover:text-zinc-900"
                     onClick={() =>
                       setAttachments((prev) => prev.filter((_, i) => i !== index))
                     }
@@ -183,7 +183,7 @@ export function ChatComposer({
             onChange={(e) => onChange(e.target.value)}
             rows={3}
             disabled={busy || disabled}
-            className="min-h-[4.5rem] resize-none border-0 bg-transparent px-4 pt-3.5 pb-1 text-[15px] text-zinc-100 shadow-none placeholder:text-zinc-500 focus-visible:ring-0 dark:bg-transparent"
+            className="min-h-[4.5rem] resize-none border-0 bg-transparent px-4 pt-3.5 pb-1 text-[15px] text-zinc-900 shadow-none placeholder:text-zinc-500 focus-visible:ring-0 dark:bg-transparent"
             placeholder={placeholder}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -195,7 +195,7 @@ export function ChatComposer({
           <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="grid size-8 place-items-center rounded-full bg-white/8 text-zinc-200 hover:bg-white/14"
+                className="grid size-8 place-items-center rounded-full bg-zinc-900/8 text-zinc-800 hover:bg-zinc-900/12"
                 aria-label="Open composer menu"
                 title="Add"
               >
@@ -300,7 +300,7 @@ export function ChatComposer({
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                className="grid size-8 place-items-center rounded-full bg-white/8 text-zinc-300 hover:bg-white/14"
+                className="grid size-8 place-items-center rounded-full bg-zinc-900/8 text-zinc-700 hover:bg-zinc-900/12"
                 aria-label="Voice input (not available yet)"
                 title="Voice input is not wired yet"
                 onClick={() =>
@@ -312,7 +312,7 @@ export function ChatComposer({
               <button
                 type="submit"
                 disabled={busy || disabled || !composeJobMessage(value, attachments)}
-                className="grid size-8 place-items-center rounded-full bg-white text-zinc-950 hover:bg-zinc-200 disabled:opacity-35"
+                className="grid size-8 place-items-center rounded-full bg-zinc-950 text-white hover:bg-zinc-800 disabled:opacity-35"
                 aria-label="Send"
               >
                 {busy ? (
