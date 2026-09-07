@@ -19,13 +19,15 @@ assert.deepEqual(
   [
     "Add files or photos",
     "Record a skill",
+    "Build",
+    "Example prompts",
     "Skills",
     "Connectors",
     "Add plugins",
   ],
 );
-assert.equal(COMPOSER_PLUS_ITEMS[2].submenu, true);
-assert.equal(COMPOSER_PLUS_ITEMS[3].submenu, true);
+assert.equal(COMPOSER_PLUS_ITEMS[4].submenu, true);
+assert.equal(COMPOSER_PLUS_ITEMS[5].submenu, true);
 console.log("ok: composer + menu labels match the desk pattern");
 
 assert.equal(connectorStatusLabel(true), "Connected");

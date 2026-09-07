@@ -5,18 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   AppWindow,
   ArrowUp,
-  ChevronLeft,
-  ChevronRight,
-  Clapperboard,
   FileText,
-  LayoutGrid,
   Layers,
+  LayoutGrid,
   Loader2,
   Mic,
   Paperclip,
+  PenLine,
   Plug,
   Plus,
-  RefreshCw,
   Smartphone,
   SquareDashedMousePointer,
   Video,
@@ -27,7 +24,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuSub,
@@ -53,11 +52,11 @@ import {
   BUILD_PROMPT_CATEGORIES,
   BUILD_PROMPT_HEADLINE,
   BUILD_PROMPT_SUBCOPY,
-  chipPage,
   composerPlaceholder,
-  nextChipSetIndex,
+  plusMenuExampleChips,
   resolveBuildPromptIntent,
-  type BuildPromptCategoryId,
+  type BuildPromptCategory,
+  type BuildPromptChip,
   type BuildPromptIntent,
 } from "@/lib/build-prompt";
 import { marketplaceBotsHref, PLANS, type JobChip, type PlanId } from "@/lib/constants";
@@ -77,7 +76,7 @@ const CATEGORY_ICONS = {
   mobile: Smartphone,
   design: SquareDashedMousePointer,
   slides: Layers,
-  animation: Clapperboard,
+  content: PenLine,
 } as const;
 
 export function ChatComposer({
@@ -127,11 +126,7 @@ export function ChatComposer({
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const categoryScroller = useRef<HTMLDivElement>(null);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
-  const [categoryId, setCategoryId] = useState<BuildPromptCategoryId>("website");
-  const [chipId, setChipId] = useState<string | null>(null);
-  const [chipSet, setChipSet] = useState(0);
   const [connectors, setConnectors] = useState<ConnectorRow[]>(
     MARKETPLACE_PLUGINS.map((plugin) => ({
       id: plugin.id,
@@ -140,6 +135,7 @@ export function ChatComposer({
     })),
   );
   const pluginsHref = `/desk/${workspaceId}/marketplace?tab=plugins`;
+  const exampleChips = plusMenuExampleChips();
 
   useEffect(() => {
     let cancelled = false;
@@ -185,26 +181,29 @@ export function ChatComposer({
     setAttachments((prev) => [...prev, ...next]);
   }
 
-  const intent = resolveBuildPromptIntent({ categoryId, chipId });
-  const placeholder = composerPlaceholder({ disabled, categoryId });
+  const placeholder = composerPlaceholder({ disabled });
   const readyMessage = composeJobMessage(value, attachments);
-  const canSend = Boolean(readyMessage || intent.action !== "default");
-  const exampleChips = chipPage(chipSet);
+  const canSend = Boolean(readyMessage);
 
   function send() {
     if (disabled || busy || !canSend) return;
-    onSubmit(readyMessage, intent);
+    onSubmit(readyMessage, { action: "default" });
     setAttachments([]);
-    setChipId(null);
   }
 
-  function selectCategory(id: BuildPromptCategoryId) {
-    setCategoryId(id);
-    setChipId(null);
+  function runBuildIntent(intent: BuildPromptIntent, fill?: string) {
+    if (disabled || busy) return;
+    onSubmit(composeJobMessage(value || fill || "", attachments), intent);
+    setAttachments([]);
   }
 
-  function scrollCategories(direction: -1 | 1) {
-    categoryScroller.current?.scrollBy({ left: direction * 160, behavior: "smooth" });
+  function runCategory(category: BuildPromptCategory) {
+    runBuildIntent(resolveBuildPromptIntent({ categoryId: category.id }));
+  }
+
+  function runExample(chip: BuildPromptChip) {
+    onChange(chip.fill);
+    runBuildIntent(resolveBuildPromptIntent({ chipId: chip.id }), chip.fill);
   }
 
   return (
@@ -339,10 +338,40 @@ export function ChatComposer({
                   {COMPOSER_PLUS_ITEMS[1].label}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>{COMPOSER_PLUS_ITEMS[2].label}</DropdownMenuLabel>
+                  {BUILD_PROMPT_CATEGORIES.map((category) => {
+                    const Icon = CATEGORY_ICONS[category.id];
+                    return (
+                      <DropdownMenuItem
+                        key={category.id}
+                        disabled={disabled}
+                        onClick={() => runCategory(category)}
+                      >
+                        <Icon className="size-4" />
+                        {category.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>{COMPOSER_PLUS_ITEMS[3].label}</DropdownMenuLabel>
+                  {exampleChips.map((chip) => (
+                    <DropdownMenuItem
+                      key={chip.id}
+                      disabled={disabled}
+                      onClick={() => runExample(chip)}
+                    >
+                      {chip.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <FileText className="size-4" />
-                    {COMPOSER_PLUS_ITEMS[2].label}
+                    {COMPOSER_PLUS_ITEMS[4].label}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="min-w-56">
                     {roleChips.map((chip) => (
@@ -383,7 +412,7 @@ export function ChatComposer({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <LayoutGrid className="size-4" />
-                    {COMPOSER_PLUS_ITEMS[3].label}
+                    {COMPOSER_PLUS_ITEMS[5].label}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="min-w-56">
                     {connectors.map((plugin) => (
@@ -412,7 +441,7 @@ export function ChatComposer({
                 </DropdownMenuSub>
                 <DropdownMenuItem onClick={() => router.push(pluginsHref)}>
                   <Plug className="size-4" />
-                  {COMPOSER_PLUS_ITEMS[4].label}
+                  {COMPOSER_PLUS_ITEMS[6].label}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -453,100 +482,6 @@ export function ChatComposer({
             </div>
           </div>
         </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-1">
-          <button
-            type="button"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Previous categories"
-            onClick={() => scrollCategories(-1)}
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          <div
-            ref={categoryScroller}
-            role="tablist"
-            aria-label="Playbook categories"
-            className="flex min-w-0 flex-1 items-start justify-between gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {BUILD_PROMPT_CATEGORIES.map((category) => {
-              const selected = category.id === categoryId;
-              const Icon = CATEGORY_ICONS[category.id];
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  disabled={disabled}
-                  onClick={() => selectCategory(category.id)}
-                  className={cn(
-                    "flex min-w-[4.5rem] flex-1 flex-col items-center gap-1.5 rounded-xl px-1 py-1 text-center text-[11px] text-muted-foreground transition-colors",
-                    selected
-                      ? "text-foreground"
-                      : "hover:text-foreground",
-                    disabled && "opacity-50",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid size-10 place-items-center rounded-xl border bg-composer-control",
-                      selected
-                        ? "border-foreground/35 text-foreground"
-                        : "border-transparent text-muted-foreground",
-                    )}
-                  >
-                    <Icon className="size-4" />
-                  </span>
-                  {category.label}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Next categories"
-            onClick={() => scrollCategories(1)}
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
-
-        <div className="mt-4 px-1">
-          <div className="mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span>Try an example prompt</span>
-            <button
-              type="button"
-              className="grid size-6 place-items-center rounded-full hover:bg-muted hover:text-foreground"
-              aria-label="Refresh example prompts"
-              onClick={() => setChipSet((index) => nextChipSetIndex(index))}
-            >
-              <RefreshCw className="size-3" />
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {exampleChips.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                disabled={disabled}
-                onClick={() => {
-                  setChipId(chip.id);
-                  if (chip.categoryId) setCategoryId(chip.categoryId);
-                  onChange(chip.fill);
-                }}
-                className={cn(
-                  "rounded-full border border-border bg-muted/70 px-3 py-1.5 text-xs text-foreground hover:bg-muted",
-                  chipId === chip.id && "border-foreground/30 bg-composer-control",
-                  disabled && "opacity-50",
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <p className="mt-3 px-1 text-xs text-muted-foreground">{usageLabel}</p>

@@ -673,9 +673,9 @@ export function MissionControl({
                 <div className="max-w-md">
                   <Bot className="size-4 text-muted-foreground" />
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    Name the job below, or pick a category. Progress shows in
-                    this thread — reading the kit, writing drafts — then the
-                    agent waits for you.
+                    Name the job below, or pick a build from the + menu.
+                    Progress shows in this thread — reading the kit, writing
+                    drafts — then the agent waits for you.
                   </p>
                 </div>
               ) : null}

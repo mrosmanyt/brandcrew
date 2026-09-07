@@ -1,6 +1,8 @@
 export const COMPOSER_PLUS_ITEMS = [
   { id: "files", label: "Add files or photos", shortcut: "Ctrl U" },
   { id: "record-skill", label: "Record a skill" },
+  { id: "build", label: "Build", section: true },
+  { id: "examples", label: "Example prompts", section: true },
   { id: "skills", label: "Skills", submenu: true },
   { id: "connectors", label: "Connectors", submenu: true },
   { id: "plugins", label: "Add plugins" },
