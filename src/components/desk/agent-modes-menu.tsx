@@ -28,7 +28,7 @@ import {
   normalizeModelRouting,
   type LlmRoutingPreference,
   type LlmStatus,
-} from "@/lib/llm";
+} from "@/lib/llm-routing";
 import { cn } from "@/lib/utils";
 
 export async function applyWorkspacePlan(input: {

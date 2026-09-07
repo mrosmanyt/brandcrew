@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { DEMO_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
-import { normalizeModelRouting } from "@/lib/llm";
+import { normalizeModelRouting } from "@/lib/llm-routing";
 
 function slugify(name: string) {
   const base = name

@@ -62,7 +62,7 @@ import {
 } from "@/lib/build-prompt";
 import { marketplaceBotsHref, PLANS, type JobChip, type PlanId } from "@/lib/constants";
 import type { SkillDTO } from "@/lib/job-types";
-import type { LlmRoutingPreference, LlmStatus } from "@/lib/llm";
+import type { LlmRoutingPreference, LlmStatus } from "@/lib/llm-routing";
 import { MARKETPLACE_PLUGINS } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
 

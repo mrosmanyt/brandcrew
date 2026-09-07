@@ -4,7 +4,7 @@ import {
   normalizeModelRouting,
   type LlmRoutingPreference,
   type LlmStatus,
-} from "@/lib/llm";
+} from "@/lib/llm-routing";
 
 export const AGENT_MODE_PLANS: PlanId[] = ["demo", "starter", "pro", "ultra"];
 

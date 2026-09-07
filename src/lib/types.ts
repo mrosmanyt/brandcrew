@@ -1,6 +1,6 @@
 import type { BrandKit } from "@/lib/brand-kit";
 import type { LimitsDTO } from "@/lib/limits";
-import type { LlmStatus } from "@/lib/llm";
+import type { LlmStatus } from "@/lib/llm-routing";
 
 export type { LimitsDTO };
 

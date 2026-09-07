@@ -34,8 +34,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deskChatGlowClass, deskChatIsEmpty } from "@/lib/agent-modes";
 import { DESK_RIGHT_PANE } from "@/lib/desk-layout";
-import type { LlmRoutingPreference, LlmStatus } from "@/lib/llm";
-import { normalizeModelRouting } from "@/lib/llm";
+import {
+  normalizeModelRouting,
+  type LlmRoutingPreference,
+  type LlmStatus,
+} from "@/lib/llm-routing";
 import { normalizePlanId } from "@/lib/limits";
 import {
   DEFAULT_AGENT_NAME,

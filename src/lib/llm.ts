@@ -2,28 +2,18 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
+import {
+  normalizeModelRouting,
+  type LlmRoutingPreference,
+  type LlmStatus,
+} from "@/lib/llm-routing";
+
+export type { LlmRoutingPreference, LlmStatus } from "@/lib/llm-routing";
+export { normalizeModelRouting } from "@/lib/llm-routing";
 
 export type TaskMode = "draft" | "final";
 
-export const LLM_ROUTING_PREFERENCES = [
-  "auto",
-  "gemini",
-  "anthropic",
-  "openai",
-] as const;
-
-export type LlmRoutingPreference = (typeof LLM_ROUTING_PREFERENCES)[number];
-
 const routingAls = new AsyncLocalStorage<LlmRoutingPreference>();
-
-export function normalizeModelRouting(
-  value?: string | null,
-): LlmRoutingPreference {
-  if (value === "gemini" || value === "anthropic" || value === "openai") {
-    return value;
-  }
-  return "auto";
-}
 
 export function currentRoutingPreference(): LlmRoutingPreference {
   return routingAls.getStore() ?? "auto";
@@ -40,15 +30,6 @@ export function runWithRoutingPreference<T>(
 export type LlmJobKind = "website" | "coding" | "posts" | "apps" | "general";
 
 export type LlmProviderName = "openai" | "anthropic" | "gemini" | "xai" | "demo";
-
-export type LlmStatus = {
-  openai: boolean;
-  anthropic: boolean;
-  gemini: boolean;
-  xai: boolean;
-  configured: boolean;
-  mode: "live" | "demo";
-};
 
 export type LlmRoute = {
   provider: "openai" | "anthropic" | "gemini" | "xai";
