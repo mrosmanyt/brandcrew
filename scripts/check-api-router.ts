@@ -6,6 +6,14 @@ import assert from "node:assert/strict";
 import { matchBestPattern, pathToSegments } from "../src/server/api/match";
 
 const PATTERNS: string[][] = [
+  ["api", "v1"],
+  ["api", "v1", "workspace"],
+  ["api", "v1", "agents", ":agentId"],
+  ["api", "v1", "agents"],
+  ["api", "v1", "jobs", ":jobId"],
+  ["api", "v1", "jobs"],
+  ["api", "v1", "artifacts", ":artifactId"],
+  ["api", "v1", "artifacts"],
   ["api", "auth", "login"],
   ["api", "auth", "signup"],
   ["api", "auth", "me"],
@@ -13,6 +21,8 @@ const PATTERNS: string[][] = [
   ["api", "oauth", "callback"],
   ["api", "billing", "checkout"],
   ["api", "workspaces"],
+  ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
+  ["api", "workspaces", ":workspaceId", "api-keys"],
   ["api", "workspaces", ":workspaceId", "artifacts", ":artifactId"],
   ["api", "workspaces", ":workspaceId", "artifacts"],
   ["api", "workspaces", ":workspaceId", "plugins", ":pluginId", "oauth", "start"],
@@ -40,6 +50,26 @@ function matchPath(pathname: string) {
 }
 
 const cases: Array<[string, string[], Record<string, string>]> = [
+  ["/api/v1", ["api", "v1"], {}],
+  ["/api/v1/workspace", ["api", "v1", "workspace"], {}],
+  ["/api/v1/agents", ["api", "v1", "agents"], {}],
+  [
+    "/api/v1/agents/ag_2",
+    ["api", "v1", "agents", ":agentId"],
+    { agentId: "ag_2" },
+  ],
+  ["/api/v1/jobs", ["api", "v1", "jobs"], {}],
+  [
+    "/api/v1/jobs/job_9",
+    ["api", "v1", "jobs", ":jobId"],
+    { jobId: "job_9" },
+  ],
+  ["/api/v1/artifacts", ["api", "v1", "artifacts"], {}],
+  [
+    "/api/v1/artifacts/art_1",
+    ["api", "v1", "artifacts", ":artifactId"],
+    { artifactId: "art_1" },
+  ],
   ["/api/auth/login", ["api", "auth", "login"], {}],
   ["/api/auth/signup", ["api", "auth", "signup"], {}],
   ["/api/auth/me", ["api", "auth", "me"], {}],
@@ -71,6 +101,16 @@ const cases: Array<[string, string[], Record<string, string>]> = [
     "/api/workspaces/ws_1/agents/ag_2",
     ["api", "workspaces", ":workspaceId", "agents", ":agentId"],
     { workspaceId: "ws_1", agentId: "ag_2" },
+  ],
+  [
+    "/api/workspaces/ws_1/api-keys",
+    ["api", "workspaces", ":workspaceId", "api-keys"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/api-keys/key_1",
+    ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
+    { workspaceId: "ws_1", keyId: "key_1" },
   ],
   [
     "/api/workspaces/ws_1/plugins/gmail/oauth/start",
@@ -117,11 +157,12 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 27);
-console.log("ok: 27 former route.ts handlers now share one catch-all");
+assert.equal(PATTERNS.length, 37);
+console.log("ok: 37 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);
+assert.equal(matchPath("/api/v1/nope"), null);
 console.log("ok: unknown API paths 404");
 
 const encoded = matchPath("/api/workspaces/ws%2Fslash/agents/ag%201");

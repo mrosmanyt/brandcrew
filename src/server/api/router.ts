@@ -6,9 +6,19 @@ import * as authMe from "./auth/me";
 import * as authSignup from "./auth/signup";
 import * as billingCheckout from "./billing/checkout";
 import * as oauthCallback from "./oauth/callback";
+import * as v1Agent from "./v1/agent";
+import * as v1Agents from "./v1/agents";
+import * as v1Artifact from "./v1/artifact";
+import * as v1Artifacts from "./v1/artifacts";
+import * as v1Job from "./v1/job";
+import * as v1Jobs from "./v1/jobs";
+import * as v1Root from "./v1/root";
+import * as v1Workspace from "./v1/workspace";
 import * as workspaceAgent from "./workspaces/agent";
 import * as workspaceAgents from "./workspaces/agents";
 import * as workspaceAgentsLaunch from "./workspaces/agents-launch";
+import * as workspaceApiKey from "./workspaces/api-key";
+import * as workspaceApiKeys from "./workspaces/api-keys";
 import * as workspaceArtifact from "./workspaces/artifact";
 import * as workspaceArtifacts from "./workspaces/artifacts";
 import * as workspaceBrandKit from "./workspaces/brand-kit";
@@ -55,6 +65,20 @@ function asHandlers(mod: object): HandlerModule {
  * vs /agents/:agentId).
  */
 export const API_ROUTES: RouteSpec[] = [
+  { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
+  { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
+  {
+    pattern: ["api", "v1", "agents", ":agentId"],
+    handlers: asHandlers(v1Agent),
+  },
+  { pattern: ["api", "v1", "agents"], handlers: asHandlers(v1Agents) },
+  { pattern: ["api", "v1", "jobs", ":jobId"], handlers: asHandlers(v1Job) },
+  { pattern: ["api", "v1", "jobs"], handlers: asHandlers(v1Jobs) },
+  {
+    pattern: ["api", "v1", "artifacts", ":artifactId"],
+    handlers: asHandlers(v1Artifact),
+  },
+  { pattern: ["api", "v1", "artifacts"], handlers: asHandlers(v1Artifacts) },
   { pattern: ["api", "auth", "login"], handlers: asHandlers(authLogin) },
   { pattern: ["api", "auth", "signup"], handlers: asHandlers(authSignup) },
   { pattern: ["api", "auth", "me"], handlers: asHandlers(authMe) },
@@ -62,6 +86,14 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "workspaces"], handlers: asHandlers(workspacesCollection) },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
+    handlers: asHandlers(workspaceApiKey),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "api-keys"],
+    handlers: asHandlers(workspaceApiKeys),
+  },
   {
     pattern: ["api", "workspaces", ":workspaceId", "artifacts", ":artifactId"],
     handlers: asHandlers(workspaceArtifact),
@@ -185,13 +217,16 @@ export async function dispatchApi(
   const segments = ["api", ...(path ?? [])];
   const matched = matchApiRoute(segments);
   if (!matched) {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not found.", code: "not_found" },
+      { status: 404 },
+    );
   }
   const method = request.method.toUpperCase();
   const handler = matched.handlers[method as HttpMethod];
   if (!handler) {
     return NextResponse.json(
-      { error: "Method not allowed." },
+      { error: "Method not allowed.", code: "method_not_allowed" },
       {
         status: 405,
         headers: { Allow: allowedMethods(matched.handlers).join(", ") },

@@ -14,6 +14,7 @@ import {
   Plus,
   Sparkles,
   Store,
+  Terminal,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/brand/logo";
@@ -258,6 +259,14 @@ function NavBody({
               icon={<ListChecks className="size-3.5" />}
             >
               Ops board
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/developers`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Terminal className="size-3.5" />}
+            >
+              API Console
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/billing`}
