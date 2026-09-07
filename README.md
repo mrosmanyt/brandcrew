@@ -1,29 +1,36 @@
 # Brandcrew
 
-Working name for an **AI Business Desk** for SMBs and agencies. One workspace. Six thin role agents. A shared Brand Kit. Each agent is measured by one approved artifact — not a feature dump.
+**Mission Control** for an AI marketing/sales crew. Named employees — Maya Writer, Omar Researcher, Sam SDR, Lex Ads, Ops, Strategist — **plan → use tools → produce artifacts**. You **approve** what leaves.
 
-v1 does **not** auto-post to LinkedIn or Meta, does not run per-agent browsers, and does not let users paste their own model keys.
+This is a vertical slice, not a Strawberry clone: no remote browsers, no LinkedIn auto-post, no live email send. The point is a real **agent job runtime** with a shared Brand Kit, skills, and a roster — not a single-companion chat tab.
 
 ## What you can do
 
-1. Sign up. Onboarding creates a demo workspace with the Northline Studio Brand Kit.
-2. Edit voice, audience, offer, sample posts, and forbidden words.
-3. Open an agent and generate its artifact:
-   - **Strategist** — ICP, offer, monthly pillars
-   - **Writer** — LinkedIn posts + newsletter draft
-   - **Distributor** — 30-day calendar + Markdown export
-   - **Sales** — outbound email / LinkedIn DM scripts
-   - **Ads** — five angles and primary text (no spend)
-   - **Ops** — approve → schedule → done board
-4. Approve an artifact. That creates an Ops card (`Schedule/publish …`) and feeds approved posts onto the Distributor calendar.
-5. On Writer, **Generate week** drafts 7 LinkedIn posts. On Sales, **Sales pack** drafts 5 emails + 5 LinkedIn DMs.
-6. Copy Markdown, regenerate, or approve from the artifact panel. The header shows tokens used / cap and which providers are configured (never the keys).
+1. Sign up. Onboarding creates a demo workspace with the Northline Studio Brand Kit (including a sample website URL).
+2. Open **Mission Control** (`/desk/[workspaceId]`).
+3. Talk to an employee or **@team**. Starting work creates a **Job** (not a one-shot generate).
+4. Watch the **live activity feed** as steps persist: plan, `read_brand_kit`, `fetch_url` / `write_artifact`, then `ask_user`.
+5. Approve artifacts. That completes the waiting job step and creates an Ops schedule card.
+6. Save an approved (or paused) job as a **Skill**, then **Run skill** to replay the playbook.
 
-Without `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` the app still boots. Generations use clearly labeled offline demo drafts written from the Brand Kit.
+### Core jobs in this slice
+
+| Shortcut | Employee | What happens |
+| --- | --- | --- |
+| **Give Maya a job** / Generate week | Maya Writer | Brand Kit → five LinkedIn post artifacts → `needs_you` |
+| **Give Omar a research pack** | Omar Researcher | Brand Kit → `fetch_url` on the kit website or a URL you paste → summary artifact |
+| **Give Sam a job** | Sam SDR | Brand Kit → outbound pack → approval |
+| **Run skill** | whoever owns it | New job from the saved playbook (demo workspaces include **LinkedIn week**) |
+
+Generate week is still in the UI. It **starts the Writer LinkedIn-week job** — it is not a separate dead path.
+
+Without `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` the app still boots. Jobs run in demo mode from the Brand Kit (Omar still attempts `fetch_url`, then writes a pack from whatever came back).
 
 ## Stack
 
 Next.js (App Router) · TypeScript · Tailwind · SQLite via Prisma · session cookies · OpenAI + Anthropic + Gemini · Stripe Checkout stubs
+
+xAI / Grok is skipped.
 
 ## Local setup
 
@@ -39,9 +46,15 @@ npm run dev
 
 The desk listens on [http://127.0.0.1:43180](http://127.0.0.1:43180).
 
-### First account
+### First account + first job
 
-Open `/signup`, create an email/password account, then walk onboarding or skip straight to the desk.
+1. Open `/signup` and create an email/password account.
+2. Skip or save the Brand Kit, then open Mission Control.
+3. Click **Give Maya a job** (or type a request and send).
+4. Watch the right-hand **Live activity** feed: plan → Brand Kit → five `write_artifact` steps → **needs you**.
+5. Approve the posts. Ops gets schedule cards; the job moves to **done** when every artifact from that job is approved.
+6. Optionally **Save** the job as a skill, then **Run skill** to replay it.
+7. Select **Omar Researcher** and run a research pack (uses Brand Kit `website`, default `https://example.com`, or a URL in your message).
 
 ## Environment variables
 
@@ -71,20 +84,29 @@ API keys are read **only on the server**. There is no UI for user-managed model 
 `LLMProvider` in `src/lib/llm.ts` picks by cost and which keys are present:
 
 - **One provider only** → that provider for every task.
-- **Draft** (Writer, Distributor, Sales, Ops) → cheap model: Gemini Flash, else OpenAI mini, else Claude Haiku.
+- **Draft** (Writer, Researcher, Distributor, Sales, Ops, job steps) → cheap model: Gemini Flash, else OpenAI mini, else Claude Haiku.
 - **Final** (Strategist, Ads) → stronger model: Claude Sonnet, else GPT-4.1, else Gemini Pro.
 
 xAI / Grok is skipped. No keys → demo mode.
 
 ```bash
-npm run test:llm   # routing + client boot checks (fake keys, no paid calls)
+npm run test:llm    # routing + client boot checks (fake keys, no paid calls)
+npm run test:jobs   # playbooks, URL guard, HTML→text (no database)
 ```
 
-## Desk flows
+## Job runtime
 
-- **First wow checklist** on the workspace overview: Brand Kit → Strategist → Writer → approve one.
-- **Generate week** (`action: generate_week`) and **Sales pack** (`action: sales_pack`) are one-click chat actions. They work in demo mode without API keys.
-- Approving a Writer, Sales, or Ads artifact adds Ops work and calendar rows. Distributor can still build a full 30-day plan.
+Jobs live in SQLite (`Job`, `JobEvent`, `Skill`). Each job has a JSON **plan** of steps. The runner ticks one step at a time, persists an activity event, and is kicked by:
+
+- `after()` after create (Next.js background work)
+- polling `GET /api/workspaces/:id/jobs` from Mission Control
+
+v1 tools:
+
+- `read_brand_kit`
+- `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
+- `write_artifact` (markdown artifact on the workspace)
+- `ask_user` (job status → `needs_you`)
 
 ## Plans
 
@@ -107,6 +129,6 @@ npx prisma db push   # apply schema to SQLite
 npx prisma studio    # inspect rows
 ```
 
-## Out of scope (v1)
+## Out of scope (this slice)
 
-Per-agent VMs, browser automation, auto-post to LinkedIn/Meta, full CRM, audit suite, user-managed LLM keys, mobile apps.
+Per-agent VMs, browser automation, auto-post to LinkedIn/Meta, full CRM, audit suite, user-managed LLM keys, mobile apps, claiming feature-complete parity with Strawberry.

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { AGENT_META, AGENT_ROLES, PLANS } from "@/lib/constants";
+import { AGENT_META, MISSION_ROLES, PLANS, employeeDisplayName } from "@/lib/constants";
 import { getCurrentUser } from "@/lib/auth";
 
 const AGENT_ICONS = ["01", "02", "03", "04", "05", "06"];
@@ -15,9 +15,9 @@ export default async function HomePage() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5">
         <BrandMark />
         <div className="flex items-center gap-2">
-          {user ? (
-            <Button render={<Link href="/desk" />}>Open desk</Button>
-          ) : (
+            {user ? (
+              <Button render={<Link href="/desk" />}>Open Mission Control</Button>
+            ) : (
             <>
               <Button variant="ghost" render={<Link href="/login" />}>
                 Sign in
@@ -31,19 +31,20 @@ export default async function HomePage() {
       <main>
         <section className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6 md:pb-16 md:pt-10">
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            AI Business Desk · SMBs & agencies
+            Mission Control · named AI employees
           </p>
           <h1 className="font-heading mt-3 max-w-3xl text-4xl leading-[1.08] tracking-tight md:text-6xl">
-            Approve one artifact a day. Not a pile of AI tabs.
+            Give Maya a job. Watch the crew work. Approve what leaves.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-            Brandcrew is a desk, not a platform. Six thin agents share one Brand
-            Kit. Strategist, Writer, Distributor, Sales, Ads, and Ops each ship
-            a single thing you can approve — then schedule.
+            Brandcrew is a desk of named employees — Maya Writer, Omar Researcher,
+            Sam SDR, Lex Ads, Ops, and Strategist — who plan, use tools, and
+            pause for you. Shared Brand Kit and skills. Not a single-companion
+            chat tab.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" render={<Link href={cta} />}>
-              {user ? "Continue to your desk" : "Start a desk — 2 minutes"}
+              {user ? "Open Mission Control" : "Start free desk"}
             </Button>
             <Button size="lg" variant="outline" render={<Link href="/#pricing" />}>
               See Starter $79 and Growth $199
@@ -56,13 +57,13 @@ export default async function HomePage() {
 
         <section className="border-y border-border bg-card/70">
           <div className="mx-auto grid w-full max-w-6xl gap-0 sm:grid-cols-2 lg:grid-cols-6">
-            {AGENT_ROLES.map((role, index) => (
+            {MISSION_ROLES.map((role, index) => (
               <article
                 key={role}
                 className="border-border px-5 py-5 sm:border-r sm:last:border-r-0 lg:border-r"
               >
                 <p className="font-mono text-[11px] text-primary">{AGENT_ICONS[index]}</p>
-                <h2 className="mt-2 text-sm font-medium">{AGENT_META[role].label}</h2>
+                <h2 className="mt-2 text-sm font-medium">{employeeDisplayName(role)}</h2>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   {AGENT_META[role].artifact}
                 </p>
@@ -74,8 +75,8 @@ export default async function HomePage() {
         <section className="mx-auto grid w-full max-w-6xl gap-4 px-5 py-14 md:grid-cols-3">
           {[
             {
-              title: "First wow in one click",
-              body: "Onboarding loads a sample Brand Kit. Generate Week writes seven LinkedIn posts. Sales pack writes ten scripts. Approve one.",
+              title: "Jobs, not one-shot generate",
+              body: "Give Maya a LinkedIn-week job. She reads the Brand Kit, writes five posts, and waits. Generate week is still there — it starts that job.",
             },
             {
               title: "Shared memory",

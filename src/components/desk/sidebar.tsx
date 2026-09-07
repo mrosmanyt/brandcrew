@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   PenLine,
   Plus,
+  Search,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -29,13 +30,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { AGENT_META, AGENT_ROLES, type AgentRole } from "@/lib/constants";
+import { MISSION_ROLES, employeeDisplayName, type AgentRole } from "@/lib/constants";
 import type { WorkspaceDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const AGENT_ICONS: Record<AgentRole, typeof Compass> = {
   strategist: Compass,
   writer: PenLine,
+  researcher: Search,
   distributor: CalendarDays,
   sales: Mail,
   ads: Megaphone,
@@ -44,11 +46,15 @@ const AGENT_ICONS: Record<AgentRole, typeof Compass> = {
 
 function StatusDot({ status }: { status?: string }) {
   const color =
-    status === "approved"
-      ? "bg-emerald-500"
-      : status === "draft"
-        ? "bg-primary"
-        : "bg-sidebar-foreground/25";
+    status === "needs-you" || status === "needs_you"
+      ? "bg-primary"
+      : status === "working" || status === "running" || status === "queued"
+        ? "bg-primary animate-pulse"
+        : status === "approved"
+          ? "bg-emerald-500"
+          : status === "draft"
+            ? "bg-primary/60"
+            : "bg-sidebar-foreground/25";
   return <span className={cn("size-1.5 rounded-full", color)} />;
 }
 
@@ -154,23 +160,23 @@ function NavBody({
         <div>
           {!collapsed ? (
             <p className="px-2 text-[11px] uppercase tracking-[0.14em] text-sidebar-foreground/45">
-              Agents
+              Employees
             </p>
           ) : null}
           <ul className="mt-1 space-y-0.5">
-            {AGENT_ROLES.map((role) => {
-              const href = `/desk/${workspace.id}/${role}`;
-              const active = pathname === href;
+            {MISSION_ROLES.map((role) => {
+              const href = `/desk/${workspace.id}?agent=${role}`;
+              const onPage = pathname === `/desk/${workspace.id}/${role}`;
               const Icon = AGENT_ICONS[role];
               return (
                 <li key={role}>
                   <Link
                     href={href}
-                    title={AGENT_META[role].label}
+                    title={employeeDisplayName(role)}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
                       collapsed && "justify-center px-0",
-                      active
+                      onPage
                         ? "bg-sidebar-accent text-sidebar-foreground"
                         : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                     )}
@@ -178,7 +184,7 @@ function NavBody({
                     <Icon className="size-4 shrink-0" />
                     {!collapsed ? (
                       <>
-                        <span className="flex-1">{AGENT_META[role].label}</span>
+                        <span className="flex-1 truncate">{employeeDisplayName(role)}</span>
                         <StatusDot status={agentStatus[role]} />
                       </>
                     ) : null}
@@ -202,7 +208,7 @@ function NavBody({
               collapsed={collapsed}
               icon={<LayoutGrid className="size-4" />}
             >
-              Overview
+              Mission Control
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/brand-kit`}

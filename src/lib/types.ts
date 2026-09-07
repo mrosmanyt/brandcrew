@@ -29,6 +29,7 @@ export type ArtifactDTO = {
   model?: string;
   provider?: string;
   createdAt: string | Date;
+  jobId?: string | null;
 };
 
 export type TaskDTO = {

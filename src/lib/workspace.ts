@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { DEMO_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
+import { linkedinWeekPlaybook } from "@/lib/job-playbooks";
 
 function slugify(name: string) {
   const base = name
@@ -28,10 +29,21 @@ export async function createDemoWorkspace(userId: string, name?: string) {
         create: [
           { agentRole: "strategist" },
           { agentRole: "writer" },
+          { agentRole: "researcher" },
           { agentRole: "distributor" },
           { agentRole: "sales" },
           { agentRole: "ads" },
           { agentRole: "ops" },
+          { agentRole: "team" },
+        ],
+      },
+      skills: {
+        create: [
+          {
+            name: "LinkedIn week",
+            agentRole: "writer",
+            playbook: JSON.stringify(linkedinWeekPlaybook()),
+          },
         ],
       },
       tasks: {

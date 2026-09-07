@@ -40,6 +40,13 @@ Position it as an 8-week engagement with a named owner, a mid-point tasting of t
 Avoid ${kit.forbiddenWords.slice(0, 4).join(", ") || "generic agency adjectives"}. Speak in rooms, plates, and check-in desks.
 `,
       };
+    case "researcher":
+      return {
+        type: "research_pack",
+        title: "Company research pack",
+        summary: "A sourced read of the company site plus messaging implications.",
+        content: demoResearchMarkdown(kit),
+      };
     case "writer":
       return {
         type: "voice_pack",
@@ -232,10 +239,9 @@ Suggested tasks:
   }
 }
 
-export function demoGenerateWeek(kit: BrandKit) {
+export function demoLinkedInPosts(kit: BrandKit) {
   const { offer } = company(kit);
-  const start = addDays(new Date(), 1);
-  const posts = [
+  return [
     {
       title: "The mismatch guests already feel",
       body: `The rooms feel like a house. The booking page feels like a chain.\n\nGuests notice before they unpack. ${offer.split(".")[0]}.`,
@@ -256,15 +262,59 @@ export function demoGenerateWeek(kit: BrandKit) {
       title: "Menus are a system",
       body: "A tasting menu has sequence, contrast, and a last course. Most websites have a photo, a price, and a paragraph that could sit on any other site.",
     },
-    {
-      title: "Proof from one room",
-      body: "One property. One before/after. One number. That is enough to decide if the House Look is real.",
-    },
-    {
-      title: "Forbidden words, on purpose",
-      body: `We will not write ${kit.forbiddenWords.slice(0, 3).join(", ") || "synergy, disrupt, world-class"}. Concrete nouns only.`,
-    },
   ];
+}
+
+export function demoResearchMarkdown(
+  kit: BrandKit,
+  fetched?: { url: string; ok: boolean; text: string },
+) {
+  const { offer, audience } = company(kit);
+  const source = fetched?.url || kit.website || "(no URL)";
+  const excerpt = fetched?.text
+    ? fetched.text.slice(0, 600)
+    : "No live page text. This pack is inferred from the Brand Kit so Maya and Sam still have a source of truth.";
+  return `# Research pack
+
+## Source
+${source}
+${fetched?.ok ? "Fetched and converted to text (size-capped)." : fetched ? `Fetch note: page was not fully readable.` : "Offline / Brand Kit fallback."}
+
+## What the site says
+${excerpt}
+
+## Company read
+Audience: ${audience}
+
+Offer: ${offer}
+
+The public page should sound as specific as the floor. If it reads like a chain, that mismatch is the story — not a slogan.
+
+## Messaging implications
+1. Lead with rooms, plates, and check-in — not agency adjectives.
+2. One property is enough proof. Do not promise a group-wide rebrand.
+3. Forbidden: ${kit.forbiddenWords.slice(0, 4).join(", ") || "hype words"}.
+
+## What not to copy
+Do not invent testimonials or traffic numbers. Omar only reports what was fetched plus the Brand Kit.
+`;
+}
+
+export function demoResearchPack(
+  kit: BrandKit,
+  fetched?: { url: string; ok: boolean; text: string },
+) {
+  return {
+    type: "research_pack",
+    title: "Company research pack",
+    summary: "Sourced notes for Writer and SDR. Approve before it is shared.",
+    content: demoResearchMarkdown(kit, fetched),
+  };
+}
+
+export function demoGenerateWeek(kit: BrandKit) {
+  const posts = demoLinkedInPosts(kit);
+  const start = addDays(new Date(), 1);
 
   const calendar = posts.map((post, index) => ({
     date: format(addDays(start, index), "yyyy-MM-dd"),
@@ -274,7 +324,7 @@ export function demoGenerateWeek(kit: BrandKit) {
   }));
 
   const content = [
-    "# Generate week — 7 LinkedIn posts",
+    "# LinkedIn week — 5 posts",
     "",
     ...posts.flatMap((post, index) => [
       `## ${index + 1}. ${post.title}`,
@@ -285,7 +335,7 @@ export function demoGenerateWeek(kit: BrandKit) {
 
   return {
     type: "writer_week",
-    title: "7 LinkedIn posts for the week",
+    title: "5 LinkedIn posts for the week",
     summary:
       "A week of posts in Brand Kit voice. Approve to drop them on the Distributor calendar.",
     content,

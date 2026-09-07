@@ -4,6 +4,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { applyArtifactApproval } from "@/lib/approvals";
+import { completeJobIfApproved } from "@/lib/job-runtime";
 
 const schema = z.object({
   status: z.enum(["draft", "approved", "scheduled", "done"]),
@@ -25,6 +26,9 @@ export async function PATCH(
     let followup = { taskCreated: false, calendarAdded: 0 };
     if (body.status === "approved") {
       followup = await applyArtifactApproval({ workspaceId, artifact });
+      if (artifact.jobId) {
+        await completeJobIfApproved(artifact.jobId);
+      }
     }
 
     return jsonOk({ artifact, ...followup });

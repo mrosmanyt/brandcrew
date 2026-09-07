@@ -21,9 +21,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Brandcrew — AI Business Desk",
+  title: "Brandcrew — Mission Control",
   description:
-    "One workspace where thin role agents share a Brand Kit. Strategy, writing, distribution, sales, ads, and ops — without the feature dump.",
+    "Named AI employees plan, use tools, and produce artifacts. You approve what leaves. Writer, Researcher, SDR, Ads, Ops, Strategist — one desk.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -4,6 +4,7 @@ import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { employeeStatusFromJobs } from "@/lib/job-serialize";
 import { getLlmStatus } from "@/lib/llm";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
@@ -24,6 +25,10 @@ export default async function WorkspaceLayout({
       workspace: {
         include: {
           artifacts: { orderBy: { createdAt: "desc" } },
+          jobs: {
+            where: { status: { in: ["queued", "running", "needs_you"] } },
+            orderBy: { updatedAt: "desc" },
+          },
         },
       },
     },
@@ -31,9 +36,11 @@ export default async function WorkspaceLayout({
   if (!member) redirect("/desk");
 
   const workspaces = (await listUserWorkspaces(user.id)).map(serializeWorkspace);
-  const agentStatus: Record<string, string> = {};
+  const agentStatus: Record<string, string> = {
+    ...employeeStatusFromJobs(member.workspace.jobs),
+  };
   for (const artifact of member.workspace.artifacts) {
-    if (!agentStatus[artifact.agentRole]) {
+    if (!agentStatus[artifact.agentRole] || agentStatus[artifact.agentRole] === "idle") {
       agentStatus[artifact.agentRole] = artifact.status;
     }
   }
