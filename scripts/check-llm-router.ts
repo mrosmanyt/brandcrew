@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   createAnthropicClient,
   createGeminiClient,
+  createXaiClient,
   getLlmStatus,
   pickRoute,
 } from "../src/lib/llm";
@@ -15,6 +16,7 @@ const KEYS = [
   "ANTHROPIC_API_KEY",
   "GEMINI_API_KEY",
   "GOOGLE_GENERATIVE_AI_API_KEY",
+  "XAI_API_KEY",
 ] as const;
 
 const saved = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
@@ -24,12 +26,14 @@ function setKeys(keys: {
   anthropic?: string;
   gemini?: string;
   geminiAlias?: string;
+  xai?: string;
 }) {
   for (const key of KEYS) delete process.env[key];
   if (keys.openai) process.env.OPENAI_API_KEY = keys.openai;
   if (keys.anthropic) process.env.ANTHROPIC_API_KEY = keys.anthropic;
   if (keys.gemini) process.env.GEMINI_API_KEY = keys.gemini;
   if (keys.geminiAlias) process.env.GOOGLE_GENERATIVE_AI_API_KEY = keys.geminiAlias;
+  if (keys.xai) process.env.XAI_API_KEY = keys.xai;
 }
 
 function restore() {
@@ -99,7 +103,31 @@ try {
   assert.equal(pickRoute("draft")?.model, "gemini-2.5-flash");
   assert.equal(pickRoute("final")?.provider, "anthropic");
   assert.equal(pickRoute("final")?.model, "claude-sonnet-5");
+  assert.equal(pickRoute("draft", "website")?.provider, "gemini");
+  assert.equal(pickRoute("draft", "coding")?.provider, "anthropic");
+  assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
   console.log("ok: all three → Gemini Flash drafts, Claude Sonnet finals");
+
+  setKeys({
+    openai: "sk-openai-fake",
+    anthropic: fakeAnthropic,
+    gemini: fakeGemini,
+    xai: "xai-fake-boot-check",
+  });
+  assert.equal(getLlmStatus().xai, true);
+  assert.equal(pickRoute("draft", "posts")?.provider, "xai");
+  assert.equal(pickRoute("draft", "website")?.provider, "gemini");
+  assert.equal(pickRoute("draft", "apps")?.provider, "anthropic");
+  const xaiClient = createXaiClient("xai-fake-boot-check");
+  const base = String(
+    (xaiClient as unknown as { baseURL?: string; _options?: { baseURL?: string } })
+      .baseURL ||
+      (xaiClient as unknown as { _options?: { baseURL?: string } })._options
+        ?.baseURL ||
+      "",
+  );
+  assert.match(base, /x\.ai/);
+  console.log("ok: posts prefer xAI when keyed; website stays Gemini; apps stay Anthropic");
 
   console.log("LLM router checks passed (no paid API calls).");
 } finally {

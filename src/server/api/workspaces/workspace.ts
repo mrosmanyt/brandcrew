@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { parseBrandKit } from "@/lib/brand-kit";
+import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { serializeWorkspace } from "@/lib/workspace";
 import { getLlmStatus } from "@/lib/llm";
 import { billingIsMock } from "@/lib/billing";
@@ -19,13 +20,16 @@ export async function GET(
   try {
     const { workspaceId } = await context.params;
     const { workspace } = await requireWorkspaceMember(workspaceId);
+    const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
     return jsonOk({
       workspace: {
         ...serializeWorkspace(workspace),
         brandKit: parseBrandKit(workspace.brandKit),
+        limits,
       },
       llm: getLlmStatus(),
       billingMock: billingIsMock(),
+      limits,
     });
   } catch (error) {
     return jsonError(error);

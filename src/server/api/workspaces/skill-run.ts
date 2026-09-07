@@ -34,7 +34,7 @@ export async function POST(
   } catch (error) {
     if (error instanceof BudgetError) {
       return NextResponse.json(
-        { error: error.message, code: "BUDGET" },
+        { error: error.message, code: error.code },
         { status: error.status },
       );
     }

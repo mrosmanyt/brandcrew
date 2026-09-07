@@ -6,6 +6,7 @@ import { SetupBanner } from "@/components/desk/setup-banner";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
+import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { getLlmStatus } from "@/lib/llm";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
@@ -43,6 +44,7 @@ export default async function WorkspaceLayout({
   if (!member) redirect("/desk");
 
   const workspaces = (await listUserWorkspaces(user.id)).map(serializeWorkspace);
+  const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
   const agentStatus: Record<string, string> = {
     ...employeeStatusFromJobs(member.workspace.jobs),
   };
@@ -69,7 +71,11 @@ export default async function WorkspaceLayout({
       </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <SetupBanner />
-        <DeskHeader workspace={serializeWorkspace(member.workspace)} llm={getLlmStatus()} />
+        <DeskHeader
+          workspace={serializeWorkspace(member.workspace)}
+          llm={getLlmStatus()}
+          limits={limits}
+        />
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </div>
     </div>

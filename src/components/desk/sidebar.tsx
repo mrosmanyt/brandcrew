@@ -19,6 +19,8 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/brand/logo";
+import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +32,7 @@ import {
 } from "@/components/ui/sheet";
 import { DEFAULT_AGENT_NAME, displayAgentName } from "@/lib/constants";
 import type { AgentDTO } from "@/lib/job-types";
+import type { ProposedAgent } from "@/lib/team-launch";
 import type { WorkspaceDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -70,8 +73,33 @@ function NavBody({
   const [creating, setCreating] = useState(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [name, setName] = useState("");
+  const [polledStatus, setPolledStatus] = useState<Record<string, string> | null>(
+    null,
+  );
+  const liveStatus = polledStatus ?? agentStatus;
+  const [launchOpen, setLaunchOpen] = useState(false);
+  const [launchProposal, setLaunchProposal] = useState<ProposedAgent[]>([]);
+  const [launchBusy, setLaunchBusy] = useState(false);
   const selectedAgentId = searchParams.get("agentId");
   const onMission = pathname === `/desk/${workspace.id}`;
+  useEffect(() => {
+    let cancelled = false;
+    async function pull() {
+      const res = await fetch(`/api/workspaces/${workspace.id}/jobs`);
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      if (data.employeeStatus && typeof data.employeeStatus === "object") {
+        setPolledStatus(data.employeeStatus as Record<string, string>);
+      }
+    }
+    const timer = setInterval(() => {
+      void pull();
+    }, 1600);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [workspace.id]);
 
   async function createWorkspace(e: React.FormEvent) {
     e.preventDefault();
@@ -105,6 +133,31 @@ function NavBody({
       return;
     }
     router.push(`/desk/${workspace.id}?agentId=${data.agent.id}`);
+    router.refresh();
+  }
+
+  async function openLaunch() {
+    const res = await fetch(`/api/workspaces/${workspace.id}/agents/launch`);
+    const data = await res.json();
+    setLaunchProposal(data.proposal ?? []);
+    setLaunchOpen(true);
+  }
+
+  async function approveLaunch(rows: ProposedAgent[], startOnboardingJobs: boolean) {
+    setLaunchBusy(true);
+    const res = await fetch(`/api/workspaces/${workspace.id}/agents/launch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agents: rows, startOnboardingJobs }),
+    });
+    const data = await res.json();
+    setLaunchBusy(false);
+    if (!res.ok) {
+      toast.error(data.error || "Could not create the team.");
+      return;
+    }
+    setLaunchOpen(false);
+    toast.success(`Created ${data.created?.length ?? 0} agents.`);
     router.refresh();
   }
 
@@ -171,14 +224,24 @@ function NavBody({
           {!collapsed ? (
             <div className="mb-1 flex items-center justify-between px-2">
               <p className="text-xs text-sidebar-foreground/45">Agents</p>
-              <button
-                type="button"
-                onClick={createAgent}
-                disabled={creatingAgent}
-                className="text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
-              >
-                New
-              </button>
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={createAgent}
+                  disabled={creatingAgent}
+                  className="text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                >
+                  New
+                </button>
+                <button
+                  type="button"
+                  onClick={openLaunch}
+                  className="text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                  title="Launch team"
+                >
+                  Team
+                </button>
+              </span>
             </div>
           ) : (
             <button
@@ -203,7 +266,9 @@ function NavBody({
                   onMission &&
                   (selectedAgentId === agent.id ||
                     (!selectedAgentId && agent.id === agents[0]?.id));
-                const initial = displayAgentName(agent.name).slice(0, 1).toUpperCase();
+                const status = liveStatus[agent.id];
+                const working =
+                  status === "working" || status === "running" || status === "queued";
                 return (
                   <li key={agent.id}>
                     <Link
@@ -217,16 +282,13 @@ function NavBody({
                           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "grid size-6 shrink-0 place-items-center rounded-md text-[10px] font-medium",
-                          active
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "bg-sidebar-accent text-sidebar-foreground",
-                        )}
-                      >
-                        {initial}
-                      </span>
+                      <AgentAvatar
+                        id={agent.id}
+                        name={agent.name}
+                        role={agent.role}
+                        working={working}
+                        size="sm"
+                      />
                       {!collapsed ? (
                         <>
                           <span className="min-w-0 flex-1">
@@ -239,7 +301,7 @@ function NavBody({
                               </span>
                             ) : null}
                           </span>
-                          <StatusDot status={agentStatus[agent.id]} />
+                          <StatusDot status={status} />
                         </>
                       ) : null}
                     </Link>
@@ -316,6 +378,13 @@ function NavBody({
       </nav>
 
       <div className="p-1.5">
+        <TeamLaunchDialog
+          open={launchOpen}
+          onOpenChange={setLaunchOpen}
+          proposal={launchProposal}
+          busy={launchBusy}
+          onApprove={approveLaunch}
+        />
         <button
           type="button"
           onClick={onLogout}

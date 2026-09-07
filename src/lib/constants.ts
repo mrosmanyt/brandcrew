@@ -14,6 +14,8 @@ export const PLANS = {
     price: 0,
     seats: 1,
     tokenBudget: 50_000,
+    jobsPerHour: 8,
+    maxConcurrentJobs: 1,
   },
   starter: {
     id: "starter",
@@ -21,6 +23,8 @@ export const PLANS = {
     price: 79,
     seats: 2,
     tokenBudget: 200_000,
+    jobsPerHour: 30,
+    maxConcurrentJobs: 3,
   },
   growth: {
     id: "growth",
@@ -28,6 +32,8 @@ export const PLANS = {
     price: 199,
     seats: 5,
     tokenBudget: 500_000,
+    jobsPerHour: 80,
+    maxConcurrentJobs: 6,
   },
 } as const;
 
@@ -42,6 +48,7 @@ export const AGENT_ROLES = [
   "sales",
   "ads",
   "ops",
+  "builder",
 ] as const;
 
 export type AgentRole = (typeof AGENT_ROLES)[number];
@@ -54,6 +61,8 @@ export const GENERATE_ACTIONS = [
   "competitor_scan",
   "outreach_from_research",
   "ad_angles_from_url",
+  "build_website",
+  "build_app",
   "regenerate",
 ] as const;
 
@@ -72,6 +81,10 @@ export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
     "Write an outreach pack of 5 LinkedIn DMs from the latest research artifact. Do not send.",
   ad_angles_from_url:
     "Browse the landing page in this message (or the Brand Kit website) and write 5 ad angles. No media buy.",
+  build_website:
+    "Build a one-page branded website from the Brand Kit. Return a complete HTML document. Do not publish.",
+  build_app:
+    "Build a small branded web app from the Brand Kit. Return a complete HTML document the desk can preview. Do not require Replit or any login.",
   regenerate: "Regenerate the last artifact with the same brief.",
 };
 
@@ -128,9 +141,26 @@ export function jobChipsForHint(hint: AgentRole): JobChip[] {
             "Browse the company website and write the ICP / offer / pillars brief from what the page actually says.",
         },
       ];
+    case "builder":
+      return [
+        { action: "build_website", label: "Build website" },
+        { action: "build_app", label: "Build app" },
+      ];
     default:
       return [{ action: "default", label: "Give a job" }];
   }
+}
+
+/** Role-label chips so Website vs App builders get the matching one-click. */
+export function jobChipsForRole(role: string): JobChip[] {
+  const text = role.toLowerCase();
+  if (/website|web builder|site builder/.test(text)) {
+    return [{ action: "build_website", label: "Build website" }];
+  }
+  if (/^app$|app builder/.test(text) && !/whatsapp/.test(text)) {
+    return [{ action: "build_app", label: "Build app" }];
+  }
+  return jobChipsForHint(playbookHintFromRole(role));
 }
 
 const MARKETPLACE_ROLE_GAPS: { hint: AgentRole; label: string }[] = [
@@ -138,6 +168,7 @@ const MARKETPLACE_ROLE_GAPS: { hint: AgentRole; label: string }[] = [
   { hint: "sales", label: "Add Sales bot from Marketplace" },
   { hint: "ads", label: "Add Ads bot from Marketplace" },
   { hint: "writer", label: "Add Content bot from Marketplace" },
+  { hint: "builder", label: "Add Website Builder from Marketplace" },
 ];
 
 export function marketplaceBotsHref(workspaceId: string) {
@@ -161,7 +192,8 @@ export function missingRoleMarketplaceChips(
   }));
 }
 
-export const HOURLY_GENERATION_CAP = 20;
+/** Demo-plan default. Paid plans use `PLANS[plan].jobsPerHour`. */
+export const HOURLY_GENERATION_CAP = PLANS.demo.jobsPerHour;
 
 export const TASK_COLUMNS = [
   { id: "approve", label: "Approve" },
@@ -182,6 +214,10 @@ export function conversationKeyForAgent(agentId: string) {
 
 export function playbookHintFromRole(role: string): AgentRole {
   const text = role.toLowerCase();
+  if (/website|web builder|site builder/.test(text)) return "builder";
+  if ((/^app$|app builder/.test(text) || /\bapp\b/.test(text)) && !/whatsapp/.test(text)) {
+    return "builder";
+  }
   if (/research/.test(text)) return "researcher";
   if (/sales/.test(text)) return "sales";
   if (/ads|paid/.test(text)) return "ads";

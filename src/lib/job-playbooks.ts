@@ -256,6 +256,46 @@ export function strategyFromSitePlaybook(url?: string): JobPlaybook {
   };
 }
 
+export function websiteBuilderPlaybook(): JobPlaybook {
+  return {
+    key: "website_builder",
+    title: "Website builder",
+    agentRole: "builder",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "write_artifact",
+        "Write the website HTML",
+        { kind: "website" },
+        "site",
+      ),
+      approveStep(
+        "Approve this website before it leaves the desk. Preview is local — nothing is published.",
+      ),
+    ],
+  };
+}
+
+export function appBuilderPlaybook(): JobPlaybook {
+  return {
+    key: "app_builder",
+    title: "App builder",
+    agentRole: "builder",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "write_artifact",
+        "Write the app HTML",
+        { kind: "app" },
+        "app",
+      ),
+      approveStep(
+        "Approve this app preview. It runs in the desk iframe — no Replit login required.",
+      ),
+    ],
+  };
+}
+
 export function genericPlaybook(role: AgentRole, title?: string, url?: string): JobPlaybook {
   const browse = url
     ? [
@@ -428,6 +468,8 @@ export function playbookFromKey(
   if (key === "gmail_draft") return gmailDraftPlaybook();
   if (key === "slack_channels") return slackChannelsPlaybook();
   if (key === "slack_post") return slackPostPlaybook();
+  if (key === "website_builder") return websiteBuilderPlaybook();
+  if (key === "app_builder") return appBuilderPlaybook();
   return genericPlaybook(role, undefined, url);
 }
 
@@ -442,6 +484,8 @@ export function inferPlaybookKey(
   if (action === "competitor_scan") return "competitor_scan";
   if (action === "outreach_from_research") return "outreach_from_research";
   if (action === "ad_angles_from_url") return "ad_angles_from_url";
+  if (action === "build_website") return "website_builder";
+  if (action === "build_app") return "app_builder";
   const text = message.toLowerCase();
   const urls = extractUrls(message);
   const hint = AGENT_ROLES.includes(role as AgentRole)
@@ -506,6 +550,23 @@ export function inferPlaybookKey(
     return "writer_from_url";
   }
   if (hint === "writer" && /linkedin|posts?/.test(text)) return "linkedin_week";
+  if (
+    /build (an? |the )?(app|web app|mini app)|app builder/.test(text) &&
+    !/website|landing page|web site/.test(text)
+  ) {
+    return "app_builder";
+  }
+  if (
+    /build (an? |the )?(website|landing|site)|website builder|one-page site/.test(
+      text,
+    )
+  ) {
+    return "website_builder";
+  }
+  if (hint === "builder") {
+    if (/^app$|app builder/.test(String(role).toLowerCase())) return "app_builder";
+    return "website_builder";
+  }
   return "generic";
 }
 

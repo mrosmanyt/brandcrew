@@ -269,6 +269,66 @@
   }
 }
 
+.agent-avatar-svg {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+.agent-avatar.is-idle .agent-avatar-svg {
+  animation: agent-idle 4.8s ease-in-out infinite;
+}
+.agent-avatar.is-working .agent-avatar-svg {
+  animation: agent-work 0.9s ease-in-out infinite;
+}
+.agent-avatar.is-working .agent-avatar-eyes {
+  animation: agent-glance 1.6s ease-in-out infinite;
+}
+.agent-avatar.is-idle .agent-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: agent-blink 5.4s ease-in-out infinite;
+}
+
+@keyframes agent-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+@keyframes agent-work {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(3deg);
+  }
+}
+@keyframes agent-glance {
+  0%,
+  40%,
+  100% {
+    transform: translateX(0);
+  }
+  55% {
+    transform: translateX(1.5px);
+  }
+  70% {
+    transform: translateX(-1.5px);
+  }
+}
+@keyframes agent-blink {
+  0%,
+  86%,
+  100% {
+    transform: scaleY(1);
+  }
+  90% {
+    transform: scaleY(0.12);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marketing-canvas .mkt-hero-kicker,
   .marketing-canvas .mkt-hero-title,
@@ -280,5 +340,11 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .agent-avatar.is-idle .agent-avatar-svg,
+  .agent-avatar.is-working .agent-avatar-svg,
+  .agent-avatar.is-working .agent-avatar-eyes,
+  .agent-avatar.is-idle .agent-eye {
+    animation: none;
   }
 }

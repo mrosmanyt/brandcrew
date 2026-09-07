@@ -67,6 +67,17 @@ export function stringifyBrandKit(kit: BrandKit): string {
   return JSON.stringify(kit);
 }
 
+export function brandLabel(kit: BrandKit) {
+  const host = (kit.website || "")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .trim();
+  if (host && !/^example\./i.test(host) && host !== "localhost") return host;
+  const offer = kit.offer.trim().split(/[.!]/)[0]?.trim() || "";
+  if (offer && offer.length <= 48) return offer;
+  return "Studio";
+}
+
 export function brandKitBrief(kit: BrandKit): string {
   const samples = kit.samplePosts.filter(Boolean).join("\n- ");
   const banned = kit.forbiddenWords.filter(Boolean).join(", ");

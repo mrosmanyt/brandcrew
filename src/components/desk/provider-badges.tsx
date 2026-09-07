@@ -10,6 +10,7 @@ export function ProviderBadges({ llm }: { llm: LlmStatus }) {
       {llm.openai ? <Badge variant="outline">OpenAI</Badge> : null}
       {llm.anthropic ? <Badge variant="outline">Anthropic</Badge> : null}
       {llm.gemini ? <Badge variant="outline">Gemini</Badge> : null}
+      {llm.xai ? <Badge variant="outline">xAI</Badge> : null}
     </span>
   );
 }
@@ -18,5 +19,6 @@ export function providerLabel(provider?: string) {
   if (provider === "openai") return "OpenAI";
   if (provider === "anthropic") return "Anthropic";
   if (provider === "gemini") return "Gemini";
+  if (provider === "xai") return "xAI";
   return "Demo";
 }

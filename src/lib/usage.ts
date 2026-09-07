@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/db";
-import { HOURLY_GENERATION_CAP } from "@/lib/constants";
+import { getWorkspaceLimits, limitsForPlan } from "@/lib/limits";
 
 export class BudgetError extends Error {
   status = 429;
-  constructor(message: string) {
+  code = "BUDGET";
+  constructor(message: string, status = 429, code = "BUDGET") {
     super(message);
     this.name = "BudgetError";
+    this.status = status;
+    this.code = code;
   }
 }
 
@@ -16,19 +19,36 @@ export async function assertWorkspaceBudget(workspaceId: string) {
   if (!workspace) {
     throw new BudgetError("Workspace not found.");
   }
-  if (workspace.tokenUsed >= workspace.tokenBudget) {
+
+  const caps = limitsForPlan(workspace.plan);
+  const tokenBudget = workspace.tokenBudget || caps.tokenBudget;
+  if (workspace.tokenUsed >= tokenBudget) {
     throw new BudgetError(
-      "This workspace has reached its generation budget. Upgrade to Starter or Growth to continue.",
+      caps.paid
+        ? "This workspace has reached its generation budget. Wait for the next cycle or upgrade."
+        : "This workspace has reached its free generation budget. Upgrade to Starter or Growth to continue.",
+      402,
+      "BUDGET",
     );
   }
 
-  const since = new Date(Date.now() - 60 * 60 * 1000);
-  const recent = await prisma.usageEvent.count({
-    where: { workspaceId, createdAt: { gte: since } },
-  });
-  if (recent >= HOURLY_GENERATION_CAP) {
+  const limits = await getWorkspaceLimits(workspaceId);
+  if (limits.jobsThisHour >= limits.jobsPerHour) {
     throw new BudgetError(
-      "This workspace hit the hourly generation cap. Wait a bit, then try again.",
+      `${caps.paid ? caps.plan : "Free"} plan: ${limits.jobsPerHour} jobs/hour used. Wait a bit${
+        caps.paid ? "" : ", or upgrade"
+      } and try again.`,
+      429,
+      "RATE_LIMIT",
+    );
+  }
+  if (limits.concurrentJobs >= limits.maxConcurrentJobs) {
+    throw new BudgetError(
+      `${caps.paid ? caps.plan : "Free"} plan: ${limits.maxConcurrentJobs} concurrent job${
+        limits.maxConcurrentJobs === 1 ? "" : "s"
+      } already running. Wait for one to finish.`,
+      429,
+      "RATE_LIMIT",
     );
   }
 

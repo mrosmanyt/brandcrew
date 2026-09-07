@@ -27,6 +27,8 @@ import {
   gmailDraftPlaybook,
   gmailInboxPlaybook,
   slackPostPlaybook,
+  websiteBuilderPlaybook,
+  appBuilderPlaybook,
 } from "../src/lib/job-playbooks";
 import { slackPostAllowed } from "../src/lib/slack";
 import { resolveRunOutput } from "../src/lib/live-output";
@@ -93,7 +95,17 @@ assert.equal(inferPlaybookKey("ads", "ad angles from the landing page"), "ad_ang
 assert.equal(inferPlaybookKey("ops", "list recent gmail"), "gmail_inbox");
 assert.equal(inferPlaybookKey("sales", "create a gmail draft to alex@example.com"), "gmail_draft");
 assert.equal(inferPlaybookKey("ops", "post this to slack"), "slack_post");
+assert.equal(inferPlaybookKey("Website", "Build a website"), "website_builder");
+assert.equal(inferPlaybookKey("App", "Build an app"), "app_builder");
 console.log("ok: playbook inference");
+
+const website = websiteBuilderPlaybook();
+assert.equal(website.agentRole, "builder");
+assert.equal(website.steps.some((step) => step.args.kind === "website"), true);
+assert.equal(website.steps.at(-1)?.tool, "ask_user");
+const appJob = appBuilderPlaybook();
+assert.equal(appJob.steps.some((step) => step.args.kind === "app"), true);
+console.log("ok: website/app builder playbooks");
 
 const gmailInbox = gmailInboxPlaybook();
 assert.equal(gmailInbox.steps.some((step) => step.tool === "gmail_list_recent"), true);

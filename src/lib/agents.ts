@@ -1,16 +1,19 @@
 import type { AgentRole, GenerateAction } from "@/lib/constants";
 import { displayAgentName } from "@/lib/constants";
-import { brandKitBrief, type BrandKit } from "@/lib/brand-kit";
+import { brandKitBrief, brandLabel, type BrandKit } from "@/lib/brand-kit";
 import {
   demoAdAnglesFromUrl,
+  demoAppHtml,
   demoArtifact,
   demoCompetitorMarkdown,
   demoGenerateWeek,
   demoOutreachFromResearch,
   demoResearchPack,
   demoSalesPack,
+  demoWebsiteHtml,
 } from "@/lib/demo";
-import { llm, type TaskMode } from "@/lib/llm";
+import { generateBuilderArtifact } from "@/lib/builders";
+import { llm, type LlmJobKind, type TaskMode } from "@/lib/llm";
 import { resolveRunOutput } from "@/lib/live-output";
 import { parseLlmJson } from "@/lib/job-serialize";
 import type { GeneratedArtifact } from "@/lib/agents-types";
@@ -25,6 +28,7 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
   sales: `Return outbound scripts. No CRM fields. Do not send.`,
   ads: `Return ad angles with primary text. State that CINEM Pro does not buy media.`,
   ops: `Return a short ops plan and a tasks array of items with status approve|schedule|done.`,
+  builder: `Return a complete HTML document for a website or small app. No external scripts. Do not publish.`,
 };
 
 export function agentMode(role: AgentRole, action: GenerateAction = "default"): TaskMode {
@@ -34,7 +38,9 @@ export function agentMode(role: AgentRole, action: GenerateAction = "default"): 
     action === "research_pack" ||
     action === "competitor_scan" ||
     action === "outreach_from_research" ||
-    action === "ad_angles_from_url"
+    action === "ad_angles_from_url" ||
+    action === "build_website" ||
+    action === "build_app"
   ) {
     return "draft";
   }
@@ -59,6 +65,12 @@ function actionInstructions(action: GenerateAction, role: AgentRole) {
   }
   if (action === "ad_angles_from_url") {
     return `Write 5 ad angles from the landing page. Creative only — no media buy.`;
+  }
+  if (action === "build_website") {
+    return `Return a complete HTML landing page in Brand Kit voice. CSS in a style tag. Do not publish.`;
+  }
+  if (action === "build_app") {
+    return `Return a complete HTML mini-app. No Replit. No external login. CSS in a style tag.`;
   }
   return ROLE_INSTRUCTIONS[role];
 }
@@ -107,6 +119,22 @@ function fallbackArtifact(
   }
   if (action === "outreach_from_research") return demoOutreachFromResearch(kit);
   if (action === "ad_angles_from_url") return demoAdAnglesFromUrl(kit);
+  if (action === "build_app") {
+    return {
+      type: "app",
+      title: `${brandLabel(kit)} mini app`,
+      summary: "Offline demo app HTML.",
+      content: demoAppHtml(kit),
+    };
+  }
+  if (action === "build_website" || role === "builder") {
+    return {
+      type: "website",
+      title: `${brandLabel(kit)} site`,
+      summary: "Offline demo landing page.",
+      content: demoWebsiteHtml(kit),
+    };
+  }
   return demoArtifact(role, kit);
 }
 
@@ -123,7 +151,9 @@ function parseLiveArtifact(
           ? "ad_angles"
           : role === "ops"
             ? "ops_board"
-            : "draft";
+            : role === "builder"
+              ? "website"
+              : "draft";
   const parsed = parseLlmJson(text);
   if (parsed) {
     const content = String(parsed.content || "").trim();
@@ -167,12 +197,37 @@ export async function generateAgentArtifact(input: {
 }> {
   const action = input.action ?? "default";
   const mode = agentMode(input.role, action);
-  const status = llm.status();
+  const kind = jobKindFor(input.role, action);
   const name = displayAgentName(input.agentName);
 
-  if (!status.configured) {
+  if (action === "build_website" || action === "build_app") {
+    const built = await generateBuilderArtifact({
+      kind: action === "build_app" ? "app" : "website",
+      kit: input.kit,
+      prompt: input.userMessage,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    return {
+      artifact: {
+        type: built.type,
+        title: built.title,
+        summary: built.summary,
+        content: built.content,
+      },
+      assistantText: built.summary
+        ? `${built.summary}\n\nPreview **${built.title}** in the desk sidebar.`
+        : `Preview **${built.title}** in the desk sidebar.`,
+      tokens: built.tokens,
+      model: built.model,
+      provider: built.provider,
+      demo: built.demo,
+    };
+  }
+
+  if (!llm.isLiveFor(kind)) {
     const artifact = fallbackArtifact(input.role, input.kit, action);
-    const assistantText = `${artifact.summary}\n\n(Offline demo draft — add OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY on the server. This template is not live work.)`;
+    const assistantText = `${artifact.summary}\n\n(Offline demo draft — add OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or XAI_API_KEY on the server. This template is not live work.)`;
     return {
       artifact,
       assistantText,
@@ -185,6 +240,7 @@ export async function generateAgentArtifact(input: {
 
   const result = await llm.complete({
     mode,
+    kind,
     json: true,
     messages: [
       {
@@ -225,4 +281,19 @@ export async function generateAgentArtifact(input: {
     provider: result.provider,
     demo: false,
   };
+}
+
+export function jobKindFor(role: AgentRole, action: GenerateAction = "default"): LlmJobKind {
+  if (action === "build_website") return "website";
+  if (action === "build_app") return "apps";
+  if (
+    action === "generate_week" ||
+    action === "sales_pack" ||
+    action === "outreach_from_research"
+  ) {
+    return "posts";
+  }
+  if (role === "builder") return "website";
+  if (role === "writer" || role === "sales" || role === "ads") return "posts";
+  return "general";
 }

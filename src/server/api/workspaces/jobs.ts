@@ -7,6 +7,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
 import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { isTeamLaunchIntent } from "@/lib/team-launch";
+import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { BudgetError } from "@/lib/usage";
 
 const postSchema = z.object({
@@ -43,10 +44,12 @@ export async function GET(
       }),
     ]);
 
+    const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
     return jsonOk({
       jobs: jobs.map(serializeJob),
       skills: skills.map(serializeSkill),
       employeeStatus: employeeStatusFromJobs(jobs),
+      limits,
     });
   } catch (error) {
     return jsonError(error);
@@ -90,17 +93,20 @@ export async function POST(
     });
 
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
+    const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
     return jsonOk({
       ...result,
       usage: {
-        tokenUsed: workspace?.tokenUsed ?? 0,
-        tokenBudget: workspace?.tokenBudget ?? 0,
+        ...limits,
+        tokenUsed: workspace?.tokenUsed ?? limits.tokenUsed,
+        tokenBudget: workspace?.tokenBudget ?? limits.tokenBudget,
       },
+      limits,
     });
   } catch (error) {
     if (error instanceof BudgetError) {
       return NextResponse.json(
-        { error: error.message, code: "BUDGET" },
+        { error: error.message, code: error.code },
         { status: error.status },
       );
     }
