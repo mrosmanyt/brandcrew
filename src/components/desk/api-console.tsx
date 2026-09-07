@@ -283,6 +283,7 @@ export function ApiConsole({ workspaceId }: { workspaceId: string }) {
               <label className="grid gap-1 text-xs text-muted-foreground">
                 Endpoint
                 <select
+                  aria-label="Endpoint"
                   className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground"
                   value={endpoint}
                   onChange={(e) => setEndpoint(e.target.value)}

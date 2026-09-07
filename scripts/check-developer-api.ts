@@ -58,20 +58,27 @@ for (const key of providerLeak) {
 }
 console.log("ok: no provider key names on API key DTO");
 
-const missing = jsonError(new ApiAuthError("Provide Authorization: Bearer cinem_live_…"));
-assert.equal(missing.status, 401);
-const missingBody = await missing.json();
-assert.equal(missingBody.code, "unauthorized");
-assert.ok(typeof missingBody.error === "string");
-assert.equal(missing.headers.get("WWW-Authenticate"), "Bearer");
-console.log("ok: JSON 401 includes code + WWW-Authenticate");
+async function main() {
+  const missing = jsonError(new ApiAuthError("Provide Authorization: Bearer cinem_live_…"));
+  assert.equal(missing.status, 401);
+  const missingBody = await missing.json();
+  assert.equal(missingBody.code, "unauthorized");
+  assert.ok(typeof missingBody.error === "string");
+  assert.equal(missing.headers.get("WWW-Authenticate"), "Bearer");
+  console.log("ok: JSON 401 includes code + WWW-Authenticate");
 
-const req = new Request("http://127.0.0.1:43180/api/v1");
-assert.equal(readBearerToken(req), "");
-const authed = new Request("http://127.0.0.1:43180/api/v1", {
-  headers: { Authorization: `Bearer ${generated.token}` },
+  const req = new Request("http://127.0.0.1:43180/api/v1");
+  assert.equal(readBearerToken(req), "");
+  const authed = new Request("http://127.0.0.1:43180/api/v1", {
+    headers: { Authorization: `Bearer ${generated.token}` },
+  });
+  assert.equal(readBearerToken(authed), generated.token);
+  console.log("ok: Bearer parsing");
+
+  console.log("Developer API checks passed.");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-assert.equal(readBearerToken(authed), generated.token);
-console.log("ok: Bearer parsing");
-
-console.log("Developer API checks passed.");
