@@ -40,6 +40,7 @@ function LoginForm() {
     <form onSubmit={onSubmit} className="space-y-5">
       <Field label="Email">
         <Input
+          className="h-10 bg-white"
           type="email"
           autoComplete="email"
           value={email}
@@ -49,6 +50,7 @@ function LoginForm() {
       </Field>
       <Field label="Password">
         <Input
+          className="h-10 bg-white"
           type="password"
           autoComplete="current-password"
           value={password}
@@ -82,7 +84,7 @@ function Field({
 export function LoginScreen() {
   return (
     <MarketingShell>
-      <div className="flex min-h-full flex-col">
+      <div className="flex flex-1 flex-col">
         <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
           <Link href="/">
             <BrandMark />

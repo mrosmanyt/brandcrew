@@ -104,7 +104,8 @@
   --accent-foreground: #171717;
   --destructive: #b42318;
   --border: #e4e0d8;
-  --input: #e4e0d8;
+  --input: #d6d1c7;
+  --border: #e4e0d8;
   --ring: #171717;
   --sidebar: #f7f5f2;
   --sidebar-foreground: #171717;
@@ -114,6 +115,11 @@
   --sidebar-accent-foreground: #171717;
   --sidebar-border: #e4e0d8;
   color-scheme: light;
+}
+
+.marketing-canvas [data-slot="input"] {
+  background: #fff;
+  border-color: #d6d1c7;
 }
 
 @layer base {

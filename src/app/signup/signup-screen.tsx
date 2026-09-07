@@ -38,7 +38,7 @@ export function SignupScreen() {
 
   return (
     <MarketingShell>
-      <div className="flex min-h-full flex-col">
+      <div className="flex flex-1 flex-col">
         <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
           <Link href="/">
             <BrandMark />
@@ -57,11 +57,17 @@ export function SignupScreen() {
             <form onSubmit={onSubmit} className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label>Your name</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input
+                    className="h-10 bg-white"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input
+                  className="h-10 bg-white"
                   type="email"
                   autoComplete="email"
                   value={email}
@@ -72,6 +78,7 @@ export function SignupScreen() {
               <div className="space-y-2">
                 <Label>Password</Label>
                 <Input
+                  className="h-10 bg-white"
                   type="password"
                   autoComplete="new-password"
                   value={password}

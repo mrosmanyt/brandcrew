@@ -95,6 +95,7 @@ export function MissionControl({
   const feedRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const urlAgentId = searchParams.get("agentId") || initialAgentId;
+  const agentRosterKey = initialAgents.map((agent) => agent.id).join(",");
 
   const selected = agents.find((agent) => agent.id === selectedId) ?? null;
 
@@ -172,6 +173,10 @@ export function MissionControl({
     const node = chatRef.current;
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages.length]);
+
+  useEffect(() => {
+    setAgents(initialAgents);
+  }, [agentRosterKey]);
 
   useEffect(() => {
     if (
