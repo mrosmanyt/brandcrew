@@ -32,6 +32,7 @@ model Workspace {
   tokenUsed     Int               @default(0)
   tokenBudget   Int               @default(15000)
   brandKit      String            @default("{}")
+  modelRouting  String            @default("auto")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   members       WorkspaceMember[]

@@ -13,6 +13,7 @@ import { workspaceOnboarding } from "@/lib/onboarding";
 const patchSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   onboardingDismissed: z.boolean().optional(),
+  modelRouting: z.enum(["auto", "gemini", "anthropic", "openai"]).optional(),
 });
 
 export async function GET(
@@ -64,10 +65,13 @@ export async function PATCH(
         data: { onboardingDismissed: body.onboardingDismissed },
       });
     }
-    if (body.name?.trim()) {
+    if (body.name?.trim() || body.modelRouting) {
       const workspace = await prisma.workspace.update({
         where: { id: workspaceId },
-        data: { name: body.name.trim() },
+        data: {
+          ...(body.name?.trim() ? { name: body.name.trim() } : {}),
+          ...(body.modelRouting ? { modelRouting: body.modelRouting } : {}),
+        },
       });
       return jsonOk({ workspace: serializeWorkspace(workspace) });
     }

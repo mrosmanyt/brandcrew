@@ -9,6 +9,7 @@ import {
   createXaiClient,
   getLlmStatus,
   pickRoute,
+  runWithRoutingPreference,
 } from "../src/lib/llm";
 
 const KEYS = [
@@ -106,6 +107,11 @@ try {
   assert.equal(pickRoute("draft", "website")?.provider, "gemini");
   assert.equal(pickRoute("draft", "coding")?.provider, "anthropic");
   assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
+  assert.equal(pickRoute("draft", "general", "openai")?.provider, "openai");
+  assert.equal(
+    runWithRoutingPreference("anthropic", () => pickRoute("draft")?.provider),
+    "anthropic",
+  );
   console.log("ok: all three → Gemini Flash drafts, Claude Sonnet finals");
 
   setKeys({

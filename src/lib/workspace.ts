@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { DEMO_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
+import { normalizeModelRouting } from "@/lib/llm-routing";
 
 function slugify(name: string) {
   const base = name
@@ -71,6 +72,7 @@ export function serializeWorkspace(workspace: {
   tokenBudget: number;
   brandKit: string;
   createdAt: Date;
+  modelRouting?: string | null;
 }) {
   return {
     id: workspace.id,
@@ -79,6 +81,7 @@ export function serializeWorkspace(workspace: {
     plan: workspace.plan,
     tokenUsed: workspace.tokenUsed,
     tokenBudget: workspace.tokenBudget,
+    modelRouting: normalizeModelRouting(workspace.modelRouting),
     createdAt: workspace.createdAt.toISOString(),
   };
 }

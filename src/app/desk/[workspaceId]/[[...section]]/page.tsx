@@ -16,6 +16,8 @@ import { parseBrandKit } from "@/lib/brand-kit";
 import { prisma } from "@/lib/db";
 import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
+import { getLlmStatus } from "@/lib/llm";
+import { normalizeModelRouting } from "@/lib/llm-routing";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
 async function MissionControlPage({
@@ -99,6 +101,13 @@ async function MissionControlPage({
             0,
           ),
         })}
+        initialLlm={getLlmStatus()}
+        billingMock={billingIsMock()}
+        initialModelRouting={normalizeModelRouting(
+          "modelRouting" in workspace
+            ? String((workspace as { modelRouting?: string }).modelRouting ?? "")
+            : "",
+        )}
       />
     </Suspense>
   );

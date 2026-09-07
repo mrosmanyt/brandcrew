@@ -8,7 +8,7 @@ import { normalizePlanId } from "@/lib/limits";
 
 const schema = z.object({
   workspaceId: z.string().min(1),
-  plan: z.enum(["starter", "pro", "growth", "ultra"]),
+  plan: z.enum(["demo", "starter", "pro", "growth", "ultra"]),
 });
 
 export async function POST(request: Request) {
@@ -16,6 +16,29 @@ export async function POST(request: Request) {
     const body = schema.parse(await request.json());
     const { workspace } = await requireWorkspaceMember(body.workspaceId);
     const plan = normalizePlanId(body.plan);
+    if (plan === "demo") {
+      if (!billingIsMock()) {
+        return NextResponse.json(
+          {
+            error:
+              "Live subscriptions cannot switch to Demo from the desk. Open Plans.",
+          },
+          { status: 400 },
+        );
+      }
+      const updated = await prisma.workspace.update({
+        where: { id: workspace.id },
+        data: {
+          plan: "demo",
+          tokenBudget: planBudget("demo"),
+        },
+      });
+      return jsonOk({
+        mock: true,
+        plan: updated.plan,
+        tokenBudget: updated.tokenBudget,
+      });
+    }
     if (plan !== "starter" && plan !== "pro" && plan !== "ultra") {
       return NextResponse.json({ error: "Choose Starter, Pro, or Ultra." }, { status: 400 });
     }

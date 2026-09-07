@@ -240,6 +240,13 @@ export function SettingsHub({
             Rename
           </Button>
         </form>
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
+          Use server API keys — set{" "}
+          <code className="rounded bg-muted px-1 py-0.5">OPENAI_API_KEY</code>,{" "}
+          <code className="rounded bg-muted px-1 py-0.5">ANTHROPIC_API_KEY</code>, or{" "}
+          <code className="rounded bg-muted px-1 py-0.5">GEMINI_API_KEY</code>{" "}
+          on the host. This desk does not accept a personal key in the browser.
+        </p>
       </section>
 
       <section className="mt-6">

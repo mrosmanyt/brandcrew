@@ -17,6 +17,7 @@ import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { BudgetStopDialog } from "@/components/desk/budget-stop";
 import { FirstRunOnboarding } from "@/components/desk/first-run-onboarding";
 import { ChatComposer } from "@/components/desk/chat-composer";
+import { JobStartingStatus } from "@/components/desk/job-starting-status";
 import {
   ChatBubble,
   ProgressCard,
@@ -31,14 +32,23 @@ import {
 import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { deskChatGlowClass, deskChatIsEmpty } from "@/lib/agent-modes";
 import { DESK_RIGHT_PANE } from "@/lib/desk-layout";
+import {
+  normalizeModelRouting,
+  type LlmRoutingPreference,
+  type LlmStatus,
+} from "@/lib/llm-routing";
+import { normalizePlanId } from "@/lib/limits";
 import {
   DEFAULT_AGENT_NAME,
   displayAgentName,
   jobChipsForRole,
   JOB_ACTION_MESSAGES,
   missingRoleMarketplaceChips,
+  PLANS,
   type GenerateAction,
+  type PlanId,
 } from "@/lib/constants";
 import type { AgentDTO, JobDTO, SkillDTO } from "@/lib/job-types";
 import { buildChatThread } from "@/lib/live-progress";
@@ -60,6 +70,9 @@ export function MissionControl({
   tokenBudget,
   initialLimits,
   initialOnboarding,
+  initialLlm,
+  billingMock,
+  initialModelRouting,
 }: {
   workspaceId: string;
   initialAgentId?: string;
@@ -72,6 +85,9 @@ export function MissionControl({
   tokenBudget: number;
   initialLimits?: LimitsDTO | null;
   initialOnboarding?: OnboardingState | null;
+  initialLlm: LlmStatus;
+  billingMock: boolean;
+  initialModelRouting?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,6 +112,11 @@ export function MissionControl({
     maxConcurrentJobs: initialLimits?.maxConcurrentJobs ?? 1,
     plan: initialLimits?.plan ?? "demo",
   });
+  const [llm, setLlm] = useState(initialLlm);
+  const [modelRouting, setModelRouting] = useState(
+    normalizeModelRouting(initialModelRouting),
+  );
+  const [billingIsMock] = useState(billingMock);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetMessage, setBudgetMessage] = useState(
     "This workspace has reached its generation budget. Upgrade to Starter ($20), Pro ($79), or Ultra ($200) to continue.",
@@ -163,6 +184,20 @@ export function MissionControl({
   const atCap = remaining <= 0;
   const jobsLeft = Math.max(0, usage.jobsPerHour - usage.jobsThisHour);
   const active = jobs.some((job) => job.status === "queued" || job.status === "running");
+  const selectedWorkingJob = selected
+    ? jobs.find(
+        (job) =>
+          job.agentId === selected.id &&
+          (job.status === "queued" || job.status === "running"),
+      )
+    : null;
+  const workingStatus: "queued" | "running" | null = selectedWorkingJob
+    ? selectedWorkingJob.status === "running"
+      ? "running"
+      : "queued"
+    : busy && selected
+      ? "queued"
+      : null;
   const roleChips = selected ? jobChipsForRole(selected.role || "") : [];
   const marketplaceChips = missingRoleMarketplaceChips(agents, workspaceId);
   const thread = selected
@@ -236,6 +271,32 @@ export function MissionControl({
       void refreshChat(selected.id);
     }
   }, [selected?.id, refreshChat]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDesk() {
+      const res = await fetch(`/api/workspaces/${workspaceId}`);
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      if (data.llm) setLlm(data.llm);
+      if (data.workspace?.modelRouting) {
+        setModelRouting(normalizeModelRouting(data.workspace.modelRouting));
+      }
+      if (data.workspace?.plan || data.limits?.plan) {
+        const nextPlan = normalizePlanId(data.limits?.plan || data.workspace.plan);
+        setUsage((prev) => ({
+          ...prev,
+          plan: nextPlan,
+          tokenBudget: data.limits?.tokenBudget ?? data.workspace?.tokenBudget ?? prev.tokenBudget,
+          tokenUsed: data.limits?.tokenUsed ?? data.workspace?.tokenUsed ?? prev.tokenUsed,
+        }));
+      }
+    }
+    void loadDesk();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   function selectAgent(id: string) {
     setSelectedId(id);
@@ -463,6 +524,10 @@ export function MissionControl({
   const latestDraft =
     [...artifacts].reverse().find((a) => a.status !== "approved") ??
     artifacts[artifacts.length - 1];
+  const chatEmpty = deskChatIsEmpty({
+    messageCount: thread.length,
+    hasDraft: Boolean(latestDraft),
+  });
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -495,8 +560,15 @@ export function MissionControl({
         />
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border lg:min-w-[18rem] lg:border-b-0">
-          <header className="shrink-0 border-b border-border px-4 py-2.5">
+        <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b border-border lg:min-w-[18rem] lg:border-b-0">
+          <div
+            aria-hidden
+            className={cn(
+              "absolute inset-x-0 bottom-0 z-0 h-[46%]",
+              deskChatGlowClass(chatEmpty),
+            )}
+          />
+          <header className="relative z-10 shrink-0 border-b border-border px-4 py-2.5">
             {selected ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -562,7 +634,7 @@ export function MissionControl({
             )}
           </header>
 
-          <div ref={chatRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={chatRef} className="relative z-10 min-h-0 flex-1 overflow-y-auto">
             <div
               className={cn(
                 "mx-auto flex min-h-full w-full max-w-3xl flex-col gap-2.5 px-4 py-3",
@@ -629,9 +701,13 @@ export function MissionControl({
                   onRegenerate={() => startJob("regenerate")}
                 />
               ) : null}
+              {workingStatus ? (
+                <JobStartingStatus status={workingStatus} className="pl-1" />
+              ) : null}
             </div>
           </div>
 
+          <div className="relative z-10">
           <ChatComposer
             workspaceId={workspaceId}
             value={input}
@@ -658,7 +734,24 @@ export function MissionControl({
               )
             }
             onRecordSkill={() => void saveSkill()}
+            plan={usage.plan}
+            billingMock={billingIsMock}
+            llm={llm}
+            modelRouting={modelRouting}
+            workingStatus={workingStatus}
+            onPlanApplied={(next) => {
+              const caps = PLANS[next.plan];
+              setUsage((prev) => ({
+                ...prev,
+                plan: next.plan,
+                tokenBudget: next.tokenBudget || caps.tokenBudget,
+                jobsPerHour: caps.jobsPerHour,
+                maxConcurrentJobs: caps.maxConcurrentJobs,
+              }));
+            }}
+            onRoutingApplied={(next: LlmRoutingPreference) => setModelRouting(next)}
           />
+          </div>
         </section>
 
         <ResizeHandle

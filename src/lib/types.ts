@@ -1,6 +1,6 @@
 import type { BrandKit } from "@/lib/brand-kit";
 import type { LimitsDTO } from "@/lib/limits";
-import type { LlmStatus } from "@/lib/llm";
+import type { LlmStatus } from "@/lib/llm-routing";
 
 export type { LimitsDTO };
 
@@ -11,6 +11,7 @@ export type WorkspaceDTO = {
   plan: string;
   tokenUsed: number;
   tokenBudget: number;
+  modelRouting?: string;
   createdAt: string;
   brandKit?: BrandKit;
   limits?: LimitsDTO;
