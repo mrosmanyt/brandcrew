@@ -6,7 +6,7 @@ The GitHub repo remains [`mrosmanyt/brandcrew`](https://github.com/mrosmanyt/bra
 
 This is a vertical slice, not a Strawberry clone: no per-agent VMs, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results. Jobs can **browse public pages** read-only (`browser_navigate` / `browser_snapshot` / `crawl_links`).
 
-The marketing site and app chrome are a **dark Cursor-style** system (tight sans, product shot, feature grid, pricing). Mission Control is **chat-first** with a dense Grok Bot–style agent list. Visual tokens live in `src/app/globals.css`.
+The public site is **Replit-simple** (warm paper, generous space, one primary CTA). Mission Control is a **Grok Bot–style** agent desk (sidebar agents, chat-first, jobs you approve). Visual tokens live in `src/app/globals.css`.
 
 ## What you can do
 

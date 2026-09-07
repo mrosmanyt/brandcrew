@@ -199,8 +199,8 @@ export function MarketplaceDesk({
     <div className="desk-page">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="page-kicker">Desk</p>
-          <h1 className="font-heading mt-1 text-2xl">Marketplace</h1>
+          <p className="page-kicker">Marketplace</p>
+          <h1 className="font-heading mt-1 text-2xl tracking-tight">Bots and plugins</h1>
         </div>
         <div className="flex rounded-lg border border-border bg-muted/40 p-0.5">
           <ToggleChip

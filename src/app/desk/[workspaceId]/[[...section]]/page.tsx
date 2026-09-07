@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { ApiConsole } from "@/components/desk/api-console";
 import { BillingPlans } from "@/components/desk/billing-plans";
@@ -68,17 +69,19 @@ async function MissionControlPage({
   }
 
   return (
-    <MissionControl
-      workspaceId={workspace.id}
-      initialAgentId={query.agentId || query.agent}
-      initialAgents={agents.map(serializeAgent)}
-      initialJobs={jobs.map(serializeJob)}
-      initialSkills={skills.map(serializeSkill)}
-      initialMessages={initialMessages}
-      initialArtifacts={initialArtifacts}
-      tokenUsed={workspace.tokenUsed}
-      tokenBudget={workspace.tokenBudget}
-    />
+    <Suspense fallback={<div className="flex-1" />}>
+      <MissionControl
+        workspaceId={workspace.id}
+        initialAgentId={query.agentId || query.agent}
+        initialAgents={agents.map(serializeAgent)}
+        initialJobs={jobs.map(serializeJob)}
+        initialSkills={skills.map(serializeSkill)}
+        initialMessages={initialMessages}
+        initialArtifacts={initialArtifacts}
+        tokenUsed={workspace.tokenUsed}
+        tokenBudget={workspace.tokenBudget}
+      />
+    </Suspense>
   );
 }
 
@@ -95,9 +98,9 @@ async function BillingPage({
   if (!workspace) redirect("/desk");
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-5 py-8">
+    <div className="mx-auto w-full max-w-3xl px-6 py-10">
       <p className="page-kicker">Billing</p>
-      <h1 className="font-heading mt-1 text-2xl">Plans</h1>
+      <h1 className="font-heading mt-1 text-2xl tracking-tight">Plans</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Starter is $79/month for 2 seats. Growth is $199/month for 5 seats.
         Token budgets rise with the plan. There is no self-serve model key
@@ -132,7 +135,7 @@ async function DevelopersPage({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="desk-page max-w-5xl">
       <p className="page-kicker">Developers</p>
-      <h1 className="font-heading mt-1 text-2xl">API Console</h1>
+      <h1 className="font-heading mt-1 text-2xl tracking-tight">API Console</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
         Mint a workspace key and call CINEM Pro over HTTPS. Bearer tokens never
         include model provider secrets. Jobs use the live runtime — Slack/Gmail
@@ -154,9 +157,9 @@ async function BrandKitPage({ workspaceId }: { workspaceId: string }) {
   if (!workspace) redirect("/desk");
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-5 py-8">
-      <p className="page-kicker">Shared memory</p>
-      <h1 className="font-heading mt-1 text-2xl">Brand Kit</h1>
+    <div className="mx-auto w-full max-w-2xl px-6 py-10">
+      <p className="page-kicker">Brand Kit</p>
+      <h1 className="font-heading mt-1 text-2xl tracking-tight">Brand Kit</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Stored as JSON on this workspace. Save, then generate — Writer, Sales,
         and the rest will use this kit immediately. There is no per-agent memory
@@ -198,9 +201,9 @@ export default async function WorkspaceSectionPage({
   const head = parts[0];
   if (head === "calendar") {
     return (
-      <div className="mx-auto w-full max-w-3xl px-5 py-8">
-        <p className="page-kicker">Distributor</p>
-        <h1 className="font-heading mt-1 text-2xl">Content calendar</h1>
+      <div className="mx-auto w-full max-w-3xl px-6 py-10">
+        <p className="page-kicker">Calendar</p>
+        <h1 className="font-heading mt-1 text-2xl tracking-tight">Content calendar</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           A 30-day plan you can export as Markdown and paste into Docs. CINEM Pro
           does not auto-post to LinkedIn.
@@ -213,9 +216,9 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "ops") {
     return (
-      <div className="mx-auto w-full max-w-5xl px-5 py-8">
+      <div className="mx-auto w-full max-w-5xl px-6 py-10">
         <p className="page-kicker">Ops</p>
-        <h1 className="font-heading mt-1 text-2xl">Task board</h1>
+        <h1 className="font-heading mt-1 text-2xl tracking-tight">Task board</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Three columns only: approve, schedule, done. Approving an artifact
           creates a schedule task here. This is not a full project tool.

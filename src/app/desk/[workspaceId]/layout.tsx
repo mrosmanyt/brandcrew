@@ -57,7 +57,7 @@ export default async function WorkspaceLayout({
     <div className="flex min-h-dvh flex-col bg-background md:flex-row">
       <Suspense
         fallback={
-          <aside className="hidden h-dvh w-56 shrink-0 border-r border-sidebar-border bg-sidebar md:block" />
+          <aside className="hidden h-dvh w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:block" />
         }
       >
         <DeskSidebar

@@ -8,26 +8,23 @@ import { Button } from "@/components/ui/button";
 export function SiteNav() {
   const signedIn = useSignedIn();
   return (
-    <header className="sticky top-0 z-30 border-b border-white/5 bg-background/75 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5">
+    <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-6">
         <Link href="/" className="shrink-0">
           <BrandMark />
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+        <nav className="hidden items-center gap-8 text-sm text-muted-foreground sm:flex">
           <Link href="/#product" className="transition-colors hover:text-foreground">
             Product
           </Link>
-          <Link href="/#features" className="transition-colors hover:text-foreground">
-            Features
-          </Link>
-          <Link href="/#pricing" className="transition-colors hover:text-foreground">
-            Pricing
+          <Link href="/#how-it-works" className="transition-colors hover:text-foreground">
+            How it works
           </Link>
         </nav>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {signedIn ? (
             <Button size="sm" nativeButton={false} render={<Link href="/desk" />}>
-              Open Mission Control
+              Open desk
             </Button>
           ) : (
             <>
@@ -35,7 +32,7 @@ export function SiteNav() {
                 Sign in
               </Button>
               <Button size="sm" nativeButton={false} render={<Link href="/signup" />}>
-                Start free desk
+                Get started
               </Button>
             </>
           )}
