@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/logo";
+import { useSignedIn } from "@/components/marketing/use-signed-in";
 import { Button } from "@/components/ui/button";
 
-export function SiteNav({ signedIn }: { signedIn: boolean }) {
+export function SiteNav() {
+  const signedIn = useSignedIn();
   return (
     <header className="sticky top-0 z-30 border-b border-white/5 bg-background/75 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5">

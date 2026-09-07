@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { listUserWorkspaces } from "@/lib/workspace";
 
+export const dynamic = "force-dynamic";
+
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

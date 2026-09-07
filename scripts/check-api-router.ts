@@ -1,0 +1,130 @@
+/**
+ * Catch-all API matcher: every public /api URL still resolves, and
+ * /agents/launch wins over /agents/:agentId.
+ */
+import assert from "node:assert/strict";
+import { matchBestPattern, pathToSegments } from "../src/server/api/match";
+
+const PATTERNS: string[][] = [
+  ["api", "auth", "login"],
+  ["api", "auth", "signup"],
+  ["api", "auth", "me"],
+  ["api", "auth", "logout"],
+  ["api", "oauth", "callback"],
+  ["api", "billing", "checkout"],
+  ["api", "workspaces"],
+  ["api", "workspaces", ":workspaceId", "artifacts", ":artifactId"],
+  ["api", "workspaces", ":workspaceId", "artifacts"],
+  ["api", "workspaces", ":workspaceId", "plugins", ":pluginId", "oauth", "start"],
+  ["api", "workspaces", ":workspaceId", "plugins", ":pluginId", "connect"],
+  ["api", "workspaces", ":workspaceId", "plugins"],
+  ["api", "workspaces", ":workspaceId", "calendar"],
+  ["api", "workspaces", ":workspaceId", "skills", ":skillId", "run"],
+  ["api", "workspaces", ":workspaceId", "skills"],
+  ["api", "workspaces", ":workspaceId", "agents", "launch"],
+  ["api", "workspaces", ":workspaceId", "agents", ":agentId"],
+  ["api", "workspaces", ":workspaceId", "agents"],
+  ["api", "workspaces", ":workspaceId", "tasks", ":taskId"],
+  ["api", "workspaces", ":workspaceId", "tasks"],
+  ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
+  ["api", "workspaces", ":workspaceId", "jobs"],
+  ["api", "workspaces", ":workspaceId", "chat"],
+  ["api", "workspaces", ":workspaceId", "brand-kit"],
+  ["api", "workspaces", ":workspaceId", "marketplace", "bots"],
+  ["api", "workspaces", ":workspaceId", "marketplace"],
+  ["api", "workspaces", ":workspaceId"],
+];
+
+function matchPath(pathname: string) {
+  return matchBestPattern(PATTERNS, pathToSegments(pathname));
+}
+
+const cases: Array<[string, string[], Record<string, string>]> = [
+  ["/api/auth/login", ["api", "auth", "login"], {}],
+  ["/api/auth/signup", ["api", "auth", "signup"], {}],
+  ["/api/auth/me", ["api", "auth", "me"], {}],
+  ["/api/auth/logout", ["api", "auth", "logout"], {}],
+  ["/api/oauth/callback", ["api", "oauth", "callback"], {}],
+  ["/api/billing/checkout", ["api", "billing", "checkout"], {}],
+  ["/api/workspaces", ["api", "workspaces"], {}],
+  [
+    "/api/workspaces/ws_1",
+    ["api", "workspaces", ":workspaceId"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/jobs",
+    ["api", "workspaces", ":workspaceId", "jobs"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/jobs/job_9",
+    ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
+    { workspaceId: "ws_1", jobId: "job_9" },
+  ],
+  [
+    "/api/workspaces/ws_1/agents/launch",
+    ["api", "workspaces", ":workspaceId", "agents", "launch"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/agents/ag_2",
+    ["api", "workspaces", ":workspaceId", "agents", ":agentId"],
+    { workspaceId: "ws_1", agentId: "ag_2" },
+  ],
+  [
+    "/api/workspaces/ws_1/plugins/gmail/oauth/start",
+    ["api", "workspaces", ":workspaceId", "plugins", ":pluginId", "oauth", "start"],
+    { workspaceId: "ws_1", pluginId: "gmail" },
+  ],
+  [
+    "/api/workspaces/ws_1/plugins/tavily/connect",
+    ["api", "workspaces", ":workspaceId", "plugins", ":pluginId", "connect"],
+    { workspaceId: "ws_1", pluginId: "tavily" },
+  ],
+  [
+    "/api/workspaces/ws_1/skills/sk_1/run",
+    ["api", "workspaces", ":workspaceId", "skills", ":skillId", "run"],
+    { workspaceId: "ws_1", skillId: "sk_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/marketplace/bots",
+    ["api", "workspaces", ":workspaceId", "marketplace", "bots"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/artifacts/art_1",
+    ["api", "workspaces", ":workspaceId", "artifacts", ":artifactId"],
+    { workspaceId: "ws_1", artifactId: "art_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/chat",
+    ["api", "workspaces", ":workspaceId", "chat"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/brand-kit",
+    ["api", "workspaces", ":workspaceId", "brand-kit"],
+    { workspaceId: "ws_1" },
+  ],
+];
+
+for (const [pathname, pattern, params] of cases) {
+  const hit = matchPath(pathname);
+  assert.ok(hit, `expected match for ${pathname}`);
+  assert.deepEqual(hit.pattern, pattern);
+  assert.deepEqual(hit.params, params);
+}
+console.log(`ok: ${cases.length} public API URLs still match`);
+
+assert.equal(PATTERNS.length, 27);
+console.log("ok: 27 former route.ts handlers now share one catch-all");
+
+assert.equal(matchPath("/api/unknown"), null);
+assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);
+console.log("ok: unknown API paths 404");
+
+const encoded = matchPath("/api/workspaces/ws%2Fslash/agents/ag%201");
+assert.equal(encoded?.params.workspaceId, "ws/slash");
+assert.equal(encoded?.params.agentId, "ag 1");
+console.log("ok: path params decode");

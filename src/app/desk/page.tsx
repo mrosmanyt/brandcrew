@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createDemoWorkspace, listUserWorkspaces } from "@/lib/workspace";
 
+export const dynamic = "force-dynamic";
+
 export default async function DeskIndexPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

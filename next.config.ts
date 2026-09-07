@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   // README and local tooling use 127.0.0.1; Next 16 treats that as a distinct
   // origin from localhost and otherwise blocks /_next client assets in dev.
   allowedDevOrigins: ["127.0.0.1"],
+  // Vercel Hobby has no Chrome; PLAYWRIGHT_ENABLED defaults off there and
+  // browse falls back to fetch. Keep playwright-core out of function traces
+  // so one catch-all API function does not balloon toward the 50MB split.
+  outputFileTracingExcludes: {
+    "/*": ["./node_modules/playwright-core/**/*"],
+  },
   ...(desktop
     ? {
         output: "standalone" as const,
@@ -15,9 +21,6 @@ const nextConfig: NextConfig = {
             "./node_modules/.prisma/client/**/*",
             "./node_modules/@prisma/client/**/*",
           ],
-        },
-        outputFileTracingExcludes: {
-          "/*": ["./node_modules/playwright-core/**/*"],
         },
       }
     : {}),
