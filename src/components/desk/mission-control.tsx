@@ -449,7 +449,7 @@ export function MissionControl({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <section className="flex min-h-0 min-w-[18rem] flex-1 flex-col border-b border-border lg:border-b-0">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border lg:min-w-[18rem] lg:border-b-0">
           <header className="shrink-0 border-b border-border px-4 py-2.5">
             {selected ? (
               <>
