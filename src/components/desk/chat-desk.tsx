@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AGENT_META,
+  JOB_ACTION_MESSAGES,
   employeeDisplayName,
+  jobChipsFor,
   type AgentRole,
   type GenerateAction,
 } from "@/lib/constants";
@@ -88,16 +90,9 @@ export function ChatDesk({
       return;
     }
     const message =
-      preset ??
-      (action === "generate_week"
-        ? "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval."
-        : action === "sales_pack"
-          ? "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs."
-          : action === "research_pack"
-            ? "Give Omar a research-pack job. Fetch the company website from the Brand Kit."
-            : action === "regenerate"
-              ? input.trim() || meta.starter
-              : input.trim());
+      preset ||
+      JOB_ACTION_MESSAGES[action] ||
+      input.trim();
     if (!message || busy) return;
     setBusy(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
@@ -162,31 +157,17 @@ export function ChatDesk({
           </h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">{meta.blurb}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {agent === "writer" ? (
-              <>
-                <Button size="sm" disabled={busy} onClick={() => generate("generate_week")}>
-                  Give Maya a job
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => generate("generate_week")}
-                >
-                  Generate week
-                </Button>
-              </>
-            ) : null}
-            {agent === "researcher" ? (
-              <Button size="sm" disabled={busy} onClick={() => generate("research_pack")}>
-                Give Omar a research pack
+            {jobChipsFor(agent).map((chip, index) => (
+              <Button
+                key={`${chip.action}-${chip.label}`}
+                size="sm"
+                variant={index === 0 ? "default" : "secondary"}
+                disabled={busy}
+                onClick={() => generate(chip.action, chip.message)}
+              >
+                {chip.label}
               </Button>
-            ) : null}
-            {agent === "sales" ? (
-              <Button size="sm" disabled={busy} onClick={() => generate("sales_pack")}>
-                Give Sam a job
-              </Button>
-            ) : null}
+            ))}
           </div>
         </header>
 

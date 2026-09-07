@@ -31,7 +31,8 @@ export async function applyArtifactApproval(input: {
     input.artifact.agentRole === "sales" ||
     input.artifact.agentRole === "ads" ||
     input.artifact.type === "writer_week" ||
-    input.artifact.type === "sales_pack";
+    input.artifact.type === "sales_pack" ||
+    input.artifact.type === "outreach_pack";
 
   if (!shouldCalendize) return { taskCreated: !existingTask, calendarAdded: 0 };
 

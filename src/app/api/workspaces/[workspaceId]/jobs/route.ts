@@ -1,23 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { CHAT_TARGETS } from "@/lib/constants";
+import { GENERATE_ACTIONS, JOB_ACTION_MESSAGES, CHAT_TARGETS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
 import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { BudgetError } from "@/lib/usage";
 
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 const postSchema = z.object({
   agentRole: z.enum(CHAT_TARGETS).optional(),
   message: z.string().max(4000).optional(),
   playbookKey: z.string().max(80).optional(),
   skillId: z.string().optional(),
-  action: z
-    .enum(["default", "generate_week", "sales_pack", "research_pack", "regenerate"])
-    .optional(),
+  action: z.enum(GENERATE_ACTIONS).optional(),
 });
 
 export async function GET(
@@ -67,18 +65,14 @@ export async function POST(
     const action = body.action ?? "default";
     let agentRole = body.agentRole ?? "writer";
     if (action === "generate_week") agentRole = "writer";
-    if (action === "sales_pack") agentRole = "sales";
-    if (action === "research_pack") agentRole = "researcher";
+    if (action === "sales_pack" || action === "outreach_from_research") agentRole = "sales";
+    if (action === "research_pack" || action === "competitor_scan") agentRole = "researcher";
+    if (action === "ad_angles_from_url") agentRole = "ads";
 
     const message =
       body.message?.trim() ||
-      (action === "generate_week"
-        ? "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval."
-        : action === "sales_pack"
-          ? "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs."
-          : action === "research_pack"
-            ? "Give Omar a research-pack job. Fetch the company website from the Brand Kit."
-            : "");
+      JOB_ACTION_MESSAGES[action] ||
+      "";
     if (!message && !body.skillId) {
       return NextResponse.json({ error: "Write a short job for the employee." }, { status: 400 });
     }

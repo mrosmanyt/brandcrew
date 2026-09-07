@@ -79,7 +79,7 @@ export const AGENT_META: Record<
     name: "Maya",
     label: "Writer",
     title: "Brand voice drafts",
-    blurb: "Maya writes LinkedIn posts and letters in Brand Kit voice, then pauses for your approval.",
+    blurb: "Maya plans LinkedIn weeks in Brand Kit voice. Paste a URL and she will browse it before drafting, then pause for your approval.",
     artifact: "Voice pack",
     generateLabel: "Give Maya a job",
     starter: "Write a week of LinkedIn posts in our brand voice.",
@@ -89,10 +89,10 @@ export const AGENT_META: Record<
     name: "Omar",
     label: "Researcher",
     title: "Source pack",
-    blurb: "Omar fetches a company site and writes a research pack the Writer and SDR can share.",
+    blurb: "Omar browses public pages (or fetches them) and writes research or competitor-scan packs the Writer and SDR can share.",
     artifact: "Research pack",
     generateLabel: "Give Omar a job",
-    starter: "Fetch our company website and write a research pack.",
+    starter: "Browse our company website and write a research pack.",
     jobCta: "Give Omar a research-pack job",
   },
   distributor: {
@@ -109,17 +109,17 @@ export const AGENT_META: Record<
     name: "Sam",
     label: "SDR",
     title: "Outbound scripts",
-    blurb: "Sam writes email and LinkedIn DM scripts. No CRM — language you can send.",
+    blurb: "Sam writes email and LinkedIn DM scripts from the Brand Kit or a prior research artifact. No CRM — language you can send after you approve.",
     artifact: "Outbound pack",
     generateLabel: "Give Sam a job",
-    starter: "Write 8 outbound email and LinkedIn DM scripts for our offer.",
+    starter: "Write 8 outbound email and LinkedIn DM scripts for our offer. Do not send.",
     jobCta: "Give Sam a sales-pack job",
   },
   ads: {
     name: "Lex",
     label: "Ads",
     title: "Angles, not spend",
-    blurb: "Lex drafts ad angles plus primary text. Brandcrew does not connect ad accounts or spend.",
+    blurb: "Lex drafts ad angles plus primary text, including from a landing page she browses. Brandcrew does not connect ad accounts or spend.",
     artifact: "Ad angle pack",
     generateLabel: "Give Lex a job",
     starter: "Give me 5 ad angles and primary text for paid social. No media plan.",
@@ -129,7 +129,7 @@ export const AGENT_META: Record<
     name: "Ops",
     label: "Ops",
     title: "Simple task board",
-    blurb: "Ops turns approved work into a three-column board: approve → schedule → done.",
+    blurb: "Ops turns approved work into a three-column board: approve → schedule → done. Nothing leaves without you.",
     artifact: "Ops board",
     generateLabel: "Give Ops a job",
     starter: "Turn our latest drafts into an approve → schedule → done board.",
@@ -149,10 +149,101 @@ export const GENERATE_ACTIONS = [
   "generate_week",
   "sales_pack",
   "research_pack",
+  "competitor_scan",
+  "outreach_from_research",
+  "ad_angles_from_url",
   "regenerate",
 ] as const;
 
 export type GenerateAction = (typeof GENERATE_ACTIONS)[number];
+
+export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
+  default: "",
+  generate_week:
+    "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval.",
+  sales_pack: "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs. Do not send.",
+  research_pack:
+    "Give Omar a research-pack job. Browse the company website from the Brand Kit.",
+  competitor_scan:
+    "Competitor scan: browse our site and two public example sites, then write a comparison artifact.",
+  outreach_from_research:
+    "Write an outreach pack of 5 LinkedIn DMs from the latest research artifact. Do not send.",
+  ad_angles_from_url:
+    "Browse https://example.com and write 5 ad angles from the landing page. No media buy.",
+  regenerate: "Regenerate the last artifact with the same brief.",
+};
+
+export type JobChip = {
+  action: GenerateAction;
+  label: string;
+  message?: string;
+};
+
+export function jobChipsFor(target: ChatTarget | AgentRole): JobChip[] {
+  switch (target) {
+    case "writer":
+      return [
+        { action: "generate_week", label: "LinkedIn week" },
+        {
+          action: "default",
+          label: "Draft from URL",
+          message:
+            "Browse https://example.com and draft a LinkedIn post in Brand Kit voice. Do not publish.",
+        },
+      ];
+    case "researcher":
+      return [
+        { action: "research_pack", label: "Research pack" },
+        { action: "competitor_scan", label: "Competitor scan" },
+      ];
+    case "sales":
+      return [
+        { action: "sales_pack", label: "Sales pack" },
+        { action: "outreach_from_research", label: "Outreach from research" },
+      ];
+    case "ads":
+      return [
+        {
+          action: "default",
+          label: "5 ad angles",
+          message: AGENT_META.ads.starter,
+        },
+        { action: "ad_angles_from_url", label: "Ad angles from URL" },
+      ];
+    case "ops":
+      return [{ action: "default", label: AGENT_META.ops.jobCta, message: AGENT_META.ops.starter }];
+    case "strategist":
+      return [
+        {
+          action: "default",
+          label: AGENT_META.strategist.jobCta,
+          message: AGENT_META.strategist.starter,
+        },
+        {
+          action: "default",
+          label: "Brief from site",
+          message:
+            "Browse our company website and write the ICP / offer / pillars brief from what the page actually says.",
+        },
+      ];
+    case "team":
+      return [
+        { action: "generate_week", label: "Maya · LinkedIn week" },
+        { action: "research_pack", label: "Omar · Research pack" },
+        { action: "competitor_scan", label: "Omar · Competitor scan" },
+        { action: "outreach_from_research", label: "Sam · Outreach from research" },
+        { action: "ad_angles_from_url", label: "Lex · Ad angles from URL" },
+      ];
+    default:
+      return [
+        {
+          action: "default",
+          label: AGENT_META[target as AgentRole]?.jobCta || "Give a job",
+          message: AGENT_META[target as AgentRole]?.starter,
+        },
+      ];
+  }
+}
 
 export const HOURLY_GENERATION_CAP = 20;
 

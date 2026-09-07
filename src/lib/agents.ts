@@ -1,24 +1,32 @@
 import type { AgentRole, GenerateAction } from "@/lib/constants";
-import { AGENT_META } from "@/lib/constants";
+import { employeeDisplayName } from "@/lib/constants";
 import { brandKitBrief, type BrandKit } from "@/lib/brand-kit";
-import { demoArtifact, demoGenerateWeek, demoResearchPack, demoSalesPack } from "@/lib/demo";
+import { employeeJobPrompt } from "@/lib/employee-prompts";
+import { demoAdAnglesFromUrl, demoArtifact, demoGenerateWeek, demoOutreachFromResearch, demoResearchPack, demoSalesPack } from "@/lib/demo";
 import { llm, type TaskMode } from "@/lib/llm";
 import type { GeneratedArtifact } from "@/lib/agents-types";
 
 export type { GeneratedArtifact } from "@/lib/agents-types";
 
 const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
-  strategist: `Return one strategy brief. Sections: Ideal customer (ICP), Offer, three monthly content pillars, and What not to say. This is the shared brief — not a slide deck.`,
-  writer: `Return one voice pack: two LinkedIn posts and one email newsletter draft. Match the Brand Kit voice. Do not use forbidden words.`,
-  researcher: `Return one research pack: source URL, what the site actually says, messaging implications, and what not to copy. No invented quotes.`,
+  strategist: `Return one strategy brief. Sections: Ideal customer (ICP), Offer, three monthly content pillars, and What not to say. If page text is provided, ground the brief in it. This is the shared brief — not a slide deck.`,
+  writer: `Return one voice pack: two LinkedIn posts and one email newsletter draft. Match the Brand Kit voice. Do not use forbidden words. If a URL was browsed, use that page — do not invent.`,
+  researcher: `Return one research pack: source URL(s), what the page actually says, messaging implications, and what not to copy. No invented quotes.`,
   distributor: `Return a 30-day content calendar starting tomorrow. Include a Markdown table and a "calendar" array of 30 objects: {date (YYYY-MM-DD), channel (linkedin|email), title, content}. Ready to paste into Google Docs.`,
-  sales: `Return 8 outbound scripts mixing email and LinkedIn DMs. No CRM fields. Each script is short enough to send today.`,
+  sales: `Return outbound scripts mixing email and LinkedIn DMs. No CRM fields. Each script is short enough to send today. Do not claim they were sent.`,
   ads: `Return 5 ad angles with primary text. Explicitly state that Brandcrew does not buy media or connect ad accounts.`,
-  ops: `Return a short ops plan and a "tasks" array of 5 items: {title, description, status} where status is approve|schedule|done.`,
+  ops: `Return a short ops plan and a "tasks" array of 5 items: {title, description, status} where status is approve|schedule|done. Nothing is sent.`,
 };
 
 export function agentMode(role: AgentRole, action: GenerateAction = "default"): TaskMode {
-  if (action === "generate_week" || action === "sales_pack" || action === "research_pack") {
+  if (
+    action === "generate_week" ||
+    action === "sales_pack" ||
+    action === "research_pack" ||
+    action === "competitor_scan" ||
+    action === "outreach_from_research" ||
+    action === "ad_angles_from_url"
+  ) {
     return "draft";
   }
   return role === "strategist" || role === "ads" ? "final" : "draft";
@@ -32,7 +40,16 @@ function actionInstructions(action: GenerateAction, role: AgentRole) {
     return `Write a sales pack: 5 outbound emails and 5 LinkedIn DMs. Markdown headings ## Email 1 … ## Email 5 and ## LinkedIn DM 1 … ## LinkedIn DM 5. No CRM fields.`;
   }
   if (action === "research_pack") {
-    return `Write a research pack from the Brand Kit and any fetched page text in the user message. Sections: Source, What the site says, Messaging implications, What not to copy.`;
+    return `Write a research pack from the Brand Kit and any browsed page text in the user message. Sections: Source, What the site says, Messaging implications, What not to copy.`;
+  }
+  if (action === "competitor_scan") {
+    return `Write a competitor comparison from browsed URLs. One section per URL, then Comparison, then What not to copy. No invented quotes.`;
+  }
+  if (action === "outreach_from_research") {
+    return `Write 5 LinkedIn DMs grounded in the research notes in the user message. Headings ## LinkedIn DM 1 … 5. Do not send.`;
+  }
+  if (action === "ad_angles_from_url") {
+    return `Write 5 ad angles from the landing page text in the user message. Creative only; Brandcrew does not buy media.`;
   }
   return ROLE_INSTRUCTIONS[role];
 }
@@ -42,10 +59,8 @@ export function systemPrompt(
   kit: BrandKit,
   action: GenerateAction = "default",
 ) {
-  const meta = AGENT_META[role];
-  return `You are the ${meta.label} on Brandcrew, an AI Business Desk.
-You share one Brand Kit and company memory with the other thin agents.
-Produce ONE approved-quality artifact — not a feature dump.
+  return `You are ${employeeDisplayName(role)} on Brandcrew, an AI Business Desk.
+${employeeJobPrompt(role)}
 
 Brand Kit:
 ${brandKitBrief(kit)}
@@ -70,6 +85,8 @@ function fallbackArtifact(
   if (action === "generate_week") return demoGenerateWeek(kit);
   if (action === "sales_pack") return demoSalesPack(kit);
   if (action === "research_pack") return demoResearchPack(kit);
+  if (action === "outreach_from_research") return demoOutreachFromResearch(kit);
+  if (action === "ad_angles_from_url") return demoAdAnglesFromUrl(kit);
   return demoArtifact(role, kit);
 }
 

@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AGENT_META,
+  JOB_ACTION_MESSAGES,
   MISSION_ROLES,
   employeeDisplayName,
+  jobChipsFor,
   type ChatTarget,
   type GenerateAction,
   type MissionRole,
@@ -163,7 +165,7 @@ export function MissionControl({
       setBudgetOpen(true);
       return;
     }
-    const message = (preset ?? input).trim();
+    const message = (preset || JOB_ACTION_MESSAGES[action] || input).trim();
     if (!message || busy) return;
     setBusy(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
@@ -334,61 +336,17 @@ export function MissionControl({
                 : meta?.blurb}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {target === "writer" || target === "team" ? (
+              {jobChipsFor(target).map((chip, index) => (
                 <Button
+                  key={`${chip.action}-${chip.label}`}
                   size="sm"
+                  variant={index === 0 ? "default" : "secondary"}
                   disabled={busy}
-                  onClick={() =>
-                    startJob(
-                      "generate_week",
-                      "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval.",
-                    )
-                  }
+                  onClick={() => startJob(chip.action, chip.message)}
                 >
-                  Give Maya a job
+                  {chip.label}
                 </Button>
-              ) : null}
-              {target === "researcher" || target === "team" ? (
-                <Button
-                  size="sm"
-                  variant={target === "researcher" ? "default" : "secondary"}
-                  disabled={busy}
-                  onClick={() => startJob("research_pack")}
-                >
-                  Give Omar a research pack
-                </Button>
-              ) : null}
-              {target === "writer" ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => startJob("generate_week")}
-                >
-                  Generate week
-                </Button>
-              ) : null}
-              {target === "sales" ? (
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => startJob("sales_pack")}
-                >
-                  Give Sam a job
-                </Button>
-              ) : null}
-              {target !== "writer" &&
-              target !== "researcher" &&
-              target !== "sales" &&
-              target !== "team" ? (
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => startJob("default", meta?.starter)}
-                >
-                  {meta?.jobCta}
-                </Button>
-              ) : null}
+              ))}
             </div>
           </header>
 
@@ -397,15 +355,21 @@ export function MissionControl({
               <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8">
                 <Sparkles className="size-5 text-primary" />
                 <p className="mt-3 max-w-md text-sm text-muted-foreground">
-                  Activity-first desk. Give Maya a LinkedIn-week job, watch steps
-                  land in the feed, then approve what leaves.
+                  Activity-first desk. Give an employee a job, watch browse and write
+                  steps land in the feed, then approve what leaves.
                 </p>
                 <Button
                   className="mt-4"
                   disabled={busy}
                   onClick={() =>
                     startJob(
-                      target === "researcher" ? "research_pack" : "generate_week",
+                      target === "researcher"
+                        ? "research_pack"
+                        : target === "sales"
+                          ? "sales_pack"
+                          : target === "ads"
+                            ? "ad_angles_from_url"
+                            : "generate_week",
                     )
                   }
                 >
@@ -547,6 +511,16 @@ export function MissionControl({
                     />
                     <div>
                       <p className="leading-5">{event.message}</p>
+                      {eventToolLine(event) ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          {eventToolLine(event)}
+                        </p>
+                      ) : null}
+                      {typeof event.data?.excerpt === "string" && event.data.excerpt ? (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                          {event.data.excerpt}
+                        </p>
+                      ) : null}
                       <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                         {eventTypeLabel(event.type)}
                       </p>
@@ -657,6 +631,14 @@ function isChatTarget(value: string | undefined): value is ChatTarget {
     value &&
       (value === "team" || (MISSION_ROLES as readonly string[]).includes(value)),
   );
+}
+
+function eventToolLine(event: JobEventDTO) {
+  const tool = typeof event.data?.tool === "string" ? event.data.tool : "";
+  const url = typeof event.data?.url === "string" ? event.data.url : "";
+  if (!tool && !url) return "";
+  if (tool && url) return `${tool} · ${url}`;
+  return tool || url;
 }
 
 function eventTypeLabel(type: string) {

@@ -38,6 +38,8 @@ export function assertPublicHttpUrl(raw: string): URL {
 }
 
 export function isPrivateIp(host: string) {
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^0\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
   if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
   if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
   if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
@@ -62,12 +64,39 @@ export function htmlToText(html: string, maxChars = MAX_TEXT_CHARS): string {
   return text.slice(0, maxChars);
 }
 
-export async function fetchUrlText(rawUrl: string): Promise<{
+export function extractHtmlLinks(html: string, baseUrl: string, max = 20): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  const hrefs = html.matchAll(/\bhref\s*=\s*["']([^"']+)["']/gi);
+  for (const match of hrefs) {
+    const href = match[1]?.trim() ?? "";
+    if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) {
+      continue;
+    }
+    try {
+      const resolved = new URL(href, baseUrl);
+      const hrefUrl = assertPublicHttpUrl(resolved.toString());
+      const normalized = hrefUrl.toString();
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      found.push(normalized);
+      if (found.length >= max) break;
+    } catch {
+      // skip blocked or invalid
+    }
+  }
+  return found;
+}
+
+export type FetchedPage = {
   url: string;
   ok: boolean;
   text: string;
+  links: string[];
   error?: string;
-}> {
+};
+
+export async function fetchUrlText(rawUrl: string): Promise<FetchedPage> {
   try {
     const url = assertPublicHttpUrl(rawUrl);
     const response = await fetch(url, {
@@ -76,30 +105,46 @@ export async function fetchUrlText(rawUrl: string): Promise<{
       signal: AbortSignal.timeout(8000),
       headers: {
         Accept: "text/html,text/plain;q=0.9,*/*;q=0.1",
-        "User-Agent": "BrandcrewResearch/0.1 (+https://github.com/mrosmanyt/brandcrew)",
+        "User-Agent": "BrandcrewResearch/0.2 (+https://github.com/mrosmanyt/brandcrew)",
       },
     });
     const buffer = await response.arrayBuffer();
     const slice = buffer.byteLength > MAX_BYTES ? buffer.slice(0, MAX_BYTES) : buffer;
     const raw = new TextDecoder("utf-8", { fatal: false }).decode(slice);
     const contentType = response.headers.get("content-type") || "";
-    const text = /html/i.test(contentType) || /<\/?[a-z][\s\S]*>/i.test(raw)
+    const looksHtml = /html/i.test(contentType) || /<\/?[a-z][\s\S]*>/i.test(raw);
+    const text = looksHtml
       ? htmlToText(raw)
       : raw.replace(/\s+/g, " ").trim().slice(0, MAX_TEXT_CHARS);
+    const finalUrl = response.url || url.toString();
+    try {
+      assertPublicHttpUrl(finalUrl);
+    } catch (error) {
+      return {
+        url: rawUrl,
+        ok: false,
+        text: "",
+        links: [],
+        error: error instanceof Error ? error.message : "Redirect blocked",
+      };
+    }
+    const links = looksHtml ? extractHtmlLinks(raw, finalUrl) : [];
     if (!response.ok) {
       return {
-        url: url.toString(),
+        url: finalUrl,
         ok: false,
         text,
+        links,
         error: `HTTP ${response.status}`,
       };
     }
-    return { url: url.toString(), ok: true, text };
+    return { url: finalUrl, ok: true, text, links };
   } catch (error) {
     return {
       url: rawUrl,
       ok: false,
       text: "",
+      links: [],
       error: error instanceof Error ? error.message : "Fetch failed",
     };
   }

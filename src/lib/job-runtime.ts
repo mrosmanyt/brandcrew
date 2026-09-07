@@ -9,20 +9,34 @@ import {
 } from "@/lib/constants";
 import { brandKitBrief, parseBrandKit, type BrandKit } from "@/lib/brand-kit";
 import { generateAgentArtifact } from "@/lib/agents";
-import { demoLinkedInPosts, demoResearchMarkdown } from "@/lib/demo";
+import {
+  demoAdAnglesFromUrl,
+  demoCompetitorMarkdown,
+  demoLinkedInPosts,
+  demoOutreachFromResearch,
+  demoResearchMarkdown,
+} from "@/lib/demo";
+import { plannerSystemPrompt } from "@/lib/employee-prompts";
 import { extractUrls, fetchUrlText } from "@/lib/fetch-url";
 import {
-  genericPlaybook,
+  browseNavigate,
+  browserInteractGuard,
+  crawlLinks,
+  excerptFromText,
+  formatSnapshot,
+  MAX_PAGES_PER_JOB,
+} from "@/lib/browse";
+import {
+  defaultCompetitorUrls,
+  ensureAskUser,
   inferPlaybookKey,
   isJobTool,
   linkedinWeekPlaybook,
   parsePlan,
   parsePlaybookJson,
   playbookFromKey,
-  researchPackPlaybook,
   resetPlaybook,
   routeTeamMessage,
-  salesPackPlaybook,
 } from "@/lib/job-playbooks";
 import {
   parseJobContext,
@@ -30,7 +44,13 @@ import {
   serializeJob,
   serializeMessage,
 } from "@/lib/job-serialize";
-import type { CreateJobResult, JobContext, JobPlaybook, JobStep } from "@/lib/job-types";
+import type {
+  BrowsedPage,
+  CreateJobResult,
+  JobContext,
+  JobPlaybook,
+  JobStep,
+} from "@/lib/job-types";
 import { llm } from "@/lib/llm";
 import { assertWorkspaceBudget, recordUsage } from "@/lib/usage";
 
@@ -128,14 +148,9 @@ export async function createJobFromChat(input: {
     inferPlaybookKey(agentRole, input.message, input.action);
 
   if (!playbook) {
-    playbook = playbookFromKey(playbookKey, agentRole, input.message);
+    playbook = playbookFromKey(playbookKey, agentRole, input.message, kit.website);
   } else {
     playbook = resetPlaybook(playbook);
-  }
-
-  if (playbookKey === "research_pack") {
-    const url = extractUrls(input.message)[0] || kit.website || "";
-    playbook = researchPackPlaybook(url);
   }
 
   const conversation = await prisma.conversation.upsert({
@@ -148,6 +163,9 @@ export async function createJobFromChat(input: {
 
   const context: JobContext = {
     userUrl: extractUrls(input.message)[0] || kit.website || "",
+    competitorUrls: defaultCompetitorUrls(input.message, kit.website),
+    pages: [],
+    pageCount: 0,
   };
 
   const job = await prisma.job.create({
@@ -218,7 +236,7 @@ export async function kickQueuedJobs(workspaceId: string) {
 }
 
 export async function runJobLoop(jobId: string) {
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 32; i++) {
     const progressed = await tickJob(jobId);
     if (!progressed) break;
     await sleep(STEP_GAP_MS);
@@ -330,7 +348,12 @@ export async function tickJob(jobId: string): Promise<boolean> {
       type: result.pause ? "ask_user" : "tool_result",
       message: result.summary,
       stepId: next.id,
-      data: { tool: next.tool, artifactId: result.artifactId },
+      data: {
+        tool: next.tool,
+        artifactId: result.artifactId,
+        url: result.url,
+        excerpt: result.excerpt,
+      },
     });
 
     if (result.pause) {
@@ -386,7 +409,7 @@ async function failJob(jobId: string, message: string) {
 }
 
 async function planSteps(role: AgentRole, prompt: string, kit: BrandKit): Promise<JobStep[]> {
-  const fallback = playbookFromKey(inferPlaybookKey(role, prompt), role, prompt).steps;
+  const fallback = playbookFromKey(inferPlaybookKey(role, prompt), role, prompt, kit.website).steps;
   if (!llm.status().configured) return fallback;
   try {
     const result = await llm.complete({
@@ -395,15 +418,7 @@ async function planSteps(role: AgentRole, prompt: string, kit: BrandKit): Promis
       messages: [
         {
           role: "system",
-          content: `You plan jobs for Brandcrew employee ${employeeDisplayName(role)}.
-Available tools: read_brand_kit, fetch_url, write_artifact, ask_user.
-Return JSON: { "title": string, "steps": [{ "tool": string, "label": string, "args": object }] }
-Rules:
-- First step is always read_brand_kit.
-- Last step is always ask_user.
-- Max 10 steps. Only those four tools.
-- LinkedIn week: five write_artifact steps with args.kind="linkedin_post" and index 1-5.
-- Research: include fetch_url then write_artifact with kind="research_pack".`,
+          content: plannerSystemPrompt(role),
         },
         {
           role: "user",
@@ -429,7 +444,9 @@ Rules:
             : {},
       });
     }
-    if (steps.length >= 2 && steps[0].tool === "read_brand_kit") return steps;
+    if (steps.length >= 2 && steps[0].tool === "read_brand_kit") {
+      return ensureAskUser(steps).slice(0, 12);
+    }
   } catch {
     // fall through
   }
@@ -450,6 +467,8 @@ async function executeTool(input: {
   pause?: boolean;
   askPrompt?: string;
   artifactId?: string;
+  url?: string;
+  excerpt?: string;
 }> {
   const { step, kit } = input;
   const context = { ...input.context };
@@ -482,13 +501,185 @@ async function executeTool(input: {
       type: "tool_call",
       message: `fetch_url ${url}`,
       stepId: step.id,
+      data: { tool: "fetch_url", url },
     });
     const fetched = await fetchUrlText(url);
-    context.fetched = { url: fetched.url, ok: fetched.ok, text: fetched.text };
+    const fetchedPage = toBrowsedPage({
+      url: fetched.url,
+      ok: fetched.ok,
+      text: fetched.text,
+      excerpt: excerptFromText(fetched.text),
+      links: fetched.links,
+      engine: "fetch",
+      error: fetched.error,
+    });
+    rememberPage(context, fetchedPage);
     return {
       summary: fetched.ok
         ? `Fetched ${fetched.url} (${fetched.text.length} chars).`
         : `Could not fully fetch ${url}${fetched.error ? ` — ${fetched.error}` : ""}. Will write from what we have.`,
+      context,
+      url: fetchedPage.url,
+      excerpt: fetchedPage.excerpt,
+    };
+  }
+
+  if (step.tool === "browser_navigate") {
+    const url =
+      String(step.args.url || "") ||
+      context.userUrl ||
+      kit.website ||
+      "";
+    if (!url) {
+      return {
+        summary: "No URL to open — writing from the Brand Kit only.",
+        context,
+      };
+    }
+    if ((context.pageCount ?? 0) >= MAX_PAGES_PER_JOB) {
+      return {
+        summary: `Browse cap reached (${MAX_PAGES_PER_JOB} pages). Skipping ${url}.`,
+        context,
+        url,
+      };
+    }
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `browser_navigate ${url}`,
+      stepId: step.id,
+      data: { tool: "browser_navigate", url },
+    });
+    try {
+      const page = toBrowsedPage(await browseNavigate(url));
+      rememberPage(context, page);
+      return {
+        summary: page.ok
+          ? `browser_navigate ${page.url} (${page.engine})`
+          : `browser_navigate ${page.url} — partial${page.error ? ` (${page.error})` : ""}`,
+        context,
+        url: page.url,
+        excerpt: page.excerpt,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Navigate failed";
+      return {
+        summary: `Could not open ${url} — ${message}`,
+        context,
+        url,
+      };
+    }
+  }
+
+  if (step.tool === "browser_snapshot") {
+    const page = context.currentPage || context.pages?.at(-1);
+    context.snapshot = formatSnapshot(page);
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: page ? `browser_snapshot ${page.url}` : "browser_snapshot (no page)",
+      stepId: step.id,
+      data: {
+        tool: "browser_snapshot",
+        url: page?.url,
+        excerpt: page?.excerpt,
+      },
+    });
+    return {
+      summary: page
+        ? `browser_snapshot ${page.url}`
+        : "No page loaded yet — snapshot is empty.",
+      context,
+      url: page?.url,
+      excerpt: page?.excerpt,
+    };
+  }
+
+  if (step.tool === "crawl_links") {
+    const start = context.currentPage || context.pages?.at(-1);
+    if (!start) {
+      return { summary: "No page to crawl from.", context };
+    }
+    const remaining = Math.max(0, MAX_PAGES_PER_JOB - (context.pageCount ?? 0));
+    const want = Math.min(Number(step.args.maxPages || 2), remaining);
+    if (want <= 0) {
+      return {
+        summary: `Browse cap reached (${MAX_PAGES_PER_JOB} pages). Crawl skipped.`,
+        context,
+        url: start.url,
+      };
+    }
+    const visited = new Set((context.pages || []).map((page) => page.url));
+    visited.add(start.url);
+    const extra = await crawlLinks(
+      {
+        url: start.url,
+        ok: start.ok,
+        title: start.title,
+        text: start.text,
+        excerpt: start.excerpt,
+        links: start.links || [],
+        engine: (start.engine as "playwright" | "fetch") || "fetch",
+        error: start.error,
+      },
+      {
+      depth: Number(step.args.depth || 1),
+      maxPages: want,
+      alreadyVisited: visited,
+    },
+    );
+    for (const raw of extra) {
+      const page = toBrowsedPage(raw);
+      rememberPage(context, page);
+      await appendEvent({
+        jobId: input.jobId,
+        type: "tool_call",
+        message: `crawl_links ${page.url}`,
+        stepId: step.id,
+        data: { tool: "crawl_links", url: page.url, excerpt: page.excerpt },
+      });
+    }
+    const last = extra.at(-1);
+    return {
+      summary: extra.length
+        ? `Crawled ${extra.length} public link${extra.length === 1 ? "" : "s"} from ${start.url}.`
+        : `No extra public links to follow from ${start.url}.`,
+      context,
+      url: last?.url || start.url,
+      excerpt: last ? excerptFromText(last.text) : start.excerpt,
+    };
+  }
+
+  if (step.tool === "browser_click" || step.tool === "browser_type") {
+    const guard = browserInteractGuard(step.tool, step.args);
+    return { summary: guard.reason, context };
+  }
+
+  if (step.tool === "read_artifact") {
+    const types = Array.isArray(step.args.types)
+      ? (step.args.types as string[])
+      : ["research_pack", "competitor_scan"];
+    const artifact = await prisma.artifact.findFirst({
+      where: {
+        workspaceId: input.workspaceId,
+        type: { in: types },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!artifact) {
+      return {
+        summary: "No research artifact on this desk yet — Sam will write from the Brand Kit only.",
+        context,
+      };
+    }
+    context.priorArtifact = {
+      id: artifact.id,
+      title: artifact.title,
+      type: artifact.type,
+      content: artifact.content.slice(0, 12_000),
+    };
+    return {
+      summary: `Read artifact “${artifact.title}” (${artifact.type}).`,
       context,
     };
   }
@@ -505,7 +696,7 @@ async function executeTool(input: {
   if (step.tool === "ask_user") {
     const prompt =
       String(step.args.prompt || "") ||
-      "Approve the drafts before they leave the desk.";
+      "Approve the drafts before they leave the desk. Brandcrew will not send or publish.";
     return {
       summary: prompt,
       context,
@@ -515,6 +706,35 @@ async function executeTool(input: {
   }
 
   return { summary: `Unknown tool ${step.tool}`, context };
+}
+
+function toBrowsedPage(page: {
+  url: string;
+  ok: boolean;
+  title?: string;
+  text: string;
+  excerpt?: string;
+  links?: string[];
+  engine?: string;
+  error?: string;
+}): BrowsedPage {
+  return {
+    url: page.url,
+    ok: page.ok,
+    title: page.title,
+    text: page.text,
+    excerpt: page.excerpt || excerptFromText(page.text),
+    links: page.links,
+    engine: page.engine,
+    error: page.error,
+  };
+}
+
+function rememberPage(context: JobContext, page: BrowsedPage) {
+  context.pages = [...(context.pages || []), page];
+  context.currentPage = page;
+  context.pageCount = (context.pageCount || 0) + 1;
+  context.fetched = { url: page.url, ok: page.ok, text: page.text };
 }
 
 async function writeJobArtifact(
@@ -539,7 +759,7 @@ async function writeJobArtifact(
 
   if (kind === "linkedin_post") {
     if (!context.weekPosts?.length) {
-      const generated = await generateLinkedInPosts(input.kit, input.prompt);
+      const generated = await generateLinkedInPosts(input.kit, input.prompt, context);
       context.weekPosts = generated.posts;
       tokens += generated.tokens;
       model = generated.model;
@@ -557,11 +777,35 @@ async function writeJobArtifact(
     model = pack.model;
     provider = pack.provider;
     tokens = pack.tokens;
+  } else if (kind === "competitor_scan") {
+    const pack = await generateCompetitorScan(input.kit, input.prompt, context);
+    title = pack.title;
+    content = pack.content;
+    type = "competitor_scan";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "outreach_pack") {
+    const pack = await generateOutreachPack(input.kit, input.prompt, context);
+    title = pack.title;
+    content = pack.content;
+    type = "outreach_pack";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "ad_angles") {
+    const pack = await generateAdAngles(input.kit, input.prompt, context);
+    title = pack.title;
+    content = pack.content;
+    type = "ad_angles";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
   } else {
     const generated = await generateAgentArtifact({
       role: input.agentRole,
       kit: input.kit,
-      userMessage: input.prompt,
+      userMessage: pageAwarePrompt(input.prompt, context),
       history: [],
       action:
         kind === "sales_pack"
@@ -617,6 +861,7 @@ async function writeJobArtifact(
 async function generateLinkedInPosts(
   kit: BrandKit,
   prompt: string,
+  context?: JobContext,
 ): Promise<{
   posts: { title: string; body: string }[];
   tokens: number;
@@ -635,12 +880,13 @@ async function generateLinkedInPosts(
         {
           role: "system",
           content: `You are Maya, the Writer on Brandcrew.
-Write exactly 5 LinkedIn posts in Brand Kit voice. No forbidden words.
+Write LinkedIn posts in Brand Kit voice. No forbidden words. Do not claim they were published.
+If page text is provided, ground the posts in it.
 Return JSON: { "posts": [{ "title": string, "body": string }] }`,
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(kit)}\n\nRequest:\n${prompt}`,
+          content: `Brand Kit:\n${brandKitBrief(kit)}\n\n${pageContextBlock(context)}\n\nRequest:\n${prompt}`,
         },
       ],
     });
@@ -654,7 +900,7 @@ Return JSON: { "posts": [{ "title": string, "body": string }] }`,
           .filter((post) => post.title && post.body)
       : [];
     return {
-      posts: posts.length >= 5 ? posts.slice(0, 5) : fallback,
+      posts: posts.length >= 1 ? posts.slice(0, 5) : fallback,
       tokens: result.tokens,
       model: result.model,
       provider: result.provider,
@@ -699,11 +945,7 @@ Return JSON: { "title": string, "content": string } where content is Markdown wi
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(kit)}\n\nFetched:\n${
-            fetched
-              ? `${fetched.url}\n${fetched.text || fetched.ok}`
-              : "(none)"
-          }\n\nRequest:\n${prompt}`,
+          content: `Brand Kit:\n${brandKitBrief(kit)}\n\n${pageContextBlock(context)}\n\nRequest:\n${prompt}`,
         },
       ],
     });
@@ -724,6 +966,207 @@ Return JSON: { "title": string, "content": string } where content is Markdown wi
       provider: "demo",
     };
   }
+}
+
+async function generateCompetitorScan(
+  kit: BrandKit,
+  prompt: string,
+  context: JobContext,
+): Promise<{
+  title: string;
+  content: string;
+  tokens: number;
+  model: string;
+  provider: string;
+}> {
+  const fallback = demoCompetitorMarkdown(kit, context.pages);
+  if (!llm.status().configured) {
+    return {
+      title: "Competitor scan",
+      content: fallback,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+  try {
+    const result = await llm.complete({
+      mode: "draft",
+      json: true,
+      messages: [
+        {
+          role: "system",
+          content: `You are Omar, the Researcher on Brandcrew.
+Write a competitor comparison from browsed pages only. No invented quotes.
+Return JSON: { "title": string, "content": string } Markdown with one section per URL plus Comparison and What not to copy.`,
+        },
+        {
+          role: "user",
+          content: `Brand Kit:\n${brandKitBrief(kit)}\n\n${pageContextBlock(context)}\n\nRequest:\n${prompt}`,
+        },
+      ],
+    });
+    const json = parseLlmJson(result.text);
+    return {
+      title: String(json?.title || "Competitor scan"),
+      content: String(json?.content || fallback),
+      tokens: result.tokens,
+      model: result.model,
+      provider: result.provider,
+    };
+  } catch {
+    return {
+      title: "Competitor scan",
+      content: fallback,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+}
+
+async function generateOutreachPack(
+  kit: BrandKit,
+  prompt: string,
+  context: JobContext,
+): Promise<{
+  title: string;
+  content: string;
+  tokens: number;
+  model: string;
+  provider: string;
+}> {
+  const fallback = demoOutreachFromResearch(kit, context.priorArtifact);
+  if (!llm.status().configured) {
+    return {
+      title: fallback.title,
+      content: fallback.content,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+  try {
+    const result = await llm.complete({
+      mode: "draft",
+      json: true,
+      messages: [
+        {
+          role: "system",
+          content: `You are Sam, the SDR on Brandcrew.
+Write exactly 5 LinkedIn DMs. Do not send. Ground them in the research artifact when present.
+Return JSON: { "title": string, "content": string } Markdown with ## LinkedIn DM 1 … 5.`,
+        },
+        {
+          role: "user",
+          content: `Brand Kit:\n${brandKitBrief(kit)}\n\nResearch artifact:\n${
+            context.priorArtifact
+              ? `${context.priorArtifact.title}\n${context.priorArtifact.content}`
+              : "(none)"
+          }\n\nRequest:\n${prompt}`,
+        },
+      ],
+    });
+    const json = parseLlmJson(result.text);
+    return {
+      title: String(json?.title || fallback.title),
+      content: String(json?.content || fallback.content),
+      tokens: result.tokens,
+      model: result.model,
+      provider: result.provider,
+    };
+  } catch {
+    return {
+      title: fallback.title,
+      content: fallback.content,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+}
+
+async function generateAdAngles(
+  kit: BrandKit,
+  prompt: string,
+  context: JobContext,
+): Promise<{
+  title: string;
+  content: string;
+  tokens: number;
+  model: string;
+  provider: string;
+}> {
+  const fallback = demoAdAnglesFromUrl(kit, context.fetched);
+  if (!llm.status().configured) {
+    return {
+      title: fallback.title,
+      content: fallback.content,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+  try {
+    const result = await llm.complete({
+      mode: "draft",
+      json: true,
+      messages: [
+        {
+          role: "system",
+          content: `You are Lex, Ads on Brandcrew.
+Write 5 ad angles with primary text from the landing page. Creative only — no media buy.
+Return JSON: { "title": string, "content": string }.`,
+        },
+        {
+          role: "user",
+          content: `Brand Kit:\n${brandKitBrief(kit)}\n\n${pageContextBlock(context)}\n\nRequest:\n${prompt}`,
+        },
+      ],
+    });
+    const json = parseLlmJson(result.text);
+    return {
+      title: String(json?.title || fallback.title),
+      content: String(json?.content || fallback.content),
+      tokens: result.tokens,
+      model: result.model,
+      provider: result.provider,
+    };
+  } catch {
+    return {
+      title: fallback.title,
+      content: fallback.content,
+      tokens: 0,
+      model: "demo",
+      provider: "demo",
+    };
+  }
+}
+
+function pageContextBlock(context?: JobContext): string {
+  if (!context) return "Pages: (none)";
+  const pages = context.pages?.length
+    ? context.pages
+        .map(
+          (page) =>
+            `- ${page.url} [${page.engine || "fetch"}${page.ok ? "" : ", partial"}]\n${(page.excerpt || page.text).slice(0, 800)}`,
+        )
+        .join("\n\n")
+    : context.fetched
+      ? `${context.fetched.url}\n${context.fetched.text.slice(0, 1200)}`
+      : "(none)";
+  const snap = context.snapshot ? `\n\nSnapshot:\n${context.snapshot.slice(0, 2000)}` : "";
+  return `Pages:\n${pages}${snap}`;
+}
+
+function pageAwarePrompt(prompt: string, context: JobContext): string {
+  const block = pageContextBlock(context);
+  if (block.includes("(none)") && !context.priorArtifact) return prompt;
+  return `${prompt}\n\n${block}${
+    context.priorArtifact
+      ? `\n\nPrior artifact ${context.priorArtifact.title}:\n${context.priorArtifact.content.slice(0, 2000)}`
+      : ""
+  }`;
 }
 
 export async function completeJobIfApproved(jobId: string) {
@@ -787,4 +1230,11 @@ export function defaultLinkedInSkillPlaybook() {
   return linkedinWeekPlaybook();
 }
 
-export { linkedinWeekPlaybook, researchPackPlaybook, salesPackPlaybook, genericPlaybook };
+export {
+  competitorScanPlaybook,
+  genericPlaybook,
+  linkedinWeekPlaybook,
+  outreachFromResearchPlaybook,
+  researchPackPlaybook,
+  salesPackPlaybook,
+} from "@/lib/job-playbooks";

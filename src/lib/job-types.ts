@@ -4,6 +4,12 @@ import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 export const JOB_TOOLS = [
   "read_brand_kit",
   "fetch_url",
+  "browser_navigate",
+  "browser_snapshot",
+  "browser_click",
+  "browser_type",
+  "crawl_links",
+  "read_artifact",
   "write_artifact",
   "ask_user",
 ] as const;
@@ -40,12 +46,29 @@ export type JobPlaybook = {
   steps: JobStep[];
 };
 
+export type BrowsedPage = {
+  url: string;
+  ok: boolean;
+  title?: string;
+  text: string;
+  excerpt: string;
+  links?: string[];
+  engine?: string;
+  error?: string;
+};
+
 export type JobContext = {
   brandBrief?: string;
   website?: string;
   fetched?: { url: string; ok: boolean; text: string };
+  pages?: BrowsedPage[];
+  currentPage?: BrowsedPage;
+  snapshot?: string;
+  pageCount?: number;
+  priorArtifact?: { id: string; title: string; type: string; content: string };
   weekPosts?: { title: string; body: string }[];
   userUrl?: string;
+  competitorUrls?: string[];
 };
 
 export type JobEventDTO = {

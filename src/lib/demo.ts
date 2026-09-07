@@ -343,6 +343,116 @@ export function demoGenerateWeek(kit: BrandKit) {
   };
 }
 
+export function demoCompetitorMarkdown(
+  kit: BrandKit,
+  pages?: { url: string; ok: boolean; text: string; excerpt?: string }[],
+) {
+  const { offer, audience } = company(kit);
+  const rows =
+    pages?.length
+      ? pages
+      : [{ url: kit.website || "https://example.com", ok: false, text: "", excerpt: "" }];
+  const sections = rows.map((page, index) => {
+    const excerpt = page.excerpt || page.text.slice(0, 400) || "(no text captured)";
+    return `## ${index + 1}. ${page.url}
+${page.ok ? "Browsed (read-only)." : "Partial / failed read."}
+
+${excerpt}
+`;
+  });
+  return `# Competitor scan
+
+Read-only comparison of ${rows.length} public page${rows.length === 1 ? "" : "s"}. No login. Nothing was sent.
+
+${sections.join("\n")}
+## Comparison
+Audience we sell to: ${audience}
+
+Offer we hold up against these pages: ${offer}
+
+1. **Specificity** — if a page could sit on any other site, that is the gap, not a slogan.
+2. **Proof** — only cite what was actually on the page. No invented traffic or testimonials.
+3. **Voice** — forbidden for us: ${kit.forbiddenWords.slice(0, 4).join(", ") || "hype words"}.
+
+## What not to copy
+Do not copy competitor claims we did not see. Omar only reports browsed text plus the Brand Kit.
+`;
+}
+
+export function demoOutreachFromResearch(
+  kit: BrandKit,
+  research?: { title?: string; content?: string },
+) {
+  const { offer, audience } = company(kit);
+  const source = research?.title
+    ? `Grounded in “${research.title}”.`
+    : "No prior research artifact — grounded in the Brand Kit only.";
+  const snippet = research?.content?.slice(0, 400) || offer;
+  const dms = [
+    `Saw the public site vs how ${audience.split(".")[0] || "your floor"} actually feels. ${offer.split(".")[0]}. Worth a 15-minute look?`,
+    "Quick question: who owns the sentence at pre-shift? That is usually where the brand lives — not the homepage hero.",
+    "Sending a one-pager, not a deck. We start with one property and 8 weeks.",
+    `From the research notes: ${snippet.split("\n")[0]?.slice(0, 160) || offer.split(".")[0]}. Happy to contrast that with a House Look brief.`,
+    "If the launch kit takes more than 20 minutes to brief, it is not finished. That is the test — not a CRM sequence.",
+  ];
+  const content = [
+    "# Outreach pack — 5 LinkedIn DMs",
+    "",
+    source,
+    "",
+    "Brandcrew will not send these. Approve, then you copy/paste.",
+    "",
+    ...dms.map((body, index) => `## LinkedIn DM ${index + 1}\n${body}\n`),
+  ].join("\n");
+  return {
+    type: "outreach_pack",
+    title: "5 LinkedIn DMs from research",
+    summary: "Five DMs grounded in research. Not sent.",
+    content,
+  };
+}
+
+export function demoAdAnglesFromUrl(
+  kit: BrandKit,
+  fetched?: { url: string; ok: boolean; text: string },
+) {
+  const { audience } = company(kit);
+  const source = fetched?.url || kit.website || "(no URL)";
+  const excerpt = fetched?.text?.slice(0, 400) || "No live page text — angles inferred from the Brand Kit.";
+  return {
+    type: "ad_angles",
+    title: "Five ad angles from the landing page",
+    summary: "Creative only. Brandcrew does not connect Meta or spend media.",
+    content: `# Ad angles from URL (creative only)
+
+Source: ${source}
+${fetched?.ok ? "Browsed read-only." : "Page was not fully readable."}
+
+What the page said:
+${excerpt}
+
+Brandcrew does not buy media, connect ad accounts, or set budgets.
+
+## 1. The mismatch
+Primary: The rooms feel like a house. The booking page feels like a chain. Guests notice.
+
+## 2. Pre-shift sentence
+Primary: If the GM cannot say it in one sentence, the homepage should not try either.
+
+## 3. One property
+Primary: We do not need your whole group. We need one location and 8 weeks.
+
+## 4. Last impression
+Primary: The walk to the door is part of the brand. So is the confirmation email.
+
+## 5. Floor staff test
+Primary: If the launch kit takes more than 20 minutes to brief, it is not finished.
+
+Audience hint: ${audience}
+`,
+  };
+}
+
 export function demoSalesPack(kit: BrandKit) {
   const { offer, audience } = company(kit);
   const emails = [
