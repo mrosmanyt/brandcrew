@@ -9,7 +9,7 @@ import {
 } from "@/lib/agent-avatar";
 import { cn } from "@/lib/utils";
 
-const SIZE_PX = { sm: 24, md: 32, lg: 40 } as const;
+const SIZE_PX = { sm: 24, md: 32, lg: 40, xl: 56 } as const;
 
 export function AgentAvatar({
   id,
@@ -19,6 +19,8 @@ export function AgentAvatar({
   size = "md",
   className,
   title,
+  spec: specOverride,
+  instanceId,
 }: {
   id?: string | null;
   name?: string | null;
@@ -27,9 +29,11 @@ export function AgentAvatar({
   size?: keyof typeof SIZE_PX;
   className?: string;
   title?: string;
+  spec?: AgentAvatarSpec;
+  instanceId?: string;
 }) {
-  const spec = agentAvatarSpec(avatarSeedFor({ id, name, role }));
-  const uid = cssId(spec.seed);
+  const spec = specOverride ?? agentAvatarSpec(avatarSeedFor({ id, name, role }));
+  const uid = cssId(`${instanceId || spec.seed}-${size}`);
   const px = SIZE_PX[size];
   const label = title || name || "Agent";
   return (
