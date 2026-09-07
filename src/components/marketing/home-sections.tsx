@@ -495,6 +495,7 @@ const FOOTER_LINKS = [
   { href: "/#developers", label: "Developer API" },
   { href: "/#faq", label: "FAQ" },
   { href: "/#trust", label: "Trust" },
+  { href: "/login", label: "Account" },
   { href: "/signup", label: "Get started" },
   { href: GITHUB_REPO, label: "GitHub", external: true },
   { href: COMPANY_SITE, label: "CINEM", external: true },

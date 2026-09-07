@@ -313,6 +313,7 @@ export function mergeOAuthTokens(
   };
 }
 
+/** Marketplace plugin callback — not Google user login (`/api/auth/google/callback`). */
 export function oauthRedirectUri() {
   return `${oauthRedirectBase()}/api/oauth/callback`;
 }
