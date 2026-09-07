@@ -228,7 +228,7 @@ Set `OAUTH_REDIRECT_BASE=http://127.0.0.1:43180` (default). Google/Slack authori
 **Cross-build limits (honest):**
 
 - **Mac `.dmg`:** run `desktop:build:mac` on **macOS**. Linux cannot produce a usable signed/stapled dmg (electron-builder will skip or fail; that is expected).
-- **Windows `.exe`:** `desktop:build:win` on Windows is the straightforward path. On Linux it can package `win-unpacked` and often a **portable** `.exe`. The NSIS installer (Setup.exe) typically needs **Wine** (`wine64`) or a Windows runner. Code signing is off (`signAndEditExecutable: false`); ship unsigned unless you add your own cert.
+- **Windows `.exe`:** `desktop:build:win` on Windows is the straightforward path. On Linux, **wine32** (i386) is required for a complete NSIS `CINEM-Pro-Setup.exe` — `wine64` alone leaves a tiny stub. Portable `.exe` still builds without wine32. Code signing is off (`signAndEditExecutable: false`); ship unsigned unless you add your own cert.
 - CI is optional — there is no GitHub Actions workflow in this slice. Do not expect a Mac dmg from a Linux agent.
 
 ### First account + first job

@@ -162,14 +162,16 @@ const wineMissing =
   !existsSync("/usr/bin/wine") &&
   !existsSync("/usr/bin/wine64");
 
-if (wineMissing) {
+if (targets.includes("--win") && (wineMissing || result.status !== 0)) {
   console.warn(
-    "NSIS/.exe wrapping on Linux often needs Wine. Retrying Windows portable + unpacked dir only…",
+    wineMissing
+      ? "NSIS on Linux needs Wine (wine32/i386, not only wine64). Building portable…"
+      : "Windows NSIS step failed. Building portable so a downloadable .exe still exists…",
   );
   npx(["electron-builder", "--publish", "never", "--win", "portable"], builderEnv);
   ensureFriendlyWinNames();
   console.warn(
-    "Produced win-unpacked / portable .exe. Full NSIS installer needs Wine or a Windows runner.",
+    "Produced win-unpacked / portable .exe. Full NSIS installer needs wine32 or a Windows runner.",
   );
   process.exit(0);
 }
