@@ -7,14 +7,14 @@ export const BUILD_PROMPT_HEADLINE = "What should this desk make?";
 export const BUILD_PROMPT_SUBCOPY =
   "Name the job. The crew drafts it — you approve what leaves.";
 
-export const BUILD_PROMPT_DEFAULT_PLACEHOLDER = "Add a message, or pick a category.";
+export const BUILD_PROMPT_DEFAULT_PLACEHOLDER = "Add a message, or pick a job from +.";
 
 export type BuildPromptCategoryId =
   | "website"
   | "mobile"
   | "design"
   | "slides"
-  | "animation";
+  | "content";
 
 export type BuildPromptCategory = {
   id: BuildPromptCategoryId;
@@ -24,7 +24,7 @@ export type BuildPromptCategory = {
   playbookKey: string;
 };
 
-/** Category row — every tile starts a real playbook. Animation maps to Ads. */
+/** + menu Build section — every item starts a real playbook. Content maps to Ads. */
 export const BUILD_PROMPT_CATEGORIES: readonly BuildPromptCategory[] = [
   {
     id: "website",
@@ -35,7 +35,7 @@ export const BUILD_PROMPT_CATEGORIES: readonly BuildPromptCategory[] = [
   },
   {
     id: "mobile",
-    label: "Mobile",
+    label: "Mobile / App",
     placeholder: "Build a small app for…",
     action: "build_app",
     playbookKey: "app_builder",
@@ -55,8 +55,8 @@ export const BUILD_PROMPT_CATEGORIES: readonly BuildPromptCategory[] = [
     playbookKey: "deck_builder",
   },
   {
-    id: "animation",
-    label: "Animation",
+    id: "content",
+    label: "Content",
     placeholder: "Write motion-ready ad angles for…",
     action: "ad_angles_from_url",
     playbookKey: "ad_angles_from_url",
@@ -132,11 +132,14 @@ export const BUILD_PROMPT_CHIPS: readonly BuildPromptChip[] = [
     fill: JOB_ACTION_MESSAGES.ad_angles_from_url,
     action: "ad_angles_from_url",
     playbookKey: "ad_angles_from_url",
-    categoryId: "animation",
+    categoryId: "content",
   },
 ];
 
-export const BUILD_PROMPT_CHIP_PAGE_SIZE = 3;
+/** Example prompts that are not already a Build category (avoids Website twice). */
+export function plusMenuExampleChips(): BuildPromptChip[] {
+  return BUILD_PROMPT_CHIPS.filter((chip) => !chip.categoryId);
+}
 
 export type BuildPromptIntent = {
   action: GenerateAction;
@@ -159,21 +162,7 @@ export function composerPlaceholder(input: {
   return categoryById(input.categoryId)?.placeholder || BUILD_PROMPT_DEFAULT_PLACEHOLDER;
 }
 
-export function chipPage(setIndex: number): BuildPromptChip[] {
-  const start =
-    ((setIndex % Math.ceil(BUILD_PROMPT_CHIPS.length / BUILD_PROMPT_CHIP_PAGE_SIZE)) +
-      Math.ceil(BUILD_PROMPT_CHIPS.length / BUILD_PROMPT_CHIP_PAGE_SIZE)) %
-    Math.ceil(BUILD_PROMPT_CHIPS.length / BUILD_PROMPT_CHIP_PAGE_SIZE);
-  const offset = start * BUILD_PROMPT_CHIP_PAGE_SIZE;
-  return BUILD_PROMPT_CHIPS.slice(offset, offset + BUILD_PROMPT_CHIP_PAGE_SIZE);
-}
-
-export function nextChipSetIndex(setIndex: number) {
-  const pages = Math.ceil(BUILD_PROMPT_CHIPS.length / BUILD_PROMPT_CHIP_PAGE_SIZE);
-  return (setIndex + 1) % pages;
-}
-
-/** Last explicit category or chip wins. Empty send still uses that playbook. */
+/** Last explicit category or chip wins. Menu picks still use that playbook. */
 export function resolveBuildPromptIntent(input: {
   categoryId?: BuildPromptCategoryId | null;
   chipId?: string | null;
