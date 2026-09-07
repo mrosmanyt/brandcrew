@@ -40,6 +40,7 @@ model Workspace {
   skills             Skill[]
   agents             Agent[]
   pluginConnections  PluginConnection[]
+  apiKeys            ApiKey[]
 }
 
 model Agent {
@@ -225,4 +226,20 @@ model Skill {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
   jobs        Job[]
+}
+
+model ApiKey {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  name            String    @default("Default")
+  prefix          String    @unique
+  keyHash         String
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  rateWindowStart DateTime  @default(now())
+  rateWindowCount Int       @default(0)
+  createdAt       DateTime  @default(now())
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, revokedAt])
 }

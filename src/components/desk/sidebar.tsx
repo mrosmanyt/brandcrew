@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   CreditCard,
+  Code2,
   LayoutGrid,
   ListChecks,
   LogOut,
@@ -258,6 +259,14 @@ function NavBody({
               icon={<ListChecks className="size-3.5" />}
             >
               Ops board
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/developers`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Code2 className="size-3.5" />}
+            >
+              API Console
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/billing`}

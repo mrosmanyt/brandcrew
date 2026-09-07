@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ApiAuthError, ApiRateLimitError } from "@/lib/api-keys";
 import { AuthError, ForbiddenError } from "@/lib/auth";
 
 export class ClientError extends Error {
@@ -14,7 +15,9 @@ export function jsonError(error: unknown) {
   if (
     error instanceof AuthError ||
     error instanceof ForbiddenError ||
-    error instanceof ClientError
+    error instanceof ClientError ||
+    error instanceof ApiAuthError ||
+    error instanceof ApiRateLimitError
   ) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }

@@ -206,6 +206,26 @@ See [`.env.example`](./.env.example). Summary:
 
 API keys are read **only on the server**. Users never paste LLM keys. Plugin keys are workspace-scoped and encrypted.
 
+## Developer API
+
+Workspace **API keys** (`bc_live_…`) authenticate `Authorization: Bearer` calls to `/api/v1`. Manage keys in Mission Control → **API Console** (`/desk/[workspaceId]/developers`). The secret is shown once; we store a SHA-256 hash.
+
+| Method | Path | Auth |
+| --- | --- | --- |
+| GET | `/api/v1` | Bearer |
+| GET/POST | `/api/v1/agents` | Bearer |
+| GET/POST | `/api/v1/jobs` | Bearer (`POST` body `{ agentId, message }`) |
+| GET | `/api/v1/jobs/:id` | Bearer |
+| GET | `/api/v1/artifacts` | Bearer |
+| GET | `/api/v1/artifacts/:id` | Bearer |
+
+Rate limit: **60 requests / minute / key**. Job starts also hit the workspace token budget. Default agent name is still **New Agent**. Responses never include model provider keys.
+
+```bash
+curl -s http://127.0.0.1:43180/api/v1 \
+  -H "Authorization: Bearer bc_live_YOUR_KEY"
+```
+
 ## Deploy to Vercel + Neon
 
 This repo is deploy-prep only — it does not create cloud accounts or push a production deploy from CI.
@@ -275,6 +295,7 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 - [ ] A job with browse uses **fetch** (not Playwright) — activity still shows a URL
 - [ ] Gmail/Slack Connect (if client ids set) returns to `/api/oauth/callback` on the Vercel origin
 - [ ] Electron `desktop:dev` still works against local Docker/Neon `DATABASE_URL`
+- [ ] API Console mints a key; `GET /api/v1` with Bearer returns the workspace id
 
 ### Serverless limits (honest)
 
@@ -298,6 +319,7 @@ npm run test:llm           # routing + client boot checks (fake keys, no paid ca
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
 npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persistence (DB smoke skipped if Postgres is down)
+npm run test:api           # API key hashing + public catalog (no live DB)
 npm run test:browse        # optional: Playwright against example.com (needs Chrome)
 ```
 
