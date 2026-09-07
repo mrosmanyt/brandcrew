@@ -18,28 +18,22 @@ export function DeskHeader({
   const tight = usedPct >= 90;
 
   return (
-    <header className="flex h-12 flex-wrap items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{workspace.name}</p>
-        <div className="mt-1 flex items-center gap-2">
-          <ProviderBadges llm={llm} />
-        </div>
+    <header className="flex h-11 items-center justify-between gap-4 border-b border-border px-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <p className="truncate text-sm">{workspace.name}</p>
+        <ProviderBadges llm={llm} />
       </div>
       <Link
         href={`/desk/${workspace.id}/billing`}
-        className="min-w-[12rem] flex-1 sm:max-w-xs"
+        className="flex min-w-[10rem] items-center gap-2 sm:max-w-xs"
         title="Token budget"
       >
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>Budget</span>
-          <span className={cn(tight && "text-destructive")}>
-            {workspace.tokenUsed.toLocaleString()} /{" "}
-            {workspace.tokenBudget.toLocaleString()}
-          </span>
-        </div>
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+        <span className={cn("text-[11px] text-muted-foreground", tight && "text-destructive")}>
+          {workspace.tokenUsed.toLocaleString()} / {workspace.tokenBudget.toLocaleString()}
+        </span>
+        <div className="h-1 w-16 overflow-hidden rounded-full bg-muted">
           <div
-            className={cn("h-full bg-primary", tight && "bg-destructive")}
+            className={cn("h-full bg-foreground/70", tight && "bg-destructive")}
             style={{ width: `${usedPct}%` }}
           />
         </div>

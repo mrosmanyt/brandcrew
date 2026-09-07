@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Bot,
   Check,
@@ -66,6 +66,7 @@ export function MissionControl({
   tokenBudget: number;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [agents, setAgents] = useState(initialAgents);
   const [selectedId, setSelectedId] = useState(
     initialAgentId && initialAgents.some((agent) => agent.id === initialAgentId)
@@ -90,8 +91,10 @@ export function MissionControl({
   const [launchOpen, setLaunchOpen] = useState(false);
   const [launchProposal, setLaunchProposal] = useState<ProposedAgent[]>([]);
   const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const urlAgentId = searchParams.get("agentId") || initialAgentId;
 
   const selected = agents.find((agent) => agent.id === selectedId) ?? null;
 
@@ -171,9 +174,20 @@ export function MissionControl({
   }, [messages.length]);
 
   useEffect(() => {
+    if (
+      urlAgentId &&
+      agents.some((agent) => agent.id === urlAgentId) &&
+      urlAgentId !== selectedId
+    ) {
+      setSelectedId(urlAgentId);
+    }
+  }, [urlAgentId, agents, selectedId]);
+
+  useEffect(() => {
     if (selected) {
       setInput(selected.instructions ? `Give this ${selected.role || "agent"} a job.` : "");
       setRenameValue(displayAgentName(selected.name));
+      setRenaming(false);
       void refreshChat(selected.id);
     }
   }, [selected?.id, refreshChat]);
@@ -252,6 +266,7 @@ export function MissionControl({
       return;
     }
     setAgents((prev) => prev.map((agent) => (agent.id === selected.id ? data.agent : agent)));
+    setRenaming(false);
     toast.success("Renamed.");
   }
 
@@ -375,38 +390,34 @@ export function MissionControl({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[13.75rem_minmax(0,1fr)_16.5rem]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[15rem_minmax(0,1fr)_16rem]">
         <aside className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
-          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-            <div>
-              <p className="page-kicker">Mission Control</p>
-              <h1 className="text-[15px] font-medium tracking-tight">Agents</h1>
+          <div className="flex items-center justify-between px-3 py-3">
+            <h1 className="text-sm font-medium">Agents</h1>
+            <div className="flex items-center gap-0.5">
+              <Button size="xs" variant="ghost" onClick={createBlankAgent} disabled={busy}>
+                <Plus className="size-3" />
+                New
+              </Button>
+              <Button size="xs" variant="ghost" onClick={openLaunch} disabled={busy} title="Launch team">
+                <Users className="size-3" />
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                nativeButton={false}
+                render={<Link href={`/desk/${workspaceId}/marketplace`} />}
+                title="Marketplace"
+              >
+                <Store className="size-3" />
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-1 border-b border-border px-2 py-1.5">
-            <Button size="xs" onClick={createBlankAgent} disabled={busy}>
-              <Plus className="size-3" />
-              New Agent
-            </Button>
-            <Button size="xs" variant="secondary" onClick={openLaunch} disabled={busy}>
-              <Users className="size-3" />
-              Launch team
-            </Button>
-            <Button
-              size="xs"
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/desk/${workspaceId}/marketplace`} />}
-            >
-              <Store className="size-3" />
-              Marketplace
-            </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-1.5">
+          <div className="flex-1 overflow-y-auto px-1.5 pb-2">
             {agents.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border px-3 py-5 text-xs leading-5 text-muted-foreground">
-                No agents yet. Create one, add a bot from Marketplace, or launch a
-                full business team (10+ roles, explicit approve).
+              <div className="px-2.5 py-6 text-xs leading-5 text-muted-foreground">
+                No agents yet. Create one, add a Marketplace bot, or launch a
+                team (you approve).
               </div>
             ) : (
               agents.map((agent) => {
@@ -417,13 +428,13 @@ export function MissionControl({
                     type="button"
                     onClick={() => selectAgent(agent.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left",
-                      selectedId === agent.id ? "bg-secondary" : "hover:bg-muted/60",
+                      "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left",
+                      selectedId === agent.id ? "bg-secondary" : "hover:bg-muted/50",
                     )}
                   >
                     <span
                       className={cn(
-                        "grid size-7 shrink-0 place-items-center rounded-md text-[11px] font-medium",
+                        "grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-medium",
                         selectedId === agent.id
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground",
@@ -433,13 +444,13 @@ export function MissionControl({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[13px] font-medium">
+                        <span className="truncate text-sm">
                           {displayAgentName(agent.name)}
                         </span>
                         <StatusChip status={live} />
                       </span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
-                        {agent.role || "No role label yet"}
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {agent.role || "No role yet"}
                       </span>
                     </span>
                   </button>
@@ -450,87 +461,106 @@ export function MissionControl({
         </aside>
 
         <section className="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
-          <header className="border-b border-border px-4 py-2.5">
+          <header className="px-5 py-3">
             {selected ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="page-kicker">{selected.role || "Agent"}</p>
-                    <h2 className="truncate text-[15px] font-medium tracking-tight">
+                    <h2 className="truncate text-sm font-medium">
                       {displayAgentName(selected.name)}
                     </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {selected.role || "Agent"}
+                    </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Input
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      className="h-7 w-36 text-xs"
-                      aria-label="Agent name"
-                    />
-                    <Button size="xs" variant="secondary" onClick={renameSelected}>
-                      <Pencil className="size-3" />
-                      Rename
-                    </Button>
+                  <div className="flex flex-wrap items-center gap-1">
+                    {renaming ? (
+                      <>
+                        <Input
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          className="h-7 w-36 text-xs"
+                          aria-label="Agent name"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void renameSelected();
+                            }
+                            if (e.key === "Escape") setRenaming(false);
+                          }}
+                        />
+                        <Button size="xs" variant="secondary" onClick={renameSelected}>
+                          Save
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="xs" variant="ghost" onClick={() => setRenaming(true)}>
+                        <Pencil className="size-3" />
+                        Rename
+                      </Button>
+                    )}
                     <Button size="xs" variant="ghost" onClick={archiveSelected}>
                       <Trash2 className="size-3" />
                       Archive
                     </Button>
                   </div>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {roleChips.map((chip) => (
-                    <Button
-                      key={`${chip.action}-${chip.label}`}
-                      size="xs"
-                      disabled={busy}
-                      onClick={() =>
-                        startJob(
-                          chip.action,
-                          chip.message || input || JOB_ACTION_MESSAGES[chip.action],
-                        )
-                      }
-                    >
-                      {chip.label}
-                    </Button>
-                  ))}
-                  {marketplaceChips.map((chip) => (
-                    <Button
-                      key={chip.label}
-                      size="xs"
-                      variant="outline"
-                      nativeButton={false}
-                      render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
-                    >
-                      {chip.label}
-                    </Button>
-                  ))}
-                </div>
+                {roleChips.length || marketplaceChips.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {roleChips.map((chip) => (
+                      <Button
+                        key={`${chip.action}-${chip.label}`}
+                        size="xs"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          startJob(
+                            chip.action,
+                            chip.message || input || JOB_ACTION_MESSAGES[chip.action],
+                          )
+                        }
+                      >
+                        {chip.label}
+                      </Button>
+                    ))}
+                    {marketplaceChips.map((chip) => (
+                      <Button
+                        key={chip.label}
+                        size="xs"
+                        variant="ghost"
+                        nativeButton={false}
+                        render={<Link href={chip.href || `/desk/${workspaceId}/marketplace`} />}
+                      >
+                        {chip.label}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
               </>
             ) : (
               <>
-                <h2 className="text-[15px] font-medium tracking-tight">Your desk</h2>
+                <h2 className="text-sm font-medium">Your desk</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Create agents you own. Marketplace bots install real Agent rows.
-                  Launching a full business team needs an explicit approve.
+                  Launching a team needs an explicit approve.
                 </p>
               </>
             )}
           </header>
 
-          <div ref={chatRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div ref={chatRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
             {!selected ? (
-              <div className="rounded-xl border border-dashed border-border bg-card/50 px-5 py-8">
+              <div className="max-w-md py-6">
                 <Sparkles className="size-4 text-muted-foreground" />
-                <p className="mt-3 max-w-md text-sm text-muted-foreground">
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   Start with New Agent, Marketplace, or Launch team. Jobs only run
                   when you pick an agent. Quick-start chips follow the agent’s
-                  role label (Research → Competitor scan). Missing roles link to
-                  Marketplace — they do not invent a named roster.
+                  role label. Missing roles link to Marketplace.
                 </p>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-wrap gap-2">
                   <Button onClick={createBlankAgent}>New Agent</Button>
                   <Button variant="secondary" onClick={openLaunch}>
-                    Launch full business team
+                    Launch team
                   </Button>
                   {marketplaceChips.map((chip) => (
                     <Button
@@ -546,12 +576,11 @@ export function MissionControl({
               </div>
             ) : null}
             {selected && messages.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-card/50 px-5 py-8">
+              <div className="max-w-md py-8">
                 <Bot className="size-4 text-muted-foreground" />
-                <p className="mt-3 max-w-md text-sm text-muted-foreground">
-                  Name the job. This agent will plan, use tools (Brand Kit,
-                  browser_navigate / snapshot, Web Search if Connected), and pause
-                  for approval.
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  Name the job. This agent will plan, use tools, and pause for
+                  approval.
                 </p>
               </div>
             ) : null}
@@ -560,11 +589,11 @@ export function MissionControl({
                 key={message.id}
                 className={
                   message.role === "user"
-                    ? "ml-auto max-w-[min(36rem,88%)] rounded-2xl bg-secondary px-3.5 py-2 text-sm"
-                    : "mr-auto max-w-[min(40rem,92%)] rounded-2xl border border-border bg-card px-3.5 py-2 text-sm"
+                    ? "ml-auto max-w-[min(36rem,88%)] rounded-2xl bg-secondary px-3.5 py-2.5 text-sm"
+                    : "mr-auto max-w-[min(40rem,92%)] rounded-2xl px-3.5 py-2.5 text-sm"
                 }
               >
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {message.role === "user"
                     ? "You"
                     : displayAgentName(selected?.name)}
@@ -573,7 +602,7 @@ export function MissionControl({
               </article>
             ))}
             {latestDraft ? (
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-xl border border-border p-4">
                 <ArtifactPanel
                   artifact={latestDraft}
                   busy={busy}
@@ -606,22 +635,22 @@ export function MissionControl({
               e.preventDefault();
               startJob("default");
             }}
-            className="border-t border-border p-3"
+            className="px-5 pb-4"
           >
-            <div className="rounded-2xl border border-border bg-muted/30 p-2">
+            <div className="rounded-2xl border border-border px-3 py-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 rows={2}
                 disabled={busy || !selected}
-                className="min-h-16 border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+                className="min-h-14 border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
                 placeholder={
                   selected
                     ? "Give this agent a job — or type “launch a full business team”."
                     : "Create an agent first"
                 }
               />
-              <div className="mt-1 flex flex-wrap items-center justify-between gap-2 px-1">
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
                   {atCap ? "Budget reached." : `${remaining.toLocaleString()} tokens left`}
                 </p>
@@ -634,10 +663,10 @@ export function MissionControl({
           </form>
         </section>
 
-        <aside className="flex min-h-0 flex-col bg-card/30">
-          <div className="border-b border-border px-3 py-2.5">
-            <p className="page-kicker">Live activity</p>
-            <h2 className="mt-0.5 text-[15px] font-medium tracking-tight">
+        <aside className="flex min-h-0 flex-col">
+          <div className="px-4 py-3">
+            <p className="text-xs text-muted-foreground">Activity</p>
+            <h2 className="mt-1 text-sm font-medium">
               {selectedJob ? selectedJob.title : "No job yet"}
             </h2>
             {selectedJob ? (
@@ -664,9 +693,9 @@ export function MissionControl({
               </Button>
             ) : null}
           </div>
-          <div ref={feedRef} className="flex-1 overflow-y-auto px-4 py-3">
+          <div ref={feedRef} className="flex-1 overflow-y-auto px-4 pb-4">
             {!selectedJob ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm leading-6 text-muted-foreground">
                 Start a job to stream plan → tools → artifacts here.
               </p>
             ) : (
@@ -677,18 +706,18 @@ export function MissionControl({
                       className={cn(
                         "mt-1 size-2.5 shrink-0",
                         event.type === "ask_user" || event.type === "error"
-                          ? "text-primary"
+                          ? "text-foreground"
                           : "text-muted-foreground",
                       )}
                     />
                     <div>
                       <p className="leading-5">{event.message}</p>
                       {typeof event.data?.url === "string" && event.data.url ? (
-                        <p className="break-all text-[11px] text-muted-foreground">
+                        <p className="break-all text-xs text-muted-foreground">
                           {event.data.url}
                         </p>
                       ) : null}
-                      <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {eventTypeLabel(event.type)}
                       </p>
                     </div>
@@ -706,10 +735,10 @@ export function MissionControl({
         </aside>
       </div>
 
-      <div className="grid shrink-0 gap-3 border-t border-border bg-background px-4 py-2.5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid shrink-0 gap-4 border-t border-border px-4 py-2.5 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <p className="page-kicker">Jobs</p>
+            <p className="text-xs text-muted-foreground">Jobs</p>
             <span className="text-xs text-muted-foreground">
               {jobs.filter((job) => job.status !== "done").length} open
             </span>
@@ -729,13 +758,11 @@ export function MissionControl({
                         if (job.agentId) selectAgent(job.agentId);
                       }}
                       className={cn(
-                        "min-w-[11rem] rounded-lg border px-2.5 py-1.5 text-left",
-                        job.id === selectedJob?.id
-                          ? "border-white/20 bg-secondary"
-                          : "border-border bg-card/50",
+                        "min-w-[10.5rem] rounded-lg px-2.5 py-1.5 text-left",
+                        job.id === selectedJob?.id ? "bg-secondary" : "hover:bg-muted/50",
                       )}
                     >
-                      <p className="truncate text-sm font-medium">{job.title}</p>
+                      <p className="truncate text-sm">{job.title}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {displayAgentName(owner?.name)} · {jobStatusLabel(job.status)}
                       </p>
@@ -747,19 +774,19 @@ export function MissionControl({
           )}
         </div>
         <div>
-          <p className="page-kicker">Skills</p>
-          <ul className="mt-2 space-y-1.5">
+          <p className="text-xs text-muted-foreground">Skills</p>
+          <ul className="mt-1.5 space-y-1">
             {skills.map((skill) => (
               <li key={skill.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate">{skill.name}</span>
                 <Button
                   size="xs"
-                  variant="outline"
+                  variant="ghost"
                   disabled={busy}
                   onClick={() => runSkill(skill)}
                 >
                   <Play className="size-3" />
-                  Run skill
+                  Run
                 </Button>
               </li>
             ))}
@@ -769,7 +796,7 @@ export function MissionControl({
               <input
                 value={skillName}
                 onChange={(e) => setSkillName(e.target.value)}
-                placeholder="Save this job as a skill"
+                placeholder="Save as skill"
                 className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-xs"
               />
               <Button size="xs" variant="secondary" onClick={saveSkill}>
@@ -821,9 +848,9 @@ function StatusChip({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "shrink-0 text-[10px] uppercase tracking-[0.12em]",
-        status === "working" && "text-primary",
-        status === "needs-you" && "text-primary",
+        "shrink-0 text-[11px]",
+        status === "working" && "text-sky-400",
+        status === "needs-you" && "text-amber-400",
         status === "idle" && "text-muted-foreground",
       )}
     >

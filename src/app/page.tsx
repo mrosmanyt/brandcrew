@@ -1,147 +1,73 @@
-import { Bot, Plug, ShieldCheck, Sparkles, SquareTerminal, Users } from "lucide-react";
+import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { ProductShot } from "@/components/marketing/product-shot";
 import { SiteNav } from "@/components/marketing/site-nav";
-import { HomeFooterCta, HomeHeroCtas, HomePlanCta } from "@/components/marketing/home-ctas";
-import { PLANS } from "@/lib/constants";
+import { HomeFooterCta, HomeHeroCtas } from "@/components/marketing/home-ctas";
 
 export const dynamic = "force-static";
 
-const FEATURES = [
+const STEPS = [
   {
-    icon: Bot,
-    title: "Your agents",
-    body: "Default name is New Agent. Role is a label. Rename freely. Jobs bind to the agent you selected.",
+    n: "1",
+    title: "Create an agent",
+    body: "New Agent is the default name. Add a Marketplace bot or launch a team — you approve the roster.",
   },
   {
-    icon: Users,
-    title: "Team launch",
-    body: "Spin up 10+ roles after an explicit approve. Marketplace bots install real Agent rows — not canned output.",
+    n: "2",
+    title: "Give it a job",
+    body: "It plans, uses tools, and writes an artifact. Browse and plugins only run when they are real.",
   },
   {
-    icon: Plug,
-    title: "Live plugins",
-    body: "Gmail and Slack Connect only after a real OAuth token exchange. Web Search needs a real Tavily key.",
-  },
-  {
-    icon: SquareTerminal,
-    title: "Tools, then pause",
-    body: "Jobs plan, browse public pages, list mail, draft Slack — then ask_user. You approve what leaves.",
-  },
-  {
-    icon: Sparkles,
-    title: "Multi-model",
-    body: "OpenAI, Anthropic, and Gemini on the server. Cheap drafts, stronger finals. No keys in the browser.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "A budget you can see",
-    body: "Token meter in the header. Hit the cap and the desk stops with a clear upgrade path.",
+    n: "3",
+    title: "Approve what leaves",
+    body: "Drafts stay drafts. Jobs pause at ask_user. You decide what goes out.",
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="min-h-full bg-background">
+    <MarketingShell>
       <SiteNav />
 
       <main>
-        <section className="relative overflow-hidden">
-          <div className="landing-glow pointer-events-none absolute inset-0" />
-          <div className="landing-grid pointer-events-none absolute inset-0" />
-          <div className="relative mx-auto w-full max-w-6xl px-5 pb-8 pt-16 md:pb-10 md:pt-24">
-            <p className="page-kicker">AI employee desk</p>
-            <h1 className="font-heading mt-4 max-w-3xl text-4xl leading-[1.05] md:text-6xl lg:text-[4.25rem]">
-              The agent desk for work you approve.
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-              CINEM Pro is staff you hire yourself. Create agents, connect Gmail and
-              Slack for real, run jobs with tools — then approve what leaves. No
-              named cast. No fake Connected plugins.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <HomeHeroCtas />
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Server-side model keys only. Drafts stay drafts until you say so.
-            </p>
+        <section className="mx-auto w-full max-w-5xl px-6 pt-20 pb-16 md:pt-28 md:pb-24">
+          <p className="text-sm text-muted-foreground">CINEM Pro · AI employee desk</p>
+          <h1 className="font-heading mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
+            Hire agents.
+            <br />
+            Approve the work.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
+            Most AI tools dump a draft and walk away. CINEM Pro is a desk: staff
+            you create, jobs that use tools, and a pause before anything leaves.
+          </p>
+          <div className="mt-10">
+            <HomeHeroCtas />
           </div>
         </section>
 
-        <section id="product" className="mx-auto w-full max-w-6xl px-5 pb-20">
+        <section id="product" className="mx-auto w-full max-w-5xl px-6 pb-24">
           <ProductShot />
         </section>
 
-        <section id="features" className="mx-auto w-full max-w-6xl px-5 pb-20">
-          <p className="page-kicker">Product</p>
-          <h2 className="font-heading mt-3 text-3xl md:text-4xl">
-            Built like an IDE for agents.
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Marketing chrome is Cursor-tight. The desk is chat-first, with a dense
-            agent list and a Marketplace that installs real rows.
-          </p>
-          <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-3">
-            {FEATURES.map((item) => (
-              <article key={item.title} className="bg-card p-5">
-                <item.icon className="size-4 text-muted-foreground" />
-                <h3 className="mt-3 text-sm font-medium tracking-tight">{item.title}</h3>
-                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{item.body}</p>
-              </article>
+        <section id="how-it-works" className="mx-auto w-full max-w-5xl px-6 pb-24">
+          <h2 className="font-heading text-3xl tracking-tight md:text-4xl">How it works</h2>
+          <ol className="mt-12 grid gap-12 md:grid-cols-3 md:gap-10">
+            {STEPS.map((step) => (
+              <li key={step.n}>
+                <p className="text-sm text-muted-foreground">{step.n}</p>
+                <h3 className="mt-3 text-lg font-medium tracking-tight">{step.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">{step.body}</p>
+              </li>
             ))}
-          </div>
-        </section>
-
-        <section id="pricing" className="mx-auto w-full max-w-6xl px-5 pb-20">
-          <p className="page-kicker">Pricing</p>
-          <h2 className="font-heading mt-3 text-3xl md:text-4xl">Two plans. No seat circus.</h2>
-          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Starter for a founder plus one. Growth for a small agency pod. Mock
-            billing works locally; Stripe test mode when keys are set.
-          </p>
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {(["starter", "growth"] as const).map((id) => {
-              const plan = PLANS[id];
-              const featured = id === "growth";
-              return (
-                <article
-                  key={id}
-                  className={
-                    featured
-                      ? "flex flex-col rounded-xl border border-white/15 bg-card p-6 shadow-[0_0_0_1px_rgb(255_255_255/0.04)]"
-                      : "flex flex-col rounded-xl border border-border bg-card/60 p-6"
-                  }
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">{plan.seats} seats</p>
-                    {featured ? (
-                      <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-                        Most desks
-                      </span>
-                    ) : null}
-                  </div>
-                  <h3 className="font-heading mt-1 text-2xl">{plan.name}</h3>
-                  <p className="mt-3 text-4xl font-medium tracking-tight">
-                    ${plan.price}
-                    <span className="text-base font-normal text-muted-foreground">/mo</span>
-                  </p>
-                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                    <li>{plan.tokenBudget.toLocaleString()} tokens per cycle</li>
-                    <li>Your agents + Marketplace + shared Brand Kit</li>
-                    <li>{id === "growth" ? "Room for a 5-person desk" : "Founder + collaborator"}</li>
-                  </ul>
-                  <HomePlanCta planName={plan.name} featured={featured} />
-                </article>
-              );
-            })}
-          </div>
+          </ol>
         </section>
 
         <section className="border-t border-border">
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 py-16 md:flex-row md:items-center">
+          <div className="mx-auto flex w-full max-w-5xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center">
             <div>
-              <h2 className="font-heading text-3xl md:text-4xl">Open the desk.</h2>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Create New Agent, connect a plugin, give a job. Approve what leaves.
+              <h2 className="font-heading text-3xl tracking-tight md:text-4xl">Open the desk</h2>
+              <p className="mt-3 max-w-md text-base leading-7 text-muted-foreground">
+                Create New Agent, connect a plugin, start a job. Approve what leaves.
               </p>
             </div>
             <HomeFooterCta />
@@ -149,9 +75,10 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-border px-5 py-6 text-center text-xs text-muted-foreground">
-        CINEM Pro is an AI employee desk from CINEM (cinem.tech). A desk, not a CRM, not an ad account, not a robot that posts for you.
+      <footer className="px-6 py-10 text-center text-sm text-muted-foreground">
+        CINEM Pro is from CINEM. A desk — not a CRM, not an ad account, not a robot
+        that posts for you.
       </footer>
-    </div>
+    </MarketingShell>
   );
 }

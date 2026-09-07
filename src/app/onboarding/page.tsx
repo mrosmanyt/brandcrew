@@ -17,10 +17,10 @@ export default async function OnboardingPage() {
   if (!workspace) redirect("/desk");
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-5 py-10">
+    <div className="mx-auto w-full max-w-2xl px-6 py-12">
       <BrandMark />
-      <p className="page-kicker mt-8">Onboarding</p>
-      <h1 className="font-heading mt-2 text-3xl">Your demo desk is ready.</h1>
+      <p className="page-kicker mt-10">Onboarding</p>
+      <h1 className="font-heading mt-2 text-3xl tracking-tight">Your demo desk is ready.</h1>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
         Hi {user.name.split(" ")[0]}. We loaded <strong>Northline Studio</strong> —
         a hospitality brand system — so your agents have company facts to write

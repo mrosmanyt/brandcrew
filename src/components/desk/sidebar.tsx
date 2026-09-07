@@ -17,6 +17,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { BrandMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { displayAgentName } from "@/lib/constants";
+import { DEFAULT_AGENT_NAME, displayAgentName } from "@/lib/constants";
 import type { AgentDTO } from "@/lib/job-types";
 import type { WorkspaceDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ function NavBody({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
   const [name, setName] = useState("");
   const selectedAgentId = searchParams.get("agentId");
   const onMission = pathname === `/desk/${workspace.id}`;
@@ -89,12 +91,29 @@ function NavBody({
     }
   }
 
+  async function createAgent() {
+    setCreatingAgent(true);
+    const res = await fetch(`/api/workspaces/${workspace.id}/agents`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: DEFAULT_AGENT_NAME, role: "" }),
+    });
+    const data = await res.json();
+    setCreatingAgent(false);
+    if (!res.ok) {
+      toast.error(data.error || "Could not create an agent.");
+      return;
+    }
+    router.push(`/desk/${workspace.id}?agentId=${data.agent.id}`);
+    router.refresh();
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-12 items-center justify-between gap-2 border-b border-sidebar-border px-2.5">
+      <div className="flex h-12 items-center justify-between gap-2 px-2.5">
         {collapsed ? (
           <span className="grid size-6 place-items-center rounded-[6px] bg-sidebar-primary text-[0.65rem] font-semibold text-sidebar-primary-foreground">
-            Bc
+            CP
           </span>
         ) : (
           <BrandMark inverted />
@@ -114,10 +133,10 @@ function NavBody({
       </div>
 
       {!collapsed ? (
-        <div className="border-b border-sidebar-border px-2.5 py-2.5">
+        <div className="px-2.5 pb-2">
           <select
             aria-label="Workspace"
-            className="w-full rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1.5 text-xs text-sidebar-foreground"
+            className="w-full rounded-md border-0 bg-sidebar-accent px-2 py-1.5 text-xs text-sidebar-foreground"
             value={workspace.id}
             onChange={(e) => router.push(`/desk/${e.target.value}`)}
           >
@@ -132,7 +151,7 @@ function NavBody({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="New workspace"
-              className="h-7 border-sidebar-border bg-sidebar-accent text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40"
+              className="h-7 border-0 bg-sidebar-accent text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40"
             />
             <Button
               type="submit"
@@ -150,10 +169,28 @@ function NavBody({
       <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
           {!collapsed ? (
-            <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/40">
-              Agents
-            </p>
-          ) : null}
+            <div className="mb-1 flex items-center justify-between px-2">
+              <p className="text-xs text-sidebar-foreground/45">Agents</p>
+              <button
+                type="button"
+                onClick={createAgent}
+                disabled={creatingAgent}
+                className="text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              >
+                New
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={createAgent}
+              disabled={creatingAgent}
+              title="New Agent"
+              className="mb-1 flex w-full items-center justify-center rounded-md py-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          )}
           {agents.length === 0 && !collapsed ? (
             <p className="px-2 pt-1 text-[11px] leading-4 text-sidebar-foreground/45">
               None yet — New Agent, Marketplace, or Launch team.
@@ -213,11 +250,9 @@ function NavBody({
           )}
         </div>
 
-        <div className="border-t border-sidebar-border px-1.5 py-2">
+        <div className="px-1.5 py-2">
           {!collapsed ? (
-            <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/40">
-              Desk
-            </p>
+            <p className="px-2 pb-1 text-xs text-sidebar-foreground/45">Desk</p>
           ) : null}
           <ul className="space-y-px">
             <SideLink
@@ -280,7 +315,7 @@ function NavBody({
         </div>
       </nav>
 
-      <div className="border-t border-sidebar-border p-1.5">
+      <div className="p-1.5">
         <button
           type="button"
           onClick={onLogout}
@@ -365,7 +400,7 @@ export function DeskSidebar(props: {
       <aside
         className={cn(
           "hidden h-dvh shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] md:block",
-          collapsed ? "w-14" : "w-56",
+          collapsed ? "w-14" : "w-60",
         )}
       >
         <NavBody

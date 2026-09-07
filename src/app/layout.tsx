@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CINEM Pro — AI employee desk",
   description:
-    "CINEM Pro is an AI employee desk from CINEM. Create your own agents, launch a full business team, and connect plugins. Jobs plan, use tools, and wait for you to approve.",
+    "CINEM Pro is an AI employee desk from CINEM. Create agents, give them jobs, and approve what leaves.",
   openGraph: {
     title: "CINEM Pro — AI employee desk",
     description:
