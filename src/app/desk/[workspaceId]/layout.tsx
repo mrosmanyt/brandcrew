@@ -56,7 +56,7 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background md:flex-row">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
       <Suspense
         fallback={
           <aside className="hidden h-dvh w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:block" />
@@ -69,14 +69,14 @@ export default async function WorkspaceLayout({
           agentStatus={agentStatus}
         />
       </Suspense>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <SetupBanner />
         <DeskHeader
           workspace={serializeWorkspace(member.workspace)}
           llm={getLlmStatus()}
           limits={limits}
         />
-        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
     </div>
   );

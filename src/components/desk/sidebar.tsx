@@ -20,9 +20,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import {
+  ResizeHandle,
+  usePersistedCollapsed,
+  usePersistedPaneWidth,
+} from "@/components/desk/resize-handle";
 import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DESK_LEFT_PANE } from "@/lib/desk-layout";
 import {
   Sheet,
   SheetContent,
@@ -443,19 +449,16 @@ export function DeskSidebar(props: {
   agentStatus: Record<string, string>;
 }) {
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("brandcrew-sidebar");
-    if (stored === "collapsed") setCollapsed(true);
-  }, []);
+  const [collapsed, setCollapsed] = usePersistedCollapsed(DESK_LEFT_PANE.collapsedKey);
+  const [leftWidth, setLeftWidth] = usePersistedPaneWidth(
+    DESK_LEFT_PANE.storageKey,
+    DESK_LEFT_PANE.defaultWidth,
+    DESK_LEFT_PANE.minWidth,
+    DESK_LEFT_PANE.maxWidth,
+  );
 
   function toggle() {
-    setCollapsed((value) => {
-      const next = !value;
-      window.localStorage.setItem("brandcrew-sidebar", next ? "collapsed" : "open");
-      return next;
-    });
+    setCollapsed((value) => !value);
   }
 
   async function logout() {
@@ -467,10 +470,10 @@ export function DeskSidebar(props: {
   return (
     <>
       <aside
-        className={cn(
-          "hidden h-dvh shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] md:block",
-          collapsed ? "w-14" : "w-60",
-        )}
+        className="hidden h-dvh shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:block"
+        style={{
+          width: collapsed ? DESK_LEFT_PANE.collapsedWidth : leftWidth,
+        }}
       >
         <NavBody
           {...props}
@@ -479,6 +482,14 @@ export function DeskSidebar(props: {
           onLogout={logout}
         />
       </aside>
+      {!collapsed ? (
+        <ResizeHandle
+          label="Resize agents sidebar"
+          className="hidden md:flex"
+          onDelta={(dx) => setLeftWidth((width) => width + dx)}
+          onDoubleClick={toggle}
+        />
+      ) : null}
       <div className="flex items-center justify-between border-b border-border bg-card px-3 py-2 md:hidden">
         <BrandMark />
         <Sheet>
