@@ -94,7 +94,7 @@ export async function POST(
         onboardingJob = await createJobFromChat({
           workspaceId,
           agentId: research.id,
-          message: `Fetch ${url} and write sourced notes from the live page. Do not invent quotes or numbers.`,
+          message: `Browse ${url} and write sourced notes from the live page. Do not invent quotes or numbers.`,
           action: "research_pack",
         });
       }

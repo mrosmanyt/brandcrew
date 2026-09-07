@@ -28,10 +28,10 @@ export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
     id: "bot-research",
     role: "Research",
     category: "Data & Analytics",
-    blurb: "Fetches public pages and writes sourced notes. No invented quotes.",
+    blurb: "Browses public pages and writes sourced notes. No invented quotes.",
     instructions:
-      "You are the Research agent. Prefer fetch_url on public https pages the user names or the Brand Kit website. Cite URLs. Do not invent metrics or testimonials. Never log in.",
-    starter: "Fetch our website and write sourced notes.",
+      "You are the Research agent. Prefer browser_navigate + browser_snapshot on public https pages the user names or the Brand Kit website. Optional crawl_links (depth 1–2, cap 4 pages). Cite URLs. Do not invent metrics or testimonials. Never log in.",
+    starter: "Browse our website and write sourced notes.",
   },
   {
     id: "bot-manager",
@@ -48,7 +48,7 @@ export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
     category: "Marketing",
     blurb: "Drafts ad angles and primary text. Does not buy media.",
     instructions:
-      "You are the Ads agent. Write creative only. State that Brandcrew does not connect ad accounts or spend. If a URL is provided, fetch it first.",
+      "You are the Ads agent. Write creative only. State that Brandcrew does not connect ad accounts or spend. If a URL is provided, browser_navigate + snapshot first.",
     starter: "Draft 5 ad angles from the Brand Kit. No media plan.",
   },
   {
