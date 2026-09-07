@@ -1,23 +1,22 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { CHAT_TARGETS } from "@/lib/constants";
+import { GENERATE_ACTIONS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
 import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
+import { isTeamLaunchIntent } from "@/lib/team-launch";
 import { BudgetError } from "@/lib/usage";
 
 export const maxDuration = 60;
 
 const postSchema = z.object({
-  agentRole: z.enum(CHAT_TARGETS).optional(),
+  agentId: z.string().min(1).optional(),
   message: z.string().max(4000).optional(),
   playbookKey: z.string().max(80).optional(),
   skillId: z.string().optional(),
-  action: z
-    .enum(["default", "generate_week", "sales_pack", "research_pack", "regenerate"])
-    .optional(),
+  action: z.enum(GENERATE_ACTIONS).optional(),
 });
 
 export async function GET(
@@ -64,32 +63,29 @@ export async function POST(
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
-    const action = body.action ?? "default";
-    let agentRole = body.agentRole ?? "writer";
-    if (action === "generate_week") agentRole = "writer";
-    if (action === "sales_pack") agentRole = "sales";
-    if (action === "research_pack") agentRole = "researcher";
+    const message = body.message?.trim() || "";
 
-    const message =
-      body.message?.trim() ||
-      (action === "generate_week"
-        ? "Give Maya a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval."
-        : action === "sales_pack"
-          ? "Give Sam a sales-pack job: 5 emails and 5 LinkedIn DMs."
-          : action === "research_pack"
-            ? "Give Omar a research-pack job. Fetch the company website from the Brand Kit."
-            : "");
+    if (isTeamLaunchIntent(message) && !body.skillId) {
+      return jsonOk({ teamLaunch: true });
+    }
+
+    if (!body.agentId) {
+      return NextResponse.json(
+        { error: "Create or select an agent first." },
+        { status: 400 },
+      );
+    }
     if (!message && !body.skillId) {
-      return NextResponse.json({ error: "Write a short job for the employee." }, { status: 400 });
+      return NextResponse.json({ error: "Write a short job for this agent." }, { status: 400 });
     }
 
     const result = await createJobFromChat({
       workspaceId,
-      agentRole,
+      agentId: body.agentId,
       message: message || "Run the saved skill.",
       playbookKey: body.playbookKey,
       skillId: body.skillId,
-      action,
+      action: body.action ?? "default",
     });
 
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
@@ -108,7 +104,7 @@ export async function POST(
       );
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Choose an employee and write a short job." }, { status: 400 });
+      return NextResponse.json({ error: "Choose an agent and write a short job." }, { status: 400 });
     }
     return jsonError(error);
   }

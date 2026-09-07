@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { DEMO_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
-import { linkedinWeekPlaybook } from "@/lib/job-playbooks";
 
 function slugify(name: string) {
   const base = name
@@ -25,45 +24,25 @@ export async function createDemoWorkspace(userId: string, name?: string) {
       members: {
         create: { userId, role: "owner" },
       },
-      conversations: {
-        create: [
-          { agentRole: "strategist" },
-          { agentRole: "writer" },
-          { agentRole: "researcher" },
-          { agentRole: "distributor" },
-          { agentRole: "sales" },
-          { agentRole: "ads" },
-          { agentRole: "ops" },
-          { agentRole: "team" },
-        ],
-      },
-      skills: {
-        create: [
-          {
-            name: "LinkedIn week",
-            agentRole: "writer",
-            playbook: JSON.stringify(linkedinWeekPlaybook()),
-          },
-        ],
-      },
       tasks: {
         create: [
           {
-            title: "Review the sample Brand Kit",
+            title: "Create an agent or launch a full business team",
             description:
-              "Northline Studio is loaded so you can try the agents. Replace voice, audience, and offer when you are ready.",
+              "Agents start as “New Agent”. Rename them. Launching a team requires an explicit approve.",
             status: "approve",
             sortOrder: 0,
           },
           {
-            title: "Generate a Strategist brief",
-            description: "One ICP + offer + pillars artifact.",
+            title: "Review the Brand Kit",
+            description:
+              "Northline Studio is loaded as sample company facts — not as fake job results.",
             status: "approve",
             sortOrder: 1,
           },
           {
-            title: "Schedule the first approved post",
-            description: "After Writer + Distributor, move a post to Schedule.",
+            title: "Give an agent a real job",
+            description: "Plan → tools → artifact. Approve before anything leaves.",
             status: "schedule",
             sortOrder: 2,
           },

@@ -12,7 +12,8 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "test:llm": "tsx scripts/check-llm-router.ts",
-    "test:jobs": "tsx scripts/check-job-runtime.ts"
+    "test:jobs": "tsx scripts/check-job-runtime.ts",
+    "test:marketplace": "tsx scripts/check-marketplace.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

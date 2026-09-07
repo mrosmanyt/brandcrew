@@ -32,8 +32,47 @@ model Workspace {
   tasks         Task[]
   calendarItems CalendarItem[]
   usageEvents   UsageEvent[]
+  jobs               Job[]
+  skills             Skill[]
+  agents             Agent[]
+  pluginConnections  PluginConnection[]
+}
+
+model Agent {
+  id            String         @id @default(cuid())
+  workspaceId   String
+  name          String         @default("New Agent")
+  role          String         @default("")
+  instructions  String         @default("")
+  templateId    String?
+  status        String         @default("active")
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   jobs          Job[]
+  conversations Conversation[]
+  artifacts     Artifact[]
   skills        Skill[]
+  usageEvents   UsageEvent[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, templateId])
+}
+
+model PluginConnection {
+  id          String    @id @default(cuid())
+  workspaceId String
+  pluginId    String
+  status      String    @default("disconnected")
+  metadata    String    @default("{}")
+  secretEnc   String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, pluginId])
+  @@index([workspaceId, status])
 }
 
 model WorkspaceMember {
@@ -50,13 +89,16 @@ model WorkspaceMember {
 model Conversation {
   id          String     @id @default(cuid())
   workspaceId String
+  agentId     String?
   agentRole   String
   createdAt   DateTime   @default(now())
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
   messages    Message[]
   artifacts   Artifact[]
 
   @@unique([workspaceId, agentRole])
+  @@index([workspaceId, agentId])
 }
 
 model Message {
@@ -73,6 +115,7 @@ model Artifact {
   workspaceId    String
   conversationId String?
   jobId          String?
+  agentId        String?
   agentRole      String
   type           String
   title          String
@@ -85,6 +128,7 @@ model Artifact {
   workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   job            Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  agent          Agent?        @relation(fields: [agentId], references: [id], onDelete: SetNull)
   tasks          Task[]
 }
 
@@ -119,13 +163,16 @@ model UsageEvent {
   tokens      Int
   model       String
   agentRole   String
+  agentId     String?
   createdAt   DateTime  @default(now())
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
 }
 
 model Job {
   id          String     @id @default(cuid())
   workspaceId String
+  agentId     String?
   agentRole   String
   title       String
   prompt      String
@@ -140,11 +187,13 @@ model Job {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
   skill       Skill?     @relation(fields: [skillId], references: [id], onDelete: SetNull)
   events      JobEvent[]
   artifacts   Artifact[]
 
   @@index([workspaceId, status])
+  @@index([workspaceId, agentId])
 }
 
 model JobEvent {
@@ -164,10 +213,12 @@ model Skill {
   id          String    @id @default(cuid())
   workspaceId String
   name        String
+  agentId     String?
   agentRole   String
   playbook    String
   sourceJobId String?
   createdAt   DateTime  @default(now())
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
   jobs        Job[]
 }

@@ -4,6 +4,7 @@ import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 export const JOB_TOOLS = [
   "read_brand_kit",
   "fetch_url",
+  "web_search",
   "write_artifact",
   "ask_user",
 ] as const;
@@ -40,10 +41,23 @@ export type JobPlaybook = {
   steps: JobStep[];
 };
 
+export type AgentDTO = {
+  id: string;
+  workspaceId: string;
+  name: string;
+  role: string;
+  instructions: string;
+  templateId: string | null;
+  status: string;
+  sortOrder: number;
+  createdAt: string;
+};
+
 export type JobContext = {
   brandBrief?: string;
   website?: string;
   fetched?: { url: string; ok: boolean; text: string };
+  search?: { query: string; ok: boolean; text: string };
   weekPosts?: { title: string; body: string }[];
   userUrl?: string;
 };
@@ -60,6 +74,7 @@ export type JobEventDTO = {
 export type JobDTO = {
   id: string;
   workspaceId: string;
+  agentId: string | null;
   agentRole: string;
   title: string;
   prompt: string;
@@ -79,6 +94,7 @@ export type SkillDTO = {
   id: string;
   workspaceId: string;
   name: string;
+  agentId: string | null;
   agentRole: string;
   playbook: JobPlaybook;
   sourceJobId: string | null;
@@ -90,5 +106,5 @@ export type EmployeeLiveStatus = "idle" | "working" | "needs-you";
 export type CreateJobResult = {
   job: JobDTO;
   messages: MessageDTO[];
-  routedFromTeam?: boolean;
+  teamLaunch?: boolean;
 };

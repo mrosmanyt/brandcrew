@@ -23,7 +23,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Brandcrew — Mission Control",
   description:
-    "Named AI employees plan, use tools, and produce artifacts. You approve what leaves. Writer, Researcher, SDR, Ads, Ops, Strategist — one desk.",
+    "Create your own agents, launch a full business team, and connect plugins. Jobs plan, use tools, and wait for you to approve.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

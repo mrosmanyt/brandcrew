@@ -1,0 +1,59 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { appOrigin } from "@/lib/crypto-secret";
+import { getMarketplacePlugin } from "@/lib/marketplace";
+import {
+  exchangeOAuthCode,
+  persistOAuthConnection,
+  readOAuthState,
+} from "@/lib/plugins";
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code") || "";
+  const state = url.searchParams.get("state") || "";
+  const providerError = url.searchParams.get("error") || "";
+
+  let workspaceId = "";
+  try {
+    if (!state) throw new Error("Missing OAuth state.");
+    const parsed = await readOAuthState(state);
+    workspaceId = parsed.workspaceId;
+    const marketplace = `${appOrigin()}/desk/${workspaceId}/marketplace?tab=plugins`;
+    if (providerError) {
+      return NextResponse.redirect(
+        `${marketplace}&error=${encodeURIComponent(providerError)}`,
+      );
+    }
+    if (!code) {
+      return NextResponse.redirect(`${marketplace}&error=missing_code`);
+    }
+    const plugin = getMarketplacePlugin(parsed.pluginId);
+    if (!plugin || plugin.auth !== "oauth") {
+      return NextResponse.redirect(`${marketplace}&error=unknown_plugin`);
+    }
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: { workspaceId, userId: parsed.userId },
+      },
+    });
+    if (!member) {
+      return NextResponse.redirect(`${marketplace}&error=forbidden`);
+    }
+    const exchanged = await exchangeOAuthCode(plugin, code);
+    await persistOAuthConnection({
+      workspaceId,
+      plugin,
+      tokens: exchanged.tokens,
+      metadata: exchanged.metadata,
+    });
+    return NextResponse.redirect(
+      `${marketplace}&connected=${encodeURIComponent(plugin.id)}`,
+    );
+  } catch {
+    const fallback = workspaceId
+      ? `${appOrigin()}/desk/${workspaceId}/marketplace?tab=plugins&error=oauth_failed`
+      : `${appOrigin()}/desk`;
+    return NextResponse.redirect(fallback);
+  }
+}
