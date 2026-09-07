@@ -79,7 +79,6 @@ export const BUILD_PROMPT_CHIPS: readonly BuildPromptChip[] = [
     fill: JOB_ACTION_MESSAGES.generate_week,
     action: "generate_week",
     playbookKey: "linkedin_week",
-    categoryId: "animation",
   },
   {
     id: "competitor-scan",
