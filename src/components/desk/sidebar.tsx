@@ -17,7 +17,7 @@ import {
   Store,
   Terminal,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
@@ -78,6 +78,7 @@ function NavBody({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [name, setName] = useState("");
   const [polledStatus, setPolledStatus] = useState<Record<string, string> | null>(
@@ -114,7 +115,8 @@ function NavBody({
       toast("Enter a workspace name.");
       return;
     }
-    if (creating) return;
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     setCreating(true);
     try {
       const res = await fetch("/api/workspaces", {
@@ -136,6 +138,7 @@ function NavBody({
     } catch {
       toast.error("Could not create workspace.");
     } finally {
+      creatingRef.current = false;
       setCreating(false);
     }
   }
