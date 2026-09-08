@@ -71,11 +71,16 @@ assert.deepEqual([...GOOGLE_LOGIN_SCOPES], ["openid", "email", "profile"]);
 console.log("ok: login scopes are OpenID only (not Gmail plugin scopes)");
 
 assert.equal(safeNextPath("/desk/abc/settings"), "/desk/abc/settings");
+assert.equal(safeNextPath("/desk?checkout=pro"), "/desk?checkout=pro");
 assert.equal(safeNextPath("https://evil.example/phish"), "/desk");
 assert.equal(safeNextPath("//evil.example"), "/desk");
 assert.equal(
   googleLoginStartHref({ intent: "signup", invite: "tok" }),
   "/api/auth/google?intent=signup&invite=tok",
+);
+assert.match(
+  googleLoginStartHref({ intent: "signup", next: "/desk?checkout=pro" }),
+  /next=%2Fdesk%3Fcheckout%3Dpro/,
 );
 assert.match(googleAuthErrorMessage("google_not_configured") || "", /GOOGLE_CLIENT_ID/);
 console.log("ok: next-path hardening + start href");
@@ -88,6 +93,9 @@ const nav = readFileSync(join(root, "src/components/marketing/site-nav.tsx"), "u
 const router = readFileSync(join(root, "src/server/api/router.ts"), "utf8");
 assert.match(loginScreen, /GoogleContinueButton/);
 assert.match(signupScreen, /GoogleContinueButton/);
+assert.match(signupScreen, /safeNextPath\(next/);
+assert.match(signupScreen, /checkoutPlanFromNextPath/);
+assert.match(loginScreen, /authHrefWithNext\("\/signup"/);
 assert.match(googleBtn, /Continue with Google/);
 assert.match(nav, /Account/);
 assert.match(nav, /accountHref/);

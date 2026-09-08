@@ -14,11 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showcaseSignupHint } from "@/lib/integrations-showcase";
+import { authHrefWithNext, checkoutPlanFromNextPath } from "@/lib/billing-ui";
+import { PLANS } from "@/lib/constants";
+import { safeNextPath } from "@/lib/google-auth-shared";
 
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const inviteToken = params.get("invite") || "";
+  const next = params.get("next");
+  const checkoutPlan = checkoutPlanFromNextPath(next);
   const chipHint = showcaseSignupHint(params.get("chip"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState(params.get("email") || "");
@@ -49,7 +54,7 @@ function SignupForm() {
     if (data.workspaceId && data.joinedViaInvite) {
       router.push(`/desk/${data.workspaceId}`);
     } else {
-      router.push("/onboarding");
+      router.push(safeNextPath(next, "/onboarding"));
     }
     router.refresh();
   }
@@ -61,7 +66,7 @@ function SignupForm() {
           <Link href="/">
             <BrandMark />
           </Link>
-          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login" />}>
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={authHrefWithNext("/login", next)} />}>
             Sign in
           </Button>
         </header>
@@ -77,11 +82,21 @@ function SignupForm() {
                 You are joining a shared workspace. Use the invited email.
               </p>
             ) : null}
+            {checkoutPlan ? (
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                After you create an account, we open desk billing for{" "}
+                {PLANS[checkoutPlan].name}. Checkout uses Whop when configured.
+              </p>
+            ) : null}
             {chipHint ? (
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{chipHint}</p>
             ) : null}
             <div className="mt-8 space-y-5">
-              <GoogleContinueButton intent="signup" invite={inviteToken || undefined} />
+              <GoogleContinueButton
+                intent="signup"
+                invite={inviteToken || undefined}
+                next={next}
+              />
               <AuthDivider />
               <form onSubmit={onSubmit} className="space-y-5">
                 <div className="space-y-2">

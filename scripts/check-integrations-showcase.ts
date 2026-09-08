@@ -93,6 +93,9 @@ const pricing = readFileSync("src/components/marketing/home-sections.tsx", "utf8
 assert.match(pricing, /Ultra/);
 assert.match(pricing, /PLANS\.ultra/);
 assert.match(pricing, /\/#integrations/);
+assert.match(pricing, /PricingPlanCta/);
+assert.match(pricing, /Get Starter \/ Get Pro \/ Get Ultra/);
+assert.match(pricing, /Checkout uses Whop/);
 console.log("ok: pricing still includes Ultra and footer links Connectors");
 
 const nav = readFileSync("src/components/marketing/site-nav.tsx", "utf8");

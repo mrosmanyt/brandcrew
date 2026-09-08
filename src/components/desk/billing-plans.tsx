@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   billingCheckoutLabel,
+  checkoutPlanFromQuery,
   type BillingProvider,
 } from "@/lib/billing-ui";
 import { CHECKOUT_PLANS, PLANS, type CheckoutPlanId } from "@/lib/constants";
@@ -16,14 +17,19 @@ export function BillingPlans({
   currentPlan,
   mock,
   provider = mock ? "mock" : "stripe",
+  requestedPlan,
+  checkoutStatus,
 }: {
   workspaceId: string;
   currentPlan: string;
   mock: boolean;
   provider?: BillingProvider;
+  requestedPlan?: string;
+  checkoutStatus?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const autoStarted = useRef<string | null>(null);
 
   async function checkout(plan: CheckoutPlanId) {
     setBusy(plan);
@@ -50,6 +56,28 @@ export function BillingPlans({
     router.refresh();
   }
 
+  useEffect(() => {
+    const plan = checkoutPlanFromQuery(requestedPlan);
+    if (!plan) return;
+    if (checkoutStatus === "success" || checkoutStatus === "cancelled") return;
+    if (currentPlan === plan || (plan === "pro" && currentPlan === "growth")) return;
+    const key = `cinem.checkout.${workspaceId}.${plan}`;
+    if (autoStarted.current === key) return;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // Private mode / non-browser: fall through with the ref only.
+    }
+    autoStarted.current = key;
+    const timer = window.setTimeout(() => {
+      void checkout(plan);
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // Start Whop/Stripe/mock checkout once after a marketing "Get {plan}" CTA.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedPlan, checkoutStatus, currentPlan, workspaceId]);
+
   const demo = PLANS.demo;
 
   return (
@@ -71,8 +99,16 @@ export function BillingPlans({
         {CHECKOUT_PLANS.map((id) => {
           const plan = PLANS[id];
           const current = currentPlan === id || (id === "pro" && currentPlan === "growth");
+          const requested = checkoutPlanFromQuery(requestedPlan) === id;
           return (
-            <article key={id} className="rounded-xl border border-border bg-card p-5">
+            <article
+              key={id}
+              className={
+                requested
+                  ? "rounded-xl border border-foreground bg-card p-5"
+                  : "rounded-xl border border-border bg-card p-5"
+              }
+            >
               <p className="text-sm text-muted-foreground">{plan.seats} seats</p>
               <h2 className="font-heading mt-1 text-2xl">{plan.name}</h2>
               <p className="mt-2 text-3xl tracking-tight">

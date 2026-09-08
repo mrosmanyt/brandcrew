@@ -119,7 +119,7 @@ async function BillingPage({
   query,
 }: {
   workspaceId: string;
-  query: { status?: string; plan?: string };
+  query: { status?: string; plan?: string; checkout?: string };
 }) {
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
@@ -147,6 +147,8 @@ async function BillingPage({
           currentPlan={workspace.plan}
           mock={billingIsMock()}
           provider={billingProvider()}
+          requestedPlan={query.plan || query.checkout}
+          checkoutStatus={query.status}
         />
       </div>
     </div>
@@ -277,6 +279,7 @@ export default async function WorkspaceSectionPage({
     tab?: string;
     status?: string;
     plan?: string;
+    checkout?: string;
   }>;
 }) {
   const { workspaceId, section } = await params;

@@ -20,7 +20,17 @@ import {
   resolvePaidPlanFromWhop,
   shouldDowngradeToDemo,
 } from "../src/lib/billing-events";
-import { billingCheckoutLabel, billingSuccessBanner } from "../src/lib/billing-ui";
+import {
+  authHrefWithNext,
+  billingCheckoutLabel,
+  billingSuccessBanner,
+  checkoutPlanFromNextPath,
+  checkoutPlanFromQuery,
+  deskCheckoutNextPath,
+  marketingPlanCtaHref,
+  signupForCheckoutHref,
+  workspaceBillingHref,
+} from "../src/lib/billing-ui";
 import { readFileSync } from "node:fs";
 
 const KEYS = [
@@ -90,6 +100,25 @@ assert.equal(billingCheckoutLabel("Pro", "stripe"), "Checkout Pro");
 assert.match(billingSuccessBanner("whop"), /Whop checkout/);
 assert.doesNotMatch(billingSuccessBanner("whop"), /Connected/);
 console.log("ok: desk copy names Whop checkout when live");
+
+assert.equal(checkoutPlanFromQuery("ultra"), "ultra");
+assert.equal(checkoutPlanFromQuery("growth"), "pro");
+assert.equal(checkoutPlanFromQuery("demo"), null);
+assert.equal(deskCheckoutNextPath("pro"), "/desk?checkout=pro");
+assert.equal(signupForCheckoutHref("starter"), "/signup?next=%2Fdesk%3Fcheckout%3Dstarter");
+assert.equal(workspaceBillingHref("ws_1", "pro"), "/desk/ws_1/billing?plan=pro");
+assert.equal(
+  marketingPlanCtaHref({ signedIn: false, plan: "ultra" }),
+  signupForCheckoutHref("ultra"),
+);
+assert.equal(
+  marketingPlanCtaHref({ signedIn: true, workspaceId: "ws_9", plan: "pro" }),
+  "/desk/ws_9/billing?plan=pro",
+);
+assert.equal(checkoutPlanFromNextPath("/desk?checkout=ultra"), "ultra");
+assert.equal(checkoutPlanFromNextPath("https://evil.example/?checkout=pro"), null);
+assert.equal(authHrefWithNext("/login", "/desk?checkout=pro"), "/login?next=%2Fdesk%3Fcheckout%3Dpro");
+console.log("ok: marketing Get {plan} hrefs go through signup next then desk billing");
 
 assert.equal(normalizeWhopEventType("payment_succeeded"), "payment.succeeded");
 assert.equal(isPaidUnlockEvent("payment.succeeded"), true);
@@ -197,6 +226,16 @@ const checkout = readFileSync("src/server/api/billing/checkout.ts", "utf8");
 assert.match(checkout, /createWhopCheckout/);
 assert.match(checkout, /billingProvider/);
 assert.match(readFileSync("src/components/desk/billing-plans.tsx", "utf8"), /Whop checkout/);
+assert.match(readFileSync("src/components/desk/billing-plans.tsx", "utf8"), /requestedPlan/);
+assert.match(readFileSync("src/components/desk/billing-plans.tsx", "utf8"), /autoStarted/);
+assert.match(readFileSync("src/app/desk/page.tsx", "utf8"), /checkoutPlanFromQuery/);
+assert.match(readFileSync("src/components/marketing/home-ctas.tsx", "utf8"), /Get \$\{PLANS\[plan\]\.name\}/);
+assert.match(readFileSync("src/components/marketing/home-sections.tsx", "utf8"), /PricingPlanCta/);
+assert.match(readFileSync("src/components/marketing/home-sections.tsx", "utf8"), /PricingDemoCta/);
+assert.match(readFileSync("src/components/marketing/home-sections.tsx", "utf8"), /Checkout uses Whop/);
+assert.match(readFileSync("src/proxy.ts", "utf8"), /searchParams\.set\("next"/);
+assert.match(readFileSync("src/proxy.ts", "utf8"), /safeNextPath/);
+assert.doesNotMatch(readFileSync("src/server/api/router.ts", "utf8"), /api", "billing", "plans"/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_API_KEY=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_WEBHOOK_SECRET=/);
 console.log("ok: catch-all registers /api/webhooks/whop; env example lists Whop vars");
