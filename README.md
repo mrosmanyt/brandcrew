@@ -305,6 +305,8 @@ See [`.env.example`](./.env.example). Summary:
 | `CRON_SECRET` | no | Bearer secret for `GET /api/cron/jobs`. If unset, schedules still run when the desk loads. |
 | `NEXT_PUBLIC_APP_URL` | no | Checkout + OAuth redirect origin. |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for Stripe test-mode. |
+| `NEXT_PUBLIC_GA_ID` | no | Optional GA4 id. Script loads only after cookie Accept. |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | no | Optional Plausible domain. Script loads only after cookie Accept. |
 
 API keys are read **only on the server**. Users never paste LLM keys. Plugin keys are workspace-scoped and encrypted.
 
@@ -398,6 +400,50 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 - [ ] Gmail/Slack Connect (if client ids set) returns to `/api/oauth/callback` on the Vercel origin
 - [ ] Electron `desktop:dev` still works against local Docker/Neon `DATABASE_URL`
 
+### 5. Website launch + security baseline
+
+Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name **CINEM Pro**, company **CINEM**.
+
+**HTTPS:** Vercel terminates TLS and redirects HTTP→HTTPS on `*.vercel.app`. This app also sends `Strict-Transport-Security: max-age=31536000` (no `preload` on a vercel.app subdomain) and CSP `upgrade-insecure-requests`. Headers live in one module: `src/lib/security-headers.ts` (applied from `next.config.ts` and `src/proxy.ts`). Follow-up hardening (nonce CSP, COOP/COEP) should extend that file — do not add a WAF product.
+
+**CSRF:** Session cookie `brandcrew_session` is httpOnly, SameSite=Lax, Secure in production and on Vercel. Same-origin POSTs send it; cross-site POSTs from other origins do not. OAuth callbacks are top-level GET. There is no extra CSRF token. The session JWT is never written to `localStorage` / `sessionStorage` (those stores are cookie-banner consent, desk pane width, billing toast, and developer API keys — not login).
+
+**Auth (existing Google + cookie session — no second system):** Continue with Google already verifies email (`email_verified === true` or the callback bounces `email_unverified`). Email/password signup remains; there is **no SMTP mailer** and **no password-reset route**, so we do not fake a “we sent a verification email” or 2FA UI. Privileged Admin HQ is `ADMIN_EMAILS` + `requireAdmin` / `loadAdminPage` on every `/admin` page and `/api/admin` GET+POST — hiding the Settings link is not the gate. Password signup and Settings password-change require 8–72 characters, reject trivial passwords, and optionally query Have I Been Pwned (k-anonymity SHA-1 prefix, 2s timeout, **fail-open**). 2FA is a follow-up.
+
+**Rate limits:** In-memory per-IP windows on login, signup, Google start/callback, checkout, admin reads, admin writes (tighter), account PATCH, and invite accept. Login/signup also bucket **per email** (cloned request body; Hobby has no Redis). Isolates do not share memory (Upstash-free). Developer API keys already have a 60/min hashed-key window in Postgres.
+
+| Item | Status |
+| --- | --- |
+| Logo in nav, desk, admin, favicon, apple-touch, OG | **Done** (SVG mark; `public/brand/cinem-mark.svg`) |
+| Privacy (`/privacy`) + Terms (`/terms`) | **Done** |
+| Footer Privacy / Terms text links (no new top-nav menus) | **Done** (extended existing footer grid) |
+| Secrets off the frontend | **Already** server-only LLM/plugin keys; this pass sanitizes 500s in production |
+| Force HTTPS | **Already** Vercel HTTP→HTTPS; **Done** HSTS + upgrade-insecure-requests + README |
+| Cookie consent banner | **Done** (non-blocking; analytics only after Accept) |
+| Meta titles + descriptions | **Done** (`metadataBase`, title template, page titles) |
+| Social preview (`og:image` / Twitter) | **Done** (`opengraph-image.tsx`, `twitter-image.tsx`, `public/og.png`) |
+| Favicon + apple touch icon | **Done** |
+| Sitemap + robots.txt | **Done** (`/sitemap.xml`, `/robots.txt`; desk/admin/api disallowed) |
+| Alt text on key marketing images | **Already** hero demo `aria-label`; live screenshot `alt`; connector marks decorative next to labels |
+| Compress / avoid huge assets | **Done** (SVG mark; geometric PNGs, no new photo dumps) |
+| Color contrast on new pages | **Done** (legal pages use `text-foreground` on the marketing canvas) |
+| Mobile-friendly new pages | **Done** |
+| Custom 404 | **Already present**; logo + Get started CTA wired |
+| Main nav anchors unchanged | **Already**; Privacy/Terms are footer-only |
+| Auth form validation | **Already** zod + required fields; **Done** extra client checks |
+| Spam protection on public forms | **Done** (honeypot `company_url` + IP rate limit) |
+| Analytics hook | **Done** (`NEXT_PUBLIC_GA_ID` or `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`; no script if unset) |
+| Landing CTA Open desk / Get started | **Already preserved** |
+| Security headers (CSP, HSTS, XFO, nosniff, referrer, permissions) | **Done** |
+| Admin routes `ADMIN_EMAILS` gated | **Already** (`requireAdmin` / `loadAdminPage` on every page + API; Settings only hides the link) |
+| Session tokens in HttpOnly cookies | **Already** `brandcrew_session`; this pass audits no `localStorage` session JWT + Secure on Vercel |
+| Google email verification | **Already** callback bounce; **Done** `email_verified === true` (missing field is unverified) |
+| Email/password verification / 2FA | **Documented** — no mailer, no fake 2FA; Google is the verified-email path; 2FA follow-up |
+| Password rules | **Done** (min 8, trivial list, optional HIBP fail-open on signup + password change) |
+| Rate limit login/signup/OAuth/checkout/admin | **Done** (per IP + per email on login/signup; tighter admin POST; PATCH `/api/auth/me`) |
+
+`npm run test:launch` covers headers, rate limit, honeypot, password rules, session-cookie audit, admin gates, sanitized errors, sitemap/robots, and “no CP placeholder”.
+
 ### Serverless limits (honest)
 
 - **No Chrome on Vercel.** Playwright is off. Browse tools fall back to `fetch` + a short public crawl. Not Browserbase.
@@ -482,6 +528,7 @@ npm run test:developer-api # hashed keys, catalog, JSON 401 shape
 npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML preview
 npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule math, export PDF
 npm run test:billing       # Whop-first provider, webhook signature, cancel rules
+npm run test:launch        # logo, privacy/terms, headers, rate limit, honeypot, SEO files
 ```
 
 ## Job runtime
@@ -548,6 +595,7 @@ npm run test:api-router
 npm run test:developer-api
 npm run test:limits
 npm run test:billing
+npm run test:launch
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS

@@ -8,6 +8,7 @@ import {
   AuthQueryError,
   GoogleContinueButton,
 } from "@/components/auth/google-continue";
+import { HoneypotField } from "@/components/auth/honeypot-field";
 import { BrandMark } from "@/components/brand/logo";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { showcaseSignupHint } from "@/lib/integrations-showcase";
 import { authHrefWithNext, checkoutPlanFromNextPath } from "@/lib/billing-ui";
 import { PLANS } from "@/lib/constants";
+import { validateSignupInput } from "@/lib/form-guard";
+import { HONEYPOT_FIELD } from "@/lib/site";
 import { safeNextPath } from "@/lib/google-auth-shared";
 
 function SignupForm() {
@@ -28,11 +31,17 @@ function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState(params.get("email") || "");
   const [password, setPassword] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const invalid = validateSignupInput(name, email, password);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await fetch("/api/auth/signup", {
@@ -43,6 +52,7 @@ function SignupForm() {
         email,
         password,
         inviteToken: inviteToken || undefined,
+        [HONEYPOT_FIELD]: honeypot,
       }),
     });
     const data = await res.json();
@@ -75,7 +85,9 @@ function SignupForm() {
             <h1 className="font-heading text-3xl tracking-tight">Get started</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               We create a demo workspace with the Northline Studio Brand Kit so you
-              can open Mission Control, create agents, and give a real job.
+              can open Mission Control, create agents, and give a real job. Prefer
+              Continue with Google — Google already verifies your email. Email/password
+              does not send a confirmation mail (no mailer in this stack).
             </p>
             {inviteToken ? (
               <p className="mt-3 text-sm text-muted-foreground">
@@ -98,7 +110,8 @@ function SignupForm() {
                 next={next}
               />
               <AuthDivider />
-              <form onSubmit={onSubmit} className="space-y-5">
+              <form onSubmit={onSubmit} className="relative space-y-5">
+                <HoneypotField value={honeypot} onChange={setHoneypot} />
                 <div className="space-y-2">
                   <Label>Your name</Label>
                   <Input
@@ -130,7 +143,9 @@ function SignupForm() {
                     minLength={8}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                  <p className="text-xs text-muted-foreground">
+                    At least 8 characters. Skip common passwords like password1.
+                  </p>
                 </div>
                 <AuthQueryError error={params.get("error")} hint={params.get("hint")} />
                 {error ? <p className="text-sm text-destructive">{error}</p> : null}

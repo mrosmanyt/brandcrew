@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/http";
+import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
 import * as adminRoot from "./admin/root";
 import * as authGoogle from "./auth/google";
@@ -273,6 +275,11 @@ export async function dispatchApi(
     );
   }
   const method = request.method.toUpperCase();
+  try {
+    await enforceSensitiveRateLimit(request, segments, method);
+  } catch (error) {
+    return jsonError(error);
+  }
   const handler = matched.handlers[method as HttpMethod];
   if (!handler) {
     return NextResponse.json(

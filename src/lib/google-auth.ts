@@ -4,6 +4,7 @@ import { oauthRedirectBase } from "@/lib/crypto-secret";
 import {
   GOOGLE_LOGIN_CALLBACK_PATH,
   GOOGLE_LOGIN_SCOPES,
+  googleEmailIsVerified,
   safeNextPath,
   type GoogleLoginIntent,
 } from "@/lib/google-auth-shared";
@@ -16,6 +17,7 @@ export {
   GOOGLE_LOGIN_SCOPES,
   GOOGLE_LOGIN_START_PATH,
   googleAuthErrorMessage,
+  googleEmailIsVerified,
   googleLoginStartHref,
   safeNextPath,
   type GoogleLoginIntent,
@@ -194,7 +196,7 @@ export async function exchangeGoogleLoginCode(code: string): Promise<GoogleLogin
     googleId: profile.sub,
     email,
     name: String(profile.name || profile.given_name || email.split("@")[0]).trim(),
-    emailVerified: profile.email_verified !== false,
+    emailVerified: googleEmailIsVerified(profile.email_verified),
   };
 }
 

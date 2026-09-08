@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { CinemMark } from "@/components/brand/logo";
 import { useSignedIn } from "@/components/marketing/use-signed-in";
 import { Reveal } from "@/components/marketing/reveal";
 import {
@@ -185,7 +186,11 @@ function NodeTile({ node, index }: { node: ShowcaseNode; index: number }) {
         } as CSSProperties
       }
     >
-      <div className="integrations-tile" title={node.honest}>
+      <div
+      className="integrations-tile"
+      title={node.honest}
+      aria-label={`${node.name}: ${node.caption}`}
+    >
         {nodeMark(node.id)}
         <div className="min-w-0">
           <p className="text-[13px] font-medium tracking-tight">{node.name}</p>
@@ -223,7 +228,7 @@ export function IntegrationsShowcase() {
               <CloudLines />
               <div className="integrations-hub">
                 <span className="integrations-hub-mark" aria-hidden>
-                  CP
+                  <CinemMark className="size-5 text-[#f7f5f2]" />
                 </span>
                 <span className="min-w-0 text-left">
                   <span className="block text-sm font-medium tracking-tight">

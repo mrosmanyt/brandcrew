@@ -62,6 +62,8 @@ assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", email: "a@
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", newPassword: "newpass99" }).success);
 assert.ok(accountPatchSchema.safeParse({ name: "Ada" }).success);
 assert.ok(accountPatchSchema.safeParse({ newPassword: "newpass99" }).success);
+assert.equal(accountPatchSchema.safeParse({ newPassword: "password1" }).success, false);
+assert.equal(accountPatchSchema.safeParse({ newPassword: "short" }).success, false);
 assert.equal(accountPatchSchema.safeParse({}).success, false);
 assert.equal(
   accountPatchSchema.safeParse({ currentPassword: "x", newPassword: "short" }).success,
