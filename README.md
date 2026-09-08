@@ -126,7 +126,7 @@ Mission Control has **one** agents list (the left sidebar). Avatars are 3D geome
 
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon or Docker) · session cookies · OpenAI + Anthropic + Gemini + optional xAI · Stripe Checkout stubs · optional Electron desktop
+Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon or Docker) · session cookies · OpenAI + Anthropic + Gemini + optional xAI · Whop checkout (Stripe fallback) · optional Electron desktop
 
 ## Developer API
 
@@ -292,12 +292,18 @@ See [`.env.example`](./.env.example). Summary:
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | no | Slack OAuth. Missing → Connect stays disconnected. |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | no | Notion OAuth. |
 | `GITHUB_TOKEN` | no | Optional GitHub plugin env; or paste a PAT in Connect. |
-| `BILLING_MOCK` | no (defaults true when Stripe is unset) | Apply Starter/Pro/Ultra locally without Stripe. |
-| `STRIPE_SECRET_KEY` | no | Stripe test-mode Checkout (and optional Stripe plugin env). |
-| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` / `STRIPE_ULTRA_PRICE_ID` | no | Price IDs for $20 / $79 / $200 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro alias. |
+| `BILLING_MOCK` | no (defaults true when neither Whop nor Stripe is set) | Apply Starter/Pro/Ultra locally without a payment provider. |
+| `BILLING_PROVIDER` | no | Optional force: `whop`, `stripe`, or `mock`. Default prefers Whop, then Stripe, then mock. |
+| `WHOP_API_KEY` | no | Whop Account API key (`apik_` / `whop_`). Enables live Whop checkout. |
+| `WHOP_COMPANY_ID` | no | Business id (`biz_…`). Alias: `WHOP_ACCOUNT_ID`. |
+| `WHOP_WEBHOOK_SECRET` | no | Signing secret (`ws_…`) for `POST /api/webhooks/whop`. |
+| `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | no | Existing Whop plan ids. If unset, checkout creates a $20 / $79 / $200 monthly renewal. |
+| `WHOP_SANDBOX` | no | `true` sends API calls to `sandbox-api.whop.com`. |
+| `STRIPE_SECRET_KEY` | no | Stripe Checkout fallback when Whop is not configured (and optional Stripe plugin env). |
+| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` / `STRIPE_ULTRA_PRICE_ID` | no | Stripe price IDs for $20 / $79 / $200 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro alias. |
 | `CRON_SECRET` | no | Bearer secret for `GET /api/cron/jobs`. If unset, schedules still run when the desk loads. |
 | `NEXT_PUBLIC_APP_URL` | no | Checkout + OAuth redirect origin. |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for test-mode Stripe. |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for Stripe test-mode. |
 
 API keys are read **only on the server**. Users never paste LLM keys. Plugin keys are workspace-scoped and encrypted.
 
@@ -336,7 +342,11 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 | `APP_URL` | same origin |
 | `OAUTH_REDIRECT_BASE` | same origin |
 | `PLAYWRIGHT_ENABLED` | `false` |
-| `BILLING_MOCK` | `true` (Stripe live is out of scope) |
+| `BILLING_MOCK` | `false` for live Whop (leave `true` only for demo) |
+| `WHOP_API_KEY` | Whop Account API key |
+| `WHOP_COMPANY_ID` | `biz_…` from the Whop dashboard |
+| `WHOP_WEBHOOK_SECRET` | Webhook signing secret |
+| `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | optional existing plan ids |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional; no keys → offline demo |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional; Gmail Connect |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | optional |
@@ -344,6 +354,21 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 4. Deploy. First build applies migrations.
 
 `npm run build` locally does **not** run `migrate deploy` (so it works without a live DB). Vercel’s `vercel-build` / `vercel.json` **does**.
+
+### 2b. Whop dashboard (live billing)
+
+1. Create a company at [whop.com/dashboard](https://whop.com/dashboard) (or [sandbox.whop.com](https://sandbox.whop.com) for test money).
+2. Developer → Account API keys. Grant `checkout_configuration:create`, `plan:create`, `plan:basic:read`, and webhook receive/read as needed. Store the key as `WHOP_API_KEY`.
+3. Copy the business id (`biz_…`) into `WHOP_COMPANY_ID`.
+4. Optional: create three products/plans at $20 / $79 / $200 monthly and set `WHOP_STARTER_PLAN_ID`, `WHOP_PRO_PLAN_ID`, `WHOP_ULTRA_PLAN_ID`. If those are empty, checkout creates a matching monthly renewal inline.
+5. Developer → Webhooks → Create webhook:
+   - URL: `https://brandcrew.vercel.app/api/webhooks/whop` (or your custom origin + `/api/webhooks/whop`)
+   - API version: `v1`
+   - Events: `payment.succeeded`, `membership.activated`, `membership.deactivated`
+6. Copy the signing secret (`ws_…`) into `WHOP_WEBHOOK_SECRET` on Vercel. Never commit it.
+7. Set `BILLING_MOCK=false` (or unset it) so desk Plans redirects to Whop instead of applying a fake upgrade.
+
+**Cancel behavior:** `membership.deactivated` returns the workspace to Demo when that membership is the one that granted the current paid plan (matched by `whopMembershipId` or `metadata.plan`). Upgrading Starter → Ultra then cancelling the old Starter membership does not drop Ultra.
 
 ### 3. OAuth redirect URIs (production)
 
@@ -376,7 +401,7 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 - **No Chrome on Vercel.** Playwright is off. Browse tools fall back to `fetch` + a short public crawl. Not Browserbase.
 - Function timeout/size limits apply to long jobs; this slice does not add a queue worker.
 - Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
-- Stripe live Checkout is not part of this prep (`BILLING_MOCK=true`).
+- **Whop is the live billing provider.** Register webhook `https://brandcrew.vercel.app/api/webhooks/whop` for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Demo when that membership matches the current plan (a stale Starter cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
 - **Scheduled jobs** enqueue when someone opens Mission Control (`GET /jobs`) or when `/api/cron/jobs` is called with `CRON_SECRET`. Vercel Hobby cron is daily (`0 12 * * *`) — not an always-on worker. Times are 09:00 UTC.
 
 ## Model routing

@@ -25,22 +25,24 @@ model User {
 }
 
 model Workspace {
-  id            String            @id @default(cuid())
-  name          String
-  slug          String            @unique
-  plan          String            @default("demo")
-  tokenUsed     Int               @default(0)
-  tokenBudget   Int               @default(15000)
-  brandKit      String            @default("{}")
-  modelRouting  String            @default("auto")
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  members       WorkspaceMember[]
-  conversations Conversation[]
-  artifacts     Artifact[]
-  tasks         Task[]
-  calendarItems CalendarItem[]
-  usageEvents   UsageEvent[]
+  id                 String            @id @default(cuid())
+  name               String
+  slug               String            @unique
+  plan               String            @default("demo")
+  tokenUsed          Int               @default(0)
+  tokenBudget        Int               @default(15000)
+  brandKit           String            @default("{}")
+  modelRouting       String            @default("auto")
+  /// Last Whop membership that granted the current paid plan. Used to match deactivates.
+  whopMembershipId   String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  members            WorkspaceMember[]
+  conversations      Conversation[]
+  artifacts          Artifact[]
+  tasks              Task[]
+  calendarItems      CalendarItem[]
+  usageEvents        UsageEvent[]
   jobs               Job[]
   skills             Skill[]
   agents             Agent[]
@@ -48,6 +50,8 @@ model Workspace {
   apiKeys            ApiKey[]
   invites            WorkspaceInvite[]
   schedules          ScheduledJob[]
+
+  @@index([whopMembershipId])
 }
 
 model Agent {
@@ -291,4 +295,14 @@ model ApiKey {
   workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, revokedAt])
+}
+
+/// Dedupes inbound provider webhooks (Whop webhook-id / payment id).
+model ProcessedWebhook {
+  id         String   @id
+  eventType  String
+  externalId String?
+  createdAt  DateTime @default(now())
+
+  @@index([externalId])
 }

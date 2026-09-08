@@ -5,16 +5,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  billingCheckoutLabel,
+  type BillingProvider,
+} from "@/lib/billing-ui";
 import { CHECKOUT_PLANS, PLANS, type CheckoutPlanId } from "@/lib/constants";
 
 export function BillingPlans({
   workspaceId,
   currentPlan,
   mock,
+  provider = mock ? "mock" : "stripe",
 }: {
   workspaceId: string;
   currentPlan: string;
   mock: boolean;
+  provider?: BillingProvider;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -37,7 +43,9 @@ export function BillingPlans({
       return;
     }
     toast.success(
-      mock ? `Mock billing: workspace is now on ${plan}.` : `Plan updated to ${plan}.`,
+      provider === "mock"
+        ? `Mock billing: workspace is now on ${plan}.`
+        : `Plan updated to ${plan}.`,
     );
     router.refresh();
   }
@@ -85,15 +93,18 @@ export function BillingPlans({
                   ? "Current plan"
                   : busy === id
                     ? "Working…"
-                    : mock
-                      ? `Apply ${plan.name} (mock)`
-                      : `Checkout ${plan.name}`}
+                    : billingCheckoutLabel(plan.name, provider)}
               </Button>
             </article>
           );
         })}
       </div>
       <p className="text-sm text-muted-foreground">
+        {provider === "whop"
+          ? "Paid plans open Whop checkout. Access updates after the signed webhook, not from this page alone."
+          : provider === "stripe"
+            ? "Paid plans open Stripe Checkout. Access updates after the webhook."
+            : "Mock billing applies the plan immediately without a payment provider."}{" "}
         See remaining tokens and jobs on{" "}
         <Link href={`/desk/${workspaceId}/usage`} className="underline">
           Usage

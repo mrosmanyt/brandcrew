@@ -1,3 +1,4 @@
+import type { BillingProvider } from "@/lib/billing-ui";
 import type { BrandKit } from "@/lib/brand-kit";
 import type { LimitsDTO } from "@/lib/limits";
 import type { LlmStatus } from "@/lib/llm-routing";
@@ -58,4 +59,5 @@ export type DeskPayload = {
   workspace: WorkspaceDTO & { brandKit: BrandKit };
   llm: LlmStatus;
   billingMock: boolean;
+  billingProvider?: BillingProvider;
 };
