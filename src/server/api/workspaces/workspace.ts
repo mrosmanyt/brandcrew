@@ -4,6 +4,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
+import { normalizeModelRouting } from "@/lib/llm-routing";
 import { serializeWorkspace } from "@/lib/workspace";
 import { getLlmStatus } from "@/lib/llm";
 import { billingIsMock, billingProvider } from "@/lib/billing";
@@ -13,7 +14,18 @@ import { workspaceOnboarding } from "@/lib/onboarding";
 const patchSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   onboardingDismissed: z.boolean().optional(),
-  modelRouting: z.enum(["auto", "gemini", "anthropic", "openai"]).optional(),
+  modelRouting: z
+    .enum([
+      "auto",
+      "opus-4.8",
+      "fable-5.1",
+      "gpt-astra",
+      "gemini-3.8-flash",
+      "gemini",
+      "anthropic",
+      "openai",
+    ])
+    .optional(),
 });
 
 export async function GET(
@@ -71,7 +83,9 @@ export async function PATCH(
         where: { id: workspaceId },
         data: {
           ...(body.name?.trim() ? { name: body.name.trim() } : {}),
-          ...(body.modelRouting ? { modelRouting: body.modelRouting } : {}),
+          ...(body.modelRouting
+            ? { modelRouting: normalizeModelRouting(body.modelRouting) }
+            : {}),
         },
       });
       return jsonOk({ workspace: serializeWorkspace(workspace) });

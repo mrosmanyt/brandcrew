@@ -10,6 +10,7 @@ import {
 import { prisma } from "@/lib/db";
 import { googleLoginPublicStatus } from "@/lib/google-auth";
 import { jsonError, jsonOk } from "@/lib/http";
+import { isAdminEmail } from "@/lib/admin";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
 export async function GET() {
@@ -28,6 +29,7 @@ export async function GET() {
       ...user,
       hasPassword: Boolean(row?.passwordHash),
       googleLinked: Boolean(row?.googleId),
+      isAdmin: isAdminEmail(user.email),
     },
     workspaces: workspaces.map(serializeWorkspace),
     googleLogin,

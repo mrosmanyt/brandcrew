@@ -310,14 +310,20 @@ export async function generateAgentArtifact(input: {
 export function jobKindFor(role: AgentRole, action: GenerateAction = "default"): LlmJobKind {
   if (action === "build_website" || action === "build_deck") return "website";
   if (action === "build_app") return "apps";
+  if (action === "research_pack" || action === "competitor_scan") return "research";
+  if (action === "whatsapp_drafts") return "whatsapp";
+  if (action === "inbox_replies") return "summaries";
   if (
     action === "generate_week" ||
     action === "sales_pack" ||
-    action === "outreach_from_research"
+    action === "outreach_from_research" ||
+    action === "ad_angles_from_url"
   ) {
-    return "posts";
+    return "outreach";
   }
   if (role === "builder") return "website";
-  if (role === "writer" || role === "sales" || role === "ads") return "posts";
+  if (role === "researcher") return "research";
+  if (role === "writer" || role === "sales" || role === "ads") return "outreach";
+  if (role === "ops") return "summaries";
   return "general";
 }

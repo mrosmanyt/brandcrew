@@ -7,6 +7,7 @@ import { ArtifactExportButtons } from "@/components/desk/artifact-export";
 import { MarkdownBody } from "@/components/desk/markdown";
 import { providerLabel } from "@/components/desk/provider-badges";
 import { extractPreviewHtml, isPreviewableArtifact } from "@/lib/html-preview";
+import { publicModelLabel } from "@/lib/model-catalog";
 import type { ArtifactDTO } from "@/lib/types";
 
 export function ArtifactPanel({
@@ -34,7 +35,9 @@ export function ArtifactPanel({
       </div>
       <p className="text-xs text-muted-foreground">
         Produced by {providerLabel(artifact.provider)}
-        {artifact.model && artifact.model !== "demo" ? ` · ${artifact.model}` : ""}
+        {artifact.model && artifact.model !== "demo"
+          ? ` · ${publicModelLabel(artifact.model)}`
+          : ""}
       </p>
       <div className="flex flex-wrap gap-2">
         {artifact.status !== "approved" ? (

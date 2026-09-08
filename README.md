@@ -406,17 +406,33 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 
 ## Model routing
 
-`LLMProvider` in `src/lib/llm.ts` picks by job family and which keys are present. No keys → offline demo.
+The desk picker shows **marketing names only**. Job runtime always calls cheaper real models so $20 plans last. Users never see provider ids in the picker. Logs and Founder Admin HQ may show `displayName` + `providerModelId`.
 
-| Job family | First choice | Fallback |
-| --- | --- | --- |
-| Website | Gemini (`GEMINI_API_KEY`) | OpenAI → Anthropic → xAI |
-| Coding / apps | Anthropic (`ANTHROPIC_API_KEY`) | Gemini → OpenAI → xAI |
-| Posts (LinkedIn week, sales copy) | xAI (`XAI_API_KEY`) only if set | Gemini → OpenAI → Anthropic |
-| General drafts | Gemini Flash | OpenAI mini → Haiku → xAI |
-| General finals | Claude Sonnet | GPT-4.1 → Gemini Pro → xAI |
+Single catalog: `src/lib/model-catalog.ts`.
 
-**Google Antigravity** (agent sessions / computer-use) is a follow-up — too heavy for this MVP. Website jobs use Gemini when the key is present.
+| UI display name | Catalog id | Backend class | Real API model (default) |
+| --- | --- | --- | --- |
+| **Opus 4.8** | `opus-4.8` | Haiku | `claude-haiku-4-5` (`ANTHROPIC_DRAFT_MODEL`) |
+| **Fable 5.1** | `fable-5.1` | Sonnet | `claude-sonnet-5` (`ANTHROPIC_FINAL_MODEL`) |
+| **GPT Astra** | `gpt-astra` | GPT Terra (cheap OpenAI) | `gpt-4o-mini` (`OPENAI_DRAFT_MODEL`) |
+| **Gemini 3.8 Flash** | `gemini-3.8-flash` | Gemini Flash | `gemini-2.5-flash` (`GEMINI_DRAFT_MODEL`) |
+
+**GPT Terra** is the cheap OpenAI backend behind GPT Astra (`gpt-4o-mini`). **Gemini 3.8 Flash** maps onto the Flash class already in the repo (`gemini-2.5-flash`). Opus is **never** called — even if `ANTHROPIC_BOOST_MODEL` names an Opus id, the router falls back to Sonnet.
+
+When the UI does not pick a model (`Auto`):
+
+| Task | Backend |
+| --- | --- |
+| Research / outreach drafts / WhatsApp / summaries / website | Gemini Flash |
+| Structured JSON / short tools (planner) | Haiku |
+| Real code / complex apps | Sonnet |
+| Ultra plan or Boost | Sonnet max (`ANTHROPIC_BOOST_MODEL` or Sonnet; never Opus) |
+
+Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline demo**.
+
+Founder Admin HQ lives at `/admin` for emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com`). Non-admins get 403. Plan assign/revoke is audited in `AdminAuditLog`.
+
+**Google Antigravity** (agent sessions / computer-use) is a follow-up — too heavy for this MVP. Website jobs use Gemini Flash when the key is present.
 
 **Replit** is optional (`REPLIT_CONNECT_URL`). App preview is a sandboxed iframe. There is no fake Connected Replit plugin.
 
@@ -435,6 +451,8 @@ Token budget, hourly jobs, and concurrent running jobs are enforced on job creat
 
 ```bash
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
+npm run test:models        # display-name catalog → cheap backend ids
+npm run test:admin         # Founder HQ allow-list + 403 authz
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:companions    # gallery templates, allowed tools, Yes/No clarify helpers
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected

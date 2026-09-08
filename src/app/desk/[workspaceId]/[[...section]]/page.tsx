@@ -10,6 +10,7 @@ import { MissionControl } from "@/components/desk/mission-control";
 import { SettingsHub } from "@/components/desk/settings-hub";
 import { UsageDashboard } from "@/components/desk/usage-dashboard";
 import { getCurrentUser } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { workspaceOnboarding } from "@/lib/onboarding";
 import { billingIsMock, billingProvider } from "@/lib/billing";
 import { billingSuccessBanner } from "@/lib/billing-ui";
@@ -193,6 +194,7 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
         ...user,
         hasPassword: Boolean(account?.passwordHash),
         googleLinked: Boolean(account?.googleId),
+        isAdmin: isAdminEmail(user.email),
       }}
       initialJobs={jobs.map(serializeJob)}
       agents={agents.map(serializeAgent)}
