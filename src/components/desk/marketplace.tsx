@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Check, FileText, Loader2, Plug, Search } from "lucide-react";
+import { Bot, Check, FileText, Loader2, Plug, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CompanionGallery, type CompanionRow } from "@/components/desk/companion-gallery";
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
 import { FEATURED_JOB_TEMPLATES, type JobTemplate } from "@/lib/job-templates";
 import {
@@ -43,14 +44,21 @@ export function MarketplaceDesk({
   initialTab?: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"plugins" | "bots" | "playbooks">(
-    initialTab === "bots" ? "bots" : initialTab === "playbooks" ? "playbooks" : "plugins",
+  const [tab, setTab] = useState<"plugins" | "bots" | "playbooks" | "companions">(
+    initialTab === "bots"
+      ? "bots"
+      : initialTab === "playbooks"
+        ? "playbooks"
+        : initialTab === "companions"
+          ? "companions"
+          : "plugins",
   );
   const [templates, setTemplates] = useState<JobTemplate[]>(FEATURED_JOB_TEMPLATES);
   const [agents, setAgents] = useState<{ id: string; role: string }[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [bots, setBots] = useState<BotRow[]>([]);
+  const [companions, setCompanions] = useState<CompanionRow[]>([]);
   const [plugins, setPlugins] = useState<PluginRow[]>([]);
   const [installedPluginCount, setInstalledPluginCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -64,6 +72,7 @@ export function MarketplaceDesk({
     if (!res.ok) return;
     const data = await res.json();
     setBots(data.bots ?? []);
+    setCompanions(data.companions ?? []);
     setPlugins(data.plugins ?? []);
     setInstalledPluginCount(data.installedPluginCount ?? 0);
     if (Array.isArray(data.templates)) setTemplates(data.templates);
@@ -276,6 +285,18 @@ export function MarketplaceDesk({
             Bots
           </ToggleChip>
           <ToggleChip
+            active={tab === "companions"}
+            icon={<Users className="size-3.5" />}
+            onClick={() => {
+              setTab("companions");
+              setCategory("All");
+              setQuery("");
+              setViewAll(null);
+            }}
+          >
+            Companions
+          </ToggleChip>
+          <ToggleChip
             active={tab === "playbooks"}
             icon={<FileText className="size-3.5" />}
             onClick={() => {
@@ -293,7 +314,12 @@ export function MarketplaceDesk({
       {tab === "playbooks" ? (
         <p className="mt-3 text-sm text-muted-foreground">
           Featured jobs: LinkedIn week, Competitor scan, Website one-click, Outreach
-          draft. They create a real job on a matching agent (or New Agent).
+          draft, LinkedIn-style outreach, Inbox invoices. They create a real job on a matching agent (or New Agent).
+        </p>
+      ) : tab === "companions" ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Gallery of named companions. Add creates a real Agent with instructions and
+          allowed tools. Connect Gmail/Slack separately — this never fakes Connected.
         </p>
       ) : tab === "plugins" ? (
         <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
@@ -320,7 +346,7 @@ export function MarketplaceDesk({
         </p>
       )}
 
-      {tab !== "playbooks" ? (
+      {tab !== "playbooks" && tab !== "companions" ? (
       <div className="relative mt-5">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -334,7 +360,7 @@ export function MarketplaceDesk({
       </div>
       ) : null}
 
-      {tab !== "playbooks" ? (
+      {tab !== "playbooks" && tab !== "companions" ? (
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {(viewAll ? ["All", viewAll] : categories).map((chip) => (
           <button
@@ -383,6 +409,12 @@ export function MarketplaceDesk({
             </article>
           ))}
         </div>
+      ) : tab === "companions" ? (
+        <CompanionGallery
+          workspaceId={workspaceId}
+          companions={companions}
+          onChanged={() => void refresh()}
+        />
       ) : tab === "bots" ? (
         <div className="mt-6 space-y-8">
           {category === "All" && !viewAll && featuredBots.length > 0 ? (

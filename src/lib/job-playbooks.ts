@@ -40,7 +40,16 @@ export function resetPlaybook(playbook: JobPlaybook): JobPlaybook {
 }
 
 function approveStep(prompt: string): JobStep {
-  return makeStep("ask_user", "Pause for your approval", { prompt }, "approve");
+  return makeStep("ask_user", "Pause for your approval", { prompt, kind: "approve" }, "approve");
+}
+
+function clarifyStep(prompt: string, choices: string[] = ["Yes", "No"]): JobStep {
+  return makeStep(
+    "ask_user",
+    "Needs a Yes/No before continuing",
+    { prompt, kind: "clarify", choices },
+    "clarify",
+  );
 }
 
 export function linkedinWeekPlaybook(url?: string): JobPlaybook {
@@ -178,6 +187,108 @@ export function salesPackPlaybook(): JobPlaybook {
         "pack",
       ),
       approveStep("Approve these outbound drafts. CINEM Pro will not send them."),
+    ],
+  };
+}
+
+export function linkedinOutreachDraftPlaybook(url?: string): JobPlaybook {
+  return {
+    key: "linkedin_outreach_draft",
+    title: "LinkedIn-style outreach draft",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      clarifyStep(
+        "Browse this public page and draft LinkedIn-style outreach? CINEM Pro will not send. Yes to continue, No to stop.",
+      ),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open the public page",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep(
+        "browser_extract",
+        "Extract visible page text",
+        { selector: "body" },
+        "extract",
+      ),
+      makeStep(
+        "write_artifact",
+        "Draft LinkedIn-style outreach (do not send)",
+        { kind: "outreach_pack" },
+        "dms",
+      ),
+      approveStep(
+        "Approve these outreach drafts. CINEM Pro will not send them — copy/paste yourself after Yes.",
+      ),
+    ],
+  };
+}
+
+export function recruiterSheetPlaybook(url?: string): JobPlaybook {
+  return {
+    key: "recruiter_sheet",
+    title: "Recruiter sheet from public page",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      clarifyStep(
+        "Extract public roles from this page into a markdown sheet? CINEM Pro will not email anyone. Yes to continue, No to stop.",
+      ),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open the public careers or about page",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep(
+        "browser_extract",
+        "Extract roles and page text",
+        { selector: "body" },
+        "extract",
+      ),
+      makeStep(
+        "write_artifact",
+        "Fill a markdown sheet from the page",
+        { kind: "recruiter_sheet" },
+        "sheet",
+      ),
+      approveStep("Approve this sheet. CINEM Pro did not email candidates or write an ATS."),
+    ],
+  };
+}
+
+export function inboxInvoicesPlaybook(gmailConnected = false): JobPlaybook {
+  const inbox = gmailConnected
+    ? [
+        makeStep(
+          "gmail_list_recent",
+          "List Gmail invoices / receipts / bills",
+          {
+            max: 12,
+            query: "in:inbox (invoice OR receipt OR bill OR invoiced) newer_than:90d",
+          },
+          "gmail-invoices",
+        ),
+      ]
+    : [];
+  return {
+    key: "inbox_invoices",
+    title: "Inbox invoice finder",
+    agentRole: "ops",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      ...inbox,
+      makeStep(
+        "write_artifact",
+        "List invoices from Gmail",
+        { kind: "inbox_invoices" },
+        "invoices",
+      ),
+      approveStep(
+        "Approve this invoice list. CINEM Pro did not send mail. QuickBooks write is TODO — not wired in this slice.",
+      ),
     ],
   };
 }
@@ -544,6 +655,9 @@ export function playbookFromKey(
   }
   if (key === "sales_pack") return salesPackPlaybook();
   if (key === "outreach_from_research") return outreachFromResearchPlaybook();
+  if (key === "linkedin_outreach_draft") return linkedinOutreachDraftPlaybook(url);
+  if (key === "recruiter_sheet") return recruiterSheetPlaybook(url);
+  if (key === "inbox_invoices") return inboxInvoicesPlaybook(Boolean(options?.gmailConnected));
   if (key === "ad_angles_from_url") return adAnglesFromUrlPlaybook(url);
   if (key === "strategy_from_site") return strategyFromSitePlaybook(url);
   if (key === "web_search") return webSearchPlaybook(message.trim());
@@ -570,6 +684,8 @@ export function inferPlaybookKey(
   if (action === "research_pack") return "research_pack";
   if (action === "competitor_scan") return "competitor_scan";
   if (action === "outreach_from_research") return "outreach_from_research";
+  if (action === "linkedin_outreach_draft") return "linkedin_outreach_draft";
+  if (action === "inbox_invoices") return "inbox_invoices";
   if (action === "ad_angles_from_url") return "ad_angles_from_url";
   if (action === "build_website") return "website_builder";
   if (action === "build_app") return "app_builder";
@@ -598,6 +714,9 @@ export function inferPlaybookKey(
   }
   if (/gmail draft|draft (an? )?email|create (a )?gmail draft/.test(text)) {
     return "gmail_draft";
+  }
+  if (/invoice|receipt|quickbooks|bill(s)? from (gmail|inbox)/.test(text)) {
+    return "inbox_invoices";
   }
   if (/gmail|inbox|recent (email|mail)/.test(text)) {
     return /repl(y|ies)/.test(text) ? "inbox_replies" : "gmail_inbox";
@@ -632,6 +751,18 @@ export function inferPlaybookKey(
     /outreach (pack )?from research|from (the )?research artifact|5 dms/.test(text)
   ) {
     return "outreach_from_research";
+  }
+  if (
+    (hint === "sales" || /outreach|linkedin/.test(text)) &&
+    /linkedin-style|outreach draft|draft outreach|prospect/.test(text)
+  ) {
+    return "linkedin_outreach_draft";
+  }
+  if (
+    /recruiter|careers page|role sheet|candidate sheet/.test(text) ||
+    (hint === "sales" && /recruit/.test(text))
+  ) {
+    return "recruiter_sheet";
   }
   if (hint === "sales" && /sales pack|outbound|linkedin dm|email script/.test(text)) {
     return "sales_pack";
@@ -732,6 +863,7 @@ export function ensureAskUser(steps: JobStep[]): JobStep[] {
       {
         prompt:
           "Approve the drafts before they leave the desk. CINEM Pro will not send or publish.",
+        kind: "approve",
       },
       "approve",
     ),

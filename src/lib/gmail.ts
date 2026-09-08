@@ -42,11 +42,21 @@ function header(headers: { name?: string; value?: string }[] | undefined, name: 
 export async function gmailListRecent(input: {
   workspaceId: string;
   max?: number;
+  query?: string;
 }): Promise<GmailHeaderMessage[]> {
   const tokens = await gmailAccessToken(input.workspaceId);
   const max = Math.min(Math.max(input.max ?? 8, 1), 20);
+  const params = new URLSearchParams({
+    maxResults: String(max),
+  });
+  const query = input.query?.trim();
+  if (query) {
+    params.set("q", query);
+  } else {
+    params.set("labelIds", "INBOX");
+  }
   const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${max}&labelIds=INBOX`,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`,
     { headers: { Authorization: `Bearer ${tokens.accessToken}` } },
   );
   const list = (await listRes.json()) as {

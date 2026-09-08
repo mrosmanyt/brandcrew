@@ -4,7 +4,7 @@
 
 The GitHub repo remains [`mrosmanyt/brandcrew`](https://github.com/mrosmanyt/brandcrew); the product is **CINEM Pro**. **CINEM** (cinem.tech) is the company.
 
-This is a vertical slice, not a Strawberry clone: no per-agent VMs, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results. Jobs can **browse public pages** read-only (`browser_navigate` / `browser_snapshot` / `crawl_links`).
+This is a vertical slice, not a Strawberry clone: no per-agent VMs, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results. Jobs can **browse public pages** (`browser_navigate` / `browser_snapshot` / `crawl_links`) and, on desktop/local Playwright, **click / type / extract / screenshot** on a live tab. Vercel serverless has no Chrome — interact tools return a clear “needs desktop” result instead of fake success.
 
 The public site is **Replit-simple** (warm paper, generous space, one primary CTA). Mission Control is a **Grok Bot–style** agent desk (sidebar agents, chat-first, jobs you approve). Visual tokens live in `src/app/globals.css`.
 
@@ -12,10 +12,10 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 
 1. Sign up with **Continue with Google** or email/password. Landing **Account** goes to `/login` when signed out and to desk settings when signed in. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
 2. Open **Mission Control** (`/desk/[workspaceId]`). A 3-step first-run card (New Agent → first job → Approve) can be dismissed; completion is stored per workspace member.
-3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft).
-4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed.
+3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, **Companions**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft, LinkedIn-style outreach, Inbox invoices).
+4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed. **Add companion** (Prospect Peter, Recruiter Ryan, Invoice Ivy, Content Casey, Research Riley) → real `Agent` with that name, instructions, and allowed tools. Custom companion: name + instructions + tool groups.
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
-6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Browse events show the **tool name + URL**.
+6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_type` / `browser_extract` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Clarify pauses show **Yes/No** on the desk and persist `Job.askKind` + `Job.userAnswer` in Postgres. Browse events show the **tool name + URL**.
 7. Approve artifacts. Save a job as a **Skill**, then **Run skill**.
 8. Open **API Console** (`/desk/[workspaceId]/developers`): mint a workspace key, call `/api/v1` from the in-app console or curl.
 9. Invite a teammate from Settings/Usage (copy the magic link — this slice does not send email). Seats follow the plan.
@@ -436,6 +436,7 @@ Token budget, hourly jobs, and concurrent running jobs are enforced on job creat
 ```bash
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
+npm run test:companions    # gallery templates, allowed tools, Yes/No clarify helpers
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
 npm run test:oauth         # mocked Gmail/Slack token exchange + Connected persistence (DB smoke skipped if Postgres is down)
 npm run test:browse        # optional: Playwright against example.com (needs Chrome)
@@ -454,28 +455,42 @@ v1 tools:
 
 - `read_brand_kit`
 - `browser_navigate` / `browser_snapshot` (Playwright + system Chrome when `PLAYWRIGHT_ENABLED`; otherwise fetch)
+- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **real on a job-scoped Playwright tab** (desktop / `npm run dev`). On Vercel they return “needs desktop” and never fake success. Still refuse login, password fields, and send.
 - `crawl_links` (depth 1–2, hard cap of 4 pages per job)
 - `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
 - `web_search` (Tavily; requires Connected Web Search plugin)
-- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send)
+- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send). `gmail_list_recent` accepts a Gmail `q` search (invoice finder uses it).
 - `slack_list_channels` / `slack_draft_message` / `slack_post_message` (Connected Slack; post only after `ask_user`)
 - `read_artifact` (outreach pack reads the latest research/competitor artifact)
 - `write_artifact` (markdown artifact on the workspace)
-- `ask_user` (job status → `needs_you`)
-- `browser_click` / `browser_type` **stubs** — always refuse login, password fields, and send
+- `ask_user` — `kind: "approve"` waits for artifact approval; `kind: "clarify"` waits for Yes/No (or a short answer) stored on `Job.userAnswer`, then resumes the same job
 
-Jobs bind to a user `Agent` (`agentId`). Activity events include `{ tool, url, excerpt }` for browse steps.
+Jobs bind to a user `Agent` (`agentId`). Activity events include `{ tool, url, excerpt }` for browse steps. Companion `allowedTools` (JSON on `Agent`) can restrict which tools that companion may run.
 
 ## Browser tools (user agents)
 
 CINEM Pro does **not** spin a VM per agent and does not require a paid browser vendor.
 
-1. Install deps as usual (`npm install`). Playwright **core** is enough — it uses the Chrome already on your machine.
-2. Leave `PLAYWRIGHT_ENABLED=true` in `.env` (see `.env.example`). If Chrome is at a custom path, set `PLAYWRIGHT_CHROME_PATH`.
-3. `npm run dev`, select **your** Research agent (or Add the Research bot from Marketplace), run **Competitor scan**. The activity feed should show `browser_navigate` + URL (or fetch fallback if Playwright could not start).
-4. On Vercel, leave `PLAYWRIGHT_ENABLED=false` (the default when `VERCEL=1`). Navigate still works via fetch, and `crawl_links` follows a couple of public same-site links. There is **no Chrome** on Vercel serverless; Browserbase is out of scope.
+**Where the browser runs**
 
-**Limits this phase:** read-only browse. No auto-login, no password automation, no LinkedIn send, no file downloads, max 4 pages/job. Gmail creates drafts only. Slack posts only after you approve. Live keys never persist canned browse copy — if the model fails, the artifact is the captured page text.
+| Environment | Navigate / snapshot / crawl | Click / type / extract / screenshot |
+| --- | --- | --- |
+| `npm run dev` or Electron desktop (`npm run desktop:dev`) | Playwright against system Chrome when `PLAYWRIGHT_ENABLED` and Chrome is found; otherwise fetch | **Live Playwright tab per job** (in-memory session in the Next process). Kept across Yes/No pauses. Closed when the job finishes or sits idle ~10 minutes. |
+| Vercel Hobby | Fetch fallback (no Chrome on serverless). `PLAYWRIGHT_ENABLED` defaults off. | Honest `desktop_required` result — **not** fake success. Run the same job on desktop. |
+
+There is no separate Electron IPC bridge in this slice: desktop already hosts Next locally, so Playwright in the job runtime is the worker. Browserbase / a remote Chrome worker is out of scope.
+
+**Local test**
+
+1. `npm install`. Playwright **core** uses the Chrome already on your machine.
+2. Leave `PLAYWRIGHT_ENABLED=true` in `.env`. Custom binary: `PLAYWRIGHT_CHROME_PATH`.
+3. `npm run dev` (or `npm run desktop:dev`). Marketplace → Companions → add **Prospect Peter** (or New Agent with browser tools).
+4. Job: “Browse https://example.com, extract the heading, ask me Yes/No before drafting outreach. Do not send.”
+5. Desk shows a **Yes/No** card (`Job.status=needs_you`, `askKind=clarify`). Yes resumes the same job with `Job.userAnswer` in context. No stops remaining steps.
+6. `npm run test:browse` — Playwright against example.com when Chrome is present.
+7. `npm run test:companions` and `npm run test:jobs` — playbooks, clarify helpers, gallery (no database).
+
+**Limits this phase:** no auto-login, no password automation, no LinkedIn send, no file downloads, max 4 pages/job. Gmail creates drafts only. Slack posts only after you approve. Live keys never persist canned browse copy — if the model fails, the artifact is the captured page text. QuickBooks write on the invoice finder is labeled **TODO**.
 
 ## Plans
 
@@ -489,6 +504,7 @@ npm run build
 npm run start
 npm run lint
 npm run test:jobs
+npm run test:companions
 npm run test:oauth
 npm run test:browse  # Playwright smoke test (Chrome + network)
 npm run test:api-router

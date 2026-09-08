@@ -66,6 +66,30 @@ export const FEATURED_JOB_TEMPLATES: JobTemplate[] = [
     roleHint: "Website",
     featured: true,
   },
+  {
+    id: "tpl-linkedin-outreach",
+    title: "LinkedIn-style outreach",
+    blurb:
+      "Browse a public page, extract text, draft DMs. Yes/No pause first. Does not send.",
+    playbookKey: "linkedin_outreach_draft",
+    action: "linkedin_outreach_draft",
+    message:
+      "Browse this public page (or the Brand Kit site), extract who they are, then draft LinkedIn-style outreach. Ask me Yes/No before drafting. Do not send.",
+    roleHint: "Sales",
+    featured: true,
+  },
+  {
+    id: "tpl-inbox-invoices",
+    title: "Inbox invoice finder",
+    blurb:
+      "List invoices from connected Gmail. QuickBooks write is TODO. Does not send.",
+    playbookKey: "inbox_invoices",
+    action: "inbox_invoices",
+    message:
+      "Find invoices in connected Gmail (invoice, receipt, or bill). List them. Do not send. Do not write to QuickBooks.",
+    roleHint: "Finance",
+    featured: true,
+  },
 ];
 
 export function getJobTemplate(id: string) {

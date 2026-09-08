@@ -24,6 +24,7 @@ export function LiveResults({
   artifacts,
   busy,
   onApprove,
+  onReply,
   width,
   collapsed,
   onExpand,
@@ -33,6 +34,7 @@ export function LiveResults({
   artifacts: ArtifactDTO[];
   busy?: boolean;
   onApprove: (artifactId: string) => void;
+  onReply?: (answer: string) => void;
   width: number;
   collapsed: boolean;
   onExpand: () => void;
@@ -118,7 +120,37 @@ export function LiveResults({
           ) : null}
         </div>
 
-        {job?.status === "needs_you" && pending.length > 0 ? (
+        {job?.screenshot ? (
+          <div className="mt-3 overflow-hidden rounded-xl border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={job.screenshot}
+              alt="Live browser screenshot"
+              className="max-h-48 w-full object-cover object-top"
+            />
+          </div>
+        ) : null}
+
+        {job?.status === "needs_you" && job.askKind === "clarify" && !job.userAnswer ? (
+          <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2.5">
+            <p className="text-sm leading-5">{job.askPrompt || "Continue?"}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(job.askChoices.length ? job.askChoices : ["Yes", "No"]).map((choice) => (
+                <Button
+                  key={choice}
+                  size="xs"
+                  variant={choice.toLowerCase() === "no" ? "outline" : "default"}
+                  disabled={busy}
+                  onClick={() => onReply?.(choice)}
+                >
+                  {choice}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {job?.status === "needs_you" && pending.length > 0 && job.askKind !== "clarify" ? (
           <Button
             className="mt-3 w-full"
             size="sm"

@@ -75,10 +75,21 @@ export function formatSnapshot(page?: {
   return `URL: ${page.url}\nEngine: ${page.engine}${page.ok ? "" : " (partial)"}\n\n${body.slice(0, SNAPSHOT_MAX_CHARS)}`;
 }
 
+export type InteractGuard =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export function playwrightDesktopRequiredReason(tool: string): string {
+  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    return `${tool} needs Playwright. Vercel serverless has no Chrome — run CINEM Pro desktop (npm run desktop:dev) or local npm run dev with PLAYWRIGHT_ENABLED=true. Navigate still works via fetch.`;
+  }
+  return `${tool} needs Playwright + Chrome on this machine. Set PLAYWRIGHT_ENABLED=true (and PLAYWRIGHT_CHROME_PATH if Chrome is not on a default path). Navigate still works via fetch.`;
+}
+
 export function browserInteractGuard(
   tool: "browser_click" | "browser_type",
   args: Record<string, unknown>,
-): { ok: false; reason: string } {
+): InteractGuard {
   const blob = `${args.selector ?? ""} ${args.text ?? ""} ${args.value ?? ""} ${args.label ?? ""}`.toLowerCase();
   if (/(password|passwd|passcode|one-time|otp|credential)/.test(blob)) {
     return {
@@ -89,7 +100,7 @@ export function browserInteractGuard(
   if (/(log[\s-]?in|sign[\s-]?in|sign[\s-]?up|auth|sso)/.test(blob)) {
     return {
       ok: false,
-      reason: "Refused: no auto-login. Browse is read-only in this phase.",
+      reason: "Refused: no auto-login. Use a public page, or pause with ask_user.",
     };
   }
   if (/(send|publish|post now|submit message|mail\.send|tweet)/.test(blob)) {
@@ -98,10 +109,7 @@ export function browserInteractGuard(
       reason: "Refused: no external send. Pause with ask_user instead.",
     };
   }
-  return {
-    ok: false,
-    reason: `${tool} is a stub in this phase — read-only navigate + snapshot only. No clicks or typing.`,
-  };
+  return { ok: true };
 }
 
 export function assertCanBrowseAnotherPage(caps: BrowseCaps): void {
@@ -192,6 +200,50 @@ async function fetchBrowse(url: string): Promise<BrowsePage> {
   };
 }
 
+export const PLAYWRIGHT_LAUNCH_ARGS = [
+  "--headless=new",
+  "--no-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--disable-extensions",
+];
+
+export const PLAYWRIGHT_USER_AGENT =
+  "CINEM-Pro-Research/0.2 (+https://github.com/mrosmanyt/brandcrew)";
+
+export async function snapshotPlaywrightPage(page: {
+  url: () => string;
+  title: () => Promise<string>;
+  content: () => Promise<string>;
+  locator: (selector: string) => {
+    ariaSnapshot: (opts: { timeout: number }) => Promise<string>;
+    innerText: (opts: { timeout: number }) => Promise<string>;
+  };
+}): Promise<BrowsePage> {
+  const finalUrl = page.url();
+  assertPublicHttpUrl(finalUrl);
+  const title = await page.title().catch(() => "");
+  let aria = "";
+  try {
+    aria = await page.locator("body").ariaSnapshot({ timeout: 4_000 });
+  } catch {
+    aria = "";
+  }
+  const bodyText = await page.locator("body").innerText({ timeout: 4_000 }).catch(() => "");
+  const html = await page.content().catch(() => "");
+  const text = (aria.trim() || htmlToText(html) || bodyText).replace(/\s+\n/g, "\n").trim();
+  const links = extractHtmlLinks(html, finalUrl);
+  return {
+    url: finalUrl,
+    ok: Boolean(text || title),
+    title,
+    text: text.slice(0, SNAPSHOT_MAX_CHARS),
+    excerpt: excerptFromText(text || title),
+    links,
+    engine: "playwright",
+  };
+}
+
 async function playwrightNavigate(url: string): Promise<BrowsePage> {
   const executablePath = resolveChromePath();
   if (!executablePath) {
@@ -201,17 +253,11 @@ async function playwrightNavigate(url: string): Promise<BrowsePage> {
   const browser = await chromium.launch({
     executablePath,
     headless: true,
-    args: [
-      "--headless=new",
-      "--no-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-extensions",
-    ],
+    args: PLAYWRIGHT_LAUNCH_ARGS,
   });
   try {
     const page = await browser.newPage({
-      userAgent: "CINEM-Pro-Research/0.2 (+https://github.com/mrosmanyt/brandcrew)",
+      userAgent: PLAYWRIGHT_USER_AGENT,
     });
     page.setDefaultTimeout(BROWSE_TIMEOUT_MS);
     page.setDefaultNavigationTimeout(BROWSE_TIMEOUT_MS);
@@ -219,28 +265,11 @@ async function playwrightNavigate(url: string): Promise<BrowsePage> {
       waitUntil: "domcontentloaded",
       timeout: BROWSE_TIMEOUT_MS,
     });
-    const finalUrl = page.url();
-    assertPublicHttpUrl(finalUrl);
-    const title = await page.title().catch(() => "");
-    let aria = "";
-    try {
-      aria = await page.locator("body").ariaSnapshot({ timeout: 4_000 });
-    } catch {
-      aria = "";
-    }
-    const bodyText = await page.locator("body").innerText({ timeout: 4_000 }).catch(() => "");
-    const html = await page.content().catch(() => "");
-    const text = (aria.trim() || htmlToText(html) || bodyText).replace(/\s+\n/g, "\n").trim();
-    const links = extractHtmlLinks(html, finalUrl);
-    const ok = response ? response.ok() : Boolean(text);
+    const snap = await snapshotPlaywrightPage(page);
+    const ok = response ? response.ok() : snap.ok;
     return {
-      url: finalUrl,
+      ...snap,
       ok,
-      title,
-      text: text.slice(0, SNAPSHOT_MAX_CHARS),
-      excerpt: excerptFromText(text || title),
-      links,
-      engine: "playwright",
       error: ok ? undefined : `HTTP ${response?.status() ?? "unknown"}`,
     };
   } finally {

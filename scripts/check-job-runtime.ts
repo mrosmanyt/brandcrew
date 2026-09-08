@@ -13,7 +13,9 @@ import {
   browserInteractGuard,
   MAX_PAGES_PER_JOB,
   playwrightEnabled,
+  playwrightDesktopRequiredReason,
 } from "../src/lib/browse";
+import { isNegativeClarification, parseAskKind } from "../src/lib/job-clarify";
 import {
   competitorScanPlaybook,
   inferPlaybookKey,
@@ -28,6 +30,9 @@ import {
   gmailInboxPlaybook,
   inboxRepliesPlaybook,
   slackPostPlaybook,
+  recruiterSheetPlaybook,
+  inboxInvoicesPlaybook,
+  linkedinOutreachDraftPlaybook,
   whatsappDraftsPlaybook,
   websiteBuilderPlaybook,
   appBuilderPlaybook,
@@ -194,9 +199,31 @@ assert.match(password.reason, /password/i);
 const send = browserInteractGuard("browser_click", { selector: "Send message" });
 assert.equal(send.ok, false);
 assert.match(send.reason, /send|stub|read-only/i);
+const publicClick = browserInteractGuard("browser_click", { selector: "a.more" });
+assert.equal(publicClick.ok, true);
 assert.equal(MAX_PAGES_PER_JOB, 4);
-console.log("ok: browse stubs refuse password/send; page cap is 4");
+assert.match(playwrightDesktopRequiredReason("browser_click"), /desktop|Playwright|Chrome/i);
+console.log("ok: browse guards refuse password/send; public click is allowed; page cap is 4");
 console.log(`ok: playwrightEnabled=${playwrightEnabled()} (informational)`);
+
+const outreachDraft = linkedinOutreachDraftPlaybook("https://example.com");
+assert.equal(outreachDraft.steps.some((step) => step.tool === "browser_extract"), true);
+assert.equal(outreachDraft.steps.some((step) => step.args.kind === "clarify"), true);
+assert.equal(outreachDraft.steps.at(-1)?.tool, "ask_user");
+assert.equal(outreachDraft.steps.at(-1)?.args.kind, "approve");
+assert.equal(inferPlaybookKey("sales", "draft outreach from this public page"), "linkedin_outreach_draft");
+const recruiter = recruiterSheetPlaybook("https://example.com/careers");
+assert.equal(recruiter.steps.some((step) => step.args.kind === "recruiter_sheet"), true);
+assert.equal(recruiter.steps.some((step) => step.args.kind === "clarify"), true);
+const invoices = inboxInvoicesPlaybook(true);
+assert.equal(invoices.steps.some((step) => step.tool === "gmail_list_recent"), true);
+assert.equal(invoices.steps.some((step) => step.args.kind === "inbox_invoices"), true);
+assert.equal(inboxInvoicesPlaybook(false).steps.some((step) => step.tool === "gmail_list_recent"), false);
+assert.equal(inferPlaybookKey("ops", "find invoices in gmail"), "inbox_invoices");
+assert.equal(parseAskKind({ kind: "clarify" }), "clarify");
+assert.equal(isNegativeClarification("No"), true);
+assert.equal(isNegativeClarification("yes"), false);
+console.log("ok: LinkedIn outreach + recruiter sheet + invoice finder; clarify is Prisma-shaped");
 
 assert.equal(TEAM_LAUNCH_ROLES.length >= 10, true);
 const proposal = proposeBusinessTeam();

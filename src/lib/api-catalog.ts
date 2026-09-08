@@ -25,8 +25,12 @@ export const V1_ENDPOINTS: V1Endpoint[] = [
   {
     method: "POST",
     path: "/api/v1/agents",
-    description: "Create an agent (name still defaults to New Agent)",
-    body: { role: "Research", instructions: "Browse public pages. Do not send." },
+    description: "Create an agent (name still defaults to New Agent; pass allowedTools to restrict)",
+    body: {
+      role: "Research",
+      instructions: "Browse public pages. Do not send.",
+      allowedTools: ["browser_navigate", "browser_extract", "write_artifact", "ask_user"],
+    },
   },
   {
     method: "GET",

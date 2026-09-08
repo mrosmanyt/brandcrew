@@ -21,6 +21,21 @@ import {
   MAX_PAGES_PER_JOB,
 } from "@/lib/browse";
 import {
+  closeBrowserSession,
+  sessionClick,
+  sessionExtract,
+  sessionNavigate,
+  sessionScreenshot,
+  sessionSnapshot,
+  sessionType,
+} from "@/lib/browser-session";
+import { parseAllowedTools, toolIsAllowed } from "@/lib/companions";
+import {
+  isClarifyStep,
+  isNegativeClarification,
+  parseAskKind,
+} from "@/lib/job-clarify";
+import {
   demoAdAnglesFromUrl,
   demoCompetitorMarkdown,
   demoInboxReplies,
@@ -70,6 +85,7 @@ import {
 } from "@/lib/slack";
 import { assertWorkspaceBudget, recordUsage } from "@/lib/usage";
 import { tavilySearch } from "@/lib/web-search";
+import { ClientError } from "@/lib/http";
 
 const STEP_GAP_MS = 280;
 
@@ -319,6 +335,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
           agentName: displayAgentName(agent?.name),
           agentInstructions: agent?.instructions || "",
           agentRoleLabel: agent?.role || job.agentRole,
+          allowedTools: parseAllowedTools(agent?.allowedTools),
         }),
       );
       await savePlan(jobId, steps);
@@ -351,6 +368,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
 
     const next = steps.find((step) => step.status === "pending");
     if (!next) {
+      await closeBrowserSession(jobId);
       await prisma.job.update({
         where: { id: jobId },
         data: { status: "done", runnerLock: "" },
@@ -386,6 +404,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
         agentRole: asAgentRole(job.agentRole),
         agentName: displayAgentName(agent?.name),
         agentInstructions: agent?.instructions || "",
+        allowedTools: parseAllowedTools(agent?.allowedTools),
         prompt: job.prompt,
         step: next,
         kit,
@@ -417,6 +436,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
         data: {
           status: "needs_you",
           askPrompt: result.askPrompt || next.label,
+          askKind: result.askKind || "approve",
           runnerLock: "",
         },
       });
@@ -459,6 +479,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
 }
 
 async function failJob(jobId: string, message: string) {
+  await closeBrowserSession(jobId);
   await prisma.job.update({
     where: { id: jobId },
     data: { status: "failed", error: message, runnerLock: "" },
@@ -474,6 +495,7 @@ async function planSteps(input: {
   agentName: string;
   agentInstructions: string;
   agentRoleLabel: string;
+  allowedTools?: string[];
 }): Promise<JobStep[]> {
   const fallback = playbookFromKey(
     inferPlaybookKey(input.role, input.prompt),
@@ -496,6 +518,7 @@ async function planSteps(input: {
             role: input.role,
             agentInstructions: input.agentInstructions,
             connectedTools: connected,
+            allowedTools: input.allowedTools,
           }),
         },
         {
@@ -511,6 +534,7 @@ async function planSteps(input: {
       const row = raw as Record<string, unknown>;
       const tool = String(row.tool || "");
       if (!isJobTool(tool)) continue;
+      if (input.allowedTools && !toolIsAllowed(input.allowedTools as never, tool)) continue;
       steps.push({
         id: `${tool}-${index}`,
         tool,
@@ -542,17 +566,26 @@ async function executeTool(input: {
   step: JobStep;
   kit: BrandKit;
   context: JobContext;
+  allowedTools?: string[];
 }): Promise<{
   summary: string;
   context: JobContext;
   pause?: boolean;
   askPrompt?: string;
+  askKind?: string;
   artifactId?: string;
   url?: string;
   excerpt?: string;
 }> {
   const { step, kit } = input;
   const context = { ...input.context };
+
+  if (input.allowedTools && !toolIsAllowed(input.allowedTools as never, step.tool)) {
+    return {
+      summary: `${step.tool} is not allowed for this companion.`,
+      context,
+    };
+  }
 
   if (step.tool === "read_brand_kit") {
     context.brandBrief = brandKitBrief(kit);
@@ -632,11 +665,25 @@ async function executeTool(input: {
       data: { tool: "browser_navigate", url },
     });
     try {
+      const live = await sessionNavigate(input.jobId, url);
+      if (live.ok && live.page) {
+        const page = toBrowsedPage(live.page);
+        rememberPage(context, page);
+        context.browserMode = live.mode;
+        return {
+          summary: `browser_navigate ${page.url} (${page.engine} session)`,
+          context,
+          url: page.url,
+          excerpt: page.excerpt,
+        };
+      }
       const page = toBrowsedPage(await browseNavigate(url));
       rememberPage(context, page);
+      context.browserMode = page.engine || "fetch";
+      const sessionNote = live.error ? ` Live tab: ${live.error}` : "";
       return {
         summary: page.ok
-          ? `browser_navigate ${page.url} (${page.engine})`
+          ? `browser_navigate ${page.url} (${page.engine})${sessionNote}`
           : `browser_navigate ${page.url} — partial${page.error ? ` (${page.error})` : ""}`,
         context,
         url: page.url,
@@ -653,6 +700,25 @@ async function executeTool(input: {
   }
 
   if (step.tool === "browser_snapshot") {
+    const live = await sessionSnapshot(input.jobId);
+    if (live.ok && live.page) {
+      const page = toBrowsedPage(live.page);
+      context.currentPage = page;
+      context.snapshot = formatSnapshot(page);
+      await appendEvent({
+        jobId: input.jobId,
+        type: "tool_call",
+        message: `browser_snapshot ${page.url}`,
+        stepId: step.id,
+        data: { tool: "browser_snapshot", url: page.url, excerpt: page.excerpt },
+      });
+      return {
+        summary: `browser_snapshot ${page.url} (live tab)`,
+        context,
+        url: page.url,
+        excerpt: page.excerpt,
+      };
+    }
     const page = context.currentPage || context.pages?.at(-1);
     context.snapshot = formatSnapshot(page);
     await appendEvent({
@@ -733,7 +799,88 @@ async function executeTool(input: {
 
   if (step.tool === "browser_click" || step.tool === "browser_type") {
     const guard = browserInteractGuard(step.tool, step.args);
-    return { summary: guard.reason, context };
+    if (!guard.ok) {
+      return { summary: guard.reason, context };
+    }
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `${step.tool} ${String(step.args.selector || step.args.text || "")}`.trim(),
+      stepId: step.id,
+      data: { tool: step.tool },
+    });
+    const live =
+      step.tool === "browser_click"
+        ? await sessionClick(input.jobId, step.args)
+        : await sessionType(input.jobId, step.args);
+    if (live.page) {
+      const page = toBrowsedPage(live.page);
+      rememberPage(context, page, { count: false });
+    }
+    return {
+      summary: live.ok
+        ? `${step.tool} on live tab (${live.mode})`
+        : `${step.tool} did not run — ${live.error || live.mode}`,
+      context,
+      url: live.page?.url,
+      excerpt: live.excerpt,
+    };
+  }
+
+  if (step.tool === "browser_extract") {
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: "browser_extract",
+      stepId: step.id,
+      data: { tool: "browser_extract" },
+    });
+    const live = await sessionExtract(input.jobId, step.args);
+    if (live.extracted) context.extracted = live.extracted;
+    if (live.page) {
+      const page = toBrowsedPage(live.page);
+      rememberPage(context, page, { count: false });
+      if (!context.extracted) context.extracted = page.text;
+    } else if (!live.ok && context.currentPage) {
+      context.extracted = context.currentPage.text;
+      return {
+        summary: `browser_extract used last fetched page — ${live.error || live.mode}`,
+        context,
+        url: context.currentPage.url,
+        excerpt: context.currentPage.excerpt,
+      };
+    }
+    return {
+      summary: live.ok
+        ? `browser_extract (${(live.extracted || "").length} chars)`
+        : `browser_extract did not run — ${live.error || live.mode}`,
+      context,
+      url: live.page?.url,
+      excerpt: live.excerpt,
+    };
+  }
+
+  if (step.tool === "browser_screenshot") {
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: "browser_screenshot",
+      stepId: step.id,
+      data: { tool: "browser_screenshot" },
+    });
+    const live = await sessionScreenshot(input.jobId);
+    if (live.screenshot) context.screenshot = live.screenshot;
+    if (live.page) rememberPage(context, toBrowsedPage(live.page), { count: false });
+    return {
+      summary: live.ok
+        ? live.screenshot
+          ? "browser_screenshot captured"
+          : live.error || "browser_screenshot captured"
+        : `browser_screenshot did not run — ${live.error || live.mode}`,
+      context,
+      url: live.page?.url,
+      excerpt: live.excerpt,
+    };
   }
 
   if (step.tool === "read_artifact") {
@@ -808,6 +955,7 @@ async function executeTool(input: {
     const messages = await gmailListRecent({
       workspaceId: input.workspaceId,
       max: Number(step.args.max || 8),
+      query: String(step.args.query || step.args.q || "").trim() || undefined,
     });
     context.gmailMessages = messages;
     return {
@@ -941,11 +1089,13 @@ async function executeTool(input: {
     const prompt =
       String(step.args.prompt || "") ||
       "Approve the drafts before they leave the desk.";
+    const kind = parseAskKind(step.args);
     return {
       summary: prompt,
       context,
       pause: true,
       askPrompt: prompt,
+      askKind: kind,
     };
   }
 
@@ -974,10 +1124,17 @@ function toBrowsedPage(page: {
   };
 }
 
-function rememberPage(context: JobContext, page: BrowsedPage) {
-  context.pages = [...(context.pages || []), page];
+function rememberPage(context: JobContext, page: BrowsedPage, opts?: { count?: boolean }) {
+  const count = opts?.count !== false;
+  if (count) {
+    context.pages = [...(context.pages || []), page];
+    context.pageCount = (context.pageCount || 0) + 1;
+  } else if (context.pages?.length) {
+    context.pages = [...context.pages.slice(0, -1), page];
+  } else {
+    context.pages = [page];
+  }
   context.currentPage = page;
-  context.pageCount = (context.pageCount || 0) + 1;
   context.fetched = { url: page.url, ok: page.ok, text: page.text };
 }
 
@@ -1118,6 +1275,39 @@ async function writeJobArtifact(
     type = "gmail_inbox";
     model = "gmail";
     provider = "gmail";
+  } else if (kind === "inbox_invoices") {
+    const listed = formatGmailList(context.gmailMessages || []);
+    const connected = Boolean(context.gmailMessages);
+    title = "Inbox invoices";
+    content = `# Inbox invoice finder
+
+${
+  connected || (context.gmailMessages && context.gmailMessages.length)
+    ? listed
+    : "Gmail is not connected on this workspace. Connect Gmail in Marketplace → Plugins (real OAuth). This list is empty on purpose — not a fake inbox."
+}
+
+## QuickBooks
+
+TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. Export this list and enter bills in QuickBooks yourself.
+`;
+    type = "inbox_invoices";
+    model = connected ? "gmail" : "demo";
+    provider = connected ? "gmail" : "demo";
+  } else if (kind === "recruiter_sheet") {
+    const pack = await generateRecruiterSheet({
+      kit: input.kit,
+      prompt: input.prompt,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title;
+    content = pack.content;
+    type = "recruiter_sheet";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
   } else if (kind === "gmail_draft") {
     const draft = context.gmailDraft;
     title = draft ? `Gmail draft to ${draft.to}` : "Gmail draft";
@@ -1245,10 +1435,14 @@ function pageContextBlock(context?: JobContext): string {
       ? `${context.fetched.url}\n${context.fetched.text.slice(0, 1200)}`
       : "(none)";
   const snap = context.snapshot ? `\n\nSnapshot:\n${context.snapshot.slice(0, 2000)}` : "";
+  const extracted = context.extracted
+    ? `\n\nExtracted:\n${context.extracted.slice(0, 4000)}`
+    : "";
+  const answer = context.userAnswer ? `\n\nUser answered: ${context.userAnswer}` : "";
   const search = context.search?.text
     ? `\n\nWeb search for “${context.search.query}”:\n${context.search.text.slice(0, 4000)}`
     : "";
-  return `Pages:\n${pages}${snap}${search}`;
+  return `Pages:\n${pages}${snap}${extracted}${answer}${search}`;
 }
 
 function pageAwarePrompt(prompt: string, context: JobContext): string {
@@ -1508,12 +1702,12 @@ async function generateOutreachPack(input: {
           role: "system",
           content: `You are ${input.agentName} on CINEM Pro.
 ${input.agentInstructions}
-Write exactly 5 LinkedIn DMs. Do not send. Ground them in the research artifact when present.
+Write exactly 5 LinkedIn DMs. Do not send. Ground them in the research artifact and/or browsed page text when present.
 Return JSON: { "title": string, "content": string } Markdown with ## LinkedIn DM 1 … 5.`,
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\nResearch artifact:\n${
+          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nResearch artifact:\n${
             input.context.priorArtifact
               ? `${input.context.priorArtifact.title}\n${input.context.priorArtifact.content}`
               : "(none)"
@@ -1671,6 +1865,64 @@ Return JSON: { "title": string, "content": string }.`,
   };
 }
 
+async function generateRecruiterSheet(input: {
+  kit: BrandKit;
+  prompt: string;
+  context: JobContext;
+  agentName: string;
+  agentInstructions: string;
+}): Promise<ArtifactPack> {
+  const extracted =
+    input.context.extracted ||
+    input.context.currentPage?.text ||
+    input.context.pages?.at(-1)?.text ||
+    "";
+  const fallback = {
+    title: "Recruiter sheet (public page)",
+    content: `# Recruiter sheet
+
+CINEM Pro did not email anyone.
+
+${extracted ? `Source: ${input.context.currentPage?.url || "browsed page"}\n\n${extracted.slice(0, 4000)}` : "No page text captured. Connect desktop Playwright or paste a public URL."}
+
+| Role | Notes | Outreach draft |
+| --- | --- | --- |
+| (fill from the page) | Public text only | Do not send |
+
+CINEM Pro will not send these. Approve, then you copy/paste.
+`,
+  };
+  const live = llm.status().configured;
+  if (!live) {
+    return { ...fallback, tokens: 0, model: "demo", provider: "demo" };
+  }
+  const result = await llm.complete({
+    mode: "draft",
+    json: true,
+    messages: [
+      {
+        role: "system",
+        content: `You are ${input.agentName} on CINEM Pro.
+${input.agentInstructions}
+Turn public page text into a markdown table of roles (Role | Notes | Outreach draft). Never claim you emailed anyone. Never invent people who are not on the page.
+Return JSON: { "title": string, "content": string }.`,
+      },
+      {
+        role: "user",
+        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+      },
+    ],
+  });
+  const json = parseLlmJson(result.text);
+  return {
+    title: String(json?.title || "").trim() || fallback.title,
+    content: String(json?.content || "").trim() || fallback.content,
+    tokens: result.tokens,
+    model: result.model,
+    provider: result.provider,
+  };
+}
+
 async function generateWhatsAppDrafts(input: {
   kit: BrandKit;
   prompt: string;
@@ -1722,6 +1974,9 @@ export async function completeJobIfApproved(jobId: string) {
     include: { artifacts: true },
   });
   if (!job || job.status !== "needs_you") return job;
+  if ((job.askKind || "") === "clarify" && !(job.userAnswer || "").trim()) {
+    return job;
+  }
   const pending = job.artifacts.filter((artifact) => artifact.status !== "approved");
   const approved = job.artifacts.length - pending.length;
   await appendEvent({
@@ -1739,7 +1994,7 @@ export async function completeJobIfApproved(jobId: string) {
   if (remaining.length) {
     await prisma.job.update({
       where: { id: jobId },
-      data: { status: "queued", askPrompt: "", runnerLock: "" },
+      data: { status: "queued", askPrompt: "", askKind: "", runnerLock: "" },
     });
     await appendEvent({
       jobId,
@@ -1749,9 +2004,10 @@ export async function completeJobIfApproved(jobId: string) {
     scheduleJobRun(jobId);
     return loadJob(jobId);
   }
+  await closeBrowserSession(jobId);
   await prisma.job.update({
     where: { id: jobId },
-    data: { status: "done", askPrompt: "" },
+    data: { status: "done", askPrompt: "", askKind: "" },
   });
   await appendEvent({
     jobId,
@@ -1759,6 +2015,92 @@ export async function completeJobIfApproved(jobId: string) {
     message: "All artifacts approved. Job complete. Ops has schedule cards.",
   });
   return loadJob(jobId);
+}
+
+export async function answerJobClarification(input: {
+  jobId: string;
+  workspaceId: string;
+  answer: string;
+}) {
+  const job = await prisma.job.findFirst({
+    where: { id: input.jobId, workspaceId: input.workspaceId },
+  });
+  if (!job) throw new ClientError("Job not found.", 404);
+  if (job.status !== "needs_you") {
+    throw new ClientError("This job is not waiting for an answer.");
+  }
+  const steps = parsePlan(job.plan);
+  const paused = steps.find((step) => step.status === "paused");
+  if (!paused || !isClarifyStep(paused)) {
+    throw new ClientError("This pause is an artifact approval, not a Yes/No question.");
+  }
+  const answer = input.answer.trim();
+  if (!answer) throw new ClientError("Write Yes, No, or a short answer.");
+  const context = parseJobContext(job.context);
+  context.userAnswer = answer;
+  context.clarification = {
+    question: job.askPrompt || String(paused.args.prompt || ""),
+    answer,
+    choices: Array.isArray(paused.args.choices)
+      ? paused.args.choices.map((row) => String(row))
+      : ["Yes", "No"],
+  };
+  const nextSteps = steps.map((step) =>
+    step.status === "paused" ? { ...step, status: "done" as const, result: answer } : step,
+  );
+  await savePlan(job.id, nextSteps);
+  await saveContext(job.id, context);
+  await appendEvent({
+    jobId: job.id,
+    type: "user_reply",
+    message: `You answered: ${answer}`,
+    stepId: paused.id,
+    data: { tool: "ask_user", answer },
+  });
+
+  if (isNegativeClarification(answer)) {
+    const skipped = nextSteps.map((step) =>
+      step.status === "pending"
+        ? { ...step, status: "done" as const, result: "Skipped — you said no." }
+        : step,
+    );
+    await savePlan(job.id, skipped);
+    await closeBrowserSession(job.id);
+    await prisma.job.update({
+      where: { id: job.id },
+      data: {
+        status: "done",
+        askPrompt: "",
+        askKind: "clarify",
+        userAnswer: answer,
+        runnerLock: "",
+      },
+    });
+    await appendEvent({
+      jobId: job.id,
+      type: "status",
+      message: "Stopped after you said no.",
+    });
+    return loadJob(job.id);
+  }
+
+  await prisma.job.update({
+    where: { id: job.id },
+    data: {
+      status: "queued",
+      askPrompt: "",
+      askKind: "clarify",
+      userAnswer: answer,
+      runnerLock: "",
+    },
+  });
+  await appendEvent({
+    jobId: job.id,
+    type: "status",
+    message: "Answer received — continuing the plan.",
+  });
+  scheduleJobRun(job.id);
+  return loadJob(job.id);
 }
 
 export async function saveSkillFromJob(input: {
@@ -1795,8 +2137,11 @@ export function defaultLinkedInSkillPlaybook() {
 export {
   competitorScanPlaybook,
   genericPlaybook,
+  inboxInvoicesPlaybook,
+  linkedinOutreachDraftPlaybook,
   linkedinWeekPlaybook,
   outreachFromResearchPlaybook,
+  recruiterSheetPlaybook,
   researchPackPlaybook,
   salesPackPlaybook,
 } from "@/lib/job-playbooks";

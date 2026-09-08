@@ -9,6 +9,8 @@ export const JOB_TOOLS = [
   "browser_snapshot",
   "browser_click",
   "browser_type",
+  "browser_extract",
+  "browser_screenshot",
   "crawl_links",
   "read_artifact",
   "gmail_list_recent",
@@ -59,6 +61,7 @@ export type AgentDTO = {
   role: string;
   instructions: string;
   templateId: string | null;
+  allowedTools: string[];
   status: string;
   sortOrder: number;
   createdAt: string;
@@ -83,7 +86,12 @@ export type JobContext = {
   pages?: BrowsedPage[];
   currentPage?: BrowsedPage;
   snapshot?: string;
+  extracted?: string;
+  screenshot?: string;
+  browserMode?: string;
   pageCount?: number;
+  userAnswer?: string;
+  clarification?: { question: string; answer?: string; choices?: string[] };
   priorArtifact?: { id: string; title: string; type: string; content: string };
   weekPosts?: { title: string; body: string }[];
   userUrl?: string;
@@ -115,6 +123,10 @@ export type JobDTO = {
   playbookKey: string | null;
   skillId: string | null;
   askPrompt: string;
+  askKind: string;
+  userAnswer: string;
+  askChoices: string[];
+  screenshot?: string;
   error: string;
   createdAt: string;
   updatedAt: string;
