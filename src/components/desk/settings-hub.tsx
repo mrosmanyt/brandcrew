@@ -317,9 +317,9 @@ export function SettingsHub({
           {user.isAdmin ? (
             <li>
               <Link href="/admin" className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40">
-                <span className="text-sm">Founder Admin HQ</span>
+                <span className="text-sm">Internal Admin HQ</span>
                 <span className="text-xs text-muted-foreground">
-                  Live workspace counts, plan assign, and audit log.
+                  Ops console for CINEM staff. Not shown to customers.
                 </span>
               </Link>
             </li>

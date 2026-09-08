@@ -35,6 +35,8 @@ model Workspace {
   modelRouting       String            @default("auto")
   /// Last Whop membership that granted the current paid plan. Used to match deactivates.
   whopMembershipId   String?
+  /// Soft suspend from Admin HQ: workspace is forced to Demo and new jobs are blocked.
+  suspended          Boolean           @default(false)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   members            WorkspaceMember[]
@@ -52,6 +54,8 @@ model Workspace {
   schedules          ScheduledJob[]
 
   @@index([whopMembershipId])
+  @@index([plan])
+  @@index([suspended])
 }
 
 model Agent {
@@ -314,6 +318,16 @@ model AdminAuditLog {
 
   @@index([createdAt])
   @@index([actorEmail])
+  @@index([action])
+}
+
+/// Internal Admin HQ toggles. Missing key → disabled. Not customer-facing.
+model FeatureFlag {
+  key       String   @id
+  enabled   Boolean  @default(false)
+  note      String   @default("")
+  updatedAt DateTime @default(now()) @updatedAt
+  updatedBy String   @default("")
 }
 
 /// Dedupes inbound provider webhooks (Whop webhook-id / payment id).
