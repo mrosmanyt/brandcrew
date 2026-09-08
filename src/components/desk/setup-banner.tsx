@@ -39,7 +39,7 @@ export function SetupBanner() {
         {mockBilling ? (
           <>
             Billing is in mock mode (<code className="rounded bg-card px-1 py-0.5 text-xs">BILLING_MOCK=true</code>
-            ): plan changes apply locally without Stripe.
+            ): plan changes apply locally without Whop or Stripe.
           </>
         ) : null}
       </p>

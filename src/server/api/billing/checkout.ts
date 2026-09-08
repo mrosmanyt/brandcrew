@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { billingIsMock, getStripe, planBudget, priceIdForPlan } from "@/lib/billing";
+import {
+  billingIsMock,
+  billingProvider,
+  getStripe,
+  planBudget,
+  priceIdForPlan,
+} from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { normalizePlanId } from "@/lib/limits";
+import { createWhopCheckout } from "@/lib/whop";
 
 const schema = z.object({
   workspaceId: z.string().min(1),
@@ -16,8 +23,9 @@ export async function POST(request: Request) {
     const body = schema.parse(await request.json());
     const { workspace } = await requireWorkspaceMember(body.workspaceId);
     const plan = normalizePlanId(body.plan);
+    const provider = billingProvider();
     if (plan === "demo") {
-      if (!billingIsMock()) {
+      if (provider !== "mock") {
         return NextResponse.json(
           {
             error:
@@ -35,6 +43,7 @@ export async function POST(request: Request) {
       });
       return jsonOk({
         mock: true,
+        provider: "mock",
         plan: updated.plan,
         tokenBudget: updated.tokenBudget,
       });
@@ -53,9 +62,21 @@ export async function POST(request: Request) {
       });
       return jsonOk({
         mock: true,
+        provider: "mock",
         plan: updated.plan,
         tokenBudget: updated.tokenBudget,
       });
+    }
+
+    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+
+    if (provider === "whop") {
+      const checkout = await createWhopCheckout({
+        workspaceId: workspace.id,
+        plan,
+        origin,
+      });
+      return jsonOk({ url: checkout.url, mock: false, provider: "whop" });
     }
 
     const stripe = getStripe();
@@ -64,13 +85,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Stripe is not configured. Set STRIPE_SECRET_KEY and price IDs, or keep BILLING_MOCK=true.",
+            "Live billing is not configured. Set WHOP_API_KEY (preferred) or STRIPE_SECRET_KEY and price IDs, or keep BILLING_MOCK=true.",
         },
         { status: 400 },
       );
     }
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price, quantity: 1 }],
@@ -82,7 +102,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return jsonOk({ url: session.url, mock: false });
+    return jsonOk({ url: session.url, mock: false, provider: "stripe" });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Choose Starter, Pro, or Ultra." }, { status: 400 });

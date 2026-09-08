@@ -6,7 +6,7 @@ import { parseBrandKit } from "@/lib/brand-kit";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { serializeWorkspace } from "@/lib/workspace";
 import { getLlmStatus } from "@/lib/llm";
-import { billingIsMock } from "@/lib/billing";
+import { billingIsMock, billingProvider } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { workspaceOnboarding } from "@/lib/onboarding";
 
@@ -43,6 +43,7 @@ export async function GET(
       },
       llm: getLlmStatus(),
       billingMock: billingIsMock(),
+      billingProvider: billingProvider(),
       limits,
       onboarding,
     });

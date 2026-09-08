@@ -7,6 +7,7 @@ import * as authLogout from "./auth/logout";
 import * as authMe from "./auth/me";
 import * as authSignup from "./auth/signup";
 import * as billingCheckout from "./billing/checkout";
+import * as whopWebhook from "./webhooks/whop";
 import * as cronJobs from "./cron/jobs";
 import * as inviteToken from "./invites/token";
 import * as oauthCallback from "./oauth/callback";
@@ -99,6 +100,7 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "auth", "google"], handlers: asHandlers(authGoogle) },
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
+  { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
   { pattern: ["api", "invites", ":token"], handlers: asHandlers(inviteToken) },
   { pattern: ["api", "workspaces"], handlers: asHandlers(workspacesCollection) },

@@ -11,7 +11,8 @@ import { SettingsHub } from "@/components/desk/settings-hub";
 import { UsageDashboard } from "@/components/desk/usage-dashboard";
 import { getCurrentUser } from "@/lib/auth";
 import { workspaceOnboarding } from "@/lib/onboarding";
-import { billingIsMock } from "@/lib/billing";
+import { billingIsMock, billingProvider } from "@/lib/billing";
+import { billingSuccessBanner } from "@/lib/billing-ui";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { prisma } from "@/lib/db";
 import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serialize";
@@ -137,8 +138,7 @@ async function BillingPage({
       </p>
       {query.status === "success" ? (
         <p className="mt-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">
-          Checkout finished. If you used Stripe test mode, confirm the webhook
-          or apply the plan from mock billing on this page.
+          {billingSuccessBanner(billingProvider())}
         </p>
       ) : null}
       <div className="mt-6">
@@ -146,6 +146,7 @@ async function BillingPage({
           workspaceId={workspace.id}
           currentPlan={workspace.plan}
           mock={billingIsMock()}
+          provider={billingProvider()}
         />
       </div>
     </div>

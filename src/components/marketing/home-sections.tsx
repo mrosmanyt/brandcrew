@@ -364,8 +364,9 @@ export function PricingSection() {
       </div>
       <p className="mt-6 text-sm leading-6 text-muted-foreground">
         Demo is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
-        to create New Agent and run a first job. Checkout uses Stripe when
-        configured; otherwise the desk can apply a plan in mock billing.
+        to create New Agent and run a first job. Checkout uses Whop when
+        configured, then Stripe; otherwise the desk can apply a plan in mock
+        billing.
       </p>
       <div className="mt-8">
         <GetStartedButton />
