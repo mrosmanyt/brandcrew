@@ -98,16 +98,22 @@ process.env.NODE_ENV = "production";
 const errorLog = console.error;
 console.error = () => undefined;
 const leaked = jsonError(new Error("DATABASE_URL=postgres://secret"));
+delete process.env.NODE_ENV;
+const leakedDev = jsonError(
+  new Error("error: Environment variable not found: DATABASE_URL."),
+);
 console.error = errorLog;
+if (saved) process.env.NODE_ENV = saved;
+else process.env.NODE_ENV = "test";
 assert.equal(leaked.status, 500);
 
 async function main() {
-  const body = (await leaked.json()) as { error?: string };
-  assert.equal(body.error, "Something went wrong. Try again.");
-  assert.doesNotMatch(String(body.error), /postgres|DATABASE_URL/i);
-  if (saved) process.env.NODE_ENV = saved;
-  else delete process.env.NODE_ENV;
-  console.log("ok: production API errors do not echo internal messages");
+    const body = (await leaked.json()) as { error?: string };
+    assert.equal(body.error, "Something went wrong. Try again.");
+    assert.doesNotMatch(String(body.error), /postgres|DATABASE_URL/i);
+    const devBody = (await leakedDev.json()) as { error?: string };
+    assert.equal(devBody.error, "Something went wrong. Try again.");
+    console.log("ok: production API errors do not echo internal messages");
 
   assert.equal(SITE_ORIGIN, "https://brandcrew.vercel.app");
   assert.match(siteOrigin(), /^https?:\/\//);

@@ -64,6 +64,18 @@ export function jsonFail(message: string, status: number, code?: string) {
   );
 }
 
+function publicInternalMessage(error: unknown) {
+  const raw = error instanceof Error ? error.message : "Unexpected error";
+  const looksInternal =
+    /DATABASE_URL|DIRECT_URL|prisma|ECONNREFUSED|TURBOPACK|password|secret|postgres:\/\//i.test(
+      raw,
+    ) || raw.length > 280;
+  if (process.env.NODE_ENV === "production" || looksInternal) {
+    return "Something went wrong. Try again.";
+  }
+  return raw;
+}
+
 export function jsonError(error: unknown) {
   if (
     error instanceof AuthError ||
@@ -85,14 +97,8 @@ export function jsonError(error: unknown) {
     );
   }
   console.error(error);
-  const message =
-    process.env.NODE_ENV === "production"
-      ? "Something went wrong. Try again."
-      : error instanceof Error
-        ? error.message
-        : "Unexpected error";
   return NextResponse.json(
-    { error: message, code: "internal_error" },
+    { error: publicInternalMessage(error), code: "internal_error" },
     { status: 500 },
   );
 }
