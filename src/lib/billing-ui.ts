@@ -1,3 +1,6 @@
+import { CHECKOUT_PLANS, type CheckoutPlanId } from "@/lib/constants";
+import { safeNextPath } from "@/lib/google-auth-shared";
+
 export type BillingProvider = "mock" | "whop" | "stripe";
 
 export function billingCheckoutLabel(planName: string, provider: BillingProvider) {
@@ -14,4 +17,51 @@ export function billingSuccessBanner(provider: BillingProvider) {
     return "Checkout finished. Confirm the Stripe webhook before the workspace plan changes.";
   }
   return "Plan applied in mock billing.";
+}
+
+export function checkoutPlanFromQuery(raw?: string | null): CheckoutPlanId | null {
+  const id = String(raw || "").trim().toLowerCase();
+  if (id === "growth") return "pro";
+  return (CHECKOUT_PLANS as readonly string[]).includes(id) ? (id as CheckoutPlanId) : null;
+}
+
+export function deskCheckoutNextPath(plan: CheckoutPlanId) {
+  return `/desk?checkout=${plan}`;
+}
+
+export function signupForCheckoutHref(plan: CheckoutPlanId) {
+  return `/signup?next=${encodeURIComponent(deskCheckoutNextPath(plan))}`;
+}
+
+export function workspaceBillingHref(workspaceId: string, plan?: CheckoutPlanId | null) {
+  const base = `/desk/${workspaceId}/billing`;
+  return plan ? `${base}?plan=${plan}` : base;
+}
+
+export function marketingPlanCtaHref(input: {
+  signedIn: boolean;
+  workspaceId?: string | null;
+  plan: CheckoutPlanId;
+}) {
+  if (input.signedIn && input.workspaceId) {
+    return workspaceBillingHref(input.workspaceId, input.plan);
+  }
+  if (input.signedIn) return deskCheckoutNextPath(input.plan);
+  return signupForCheckoutHref(input.plan);
+}
+
+export function checkoutPlanFromNextPath(next?: string | null): CheckoutPlanId | null {
+  const path = safeNextPath(next, "");
+  if (!path) return null;
+  try {
+    const url = new URL(path, "https://cinem.invalid");
+    return checkoutPlanFromQuery(url.searchParams.get("checkout") || url.searchParams.get("plan"));
+  } catch {
+    return null;
+  }
+}
+
+export function authHrefWithNext(path: "/login" | "/signup", next?: string | null) {
+  if (!next) return path;
+  return `${path}?next=${encodeURIComponent(next)}`;
 }

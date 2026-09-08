@@ -6,12 +6,14 @@ export type MarketingAuth = {
   signedIn: boolean;
   accountHref: string;
   deskHref: string;
+  workspaceId: string | null;
 };
 
 const SIGNED_OUT: MarketingAuth = {
   signedIn: false,
   accountHref: "/login",
   deskHref: "/signup",
+  workspaceId: null,
 };
 
 /**
@@ -37,6 +39,7 @@ export function useMarketingAuth(): MarketingAuth {
                   ? `/desk/${workspaceId}/settings`
                   : "/desk",
                 deskHref: workspaceId ? `/desk/${workspaceId}` : "/desk",
+                workspaceId: workspaceId || null,
               }
             : SIGNED_OUT,
         );

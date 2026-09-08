@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GetStartedButton } from "@/components/marketing/home-ctas";
+import { GetStartedButton, PricingDemoCta, PricingPlanCta } from "@/components/marketing/home-ctas";
 import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
 import { PLANS } from "@/lib/constants";
@@ -340,11 +340,14 @@ export function PricingSection() {
       bordered
       kicker="Pricing"
       title="Starter, Pro, and Ultra"
-      lead="Signup starts on Demo. Upgrade in the desk when you need more seats and a higher token budget. Model keys stay on the server."
+      lead="Signup starts on Demo. Get Starter, Pro, or Ultra to sign in and checkout — Whop when configured — so the workspace unlocks from the payment webhook."
     >
       <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
-          <article key={plan.id} className="mkt-card-hover rounded-xl border border-border bg-card p-6">
+          <article
+            key={plan.id}
+            className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6"
+          >
             <p className="text-sm text-muted-foreground">
               {plan.seats} seats · {plan.tokenBudget.toLocaleString()} tokens / cycle
             </p>
@@ -353,12 +356,13 @@ export function PricingSection() {
               ${plan.price}
               <span className="text-base text-muted-foreground">/mo</span>
             </p>
-            <ul className="mt-5 space-y-2 text-sm leading-6 text-muted-foreground">
+            <ul className="mt-5 mb-6 space-y-2 text-sm leading-6 text-muted-foreground">
               <li>{plan.jobsPerHour} jobs / hour · {plan.maxConcurrentJobs} concurrent</li>
               <li>Mission Control, Marketplace, Brand Kit</li>
               <li>Approve-before-send jobs</li>
               <li>Developer API keys in the Console</li>
             </ul>
+            <PricingPlanCta plan={plan.id} featured={plan.id === "pro"} />
           </article>
         ))}
       </div>
@@ -366,10 +370,14 @@ export function PricingSection() {
         Demo is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
         to create New Agent and run a first job. Checkout uses Whop when
         configured, then Stripe; otherwise the desk can apply a plan in mock
-        billing.
+        billing. Get Starter, Pro, or Ultra signs you in first, then opens desk
+        billing for that plan.
       </p>
-      <div className="mt-8">
-        <GetStartedButton />
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <PricingDemoCta />
+        <p className="text-sm text-muted-foreground">
+          Demo: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
+        </p>
       </div>
     </Section>
   );
@@ -459,7 +467,7 @@ const FAQS = [
   },
   {
     q: "How does pricing work?",
-    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Demo. Upgrade in the desk.",
+    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Demo. Get Starter / Get Pro / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
   },
   {
     q: "Can I call this from my own app?",
