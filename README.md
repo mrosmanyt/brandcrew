@@ -443,6 +443,7 @@ npm run test:api-router    # catch-all matcher still resolves every public /api 
 npm run test:developer-api # hashed keys, catalog, JSON 401 shape
 npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML preview
 npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule math, export PDF
+npm run test:billing       # Whop-first provider, webhook signature, cancel rules
 ```
 
 ## Job runtime
@@ -493,6 +494,7 @@ npm run test:browse  # Playwright smoke test (Chrome + network)
 npm run test:api-router
 npm run test:developer-api
 npm run test:limits
+npm run test:billing
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS
