@@ -19,6 +19,13 @@ export async function assertWorkspaceBudget(workspaceId: string) {
   if (!workspace) {
     throw new BudgetError("Workspace not found.");
   }
+  if (workspace.suspended) {
+    throw new BudgetError(
+      "This workspace is suspended. New jobs are blocked until an admin unsuspends it.",
+      403,
+      "SUSPENDED",
+    );
+  }
 
   const caps = limitsForPlan(workspace.plan);
   const tokenBudget = workspace.tokenBudget || caps.tokenBudget;

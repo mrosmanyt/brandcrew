@@ -279,6 +279,7 @@ See [`.env.example`](./.env.example). Summary:
 | `DATABASE_URL` | yes | Postgres connection string. Local Docker default is in `.env.example`. Neon: pooled URL (`sslmode=require`, add `pgbouncer=true` if using the pooler). |
 | `DIRECT_URL` | yes | Unpooled Postgres URL for `prisma migrate deploy`. Local Docker: same as `DATABASE_URL`. Neon: the **direct** connection string. |
 | `SESSION_SECRET` | yes (dev default provided) | Signs the session cookie **and** encrypts plugin secrets. **Change in production.** |
+| `ADMIN_EMAILS` | no (`cinemtech@gmail.com` always included) | Comma-separated staff emails for Internal Admin HQ at `/admin`. Set on Vercel for every operator or they get 403. |
 | `OPENAI_API_KEY` | no | OpenAI. Cheap drafts (`gpt-4o-mini`) and GPT-4.1-class finals when Claude is unset. |
 | `ANTHROPIC_API_KEY` | no | Claude. Preferred for strong finals (`claude-sonnet-5`). |
 | `GEMINI_API_KEY` | no | Gemini. Preferred cheap drafts (`gemini-2.5-flash`). Sole provider uses Flash + Pro. |
@@ -348,6 +349,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 | `WHOP_WEBHOOK_SECRET` | Webhook signing secret |
 | `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | optional existing plan ids |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional; no keys → offline demo |
+| `ADMIN_EMAILS` | comma-separated staff emails that may open `/admin`. `cinemtech@gmail.com` is always included. **Set this on Vercel** for every operator (QA included) or they get 403. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional; Gmail Connect |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | optional |
 
@@ -430,7 +432,24 @@ When the UI does not pick a model (`Auto`):
 
 Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline demo**.
 
-Founder Admin HQ lives at `/admin` for emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com`). Non-admins get 403. Plan assign/revoke is audited in `AdminAuditLog`.
+Founder Admin HQ lives at `/admin` (path-based internal ops console, not a customer product). Access is emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com`). **Set `ADMIN_EMAILS` on Vercel** to every staff email or they get 403. Non-admins get 403. Plan assign / revoke / suspend and flag writes are audited in `AdminAuditLog`.
+
+## Internal Admin HQ
+
+`/admin` is CINEM staff only. Same app, strict email gate. Subdomain `admin.*` is not wired.
+
+| Section | What it shows (Postgres / env, never fake KPIs) |
+| --- | --- |
+| **Overview** | User count, paid vs free workspaces, by-plan counts, jobs running / needs_you / failed 24h / created 24h, token sums |
+| **Customers 360** | Search by email → user, workspaces, plan, tokens, memberships, recent jobs, usage events. Assign / revoke / suspend |
+| **Billing** | Paid workspaces, Whop membership id when stored, assign / revoke. No invented credit balances |
+| **Model / cost** | Display→backend map, provider key present/absent (booleans only), `UsageEvent` totals by `model` |
+| **Access** | Effective admin emails from env (local part masked, domain visible). Role is `superadmin` via `ADMIN_EMAILS` only. SSO later |
+| **Audit** | Full `AdminAuditLog` with action / actor / target filters |
+| **Trust & safety** | User or workspace search + revoke to Demo / suspend (ban-lite) |
+| **Feature flags** | `FeatureFlag { key, enabled, note }` with confirm + audit |
+
+`ADMIN_EMAILS` parsing always unions `cinemtech@gmail.com`. Add each extra operator on Vercel (Production and Preview), comma-separated. QA accounts belong in that env var, not in source.
 
 **Google Antigravity** (agent sessions / computer-use) is a follow-up — too heavy for this MVP. Website jobs use Gemini Flash when the key is present.
 
@@ -452,7 +471,7 @@ Token budget, hourly jobs, and concurrent running jobs are enforced on job creat
 ```bash
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
 npm run test:models        # display-name catalog → cheap backend ids
-npm run test:admin         # Founder HQ allow-list + 403 authz
+npm run test:admin         # Admin HQ allow-list, masking, section APIs, 403 authz
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:companions    # gallery templates, allowed tools, Yes/No clarify helpers
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected
