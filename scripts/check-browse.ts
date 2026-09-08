@@ -1,4 +1,5 @@
 import { browseNavigate, playwrightEnabled, resolveChromePath } from "../src/lib/browse";
+import { closeBrowserSession, sessionClick, sessionExtract, sessionNavigate } from "../src/lib/browser-session";
 
 async function main() {
   console.log("enabled", playwrightEnabled(), "chrome", resolveChromePath());
@@ -17,6 +18,19 @@ async function main() {
       2,
     ),
   );
+  if (page.engine === "playwright") {
+    const jobId = "browse-smoke";
+    try {
+      const nav = await sessionNavigate(jobId, "https://example.com");
+      console.log("session_navigate", nav.ok, nav.mode, nav.page?.url);
+      const click = await sessionClick(jobId, { selector: "a" });
+      console.log("session_click", click.ok, click.mode, click.page?.url || click.error);
+      const extracted = await sessionExtract(jobId, { selector: "body" });
+      console.log("session_extract", extracted.ok, (extracted.extracted || "").slice(0, 80));
+    } finally {
+      await closeBrowserSession(jobId);
+    }
+  }
 }
 
 main().catch((error) => {

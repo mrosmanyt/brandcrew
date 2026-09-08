@@ -20,6 +20,7 @@ import { ChatComposer } from "@/components/desk/chat-composer";
 import { JobStartingStatus } from "@/components/desk/job-starting-status";
 import {
   ChatBubble,
+  ClarificationCard,
   ProgressCard,
   ThreadDraftCard,
 } from "@/components/desk/chat-thread";
@@ -474,6 +475,28 @@ export function MissionControl({
     if (selected) void refreshChat(selected.id);
   }
 
+  async function answerClarification(jobId: string, answer: string) {
+    setBusy(true);
+    const res = await fetch(`/api/workspaces/${workspaceId}/jobs/${jobId}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answer }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) {
+      toast.error(data.error || "Could not send that answer.");
+      return;
+    }
+    if (data.job) {
+      setJobs((prev) => prev.map((row) => (row.id === data.job.id ? data.job : row)));
+      setSelectedJobId(data.job.id);
+    }
+    toast.success(answer.toLowerCase() === "no" ? "Stopped." : "Continuing.");
+    void refreshJobs();
+    if (selected) void refreshChat(selected.id);
+  }
+
   async function saveSkill() {
     const job =
       selectedJob &&
@@ -661,10 +684,10 @@ export function MissionControl({
                     <Button
                       variant="outline"
                       nativeButton={false}
-                      render={<Link href={`/desk/${workspaceId}/marketplace`} />}
+                      render={<Link href={`/desk/${workspaceId}/marketplace?tab=companions`} />}
                     >
                       <Store className="size-3.5" />
-                      Marketplace
+                      Companion gallery
                     </Button>
                   </div>
                 </div>
@@ -699,6 +722,16 @@ export function MissionControl({
                   busy={busy}
                   onApprove={() => approve(latestDraft.id)}
                   onRegenerate={() => startJob("regenerate")}
+                />
+              ) : null}
+              {selectedJob?.status === "needs_you" &&
+              selectedJob.askKind === "clarify" &&
+              !selectedJob.userAnswer ? (
+                <ClarificationCard
+                  prompt={selectedJob.askPrompt || "Continue?"}
+                  choices={selectedJob.askChoices}
+                  busy={busy}
+                  onAnswer={(answer) => void answerClarification(selectedJob.id, answer)}
                 />
               ) : null}
               {workingStatus ? (
@@ -771,6 +804,11 @@ export function MissionControl({
           artifacts={artifacts}
           busy={busy}
           onApprove={approve}
+          onReply={
+            selectedJob
+              ? (answer) => void answerClarification(selectedJob.id, answer)
+              : undefined
+          }
           width={rightWidth}
           collapsed={rightCollapsed}
           onExpand={() => setRightCollapsed(false)}

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { serializeAgent } from "@/lib/job-serialize";
 import { FEATURED_JOB_TEMPLATES } from "@/lib/job-templates";
+import { COMPANION_GALLERY } from "@/lib/companions";
 import {
   MARKETPLACE_BOTS,
   MARKETPLACE_PLUGINS,
@@ -42,6 +43,10 @@ export async function GET(
       agents: agents.map(serializeAgent),
       installedPluginCount: plugins.filter((row) => row.connected).length,
       templates: FEATURED_JOB_TEMPLATES,
+      companions: COMPANION_GALLERY.map((row) => ({
+        ...row,
+        added: addedTemplateIds.includes(row.id),
+      })),
     });
   } catch (error) {
     return jsonError(error);

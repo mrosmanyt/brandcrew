@@ -80,6 +80,8 @@ export const GENERATE_ACTIONS = [
   "brand_kit_draft",
   "inbox_replies",
   "whatsapp_drafts",
+  "linkedin_outreach_draft",
+  "inbox_invoices",
   "regenerate",
 ] as const;
 
@@ -110,6 +112,10 @@ export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
     "List recent inbox mail if Gmail is connected, then draft replies. Pause for my approval. Do not send.",
   whatsapp_drafts:
     "Draft WhatsApp replies from the Brand Kit. Do not send. WhatsApp stays draft-only even if Twilio credentials are stored.",
+  linkedin_outreach_draft:
+    "Browse this public page (or the Brand Kit site), extract who they are, then draft LinkedIn-style outreach. Ask me Yes/No before drafting. Do not send.",
+  inbox_invoices:
+    "Find invoices in connected Gmail (invoice, receipt, or bill). List them. Do not send. Do not write to QuickBooks.",
   regenerate: "Regenerate the last artifact with the same brief.",
 };
 
@@ -142,6 +148,7 @@ export function jobChipsForHint(hint: AgentRole): JobChip[] {
       return [
         { action: "sales_pack", label: "Sales pack" },
         { action: "outreach_from_research", label: "Outreach from research" },
+        { action: "linkedin_outreach_draft", label: "Outreach from page" },
       ];
     case "ads":
       return [
@@ -174,6 +181,7 @@ export function jobChipsForHint(hint: AgentRole): JobChip[] {
     case "ops":
       return [
         { action: "inbox_replies", label: "Inbox replies" },
+        { action: "inbox_invoices", label: "Find invoices" },
         { action: "whatsapp_drafts", label: "WhatsApp drafts" },
       ];
     default:
@@ -249,9 +257,9 @@ export function playbookHintFromRole(role: string): AgentRole {
     return "builder";
   }
   if (/research/.test(text)) return "researcher";
-  if (/sales/.test(text)) return "sales";
+  if (/sales|recruit/.test(text)) return "sales";
   if (/ads|paid/.test(text)) return "ads";
-  if (/\bops\b/.test(text)) return "ops";
+  if (/\bops\b|invoice|finance|bookkeep/.test(text)) return "ops";
   if (/content|writer|marketing/.test(text)) return "writer";
   if (/main|manager|strateg|finance/.test(text)) return "strategist";
   if (/dev|whatsapp|support/.test(text)) return "ops";

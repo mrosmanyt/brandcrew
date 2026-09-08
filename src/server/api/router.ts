@@ -29,10 +29,12 @@ import * as workspaceArtifacts from "./workspaces/artifacts";
 import * as workspaceBrandKit from "./workspaces/brand-kit";
 import * as workspaceCalendar from "./workspaces/calendar";
 import * as workspaceChat from "./workspaces/chat";
+import * as workspaceCompanions from "./workspaces/companions";
 import * as workspacesCollection from "./workspaces/collection";
 import * as workspaceInvite from "./workspaces/invite";
 import * as workspaceInvites from "./workspaces/invites";
 import * as workspaceJob from "./workspaces/job";
+import * as workspaceJobReply from "./workspaces/job-reply";
 import * as workspaceJobs from "./workspaces/jobs";
 import * as workspaceSchedule from "./workspaces/schedule";
 import * as workspaceSchedules from "./workspaces/schedules";
@@ -193,12 +195,20 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(workspaceTasks),
   },
   {
+    pattern: ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "reply"],
+    handlers: asHandlers(workspaceJobReply),
+  },
+  {
     pattern: ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
     handlers: asHandlers(workspaceJob),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "jobs"],
     handlers: asHandlers(workspaceJobs),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "companions"],
+    handlers: asHandlers(workspaceCompanions),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "chat"],

@@ -24,6 +24,8 @@ const TOOL_NOW: Record<string, string> = {
   browser_snapshot: "Capturing page snapshot…",
   browser_click: "Clicking on the page…",
   browser_type: "Typing on the page…",
+  browser_extract: "Extracting page text…",
+  browser_screenshot: "Capturing a screenshot…",
   crawl_links: "Crawling links…",
   read_artifact: "Reading a previous draft…",
   gmail_list_recent: "Checking Gmail…",
@@ -64,6 +66,14 @@ function doneLabel(tool: string, message: string, url?: string): string {
       return host ? `Opened ${host}.` : "Opened URL.";
     case "browser_snapshot":
       return host ? `Captured snapshot of ${host}.` : "Captured page snapshot.";
+    case "browser_click":
+      return host ? `Clicked on ${host}.` : "Clicked on the page.";
+    case "browser_type":
+      return host ? `Typed on ${host}.` : "Typed on the page.";
+    case "browser_extract":
+      return host ? `Extracted text from ${host}.` : "Extracted page text.";
+    case "browser_screenshot":
+      return host ? `Captured a screenshot of ${host}.` : "Captured a screenshot.";
     case "crawl_links":
       return "Crawled public links.";
     case "web_search":
@@ -101,7 +111,7 @@ function friendlyRaw(message: string): string {
   if (/Approval received/i.test(trimmed)) return "Approval received — continuing.";
   if (/artifacts approved/i.test(trimmed)) return trimmed;
   if (/Job complete/i.test(trimmed)) return "All artifacts approved. Job complete.";
-  if (/^browser_navigate|^fetch_url|^browser_snapshot|^browser_click|^browser_type|^crawl_links|^web_search|^write_artifact|^read_/i.test(trimmed)) {
+  if (/^browser_navigate|^fetch_url|^browser_snapshot|^browser_click|^browser_type|^browser_extract|^browser_screenshot|^crawl_links|^web_search|^write_artifact|^read_/i.test(trimmed)) {
     const url = trimmed.match(/https?:\/\/\S+/)?.[0];
     const tool = trimmed.split(/\s+/)[0];
     return doneLabel(tool, trimmed, url);
@@ -112,6 +122,7 @@ function friendlyRaw(message: string): string {
 function toneForType(type: string, tool?: string): LiveProgressTone {
   if (type === "error") return "error";
   if (type === "ask_user" || tool === "ask_user") return "wait";
+  if (type === "user_reply") return "success";
   if (type === "step_start" || type === "created" || type === "tool_call") {
     return type === "created" ? "info" : "working";
   }
@@ -175,6 +186,16 @@ export function liveProgressFromEvents(events: JobEventDTO[]): LiveProgressLine[
     }
 
     if (event.type === "status") {
+      standalone.push({
+        id: event.id,
+        tone: "success",
+        label: friendlyRaw(event.message),
+        createdAt: String(event.createdAt),
+      });
+      continue;
+    }
+
+    if (event.type === "user_reply") {
       standalone.push({
         id: event.id,
         tone: "success",
@@ -264,8 +285,9 @@ export function currentLiveHeadline(job: JobDTO | null): {
     return { headline: "No live job", detail: "Start a job to stream results here.", tone: "info" };
   }
   if (job.status === "needs_you") {
+    const clarifying = job.askKind === "clarify" && !job.userAnswer;
     return {
-      headline: "Waiting for your approval…",
+      headline: clarifying ? "Waiting for your Yes/No…" : "Waiting for your approval…",
       detail: job.askPrompt || job.title,
       tone: "wait",
     };
@@ -317,6 +339,7 @@ export function eventTypeLabel(type: string) {
     step_start: "step",
     tool_call: "tool",
     tool_result: "result",
+    user_reply: "reply",
     ask_user: "needs you",
     status: "status",
     error: "error",

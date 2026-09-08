@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -154,6 +155,61 @@ export function ThreadDraftCard({
             Regenerate
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function ClarificationCard({
+  prompt,
+  choices,
+  busy,
+  onAnswer,
+}: {
+  prompt: string;
+  choices: string[];
+  busy?: boolean;
+  onAnswer: (answer: string) => void;
+}) {
+  const [custom, setCustom] = useState("");
+  const buttons = choices.length ? choices : ["Yes", "No"];
+  return (
+    <div className="flex justify-start pl-8">
+      <div className="w-full max-w-[min(40rem,86%)] rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2.5">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Needs you</p>
+        <p className="mt-1 text-sm leading-5">{prompt}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {buttons.map((choice) => (
+            <Button
+              key={choice}
+              size="xs"
+              variant={choice.toLowerCase() === "no" ? "outline" : "default"}
+              disabled={busy}
+              onClick={() => onAnswer(choice)}
+            >
+              {choice}
+            </Button>
+          ))}
+        </div>
+        <form
+          className="mt-2 flex gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const value = custom.trim();
+            if (value) onAnswer(value);
+          }}
+        >
+          <input
+            value={custom}
+            onChange={(event) => setCustom(event.target.value)}
+            placeholder="Or type a short answer"
+            className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-xs"
+            disabled={busy}
+          />
+          <Button size="xs" type="submit" variant="secondary" disabled={busy || !custom.trim()}>
+            Reply
+          </Button>
+        </form>
       </div>
     </div>
   );

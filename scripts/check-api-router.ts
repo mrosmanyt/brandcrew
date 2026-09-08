@@ -46,8 +46,10 @@ const PATTERNS: string[][] = [
   ["api", "workspaces", ":workspaceId", "agents"],
   ["api", "workspaces", ":workspaceId", "tasks", ":taskId"],
   ["api", "workspaces", ":workspaceId", "tasks"],
+  ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "reply"],
   ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
   ["api", "workspaces", ":workspaceId", "jobs"],
+  ["api", "workspaces", ":workspaceId", "companions"],
   ["api", "workspaces", ":workspaceId", "chat"],
   ["api", "workspaces", ":workspaceId", "brand-kit"],
   ["api", "workspaces", ":workspaceId", "marketplace", "bots"],
@@ -132,6 +134,11 @@ const cases: Array<[string, string[], Record<string, string>]> = [
     { workspaceId: "ws_1" },
   ],
   [
+    "/api/workspaces/ws_1/jobs/job_9/reply",
+    ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "reply"],
+    { workspaceId: "ws_1", jobId: "job_9" },
+  ],
+  [
     "/api/workspaces/ws_1/jobs/job_9",
     ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
     { workspaceId: "ws_1", jobId: "job_9" },
@@ -182,6 +189,11 @@ const cases: Array<[string, string[], Record<string, string>]> = [
     { workspaceId: "ws_1", artifactId: "art_1" },
   ],
   [
+    "/api/workspaces/ws_1/companions",
+    ["api", "workspaces", ":workspaceId", "companions"],
+    { workspaceId: "ws_1" },
+  ],
+  [
     "/api/workspaces/ws_1/chat",
     ["api", "workspaces", ":workspaceId", "chat"],
     { workspaceId: "ws_1" },
@@ -201,8 +213,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 47);
-console.log("ok: 47 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 49);
+console.log("ok: 49 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

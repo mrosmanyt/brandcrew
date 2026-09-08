@@ -4,12 +4,14 @@ import { DEFAULT_AGENT_NAME } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonFail, jsonOk } from "@/lib/http";
 import { serializeAgent } from "@/lib/job-serialize";
+import { serializeAllowedTools } from "@/lib/companions";
 
 const createSchema = z.object({
   name: z.string().max(80).optional(),
   role: z.string().max(80).optional(),
   instructions: z.string().max(8000).optional(),
   templateId: z.string().max(80).optional(),
+  allowedTools: z.array(z.string().max(40)).max(24).optional(),
 });
 
 export async function GET(request: Request) {
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
         role: body.role?.trim() || "",
         instructions: body.instructions?.trim() || "",
         templateId: body.templateId?.trim() || null,
+        allowedTools: body.allowedTools ? serializeAllowedTools(body.allowedTools) : "[]",
         sortOrder: count,
       },
     });

@@ -11,6 +11,8 @@ import type {
 } from "@/lib/job-types";
 import { parsePlan, parsePlaybookJson } from "@/lib/job-playbooks";
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+import { parseAllowedTools } from "@/lib/companions";
+import { clarifyChoices, parseAskKind, pausedAskStep } from "@/lib/job-clarify";
 
 export function serializeAgent(agent: {
   id: string;
@@ -19,6 +21,7 @@ export function serializeAgent(agent: {
   role: string;
   instructions: string;
   templateId?: string | null;
+  allowedTools?: string | null;
   status: string;
   sortOrder: number;
   createdAt: Date;
@@ -30,6 +33,7 @@ export function serializeAgent(agent: {
     role: agent.role,
     instructions: agent.instructions,
     templateId: agent.templateId ?? null,
+    allowedTools: parseAllowedTools(agent.allowedTools),
     status: agent.status,
     sortOrder: agent.sortOrder,
     createdAt: agent.createdAt.toISOString(),
@@ -83,6 +87,9 @@ export function serializeJob(job: {
   playbookKey: string | null;
   skillId: string | null;
   askPrompt: string;
+  askKind?: string | null;
+  userAnswer?: string | null;
+  context?: string | null;
   error: string;
   createdAt: Date;
   updatedAt: Date;
@@ -96,6 +103,10 @@ export function serializeJob(job: {
   }[];
   artifacts?: Artifact[];
 }): JobDTO {
+  const plan = parsePlan(job.plan);
+  const paused = pausedAskStep(plan);
+  const context = parseJobContext(job.context);
+  const askKind = job.askKind || (paused ? parseAskKind(paused.args) : "");
   return {
     id: job.id,
     workspaceId: job.workspaceId,
@@ -104,10 +115,14 @@ export function serializeJob(job: {
     title: job.title,
     prompt: job.prompt,
     status: job.status as JobStatus,
-    plan: parsePlan(job.plan),
+    plan,
     playbookKey: job.playbookKey,
     skillId: job.skillId,
     askPrompt: job.askPrompt,
+    askKind,
+    userAnswer: job.userAnswer || context.userAnswer || "",
+    askChoices: paused ? clarifyChoices(paused.args) : [],
+    screenshot: context.screenshot,
     error: job.error,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
