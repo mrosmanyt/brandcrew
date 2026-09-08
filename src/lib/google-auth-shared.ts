@@ -15,6 +15,11 @@ export function googleLoginStartHref(input: {
   return `${GOOGLE_LOGIN_START_PATH}?${params.toString()}`;
 }
 
+/** Google OpenID `email_verified` must be exactly true — missing/false is unverified. */
+export function googleEmailIsVerified(value: unknown): boolean {
+  return value === true;
+}
+
 export function googleAuthErrorMessage(code: string | null, hint?: string | null) {
   if (!code) return hint?.trim() || null;
   if (code === "google_not_configured") {

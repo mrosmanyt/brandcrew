@@ -6,11 +6,13 @@ import { limitsForPlan } from "@/lib/limits";
 import { createDemoWorkspace } from "@/lib/workspace";
 import { honeypotFilled } from "@/lib/form-guard";
 import { jsonError } from "@/lib/http";
+import { assertPasswordAllowed } from "@/lib/password";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/password-rules";
 
 const schema = z.object({
   name: z.string().min(1).max(80),
   email: z.string().email(),
-  password: z.string().min(8).max(72),
+  password: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
   inviteToken: z.string().max(200).optional(),
   company_url: z.string().max(200).optional(),
 });
@@ -23,6 +25,10 @@ export async function POST(request: Request) {
     }
     const body = schema.parse(raw);
     const email = body.email.toLowerCase().trim();
+    const weak = await assertPasswordAllowed(body.password, email);
+    if (weak) {
+      return NextResponse.json({ error: weak }, { status: 400 });
+    }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
@@ -96,7 +102,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Name, a valid email, and an 8+ character password are required." },
+        { error: "Name, a valid email, and a password of 8+ characters (not a common password) are required." },
         { status: 400 },
       );
     }

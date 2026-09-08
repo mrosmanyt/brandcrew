@@ -42,11 +42,13 @@ export default function PrivacyPage() {
       <h2>Cookies</h2>
       <p>
         The <code>brandcrew_session</code> cookie is essential. It is httpOnly,
-        SameSite=Lax, and Secure in production. It keeps you signed in. We do
-        not use advertising cookies. Optional analytics scripts load only when
-        an analytics environment variable is set <em>and</em> you accept them
-        in the cookie banner. Your banner choice is stored in localStorage on
-        this device, not as a tracking cookie.
+        SameSite=Lax, and Secure in production (and on Vercel). It keeps you
+        signed in. The session JWT is never written to localStorage or
+        sessionStorage. We do not use advertising cookies. Optional analytics
+        scripts load only when an analytics environment variable is set{" "}
+        <em>and</em> you accept them in the cookie banner. Your banner choice
+        (and desk pane width) may be stored in localStorage on this device — that
+        is not a login token.
       </p>
 
       <h2>Processors</h2>

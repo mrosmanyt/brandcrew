@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { jobDeskHref, settingsDeskLinks } from "@/lib/desk-settings";
+import { assertStrongPassword } from "@/lib/password-rules";
 import { displayAgentName } from "@/lib/constants";
 import type { AgentDTO, JobDTO } from "@/lib/job-types";
 import { jobStatusLabel } from "@/lib/live-progress";
@@ -87,6 +88,11 @@ export function SettingsHub({
 
   async function savePassword(e: React.FormEvent) {
     e.preventDefault();
+    const weak = assertStrongPassword(newPassword, email);
+    if (weak) {
+      toast.error(weak);
+      return;
+    }
     setBusy("password");
     try {
       await patchAccount({ currentPassword, newPassword });

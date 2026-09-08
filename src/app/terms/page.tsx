@@ -35,10 +35,14 @@ export default function TermsPage() {
 
       <h2>Accounts</h2>
       <p>
-        You must provide an accurate email. You are responsible for activity
-        under your session. Do not share your password. Plans (Demo, Starter,
-        Pro, Ultra) cap seats, tokens, and jobs per hour. When a cap is hit,
-        the desk stops — it does not keep spending silently.
+        You must provide an accurate email. Continue with Google is the
+        verified-email path (Google must report the address as verified).
+        Email/password signup does not send a confirmation message — there is
+        no mailer or password-reset email in this product yet. Two-factor
+        authentication is a follow-up, not a fake UI. You are responsible for
+        activity under your session. Do not share your password. Plans (Demo,
+        Starter, Pro, Ultra) cap seats, tokens, and jobs per hour. When a cap
+        is hit, the desk stops — it does not keep spending silently.
       </p>
 
       <h2>Acceptable use</h2>

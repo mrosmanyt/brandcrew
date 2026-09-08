@@ -406,9 +406,11 @@ Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name 
 
 **HTTPS:** Vercel terminates TLS and redirects HTTP→HTTPS on `*.vercel.app`. This app also sends `Strict-Transport-Security: max-age=31536000` (no `preload` on a vercel.app subdomain) and CSP `upgrade-insecure-requests`. Headers live in one module: `src/lib/security-headers.ts` (applied from `next.config.ts` and `src/proxy.ts`). Follow-up hardening (nonce CSP, COOP/COEP) should extend that file — do not add a WAF product.
 
-**CSRF:** Session cookie `brandcrew_session` is httpOnly, SameSite=Lax, Secure in production. Same-origin POSTs send it; cross-site POSTs from other origins do not. OAuth callbacks are top-level GET. There is no extra CSRF token.
+**CSRF:** Session cookie `brandcrew_session` is httpOnly, SameSite=Lax, Secure in production and on Vercel. Same-origin POSTs send it; cross-site POSTs from other origins do not. OAuth callbacks are top-level GET. There is no extra CSRF token. The session JWT is never written to `localStorage` / `sessionStorage` (those stores are cookie-banner consent, desk pane width, billing toast, and developer API keys — not login).
 
-**Rate limits:** In-memory per-IP windows on auth, Google start, checkout, admin, and invite accept. Hobby functions do not share memory across isolates (Upstash-free). Developer API keys already have a 60/min hashed-key window in Postgres.
+**Auth (existing Google + cookie session — no second system):** Continue with Google already verifies email (`email_verified === true` or the callback bounces `email_unverified`). Email/password signup remains; there is **no SMTP mailer** and **no password-reset route**, so we do not fake a “we sent a verification email” or 2FA UI. Privileged Admin HQ is `ADMIN_EMAILS` + `requireAdmin` / `loadAdminPage` on every `/admin` page and `/api/admin` GET+POST — hiding the Settings link is not the gate. Password signup and Settings password-change require 8–72 characters, reject trivial passwords, and optionally query Have I Been Pwned (k-anonymity SHA-1 prefix, 2s timeout, **fail-open**). 2FA is a follow-up.
+
+**Rate limits:** In-memory per-IP windows on login, signup, Google start/callback, checkout, admin reads, admin writes (tighter), account PATCH, and invite accept. Login/signup also bucket **per email** (cloned request body; Hobby has no Redis). Isolates do not share memory (Upstash-free). Developer API keys already have a 60/min hashed-key window in Postgres.
 
 | Item | Status |
 | --- | --- |
@@ -433,9 +435,14 @@ Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name 
 | Analytics hook | **Done** (`NEXT_PUBLIC_GA_ID` or `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`; no script if unset) |
 | Landing CTA Open desk / Get started | **Already preserved** |
 | Security headers (CSP, HSTS, XFO, nosniff, referrer, permissions) | **Done** |
-| Admin routes `ADMIN_EMAILS` gated | **Already** (`requireAdmin` / `loadAdminPage`) |
+| Admin routes `ADMIN_EMAILS` gated | **Already** (`requireAdmin` / `loadAdminPage` on every page + API; Settings only hides the link) |
+| Session tokens in HttpOnly cookies | **Already** `brandcrew_session`; this pass audits no `localStorage` session JWT + Secure on Vercel |
+| Google email verification | **Already** callback bounce; **Done** `email_verified === true` (missing field is unverified) |
+| Email/password verification / 2FA | **Documented** — no mailer, no fake 2FA; Google is the verified-email path; 2FA follow-up |
+| Password rules | **Done** (min 8, trivial list, optional HIBP fail-open on signup + password change) |
+| Rate limit login/signup/OAuth/checkout/admin | **Done** (per IP + per email on login/signup; tighter admin POST; PATCH `/api/auth/me`) |
 
-`npm run test:launch` covers headers, rate limit, honeypot, sanitized errors, sitemap/robots, and “no CP placeholder”.
+`npm run test:launch` covers headers, rate limit, honeypot, password rules, session-cookie audit, admin gates, sanitized errors, sitemap/robots, and “no CP placeholder”.
 
 ### Serverless limits (honest)
 

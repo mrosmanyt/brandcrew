@@ -85,7 +85,9 @@ function SignupForm() {
             <h1 className="font-heading text-3xl tracking-tight">Get started</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               We create a demo workspace with the Northline Studio Brand Kit so you
-              can open Mission Control, create agents, and give a real job.
+              can open Mission Control, create agents, and give a real job. Prefer
+              Continue with Google — Google already verifies your email. Email/password
+              does not send a confirmation mail (no mailer in this stack).
             </p>
             {inviteToken ? (
               <p className="mt-3 text-sm text-muted-foreground">
@@ -141,7 +143,9 @@ function SignupForm() {
                     minLength={8}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                  <p className="text-xs text-muted-foreground">
+                    At least 8 characters. Skip common passwords like password1.
+                  </p>
                 </div>
                 <AuthQueryError error={params.get("error")} hint={params.get("hint")} />
                 {error ? <p className="text-sm text-destructive">{error}</p> : null}

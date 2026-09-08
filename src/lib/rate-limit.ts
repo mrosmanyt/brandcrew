@@ -66,6 +66,10 @@ export function resetRateLimitStore() {
   buckets.clear();
 }
 
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_IP_LIMIT = 8;
+const AUTH_EMAIL_LIMIT = 8;
+
 export function sensitiveRateLimit(
   segments: string[],
   method: string,
@@ -73,40 +77,76 @@ export function sensitiveRateLimit(
   const path = segments.join("/");
   const verb = method.toUpperCase();
 
-  if (
-    (path === "api/auth/login" || path === "api/auth/signup") &&
-    verb === "POST"
-  ) {
-    return { key: "auth", limit: 8, windowMs: 15 * 60 * 1000 };
+  if (path === "api/auth/login" && verb === "POST") {
+    return { key: "auth-login", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
+  }
+  if (path === "api/auth/signup" && verb === "POST") {
+    return { key: "auth-signup", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
+  }
+  if (path === "api/auth/me" && verb === "PATCH") {
+    return { key: "account", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
   }
   if (path === "api/auth/google" || path === "api/auth/google/callback") {
-    return { key: "auth-google", limit: 30, windowMs: 15 * 60 * 1000 };
+    return { key: "auth-google", limit: 30, windowMs: AUTH_WINDOW_MS };
   }
   if (path === "api/billing/checkout" && verb === "POST") {
     return { key: "checkout", limit: 8, windowMs: 10 * 60 * 1000 };
   }
   if (path === "api/admin") {
+    if (verb === "POST" || verb === "PUT" || verb === "PATCH" || verb === "DELETE") {
+      return { key: "admin-write", limit: 20, windowMs: 60 * 1000 };
+    }
     return { key: "admin", limit: 60, windowMs: 60 * 1000 };
   }
   if (path.startsWith("api/invites/") && verb === "POST") {
-    return { key: "invite", limit: 10, windowMs: 15 * 60 * 1000 };
+    return { key: "invite", limit: 10, windowMs: AUTH_WINDOW_MS };
   }
   return null;
 }
 
-export function enforceSensitiveRateLimit(
-  request: Request,
-  segments: string[],
-  method: string,
-) {
-  const spec = sensitiveRateLimit(segments, method);
-  if (!spec) return;
-  const ip = clientIp(request);
-  const hit = takeToken(`${spec.key}:${ip}`, spec.limit, spec.windowMs);
+function throwIfLimited(hit: { ok: true } | { ok: false; retryAfterSec: number }) {
   if (!hit.ok) {
     throw new ApiRateLimitError(
       "Too many attempts. Try again in a minute.",
       hit.retryAfterSec,
     );
   }
+}
+
+async function enforceAuthEmailRateLimit(
+  request: Request,
+  segments: string[],
+  method: string,
+) {
+  const path = segments.join("/");
+  if (
+    (path !== "api/auth/login" && path !== "api/auth/signup") ||
+    method.toUpperCase() !== "POST"
+  ) {
+    return;
+  }
+  let email = "";
+  try {
+    const body = (await request.clone().json()) as { email?: unknown };
+    if (typeof body.email === "string") email = body.email.trim().toLowerCase();
+  } catch {
+    return;
+  }
+  if (!email) return;
+  throwIfLimited(
+    takeToken(`auth-email:${path}:${email}`, AUTH_EMAIL_LIMIT, AUTH_WINDOW_MS),
+  );
+}
+
+export async function enforceSensitiveRateLimit(
+  request: Request,
+  segments: string[],
+  method: string,
+) {
+  const spec = sensitiveRateLimit(segments, method);
+  if (spec) {
+    const ip = clientIp(request);
+    throwIfLimited(takeToken(`${spec.key}:${ip}`, spec.limit, spec.windowMs));
+  }
+  await enforceAuthEmailRateLimit(request, segments, method);
 }

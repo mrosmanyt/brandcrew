@@ -2,14 +2,21 @@
  * Launch checklist + security baseline (no database).
  */
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
-import { jsonError } from "../src/lib/http";
+import { createHash } from "node:crypto";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { jsonError, ApiRateLimitError } from "../src/lib/http";
 import { honeypotFilled, validateLoginInput, validateSignupInput } from "../src/lib/form-guard";
 import {
   resetRateLimitStore,
   takeToken,
   sensitiveRateLimit,
+  enforceSensitiveRateLimit,
 } from "../src/lib/rate-limit";
+import { assertStrongPassword } from "../src/lib/password-rules";
+import { hibpRangeContainsSuffix, assertPasswordNotPwned } from "../src/lib/password";
+import { googleEmailIsVerified } from "../src/lib/google-auth-shared";
+import { SESSION_COOKIE } from "../src/lib/constants";
 import { securityHeaderList } from "../src/lib/security-headers";
 import { CINEM_MARK_PATHS, CINEM_MARK_POLYGONS } from "../src/lib/cinem-mark";
 import { HONEYPOT_FIELD, SITE_ORIGIN, siteOrigin } from "../src/lib/site";
@@ -76,9 +83,13 @@ assert.equal(takeToken("t", 2, 60_000).ok, true);
 const blocked = takeToken("t", 2, 60_000);
 assert.equal(blocked.ok, false);
 if (!blocked.ok) assert.ok(blocked.retryAfterSec >= 1);
-assert.equal(sensitiveRateLimit(["api", "auth", "login"], "POST")?.key, "auth");
+assert.equal(sensitiveRateLimit(["api", "auth", "login"], "POST")?.key, "auth-login");
+assert.equal(sensitiveRateLimit(["api", "auth", "signup"], "POST")?.key, "auth-signup");
+assert.equal(sensitiveRateLimit(["api", "auth", "me"], "PATCH")?.key, "account");
 assert.equal(sensitiveRateLimit(["api", "billing", "checkout"], "POST")?.key, "checkout");
 assert.equal(sensitiveRateLimit(["api", "admin"], "GET")?.key, "admin");
+assert.equal(sensitiveRateLimit(["api", "admin"], "POST")?.key, "admin-write");
+assert.equal(sensitiveRateLimit(["api", "auth", "google", "callback"], "GET")?.key, "auth-google");
 assert.equal(sensitiveRateLimit(["api", "v1", "jobs"], "GET"), null);
 console.log("ok: in-memory rate limit trips after the window cap");
 
@@ -89,9 +100,22 @@ assert.equal(validateLoginInput("not-an-email", "x"), "Enter a valid email.");
 assert.equal(validateLoginInput("a@b.com", ""), "Enter your password.");
 assert.equal(validateLoginInput("a@b.com", "secret"), null);
 assert.equal(validateSignupInput("", "a@b.com", "password1"), "Enter your name.");
-assert.equal(validateSignupInput("Ada", "a@b.com", "short"), "Password must be at least 8 characters.");
-assert.equal(validateSignupInput("Ada", "a@b.com", "password1"), null);
-console.log("ok: honeypot + auth form validation");
+assert.equal(validateSignupInput("Ada", "a@b.com", "short"), "Use at least 8 characters.");
+assert.equal(
+  validateSignupInput("Ada", "a@b.com", "password1"),
+  "That password is too common. Choose another.",
+);
+assert.equal(validateSignupInput("Ada", "a@b.com", "correct-horse-9"), null);
+assert.equal(assertStrongPassword("aaaaaaaa", "ada@example.com"), "Don't use a single repeated character.");
+assert.equal(assertStrongPassword("adaxxxxx", "ada@example.com"), null);
+assert.equal(
+  assertStrongPassword("xxadaxxx", "adax@example.com"),
+  "Don't include your email in the password.",
+);
+const sha1Password = createHash("sha1").update("password").digest("hex").toUpperCase();
+assert.equal(hibpRangeContainsSuffix(sha1Password, `${sha1Password.slice(5)}:99\n`), true);
+assert.equal(hibpRangeContainsSuffix(sha1Password, "DEADBEEF:1\n"), false);
+console.log("ok: honeypot + auth form validation + password rules");
 
 const saved = process.env.NODE_ENV;
 process.env.NODE_ENV = "production";
@@ -175,6 +199,121 @@ async function main() {
   const live = readFileSync("src/components/desk/live-results.tsx", "utf8");
   assert.match(live, /alt="Live browser screenshot"/);
   console.log("ok: key marketing/demo surfaces keep accessible names");
+
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("offline");
+  };
+  assert.equal(await assertPasswordNotPwned("correct-horse-9"), null);
+  globalThis.fetch = origFetch;
+  console.log("ok: HIBP password check fails open when the range API is down");
+
+  assert.equal(googleEmailIsVerified(true), true);
+  assert.equal(googleEmailIsVerified(false), false);
+  assert.equal(googleEmailIsVerified(undefined), false);
+  const googleAuth = readFileSync("src/lib/google-auth.ts", "utf8");
+  assert.match(googleAuth, /googleEmailIsVerified\(profile\.email_verified\)/);
+  const googleCallback = readFileSync("src/server/api/auth/google-callback.ts", "utf8");
+  assert.match(googleCallback, /email_unverified/);
+  assert.match(googleCallback, /!profile\.emailVerified/);
+  const signupScreen = readFileSync("src/app/signup/signup-screen.tsx", "utf8");
+  assert.match(signupScreen, /Google already verifies/);
+  console.log("ok: Google OpenID requires email_verified === true; password path is documented");
+
+  const authSrc = readFileSync("src/lib/auth.ts", "utf8");
+  assert.match(authSrc, /httpOnly: true/);
+  assert.match(authSrc, /sameSite: "lax"/);
+  assert.match(authSrc, /sessionCookieSecure/);
+  assert.match(authSrc, /jar\.set\(SESSION_COOKIE/);
+  assert.match(authSrc, SESSION_COOKIE === "brandcrew_session" ? /SESSION_COOKIE/ : /brandcrew_session/);
+
+  function walkSource(dir: string, acc: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      if (name === "node_modules" || name === ".next") continue;
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walkSource(full, acc);
+      else if (/\.(ts|tsx|js|mjs)$/.test(name)) acc.push(full);
+    }
+    return acc;
+  }
+  const sessionStoreHits: string[] = [];
+  for (const file of walkSource("src")) {
+    const text = readFileSync(file, "utf8");
+    if (
+      /localStorage\.setItem\([^)]*(session_token|brandcrew_session|SESSION_COOKIE)/.test(
+        text,
+      ) ||
+      /sessionStorage\.setItem\([^)]*(session_token|brandcrew_session|SESSION_COOKIE)/.test(
+        text,
+      )
+    ) {
+      sessionStoreHits.push(file);
+    }
+  }
+  assert.deepEqual(sessionStoreHits, []);
+  console.log("ok: session JWT is HttpOnly cookie only; no localStorage session_token");
+
+  const rateLimitSrc = readFileSync("src/lib/rate-limit.ts", "utf8");
+  assert.match(rateLimitSrc, /auth-email/);
+  assert.match(rateLimitSrc, /request\.clone\(\)/);
+  assert.match(router, /await enforceSensitiveRateLimit/);
+  assert.doesNotMatch(router, /auth\/forgot|password-reset|reset-password/);
+  resetRateLimitStore();
+  async function loginAttempt(ip: string, email: string) {
+    return new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": ip,
+      },
+      body: JSON.stringify({ email, password: "x" }),
+    });
+  }
+  for (let i = 0; i < 8; i += 1) {
+    await enforceSensitiveRateLimit(
+      await loginAttempt(`198.51.100.${i}`, "ada@example.com"),
+      ["api", "auth", "login"],
+      "POST",
+    );
+  }
+  let emailLimited = false;
+  try {
+    await enforceSensitiveRateLimit(
+      await loginAttempt("203.0.113.9", "ada@example.com"),
+      ["api", "auth", "login"],
+      "POST",
+    );
+  } catch (error) {
+    emailLimited = error instanceof ApiRateLimitError;
+  }
+  assert.equal(emailLimited, true);
+  console.log("ok: auth limits are per IP and per email; no password-reset route");
+
+  const adminApi = readFileSync("src/server/api/admin/root.ts", "utf8");
+  assert.ok(
+    [...adminApi.matchAll(/await requireAdmin\(\)/g)].length >= 2,
+    "GET and POST /api/admin must call requireAdmin",
+  );
+  function walkPages(dir: string, acc: string[] = []): string[] {
+    for (const name of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, name.name);
+      if (name.isDirectory()) walkPages(full, acc);
+      else if (name.name === "page.tsx") acc.push(full);
+    }
+    return acc;
+  }
+  const adminPages = walkPages("src/app/admin");
+  assert.ok(adminPages.length >= 8, "expected Admin HQ pages");
+  for (const page of adminPages) {
+    assert.match(readFileSync(page, "utf8"), /loadAdminPage/, `${page} must call loadAdminPage`);
+  }
+  const adminLayout = readFileSync("src/app/admin/layout.tsx", "utf8");
+  assert.match(adminLayout, /isAdminEmail/);
+  assert.match(adminLayout, /getCurrentUser/);
+  const settingsHub = readFileSync("src/components/desk/settings-hub.tsx", "utf8");
+  assert.match(settingsHub, /user\.isAdmin \?/);
+  assert.doesNotMatch(settingsHub, /\/api\/admin/);
+  console.log("ok: /admin and /api/admin stay server-gated via ADMIN_EMAILS; UI only hides the link");
 
   console.log("Launch + security checks passed.");
 }

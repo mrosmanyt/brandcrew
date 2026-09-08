@@ -44,6 +44,11 @@ export async function readSessionUserId(token: string | undefined) {
   }
 }
 
+/** Session JWT lives only in this HttpOnly cookie — never localStorage. */
+export function sessionCookieSecure() {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+
 export async function setSessionCookie(userId: string) {
   const token = await createSessionToken(userId);
   const jar = await cookies();
@@ -53,7 +58,7 @@ export async function setSessionCookie(userId: string) {
     // cross-site POSTs from other origins do not. OAuth returns are GET.
     sameSite: "lax",
     path: "/",
-    secure: process.env.NODE_ENV === "production",
+    secure: sessionCookieSecure(),
     maxAge: SESSION_DAYS * 24 * 60 * 60,
   });
 }

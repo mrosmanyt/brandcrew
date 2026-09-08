@@ -276,7 +276,7 @@ export async function dispatchApi(
   }
   const method = request.method.toUpperCase();
   try {
-    enforceSensitiveRateLimit(request, segments, method);
+    await enforceSensitiveRateLimit(request, segments, method);
   } catch (error) {
     return jsonError(error);
   }

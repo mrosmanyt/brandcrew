@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   googleAuthErrorMessage,
+  googleEmailIsVerified,
   googleLoginStartHref,
   GOOGLE_LOGIN_CALLBACK_PATH,
   GOOGLE_LOGIN_SCOPES,
@@ -83,6 +84,9 @@ assert.match(
   /next=%2Fdesk%3Fcheckout%3Dpro/,
 );
 assert.match(googleAuthErrorMessage("google_not_configured") || "", /GOOGLE_CLIENT_ID/);
+assert.equal(googleEmailIsVerified(true), true);
+assert.equal(googleEmailIsVerified(false), false);
+assert.equal(googleEmailIsVerified(undefined), false);
 console.log("ok: next-path hardening + start href");
 
 const root = process.cwd();

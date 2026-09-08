@@ -3,6 +3,8 @@
  * Prisma section smokes skipped if Postgres is down.
  */
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import {
   ADMIN_SECTIONS,
   DEFAULT_ADMIN_EMAIL,
@@ -109,6 +111,21 @@ async function main() {
   assert.match(String(body.error), /admin/i);
   console.log("ok: ForbiddenError serializes as HTTP 403");
 
+  const adminApi = readFileSync("src/server/api/admin/root.ts", "utf8");
+  assert.ok([...adminApi.matchAll(/await requireAdmin\(\)/g)].length >= 2);
+  function walkPages(dir: string, acc: string[] = []): string[] {
+    for (const name of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, name.name);
+      if (name.isDirectory()) walkPages(full, acc);
+      else if (name.name === "page.tsx") acc.push(full);
+    }
+    return acc;
+  }
+  for (const page of walkPages("src/app/admin")) {
+    assert.match(readFileSync(page, "utf8"), /loadAdminPage/, page);
+  }
+  console.log("ok: every /admin page and /api/admin method is server-gated");
+
   await smokeSections();
   console.log("Admin authz checks passed.");
 }
@@ -149,7 +166,7 @@ async function smokeSections() {
     console.log("ok: overview + customers + billing + models + flags section queries");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (/Can't reach database server|P1001|P1017|ECONNREFUSED|does not exist/i.test(message)) {
+    if (/Can't reach database server|P1001|P1017|ECONNREFUSED|does not exist|DATABASE_URL/i.test(message)) {
       console.log("skip: Postgres admin section smoke (start docker compose or migrate)");
       return;
     }

@@ -9,6 +9,8 @@ import {
 
 export type CookieConsent = "accepted" | "essential";
 
+/** Banner preference only — never a session JWT or brandcrew_session. */
+
 function readConsent(): CookieConsent | "unset" {
   try {
     const value = window.localStorage.getItem(COOKIE_CONSENT_KEY);

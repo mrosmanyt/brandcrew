@@ -1,3 +1,4 @@
+import { assertStrongPassword } from "@/lib/password-rules";
 import { HONEYPOT_FIELD } from "@/lib/site";
 
 export function honeypotFilled(body: unknown): boolean {
@@ -23,6 +24,5 @@ export function validateSignupInput(
   if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
     return "Enter a valid email.";
   }
-  if (password.length < 8) return "Password must be at least 8 characters.";
-  return null;
+  return assertStrongPassword(password, email);
 }

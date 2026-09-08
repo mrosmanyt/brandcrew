@@ -11,6 +11,7 @@ import { prisma } from "@/lib/db";
 import { googleLoginPublicStatus } from "@/lib/google-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { isAdminEmail } from "@/lib/admin";
+import { assertPasswordAllowed } from "@/lib/password";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
 export async function GET() {
@@ -71,7 +72,13 @@ export async function PATCH(request: Request) {
       data.email = email;
     }
     if (body.name) data.name = body.name.trim();
-    if (body.newPassword) data.passwordHash = await hashPassword(body.newPassword);
+    if (body.newPassword) {
+      const weak = await assertPasswordAllowed(body.newPassword, data.email || user.email);
+      if (weak) {
+        return NextResponse.json({ error: weak }, { status: 400 });
+      }
+      data.passwordHash = await hashPassword(body.newPassword);
+    }
 
     const updated = await prisma.user.update({
       where: { id: user.id },
@@ -83,7 +90,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Email must be valid. New password needs 8+ characters. Password accounts must include the current password." },
+        { error: "Email must be valid. New password needs 8+ characters and cannot be a common password. Password accounts must include the current password." },
         { status: 400 },
       );
     }
