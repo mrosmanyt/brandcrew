@@ -24,9 +24,14 @@ export class ApiAuthError extends Error {
 export class ApiRateLimitError extends Error {
   status = 429;
   code = "rate_limited";
-  constructor(message = "API rate limit exceeded. Try again in a minute.") {
+  retryAfterSec = 60;
+  constructor(
+    message = "API rate limit exceeded. Try again in a minute.",
+    retryAfterSec = 60,
+  ) {
     super(message);
     this.name = "ApiRateLimitError";
+    this.retryAfterSec = retryAfterSec;
   }
 }
 
@@ -72,15 +77,20 @@ export function jsonError(error: unknown) {
       headers["WWW-Authenticate"] = "Bearer";
     }
     if (error instanceof ApiRateLimitError) {
-      headers["Retry-After"] = "60";
+      headers["Retry-After"] = String(error.retryAfterSec || 60);
     }
     return NextResponse.json(
       { error: error.message, code: errorCode(error, error.status) },
       { status: error.status, headers },
     );
   }
-  const message = error instanceof Error ? error.message : "Unexpected error";
   console.error(error);
+  const message =
+    process.env.NODE_ENV === "production"
+      ? "Something went wrong. Try again."
+      : error instanceof Error
+        ? error.message
+        : "Unexpected error";
   return NextResponse.json(
     { error: message, code: "internal_error" },
     { status: 500 },

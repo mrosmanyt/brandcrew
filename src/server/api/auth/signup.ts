@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { limitsForPlan } from "@/lib/limits";
 import { createDemoWorkspace } from "@/lib/workspace";
+import { honeypotFilled } from "@/lib/form-guard";
 import { jsonError } from "@/lib/http";
 
 const schema = z.object({
@@ -11,11 +12,16 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(72),
   inviteToken: z.string().max(200).optional(),
+  company_url: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
   try {
-    const body = schema.parse(await request.json());
+    const raw: unknown = await request.json();
+    if (honeypotFilled(raw)) {
+      return NextResponse.json({ error: "Could not complete that request." }, { status: 400 });
+    }
+    const body = schema.parse(raw);
     const email = body.email.toLowerCase().trim();
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {

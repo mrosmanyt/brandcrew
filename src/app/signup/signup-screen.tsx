@@ -8,6 +8,7 @@ import {
   AuthQueryError,
   GoogleContinueButton,
 } from "@/components/auth/google-continue";
+import { HoneypotField } from "@/components/auth/honeypot-field";
 import { BrandMark } from "@/components/brand/logo";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { showcaseSignupHint } from "@/lib/integrations-showcase";
 import { authHrefWithNext, checkoutPlanFromNextPath } from "@/lib/billing-ui";
 import { PLANS } from "@/lib/constants";
+import { validateSignupInput } from "@/lib/form-guard";
+import { HONEYPOT_FIELD } from "@/lib/site";
 import { safeNextPath } from "@/lib/google-auth-shared";
 
 function SignupForm() {
@@ -28,11 +31,17 @@ function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState(params.get("email") || "");
   const [password, setPassword] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const invalid = validateSignupInput(name, email, password);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await fetch("/api/auth/signup", {
@@ -43,6 +52,7 @@ function SignupForm() {
         email,
         password,
         inviteToken: inviteToken || undefined,
+        [HONEYPOT_FIELD]: honeypot,
       }),
     });
     const data = await res.json();
@@ -98,7 +108,8 @@ function SignupForm() {
                 next={next}
               />
               <AuthDivider />
-              <form onSubmit={onSubmit} className="space-y-5">
+              <form onSubmit={onSubmit} className="relative space-y-5">
+                <HoneypotField value={honeypot} onChange={setHoneypot} />
                 <div className="space-y-2">
                   <Label>Your name</Label>
                   <Input

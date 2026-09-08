@@ -49,6 +49,8 @@ export async function setSessionCookie(userId: string) {
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
+    // SameSite=Lax is the CSRF control: same-origin POSTs send the cookie;
+    // cross-site POSTs from other origins do not. OAuth returns are GET.
     sameSite: "lax",
     path: "/",
     secure: process.env.NODE_ENV === "production",

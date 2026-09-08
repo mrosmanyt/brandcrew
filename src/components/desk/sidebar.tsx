@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BrandMark } from "@/components/brand/logo";
+import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import {
@@ -192,9 +192,10 @@ function NavBody({
     <div className="flex h-full flex-col">
       <div className="flex h-12 items-center justify-between gap-2 px-2.5">
         {collapsed ? (
-          <span className="grid size-6 place-items-center rounded-[6px] bg-sidebar-primary text-[0.65rem] font-semibold text-sidebar-primary-foreground">
-            CP
-          </span>
+          <CinemMark
+            className="size-6 text-sidebar-foreground"
+            title="CINEM Pro"
+          />
         ) : (
           <BrandMark inverted />
         )}

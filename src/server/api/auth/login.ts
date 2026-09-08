@@ -2,16 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
+import { honeypotFilled } from "@/lib/form-guard";
 import { jsonError } from "@/lib/http";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  company_url: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
   try {
-    const body = schema.parse(await request.json());
+    const raw: unknown = await request.json();
+    if (honeypotFilled(raw)) {
+      return NextResponse.json({ error: "Could not complete that request." }, { status: 400 });
+    }
+    const body = schema.parse(raw);
     const user = await prisma.user.findUnique({
       where: { email: body.email.toLowerCase().trim() },
     });

@@ -506,6 +506,8 @@ const FOOTER_LINKS = [
   { href: "/#trust", label: "Trust" },
   { href: "/login", label: "Account" },
   { href: "/signup", label: "Get started" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
   { href: GITHUB_REPO, label: "GitHub", external: true },
   { href: COMPANY_SITE, label: "CINEM", external: true },
 ] as const;
