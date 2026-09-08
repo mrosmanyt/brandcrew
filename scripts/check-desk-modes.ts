@@ -39,11 +39,16 @@ assert.equal(planApplyAction("demo", "pro", false), "open-plans");
 assert.equal(planApplyAction("ultra", "demo", false), "checkout");
 console.log("ok: plan rows map Demo/Starter/Pro/Ultra with honest apply actions");
 
-assert.equal(modelRoutingLabel("auto"), "Auto Default");
+assert.equal(modelRoutingLabel("auto"), "Auto");
 assert.equal(modelRoutingLocked("auto", { openai: false, anthropic: false, gemini: false }), false);
-assert.equal(modelRoutingLocked("gemini", { openai: true, anthropic: true, gemini: false }), true);
-assert.equal(modelRoutingLocked("anthropic", { openai: false, anthropic: true, gemini: false }), false);
-assert.equal(MODEL_ROUTING_OPTIONS.length, 4);
+assert.equal(modelRoutingLocked("gemini-3.8-flash", { openai: true, anthropic: true, gemini: false }), true);
+assert.equal(modelRoutingLocked("opus-4.8", { openai: false, anthropic: true, gemini: false }), false);
+assert.equal(modelRoutingLocked("gpt-astra", { openai: false, anthropic: true, gemini: true }), true);
+assert.equal(MODEL_ROUTING_OPTIONS.length, 5);
+assert.deepEqual(
+  MODEL_ROUTING_OPTIONS.map((row) => row.label),
+  ["Auto", "Opus 4.8", "Fable 5.1", "GPT Astra", "Gemini 3.8 Flash"],
+);
 assert.match(SERVER_KEYS_COPY, /server/);
 assert.match(AGENT_MODES_SHORTCUT, /Ctrl Shift I/);
 console.log("ok: routing options lock when the server key is missing");
@@ -71,7 +76,7 @@ process.env.ANTHROPIC_API_KEY = "sk-ant-fake";
 process.env.GEMINI_API_KEY = "gemini-fake";
 assert.equal(pickRoute("draft", "general", "openai")?.provider, "openai");
 assert.equal(pickRoute("draft", "general", "gemini")?.provider, "gemini");
-assert.equal(pickRoute("final", "general", "anthropic")?.provider, "anthropic");
+assert.equal(pickRoute("final", "general", "anthropic")?.model, "claude-haiku-4-5");
 assert.equal(
   runWithRoutingPreference("openai", () => pickRoute("draft")?.provider),
   "openai",
@@ -98,7 +103,13 @@ const menu = readFileSync("src/components/desk/agent-modes-menu.tsx", "utf8");
 assert.match(menu, /Use server API keys/);
 assert.match(menu, /Add key on server/);
 assert.match(menu, /\/api\/billing\/checkout/);
-assert.match(menu, /modelRouting/);
+assert.match(menu, /MODEL_ROUTING_OPTIONS/);
+assert.doesNotMatch(menu, /claude-haiku|gpt-4o-mini|Prefer Gemini|Prefer Claude/);
+const catalog = readFileSync("src/lib/model-catalog.ts", "utf8");
+assert.match(catalog, /Opus 4.8/);
+assert.match(catalog, /Fable 5.1/);
+assert.match(catalog, /GPT Astra/);
+assert.match(catalog, /Gemini 3.8 Flash/);
 const mid = readFileSync("src/components/desk/mission-control.tsx", "utf8");
 assert.match(mid, /deskChatGlowClass/);
 assert.match(mid, /JobStartingStatus/);

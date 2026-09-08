@@ -2,9 +2,11 @@ import { PLANS, type PlanId } from "@/lib/constants";
 import { normalizePlanId } from "@/lib/limits";
 import {
   normalizeModelRouting,
+  routingProvider,
   type LlmRoutingPreference,
   type LlmStatus,
 } from "@/lib/llm-routing";
+import { DISPLAY_MODELS } from "@/lib/model-catalog";
 
 export const AGENT_MODE_PLANS: PlanId[] = ["demo", "starter", "pro", "ultra"];
 
@@ -75,41 +77,31 @@ export function planApplyAction(
 export const MODEL_ROUTING_OPTIONS: ModelRoutingOption[] = [
   {
     id: "auto",
-    label: "Auto Default",
-    hint: "Chooses the best model for the job",
+    label: "Auto",
+    hint: "Picks the best model for the job",
   },
-  {
-    id: "gemini",
-    label: "Prefer Gemini",
-    hint: "Uses Gemini when GEMINI_API_KEY is on the server",
-  },
-  {
-    id: "anthropic",
-    label: "Prefer Claude",
-    hint: "Uses Anthropic when ANTHROPIC_API_KEY is on the server",
-  },
-  {
-    id: "openai",
-    label: "Prefer OpenAI",
-    hint: "Uses OpenAI when OPENAI_API_KEY is on the server",
-  },
+  ...DISPLAY_MODELS.map((row) => ({
+    id: row.id as LlmRoutingPreference,
+    label: row.displayName,
+    hint: row.hint,
+  })),
 ];
 
 export function modelRoutingLocked(
   id: LlmRoutingPreference,
   llm: Pick<LlmStatus, "openai" | "anthropic" | "gemini">,
 ) {
-  if (id === "auto") return false;
-  if (id === "gemini") return !llm.gemini;
-  if (id === "anthropic") return !llm.anthropic;
+  const provider = routingProvider(id);
+  if (!provider) return false;
+  if (provider === "gemini") return !llm.gemini;
+  if (provider === "anthropic") return !llm.anthropic;
   return !llm.openai;
 }
 
 export function modelRoutingLabel(id?: string | null) {
   const normalized = normalizeModelRouting(id);
   return (
-    MODEL_ROUTING_OPTIONS.find((row) => row.id === normalized)?.label ??
-    "Auto Default"
+    MODEL_ROUTING_OPTIONS.find((row) => row.id === normalized)?.label ?? "Auto"
   );
 }
 

@@ -9,7 +9,9 @@ export function proxy(request: NextRequest) {
   const authed = Boolean(session);
 
   if (
-    (pathname.startsWith("/desk") || pathname.startsWith("/onboarding")) &&
+    (pathname.startsWith("/desk") ||
+      pathname.startsWith("/onboarding") ||
+      pathname.startsWith("/admin")) &&
     !authed
   ) {
     const login = new URL("/login", request.url);
@@ -27,5 +29,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/desk/:path*", "/onboarding", "/login", "/signup"],
+  matcher: ["/desk/:path*", "/onboarding", "/login", "/signup", "/admin", "/admin/:path*"],
 };

@@ -75,7 +75,7 @@ import type {
   JobPlaybook,
   JobStep,
 } from "@/lib/job-types";
-import { llm, runWithRoutingPreference } from "@/lib/llm";
+import { llm, runWithLlmRouting } from "@/lib/llm";
 import { connectedToolNames, getConnectedPlugin } from "@/lib/plugins";
 import {
   formatSlackChannels,
@@ -320,23 +320,26 @@ export async function tickJob(jobId: string): Promise<boolean> {
       "modelRouting" in workspace
         ? String((workspace as { modelRouting?: string | null }).modelRouting ?? "")
         : "";
+    const routingPlan = workspace.plan;
 
     let steps = parsePlan(job.plan);
     if (!steps.length) {
       const agent = job.agentId
         ? await prisma.agent.findUnique({ where: { id: job.agentId } })
         : null;
-      steps = await runWithRoutingPreference(routingPrefer, () =>
-        planSteps({
-          workspaceId: job.workspaceId,
-          role: asAgentRole(job.agentRole),
-          prompt: job.prompt,
-          kit: parseBrandKit(workspace.brandKit),
-          agentName: displayAgentName(agent?.name),
-          agentInstructions: agent?.instructions || "",
-          agentRoleLabel: agent?.role || job.agentRole,
-          allowedTools: parseAllowedTools(agent?.allowedTools),
-        }),
+      steps = await runWithLlmRouting(
+        { prefer: routingPrefer, plan: routingPlan },
+        () =>
+          planSteps({
+            workspaceId: job.workspaceId,
+            role: asAgentRole(job.agentRole),
+            prompt: job.prompt,
+            kit: parseBrandKit(workspace.brandKit),
+            agentName: displayAgentName(agent?.name),
+            agentInstructions: agent?.instructions || "",
+            agentRoleLabel: agent?.role || job.agentRole,
+            allowedTools: parseAllowedTools(agent?.allowedTools),
+          }),
       );
       await savePlan(jobId, steps);
       await appendEvent({
@@ -396,8 +399,10 @@ export async function tickJob(jobId: string): Promise<boolean> {
     const agent = job.agentId
       ? await prisma.agent.findUnique({ where: { id: job.agentId } })
       : null;
-    const result = await runWithRoutingPreference(routingPrefer, () =>
-      executeTool({
+    const result = await runWithLlmRouting(
+      { prefer: routingPrefer, plan: routingPlan },
+      () =>
+        executeTool({
         workspaceId: job.workspaceId,
         jobId,
         agentId: job.agentId,
@@ -508,6 +513,7 @@ async function planSteps(input: {
   try {
     const result = await llm.complete({
       mode: "draft",
+      kind: "json",
       json: true,
       messages: [
         {
@@ -1476,7 +1482,7 @@ async function generateLinkedInPosts(input: {
   }
   const result = await llm.complete({
     mode: "draft",
-    kind: "posts",
+    kind: "outreach",
     json: true,
     messages: [
       {
@@ -1552,6 +1558,7 @@ async function generateResearchPack(input: {
   try {
     const result = await llm.complete({
       mode: "draft",
+      kind: "research",
       json: true,
       messages: [
         {
@@ -1628,6 +1635,7 @@ async function generateCompetitorScan(input: {
   try {
     const result = await llm.complete({
       mode: "draft",
+      kind: "research",
       json: true,
       messages: [
         {
@@ -1696,6 +1704,7 @@ async function generateOutreachPack(input: {
   try {
     const result = await llm.complete({
       mode: "draft",
+      kind: "outreach",
       json: true,
       messages: [
         {
@@ -1773,6 +1782,7 @@ async function generateAdAngles(input: {
   try {
     const result = await llm.complete({
       mode: "draft",
+      kind: "outreach",
       json: true,
       messages: [
         {
@@ -1838,6 +1848,7 @@ async function generateInboxReplies(input: {
   }
   const result = await llm.complete({
     mode: "draft",
+    kind: "summaries",
     json: true,
     messages: [
       {
@@ -1898,6 +1909,7 @@ CINEM Pro will not send these. Approve, then you copy/paste.
   }
   const result = await llm.complete({
     mode: "draft",
+    kind: "outreach",
     json: true,
     messages: [
       {
@@ -1943,6 +1955,7 @@ async function generateWhatsAppDrafts(input: {
   }
   const result = await llm.complete({
     mode: "draft",
+    kind: "whatsapp",
     json: true,
     messages: [
       {

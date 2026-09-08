@@ -2,6 +2,15 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
+import { normalizePlanId } from "@/lib/limits";
+import {
+  geminiFlashModelId,
+  gptTerraModelId,
+  haikuModelId,
+  publicModelLabel,
+  sonnetMaxModelId,
+  sonnetModelId,
+} from "@/lib/model-catalog";
 import {
   normalizeModelRouting,
   type LlmRoutingPreference,
@@ -13,21 +22,65 @@ export { normalizeModelRouting } from "@/lib/llm-routing";
 
 export type TaskMode = "draft" | "final";
 
-const routingAls = new AsyncLocalStorage<LlmRoutingPreference>();
+type RoutingStore = {
+  prefer: LlmRoutingPreference;
+  plan: string;
+  boost: boolean;
+};
+
+const routingAls = new AsyncLocalStorage<RoutingStore>();
 
 export function currentRoutingPreference(): LlmRoutingPreference {
-  return routingAls.getStore() ?? "auto";
+  return routingAls.getStore()?.prefer ?? "auto";
+}
+
+export function currentRoutingPlan(): string {
+  return routingAls.getStore()?.plan ?? "";
+}
+
+export function currentRoutingBoost(): boolean {
+  return routingAls.getStore()?.boost ?? false;
+}
+
+export function runWithLlmRouting<T>(
+  input: { prefer?: string | null; plan?: string | null; boost?: boolean },
+  fn: () => T,
+): T {
+  const prev = routingAls.getStore();
+  return routingAls.run(
+    {
+      prefer: normalizeModelRouting(input.prefer ?? prev?.prefer),
+      plan: input.plan ?? prev?.plan ?? "",
+      boost: input.boost ?? prev?.boost ?? false,
+    },
+    fn,
+  );
 }
 
 export function runWithRoutingPreference<T>(
   prefer: LlmRoutingPreference | string | null | undefined,
   fn: () => T,
 ): T {
-  return routingAls.run(normalizeModelRouting(prefer), fn);
+  return runWithLlmRouting({ prefer }, fn);
 }
 
-/** Job-family routing. General keeps the existing cheap-draft / strong-final policy. */
-export type LlmJobKind = "website" | "coding" | "posts" | "apps" | "general";
+/**
+ * Job-family routing when the desk does not pick a display model.
+ * Cheap backends only — see `src/lib/model-catalog.ts`.
+ */
+export type LlmJobKind =
+  | "website"
+  | "coding"
+  | "posts"
+  | "apps"
+  | "general"
+  | "research"
+  | "outreach"
+  | "whatsapp"
+  | "summaries"
+  | "json"
+  | "code"
+  | "boost";
 
 export type LlmProviderName = "openai" | "anthropic" | "gemini" | "xai" | "demo";
 
@@ -41,6 +94,7 @@ export type LlmCompleteResult = {
   text: string;
   tokens: number;
   model: string;
+  displayName: string;
   provider: LlmProviderName;
   demo: boolean;
 };
@@ -98,7 +152,7 @@ export function getLlmStatus(): LlmStatus {
 }
 
 export function openaiDraftModel() {
-  return process.env.OPENAI_DRAFT_MODEL || "gpt-4o-mini";
+  return gptTerraModelId();
 }
 
 export function openaiFinalModel() {
@@ -106,15 +160,15 @@ export function openaiFinalModel() {
 }
 
 export function anthropicDraftModel() {
-  return process.env.ANTHROPIC_DRAFT_MODEL || "claude-haiku-4-5";
+  return haikuModelId();
 }
 
 export function anthropicFinalModel() {
-  return process.env.ANTHROPIC_FINAL_MODEL || "claude-sonnet-5";
+  return sonnetModelId();
 }
 
 export function geminiDraftModel() {
-  return process.env.GEMINI_DRAFT_MODEL || "gemini-2.5-flash";
+  return geminiFlashModelId();
 }
 
 export function geminiFinalModel() {
@@ -151,32 +205,30 @@ function firstRoute(
   return candidates.find((row): row is LlmRoute => Boolean(row)) ?? null;
 }
 
-function geminiRoute(mode: TaskMode): LlmRoute | null {
+function geminiFlashRoute(): LlmRoute | null {
   const key = geminiKey();
   if (!key) return null;
-  return {
-    provider: "gemini",
-    model: mode === "final" ? geminiFinalModel() : geminiDraftModel(),
-    apiKey: key,
-  };
+  return { provider: "gemini", model: geminiFlashModelId(), apiKey: key };
 }
 
-function openaiRoute(mode: TaskMode): LlmRoute | null {
+function openaiTerraRoute(): LlmRoute | null {
   const key = openaiKey();
   if (!key) return null;
-  return {
-    provider: "openai",
-    model: mode === "final" ? openaiFinalModel() : openaiDraftModel(),
-    apiKey: key,
-  };
+  return { provider: "openai", model: gptTerraModelId(), apiKey: key };
 }
 
-function anthropicRoute(mode: TaskMode): LlmRoute | null {
+function anthropicHaikuRoute(): LlmRoute | null {
+  const key = anthropicKey();
+  if (!key) return null;
+  return { provider: "anthropic", model: haikuModelId(), apiKey: key };
+}
+
+function anthropicSonnetRoute(max = false): LlmRoute | null {
   const key = anthropicKey();
   if (!key) return null;
   return {
     provider: "anthropic",
-    model: mode === "final" ? anthropicFinalModel() : anthropicDraftModel(),
+    model: max ? sonnetMaxModelId() : sonnetModelId(),
     apiKey: key,
   };
 }
@@ -187,59 +239,94 @@ function xaiRoute(): LlmRoute | null {
   return { provider: "xai", model: xaiPostsModel(), apiKey: key };
 }
 
-/**
- * Router policy:
- * - Website → Gemini (cheap) when present, else OpenAI / Anthropic / xAI.
- * - Coding / apps → Anthropic when present, else Gemini / OpenAI / xAI.
- * - Posts → xAI only if keyed, else Gemini / OpenAI / Anthropic.
- * - General drafts: Gemini Flash → OpenAI mini → Haiku → xAI.
- * - General finals: Claude Sonnet → GPT-4.1 → Gemini Pro → xAI.
- */
-function pickRouteDefault(mode: TaskMode, kind: LlmJobKind): LlmRoute | null {
-  if (kind === "website") {
-    return firstRoute([geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft"), xaiRoute()]);
-  }
-  if (kind === "coding" || kind === "apps") {
-    return firstRoute([
-      anthropicRoute(mode === "final" ? "final" : "draft"),
-      geminiRoute("draft"),
-      openaiRoute("draft"),
-      xaiRoute(),
-    ]);
-  }
-  if (kind === "posts") {
-    return firstRoute([xaiRoute(), geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft")]);
-  }
+const CHEAP_FALLBACKS = [
+  geminiFlashRoute,
+  openaiTerraRoute,
+  anthropicHaikuRoute,
+  xaiRoute,
+];
 
-  if (mode === "draft") {
-    return firstRoute([geminiRoute("draft"), openaiRoute("draft"), anthropicRoute("draft"), xaiRoute()]);
-  }
-  return firstRoute([anthropicRoute("final"), openaiRoute("final"), geminiRoute("final"), xaiRoute()]);
+function firstCheap(extra: Array<LlmRoute | null> = []): LlmRoute | null {
+  return firstRoute([...extra, ...CHEAP_FALLBACKS.map((fn) => fn())]);
 }
 
-function preferredRoute(
-  prefer: LlmRoutingPreference,
-  mode: TaskMode,
+function isFlashKind(kind: LlmJobKind) {
+  return (
+    kind === "website" ||
+    kind === "research" ||
+    kind === "outreach" ||
+    kind === "whatsapp" ||
+    kind === "summaries" ||
+    kind === "posts"
+  );
+}
+
+function isCodeKind(kind: LlmJobKind) {
+  return kind === "coding" || kind === "apps" || kind === "code";
+}
+
+function isJsonKind(kind: LlmJobKind, json: boolean) {
+  return kind === "json" || (json && kind === "general");
+}
+
+function wantsSonnetMax(kind: LlmJobKind, plan: string, boost: boolean) {
+  return boost || kind === "boost" || normalizePlanId(plan) === "ultra";
+}
+
+/**
+ * Auto (no UI model pick):
+ * - research / outreach / WhatsApp / summaries / website → Gemini Flash
+ * - structured JSON / short tools → Haiku
+ * - code / complex apps → Sonnet
+ * - Ultra or Boost → Sonnet max (never Opus)
+ */
+function pickRouteDefault(
+  kind: LlmJobKind,
+  json: boolean,
+  plan: string,
+  boost: boolean,
 ): LlmRoute | null {
-  if (prefer === "gemini") return geminiRoute(mode);
-  if (prefer === "anthropic") return anthropicRoute(mode);
-  if (prefer === "openai") return openaiRoute(mode);
+  if (wantsSonnetMax(kind, plan, boost)) {
+    return firstCheap([anthropicSonnetRoute(true)]);
+  }
+  if (isCodeKind(kind)) {
+    return firstCheap([anthropicSonnetRoute()]);
+  }
+  if (isJsonKind(kind, json)) {
+    return firstCheap([anthropicHaikuRoute()]);
+  }
+  if (isFlashKind(kind) || kind === "general") {
+    return firstCheap([geminiFlashRoute()]);
+  }
+  return firstCheap();
+}
+
+function catalogRoute(prefer: LlmRoutingPreference): LlmRoute | null {
+  if (prefer === "opus-4.8") return firstCheap([anthropicHaikuRoute()]);
+  if (prefer === "fable-5.1") return firstCheap([anthropicSonnetRoute()]);
+  if (prefer === "gpt-astra") return firstCheap([openaiTerraRoute()]);
+  if (prefer === "gemini-3.8-flash") return firstCheap([geminiFlashRoute()]);
   return null;
 }
 
 /**
- * Router policy, plus an optional workspace preference.
- * Prefer Gemini / Claude / OpenAI only when that server key exists;
- * otherwise fall back to the default job-family router.
+ * Display-model catalog first; otherwise task-based cheap routing.
+ * Picked UI names always resolve to Haiku / Sonnet / GPT Terra / Gemini Flash.
  */
 export function pickRoute(
   mode: TaskMode,
   kind: LlmJobKind = "general",
-  prefer: LlmRoutingPreference = currentRoutingPreference(),
+  prefer: LlmRoutingPreference | string = currentRoutingPreference(),
+  extras?: { json?: boolean; plan?: string; boost?: boolean },
 ): LlmRoute | null {
-  const chosen = preferredRoute(prefer, mode);
+  void mode;
+  const catalogId = normalizeModelRouting(prefer);
+  const json = extras?.json ?? false;
+  const plan = extras?.plan ?? currentRoutingPlan();
+  const boost = extras?.boost ?? currentRoutingBoost();
+  const chosen = catalogRoute(catalogId);
   if (chosen) return chosen;
-  return pickRouteDefault(mode, kind);
+  return pickRouteDefault(kind, json, plan, boost);
 }
 
 export function createAnthropicClient(apiKey: string) {
@@ -285,7 +372,9 @@ export class LLMProvider {
     messages: { role: "system" | "user" | "assistant"; content: string }[];
     json?: boolean;
   }): Promise<LlmCompleteResult> {
-    const route = pickRoute(input.mode, input.kind ?? "general");
+    const route = pickRoute(input.mode, input.kind ?? "general", currentRoutingPreference(), {
+      json: input.json,
+    });
     if (!route) {
       throw new Error("NO_LLM_KEYS");
     }
@@ -327,6 +416,7 @@ export class LLMProvider {
       text,
       tokens,
       model: route.model,
+      displayName: publicModelLabel(route.model),
       provider: "openai",
       demo: false,
     };
@@ -372,6 +462,7 @@ export class LLMProvider {
       text,
       tokens: tokens || Math.ceil(text.split(/\s+/).length * 1.3),
       model: route.model,
+      displayName: publicModelLabel(route.model),
       provider: "anthropic",
       demo: false,
     };
@@ -420,6 +511,7 @@ export class LLMProvider {
       text,
       tokens: tokens || Math.ceil(text.split(/\s+/).length * 1.3),
       model: route.model,
+      displayName: publicModelLabel(route.model),
       provider: "gemini",
       demo: false,
     };
@@ -450,6 +542,7 @@ export class LLMProvider {
       text,
       tokens,
       model: route.model,
+      displayName: publicModelLabel(route.model),
       provider: "xai",
       demo: false,
     };

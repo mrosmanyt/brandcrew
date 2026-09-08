@@ -18,6 +18,8 @@
     "db:generate": "node scripts/prisma-generate.mjs",
     "vercel-build": "node scripts/prisma-generate.mjs --with-migrate && next build",
     "test:llm": "tsx scripts/check-llm-router.ts",
+    "test:models": "tsx scripts/check-model-catalog.ts",
+    "test:admin": "tsx scripts/check-admin.ts",
     "test:jobs": "tsx scripts/check-job-runtime.ts",
     "test:companions": "tsx scripts/check-companions.ts",
     "test:marketplace": "tsx scripts/check-marketplace.ts",

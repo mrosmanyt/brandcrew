@@ -303,6 +303,19 @@ model ApiKey {
   @@index([workspaceId, revokedAt])
 }
 
+/// Founder Admin HQ mutations (plan assign / revoke).
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorEmail String
+  action     String
+  targetId   String
+  meta       String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorEmail])
+}
+
 /// Dedupes inbound provider webhooks (Whop webhook-id / payment id).
 model ProcessedWebhook {
   id         String   @id

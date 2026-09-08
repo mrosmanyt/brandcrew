@@ -105,11 +105,11 @@ assert.equal(pickRoute("draft", "coding")?.provider, "anthropic");
 assert.equal(pickRoute("draft", "apps")?.provider, "anthropic");
 assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
 process.env.XAI_API_KEY = "x";
-assert.equal(pickRoute("draft", "posts")?.provider, "xai");
+assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
 for (const key of Object.keys(saved)) {
   if (saved[key] === undefined) delete process.env[key];
   else process.env[key] = saved[key];
 }
-console.log("ok: website→Gemini, coding→Anthropic, posts→xAI if keyed");
+console.log("ok: website→Gemini Flash, coding→Sonnet, posts stay Flash (not xAI)");
 
 console.log("Limits / builders / avatars checks passed.");

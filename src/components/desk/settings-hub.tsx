@@ -29,6 +29,7 @@ type AccountUser = {
   name: string;
   hasPassword?: boolean;
   googleLinked?: boolean;
+  isAdmin?: boolean;
 };
 
 export function SettingsHub({
@@ -313,6 +314,16 @@ export function SettingsHub({
       <section className="mt-6">
         <h2 className="text-sm font-medium">More</h2>
         <ul className="mt-3 space-y-1">
+          {user.isAdmin ? (
+            <li>
+              <Link href="/admin" className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40">
+                <span className="text-sm">Founder Admin HQ</span>
+                <span className="text-xs text-muted-foreground">
+                  Live workspace counts, plan assign, and audit log.
+                </span>
+              </Link>
+            </li>
+          ) : null}
           {links.map((link) => (
             <li key={link.href}>
               <Link

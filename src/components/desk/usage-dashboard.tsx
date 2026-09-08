@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { InviteTeam } from "@/components/desk/invite-team";
 import { ScheduleJobs } from "@/components/desk/schedule-jobs";
+import { publicModelLabel } from "@/lib/model-catalog";
 import type { AgentDTO } from "@/lib/job-types";
 
 type UsagePayload = {
@@ -118,7 +119,7 @@ export function UsageDashboard({
             {data.events.slice(0, 12).map((row) => (
               <li key={row.id} className="flex justify-between gap-3 py-2">
                 <span>
-                  {row.agentRole || "job"} · {row.model}
+                  {row.agentRole || "job"} · {publicModelLabel(row.model)}
                 </span>
                 <span className="text-muted-foreground">
                   {row.tokens.toLocaleString()} tok

@@ -139,8 +139,8 @@ export function AgentModesMenu({
     onRoutingApplied?.(normalizeModelRouting(data.workspace?.modelRouting ?? next));
     toast.success(
       next === "auto"
-        ? "Using the default model router."
-        : `Prefer ${MODEL_ROUTING_OPTIONS.find((row) => row.id === next)?.label.replace("Prefer ", "")}.`,
+        ? "Using automatic model routing."
+        : `Using ${MODEL_ROUTING_OPTIONS.find((row) => row.id === next)?.label ?? next}.`,
     );
   }
 
@@ -201,7 +201,7 @@ export function AgentModesMenu({
         </p>
         <DropdownMenuSeparator className="mx-0" />
         <div className="flex items-center gap-1 px-3 pt-2 pb-1">
-          <p className="text-xs font-medium">Model routing</p>
+          <p className="text-xs font-medium">Model</p>
           <span title={SERVER_KEYS_COPY}>
             <Info className="size-3 text-muted-foreground" />
           </span>

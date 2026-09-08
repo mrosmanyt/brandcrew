@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { matchBestPattern, pathToSegments } from "../src/server/api/match";
 
 const PATTERNS: string[][] = [
+  ["api", "admin"],
   ["api", "v1"],
   ["api", "v1", "workspace"],
   ["api", "v1", "agents", ":agentId"],
@@ -62,6 +63,7 @@ function matchPath(pathname: string) {
 }
 
 const cases: Array<[string, string[], Record<string, string>]> = [
+  ["/api/admin", ["api", "admin"], {}],
   ["/api/v1", ["api", "v1"], {}],
   ["/api/v1/workspace", ["api", "v1", "workspace"], {}],
   ["/api/v1/agents", ["api", "v1", "agents"], {}],
@@ -213,8 +215,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 49);
-console.log("ok: 49 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 50);
+console.log("ok: 50 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

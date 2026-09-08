@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
+import * as adminRoot from "./admin/root";
 import * as authGoogle from "./auth/google";
 import * as authGoogleCallback from "./auth/google-callback";
 import * as authLogin from "./auth/login";
@@ -77,6 +78,7 @@ function asHandlers(mod: object): HandlerModule {
  * vs /agents/:agentId).
  */
 export const API_ROUTES: RouteSpec[] = [
+  { pattern: ["api", "admin"], handlers: asHandlers(adminRoot) },
   { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
   { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
   {
