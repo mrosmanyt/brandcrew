@@ -17,7 +17,7 @@ const NAV = [
 export function SiteNav() {
   const { signedIn, accountHref, deskHref } = useMarketingAuth();
   return (
-    <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
+    <header className="sticky top-[var(--announce-h,0px)] z-30 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-6">
         <Link href="/" className="shrink-0">
           <BrandMark priority />

@@ -18,6 +18,13 @@ export function siteOrigin() {
 export const COOKIE_CONSENT_KEY = "cinem_cookie_consent";
 export const COOKIE_CONSENT_EVENT = "cinem-cookie-consent";
 
+/** Public founder contact for marketing CTAs (not an auth/admin gate). */
+export const FOUNDER_EMAIL = "cinemtech@gmail.com";
+export const FOUNDER_MAILTO = `mailto:${FOUNDER_EMAIL}`;
+/** localStorage flag only — never a session JWT or brandcrew_session. */
+export const ANNOUNCEMENT_DISMISS_KEY = "cinem_announce_raise_1m";
+export const ANNOUNCEMENT_DISMISS_EVENT = "cinem-announce-dismiss";
+
 export const HONEYPOT_FIELD = "company_url";
 
 /** Exact Windows filenames from electron-builder (package.json build.nsis / portable). */
