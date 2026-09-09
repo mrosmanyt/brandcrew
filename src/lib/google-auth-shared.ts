@@ -28,7 +28,15 @@ export function googleAuthErrorMessage(code: string | null, hint?: string | null
       "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
     );
   }
-  if (code === "access_denied") return "Google sign-in was cancelled.";
+  if (code === "google_unverified") {
+    return (
+      hint ||
+      "Google blocked sign-in because this Cloud OAuth app is in Testing (unverified). Add this Gmail as a Test user under APIs & Services → OAuth consent screen, or publish the app to Production. CINEM Pro does not create a session unless Google returns a verified profile."
+    );
+  }
+  if (code === "access_denied") {
+    return hint || "Google sign-in was cancelled.";
+  }
   if (code === "missing_code") return "Google did not return an authorization code.";
   if (code === "email_unverified") {
     return "Verify that Google account email, then try Continue with Google again.";

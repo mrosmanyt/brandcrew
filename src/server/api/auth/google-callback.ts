@@ -11,6 +11,7 @@ import {
   upsertGoogleUser,
   type GoogleLoginIntent,
 } from "@/lib/google-auth";
+import { isGoogleOAuthUnverifiedDescription } from "@/lib/plugin-oauth-errors";
 
 function bounce(
   intent: GoogleLoginIntent,
@@ -45,7 +46,11 @@ export async function GET(request: Request) {
     const parsed = await readGoogleLoginState(state);
     intent = parsed.intent;
 
+    const providerDescription = url.searchParams.get("error_description") || "";
     if (providerError === "access_denied") {
+      if (isGoogleOAuthUnverifiedDescription(providerDescription)) {
+        return bounce(intent, "google_unverified");
+      }
       return bounce(intent, "access_denied");
     }
     if (providerError) {

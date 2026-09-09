@@ -21,6 +21,7 @@ import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serializ
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { getLlmStatus } from "@/lib/llm";
 import { normalizeModelRouting } from "@/lib/llm-routing";
+import { parseAutoApproveSafe } from "@/lib/write-gate";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
 async function MissionControlPage({
@@ -114,6 +115,11 @@ async function MissionControlPage({
           "modelRouting" in workspace
             ? String((workspace as { modelRouting?: string }).modelRouting ?? "")
             : "",
+        )}
+        initialAutoApproveSafe={parseAutoApproveSafe(
+          "autoApproveSafe" in workspace
+            ? (workspace as { autoApproveSafe?: boolean }).autoApproveSafe
+            : false,
         )}
       />
     </Suspense>

@@ -41,6 +41,7 @@ import {
   type LlmStatus,
 } from "@/lib/llm-routing";
 import { normalizePlanId } from "@/lib/limits";
+import { parseAutoApproveSafe } from "@/lib/write-gate";
 import {
   DEFAULT_AGENT_NAME,
   displayAgentName,
@@ -74,6 +75,7 @@ export function MissionControl({
   initialLlm,
   billingMock,
   initialModelRouting,
+  initialAutoApproveSafe,
 }: {
   workspaceId: string;
   initialAgentId?: string;
@@ -89,6 +91,7 @@ export function MissionControl({
   initialLlm: LlmStatus;
   billingMock: boolean;
   initialModelRouting?: string;
+  initialAutoApproveSafe?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,6 +119,9 @@ export function MissionControl({
   const [llm, setLlm] = useState(initialLlm);
   const [modelRouting, setModelRouting] = useState(
     normalizeModelRouting(initialModelRouting),
+  );
+  const [autoApproveSafe, setAutoApproveSafe] = useState(
+    parseAutoApproveSafe(initialAutoApproveSafe),
   );
   const [billingIsMock] = useState(billingMock);
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -282,6 +288,9 @@ export function MissionControl({
       if (data.llm) setLlm(data.llm);
       if (data.workspace?.modelRouting) {
         setModelRouting(normalizeModelRouting(data.workspace.modelRouting));
+      }
+      if (typeof data.workspace?.autoApproveSafe === "boolean") {
+        setAutoApproveSafe(parseAutoApproveSafe(data.workspace.autoApproveSafe));
       }
       if (data.workspace?.plan || data.limits?.plan) {
         const nextPlan = normalizePlanId(data.limits?.plan || data.workspace.plan);
@@ -771,6 +780,7 @@ export function MissionControl({
             billingMock={billingIsMock}
             llm={llm}
             modelRouting={modelRouting}
+            autoApproveSafe={autoApproveSafe}
             workingStatus={workingStatus}
             onPlanApplied={(next) => {
               const caps = PLANS[next.plan];
@@ -783,6 +793,7 @@ export function MissionControl({
               }));
             }}
             onRoutingApplied={(next: LlmRoutingPreference) => setModelRouting(next)}
+            onAutoApproveSafeApplied={(next) => setAutoApproveSafe(next)}
           />
           </div>
         </section>

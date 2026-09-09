@@ -8,6 +8,10 @@ import { prisma } from "../src/lib/db";
 import { gmailDisconnectedError, gmailListRecent, rfc2822Raw, tokenExpired } from "../src/lib/gmail";
 import { getMarketplacePlugin } from "../src/lib/marketplace";
 import {
+  mapPluginOAuthError,
+  pluginOAuthErrorMessage,
+} from "../src/lib/plugin-oauth-errors";
+import {
   exchangeOAuthCode,
   getOAuthTokens,
   mergeOAuthTokens,
@@ -76,6 +80,8 @@ const pendingAsk: JobStep[] = [
   { id: "post", tool: "slack_post_message", label: "post", status: "pending", args: {} },
 ];
 assert.equal(slackPostAllowed(pendingAsk, "post"), false);
+assert.equal(mapPluginOAuthError({ error: "access_denied", pluginId: "gmail" }), "google_unverified");
+assert.match(pluginOAuthErrorMessage("google_unverified", "gmail"), /Test user/);
 console.log("ok: disconnected guards + slack post blocked before approval");
 
 const originalFetch = globalThis.fetch;
@@ -214,7 +220,7 @@ run()
   .catch((error) => {
     globalThis.fetch = originalFetch;
     const message = error instanceof Error ? error.message : String(error);
-    if (/Can't reach database server|P1001|P1017|ECONNREFUSED/i.test(message)) {
+    if (/Can't reach database server|P1001|P1017|ECONNREFUSED|Environment variable not found: DATABASE_URL/i.test(message)) {
       console.log("skip: Postgres OAuth DB smoke (start docker compose or set DATABASE_URL)");
       console.log("OAuth plugin checks passed.");
       return;

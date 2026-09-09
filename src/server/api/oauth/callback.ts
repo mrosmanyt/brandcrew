@@ -7,6 +7,7 @@ import {
   persistOAuthConnection,
   readOAuthState,
 } from "@/lib/plugins";
+import { mapPluginOAuthError } from "@/lib/plugin-oauth-errors";
 import { pluginOAuthReturnPath } from "@/lib/setup-wizard";
 
 /** Marketplace plugin OAuth only. User Google sign-in is `/api/auth/google/callback`. */
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code") || "";
   const state = url.searchParams.get("state") || "";
   const providerError = url.searchParams.get("error") || "";
+  const providerDescription = url.searchParams.get("error_description") || "";
 
   let workspaceId = "";
   let next = "";
@@ -35,7 +37,13 @@ export async function GET(request: Request) {
         })}`,
       );
     if (providerError) {
-      return bounce(providerError);
+      return bounce(
+        mapPluginOAuthError({
+          error: providerError,
+          errorDescription: providerDescription,
+          pluginId: parsed.pluginId,
+        }),
+      );
     }
     if (!code) {
       return bounce("missing_code");

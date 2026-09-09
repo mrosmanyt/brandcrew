@@ -3,6 +3,7 @@
  * No database.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { accountPatchSchema } from "../src/lib/account";
 import {
   clipComposerText,
@@ -57,6 +58,11 @@ assert.ok(links.some((link) => link.href.includes("tab=plugins")));
 assert.ok(links.some((link) => link.href.includes("tab=bots")));
 assert.equal(jobDeskHref("ws_1", { id: "job_9", agentId: "ag_2" }), "/desk/ws_1?agentId=ag_2&jobId=job_9");
 console.log("ok: Settings hub lists Plugins, Bots, Marketplace, Plans, and Jobs deep-links");
+
+const composerSrc = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
+assert.match(composerSrc, /Always approved/);
+assert.match(composerSrc, /autoApproveSafe/);
+console.log("ok: composer textbar has Always approved");
 
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", email: "a@b.com" }).success);
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", newPassword: "newpass99" }).success);

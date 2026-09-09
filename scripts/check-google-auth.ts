@@ -84,6 +84,9 @@ assert.match(
   /next=%2Fdesk%3Fcheckout%3Dpro/,
 );
 assert.match(googleAuthErrorMessage("google_not_configured") || "", /GOOGLE_CLIENT_ID/);
+assert.match(googleAuthErrorMessage("google_unverified") || "", /Test user/);
+assert.match(googleAuthErrorMessage("google_unverified") || "", /Production/);
+assert.equal(googleAuthErrorMessage("access_denied"), "Google sign-in was cancelled.");
 assert.equal(googleEmailIsVerified(true), true);
 assert.equal(googleEmailIsVerified(false), false);
 assert.equal(googleEmailIsVerified(undefined), false);

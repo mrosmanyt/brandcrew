@@ -24,6 +24,7 @@ import {
   type MarketplaceBot,
   type PluginDef,
 } from "@/lib/marketplace";
+import { pluginOAuthErrorMessage } from "@/lib/plugin-oauth-errors";
 import { cn } from "@/lib/utils";
 
 type BotRow = MarketplaceBot & { added: boolean };
@@ -93,14 +94,8 @@ export function MarketplaceDesk({
       toast.success(`${connected} connected.`);
       void refresh();
     }
-    if (error === "oauth_not_configured") {
-      toast.error(
-        plugin
-          ? `${plugin}: OAuth client id/secret missing. Connect stays disconnected.`
-          : "OAuth is not configured on the server. Connect stays disconnected.",
-      );
-    } else if (error) {
-      toast.error(`OAuth did not finish (${error}). Not marked Connected.`);
+    if (error) {
+      toast.error(pluginOAuthErrorMessage(error, plugin));
     }
   }, []);
 
