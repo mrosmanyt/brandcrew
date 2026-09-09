@@ -12,18 +12,20 @@ import {
 
 assert.equal(FOUNDER_EMAIL, "cinemtech@gmail.com");
 assert.equal(FOUNDER_MAILTO, "mailto:cinemtech@gmail.com");
-assert.equal(ANNOUNCEMENT_DISMISS_KEY, "cinem_announce_raise_5m");
+assert.equal(ANNOUNCEMENT_DISMISS_KEY, "cinem_announce_raise_1m");
 assert.doesNotMatch(ANNOUNCEMENT_DISMISS_KEY, /brandcrew_session|session_token/);
 console.log("ok: founder mailto + dismiss key are public marketing constants");
 
 const banner = readFileSync("src/components/marketing/announcement-banner.tsx", "utf8");
 assert.match(banner, /"use client"/);
-assert.match(banner, /raising a \$5M round to build the AI employee desk/);
+assert.match(banner, /raising a \$1M round to build the AI employee desk/);
+assert.doesNotMatch(banner, /\$5M/);
 assert.match(banner, /Talk to the founder/);
 assert.match(banner, /FOUNDER_MAILTO|mailto:cinemtech@gmail\.com/);
 assert.match(banner, /ANNOUNCEMENT_DISMISS_KEY|localStorage/);
 assert.match(banner, /Dismiss announcement/);
 assert.doesNotMatch(banner, /we raised|round is closed|we've raised|has been raised/i);
+assert.doesNotMatch(banner, /80k\+?\s*users|80,000\s*users/i);
 assert.doesNotMatch(banner, /prisma|getCurrentUser|\/api\/billing/);
 console.log("ok: banner copy is seeking (raising), dismissible, founder mailto");
 

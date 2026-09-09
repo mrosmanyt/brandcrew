@@ -72,7 +72,7 @@ export function AnnouncementBanner() {
     >
       <div className="relative mx-auto flex min-h-10 w-full max-w-5xl items-center justify-center px-11 py-2 sm:px-12">
         <p className="text-center text-[13px] leading-5 sm:text-sm">
-          We&apos;re raising a $5M round to build the AI employee desk.{" "}
+          We&apos;re raising a $1M round to build the AI employee desk.{" "}
           <a
             href={FOUNDER_MAILTO}
             className="whitespace-nowrap font-medium underline decoration-background/40 underline-offset-4 transition-colors hover:decoration-background"

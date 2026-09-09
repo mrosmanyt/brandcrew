@@ -22,7 +22,7 @@ export const COOKIE_CONSENT_EVENT = "cinem-cookie-consent";
 export const FOUNDER_EMAIL = "cinemtech@gmail.com";
 export const FOUNDER_MAILTO = `mailto:${FOUNDER_EMAIL}`;
 /** localStorage flag only — never a session JWT or brandcrew_session. */
-export const ANNOUNCEMENT_DISMISS_KEY = "cinem_announce_raise_5m";
+export const ANNOUNCEMENT_DISMISS_KEY = "cinem_announce_raise_1m";
 export const ANNOUNCEMENT_DISMISS_EVENT = "cinem-announce-dismiss";
 
 export const HONEYPOT_FIELD = "company_url";
