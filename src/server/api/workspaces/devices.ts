@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { generateDeviceToken, serializeDevice } from "@/lib/device-auth";
 import { DEVICE_PAIRING_TTL_MS, pairingCode } from "@/lib/device-protocol";

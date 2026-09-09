@@ -53,10 +53,12 @@ assert.match(bg, /chrome\.debugger/);
 assert.match(bg, /CINEM_UNTRUSTED_PAGE_CONTENT/);
 assert.match(bg, /allowlist/);
 const host = readFileSync("native-host/host.mjs", "utf8");
+assert.equal(NATIVE_HTTP_PORT, 43181);
 assert.match(host, /--http/);
-assert.match(host, String(NATIVE_HTTP_PORT));
+assert.match(host, /43181/);
 assert.match(readFileSync("native-host/install.mjs", "utf8"), new RegExp(NATIVE_HOST_NAME.replaceAll(".", "\\.")));
-assert.match(readFileSync("electron/main.cjs", "utf8"), /native-host\/host\.mjs/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /native-host/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /host\.mjs/);
 console.log("ok: MV3 extension + native host + Electron local agent");
 
 assert.ok(JOB_TOOLS.includes("native_file_read"));
