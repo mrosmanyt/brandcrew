@@ -51,7 +51,7 @@ export function AdminTrust({
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Trust & safety"
-      hint="Ban-lite only: search a user or workspace, then force Demo / suspend. There is no separate abuse pipeline yet."
+      hint="Ban-lite only: search a user or workspace, then force Free / suspend. There is no separate abuse pipeline yet."
     >
       <form onSubmit={onSearch} className="flex w-full max-w-lg items-end gap-2">
         <div className="min-w-0 flex-1 space-y-1.5">

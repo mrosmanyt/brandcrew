@@ -1,25 +1,42 @@
 /**
  * Single display→backend model catalog.
  *
- * Desk picker shows `displayName` only. Job runtime always calls the cheap
- * `providerModelId` so Starter ($20) budgets last. Never call Opus.
+ * Desk picker shows `displayName` only. Extra named rows (GPT-4o mini, GPT Sol,
+ * Claude Opus, Gemini Flash, …) are intentional so the menu is not only
+ * flagship labels. Job runtime still calls the cheap `providerModelId` so
+ * Starter ($20) budgets last. Never call Opus.
  *
  * | UI (displayName)   | Catalog id         | Backend class | Real provider id          |
  * |--------------------|--------------------|---------------|---------------------------|
- * | Opus 4.8           | opus-4.8           | Haiku         | ANTHROPIC_DRAFT_MODEL     |
+ * | GPT-4o mini        | gpt-4o-mini        | Terra         | OPENAI_DRAFT_MODEL        |
+ * | GPT Sol            | gpt-sol            | Terra         | OPENAI_DRAFT_MODEL        |
+ * | GPT Astra          | gpt-astra          | Terra         | OPENAI_DRAFT_MODEL        |
+ * | Gemini Flash       | gemini-flash       | Flash         | GEMINI_DRAFT_MODEL        |
+ * | Gemini 3.8 Flash   | gemini-3.8-flash   | Flash         | GEMINI_DRAFT_MODEL        |
+ * | Claude Haiku       | claude-haiku       | Haiku         | ANTHROPIC_DRAFT_MODEL     |
+ * | Claude Sonnet      | claude-sonnet      | Sonnet        | ANTHROPIC_FINAL_MODEL     |
  * | Fable 5.1          | fable-5.1          | Sonnet        | ANTHROPIC_FINAL_MODEL     |
- * | GPT Astra          | gpt-astra          | GPT Terra     | OPENAI_DRAFT_MODEL        |
- * | Gemini 3.8 Flash   | gemini-3.8-flash   | Gemini Flash  | GEMINI_DRAFT_MODEL        |
+ * | Opus 4.8           | opus-4.8           | Haiku         | ANTHROPIC_DRAFT_MODEL     |
+ * | Claude Opus        | claude-opus        | Haiku         | ANTHROPIC_DRAFT_MODEL     |
  *
  * GPT Terra (cheap OpenAI) defaults to `gpt-4o-mini`.
  * Gemini Flash defaults to `gemini-2.5-flash` (maps the “3.1 Flash” class).
  */
 
+export const MODEL_CAPABILITIES = ["Fast & cheap", "Smart", "Smartest"] as const;
+export type ModelCapability = (typeof MODEL_CAPABILITIES)[number];
+
 export const DISPLAY_MODEL_IDS = [
-  "opus-4.8",
-  "fable-5.1",
+  "gpt-4o-mini",
+  "gpt-sol",
   "gpt-astra",
+  "gemini-flash",
   "gemini-3.8-flash",
+  "claude-haiku",
+  "claude-sonnet",
+  "fable-5.1",
+  "opus-4.8",
+  "claude-opus",
 ] as const;
 
 export type DisplayModelId = (typeof DISPLAY_MODEL_IDS)[number];
@@ -31,6 +48,7 @@ export type DisplayModel = {
   displayName: string;
   provider: "anthropic" | "openai" | "gemini";
   backendClass: BackendClass;
+  capability: ModelCapability;
   providerModelEnv: string;
   defaultProviderModelId: string;
   hint: string;
@@ -43,40 +61,104 @@ export const ANTHROPIC_SONNET_MODEL_ID = "claude-sonnet-5";
 
 export const DISPLAY_MODELS: DisplayModel[] = [
   {
-    id: "opus-4.8",
-    displayName: "Opus 4.8",
-    provider: "anthropic",
-    backendClass: "haiku",
-    providerModelEnv: "ANTHROPIC_DRAFT_MODEL",
-    defaultProviderModelId: ANTHROPIC_HAIKU_MODEL_ID,
-    hint: "Fast replies and structured tools",
+    id: "gpt-4o-mini",
+    displayName: "GPT-4o mini",
+    provider: "openai",
+    backendClass: "terra",
+    capability: "Fast & cheap",
+    providerModelEnv: "OPENAI_DRAFT_MODEL",
+    defaultProviderModelId: GPT_TERRA_MODEL_ID,
+    hint: "Fast & cheap · OpenAI",
   },
   {
-    id: "fable-5.1",
-    displayName: "Fable 5.1",
-    provider: "anthropic",
-    backendClass: "sonnet",
-    providerModelEnv: "ANTHROPIC_FINAL_MODEL",
-    defaultProviderModelId: ANTHROPIC_SONNET_MODEL_ID,
-    hint: "Code and complex apps",
+    id: "gpt-sol",
+    displayName: "GPT Sol",
+    provider: "openai",
+    backendClass: "terra",
+    capability: "Fast & cheap",
+    providerModelEnv: "OPENAI_DRAFT_MODEL",
+    defaultProviderModelId: GPT_TERRA_MODEL_ID,
+    hint: "Fast & cheap · OpenAI",
   },
   {
     id: "gpt-astra",
     displayName: "GPT Astra",
     provider: "openai",
     backendClass: "terra",
+    capability: "Smart",
     providerModelEnv: "OPENAI_DRAFT_MODEL",
     defaultProviderModelId: GPT_TERRA_MODEL_ID,
-    hint: "OpenAI drafting",
+    hint: "Smart · OpenAI drafting",
+  },
+  {
+    id: "gemini-flash",
+    displayName: "Gemini Flash",
+    provider: "gemini",
+    backendClass: "flash",
+    capability: "Fast & cheap",
+    providerModelEnv: "GEMINI_DRAFT_MODEL",
+    defaultProviderModelId: GEMINI_FLASH_MODEL_ID,
+    hint: "Fast & cheap · Gemini",
   },
   {
     id: "gemini-3.8-flash",
     displayName: "Gemini 3.8 Flash",
     provider: "gemini",
     backendClass: "flash",
+    capability: "Fast & cheap",
     providerModelEnv: "GEMINI_DRAFT_MODEL",
     defaultProviderModelId: GEMINI_FLASH_MODEL_ID,
-    hint: "Research, outreach, and summaries",
+    hint: "Fast & cheap · research and summaries",
+  },
+  {
+    id: "claude-haiku",
+    displayName: "Claude Haiku",
+    provider: "anthropic",
+    backendClass: "haiku",
+    capability: "Fast & cheap",
+    providerModelEnv: "ANTHROPIC_DRAFT_MODEL",
+    defaultProviderModelId: ANTHROPIC_HAIKU_MODEL_ID,
+    hint: "Fast & cheap · Claude",
+  },
+  {
+    id: "claude-sonnet",
+    displayName: "Claude Sonnet",
+    provider: "anthropic",
+    backendClass: "sonnet",
+    capability: "Smart",
+    providerModelEnv: "ANTHROPIC_FINAL_MODEL",
+    defaultProviderModelId: ANTHROPIC_SONNET_MODEL_ID,
+    hint: "Smart · Claude",
+  },
+  {
+    id: "fable-5.1",
+    displayName: "Fable 5.1",
+    provider: "anthropic",
+    backendClass: "sonnet",
+    capability: "Smart",
+    providerModelEnv: "ANTHROPIC_FINAL_MODEL",
+    defaultProviderModelId: ANTHROPIC_SONNET_MODEL_ID,
+    hint: "Smart · code and complex apps",
+  },
+  {
+    id: "opus-4.8",
+    displayName: "Opus 4.8",
+    provider: "anthropic",
+    backendClass: "haiku",
+    capability: "Smartest",
+    providerModelEnv: "ANTHROPIC_DRAFT_MODEL",
+    defaultProviderModelId: ANTHROPIC_HAIKU_MODEL_ID,
+    hint: "Smartest · fast replies and tools",
+  },
+  {
+    id: "claude-opus",
+    displayName: "Claude Opus",
+    provider: "anthropic",
+    backendClass: "haiku",
+    capability: "Smartest",
+    providerModelEnv: "ANTHROPIC_DRAFT_MODEL",
+    defaultProviderModelId: ANTHROPIC_HAIKU_MODEL_ID,
+    hint: "Smartest · Claude",
   },
 ];
 
@@ -87,6 +169,10 @@ export function isDisplayModelId(value: string | null | undefined): value is Dis
 export function displayModelById(id: string | null | undefined): DisplayModel | undefined {
   if (!id) return undefined;
   return DISPLAY_MODELS.find((row) => row.id === id);
+}
+
+export function modelsByCapability(capability: ModelCapability) {
+  return DISPLAY_MODELS.filter((row) => row.capability === capability);
 }
 
 /** Never send Opus, even if an env override names it. */
@@ -133,9 +219,10 @@ export function geminiFlashModelId() {
 }
 
 export function providerModelIdFor(id: DisplayModelId): string {
-  if (id === "opus-4.8") return haikuModelId();
-  if (id === "fable-5.1") return sonnetModelId();
-  if (id === "gpt-astra") return gptTerraModelId();
+  const row = displayModelById(id);
+  if (row?.backendClass === "haiku") return haikuModelId();
+  if (row?.backendClass === "sonnet") return sonnetModelId();
+  if (row?.backendClass === "terra") return gptTerraModelId();
   return geminiFlashModelId();
 }
 
@@ -156,7 +243,7 @@ export function catalogByProviderModelId(model?: string | null): DisplayModel | 
 
 /** Customer-facing label. Never a raw provider id. */
 export function publicModelLabel(model?: string | null): string {
-  if (!model || model === "demo") return "Offline demo";
+  if (!model || model === "demo") return "Offline templates";
   if (model === "browse" || model === "tools") return "Tools";
   return catalogByProviderModelId(model)?.displayName ?? "CINEM model";
 }
@@ -176,6 +263,7 @@ export const DISPLAY_TO_BACKEND_MAP = DISPLAY_MODELS.map((row) => ({
   displayName: row.displayName,
   catalogId: row.id,
   backendClass: row.backendClass,
+  capability: row.capability,
   provider: row.provider,
   defaultProviderModelId: row.defaultProviderModelId,
 }));

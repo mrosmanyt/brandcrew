@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { checkoutPlanFromQuery, workspaceBillingHref } from "@/lib/billing-ui";
+import { prisma } from "@/lib/db";
 import { createDemoWorkspace, listUserWorkspaces } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +17,21 @@ export default async function DeskIndexPage({
   if (!workspaces.length) {
     const created = await createDemoWorkspace(user.id, `${user.name}'s desk`);
     workspaces = [created];
+    redirect(`/onboarding?workspace=${encodeURIComponent(created.id)}`);
   }
   const query = await searchParams;
   const plan = checkoutPlanFromQuery(query.checkout || query.plan);
   if (plan) {
     redirect(workspaceBillingHref(workspaces[0].id, plan));
+  }
+  const membership = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: { workspaceId: workspaces[0].id, userId: user.id },
+    },
+    select: { setupWizardDone: true },
+  });
+  if (membership && !membership.setupWizardDone) {
+    redirect(`/onboarding?workspace=${encodeURIComponent(workspaces[0].id)}`);
   }
   redirect(`/desk/${workspaces[0].id}`);
 }

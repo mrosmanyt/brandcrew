@@ -35,7 +35,7 @@ model Workspace {
   modelRouting       String            @default("auto")
   /// Last Whop membership that granted the current paid plan. Used to match deactivates.
   whopMembershipId   String?
-  /// Soft suspend from Admin HQ: workspace is forced to Demo and new jobs are blocked.
+  /// Soft suspend from Admin HQ: workspace is forced to Free and new jobs are blocked.
   suspended          Boolean           @default(false)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
@@ -110,6 +110,9 @@ model WorkspaceMember {
   userId               String
   role                 String    @default("owner")
   onboardingDismissed  Boolean   @default(false)
+  /// First-run setup wizard. Default true so existing desks are not forced through it.
+  /// New workspaces from createDemoWorkspace set this false.
+  setupWizardDone      Boolean   @default(true)
   workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 

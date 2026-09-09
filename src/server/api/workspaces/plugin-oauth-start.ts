@@ -8,28 +8,37 @@ import {
   oauthReady,
   signOAuthState,
 } from "@/lib/plugins";
+import { pluginOAuthReturnPath } from "@/lib/setup-wizard";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ workspaceId: string; pluginId: string }> },
 ) {
   try {
     const { workspaceId, pluginId } = await context.params;
     const { user } = await requireWorkspaceMember(workspaceId);
     const plugin = getMarketplacePlugin(pluginId);
-    const marketplace = `${appOrigin()}/desk/${workspaceId}/marketplace?tab=plugins`;
+    const next = new URL(request.url).searchParams.get("next") || "";
+    const fail = (error: string) =>
+      NextResponse.redirect(
+        `${appOrigin()}${pluginOAuthReturnPath({
+          workspaceId,
+          next,
+          error,
+          plugin: plugin?.id || pluginId,
+        })}`,
+      );
     if (!plugin || plugin.auth !== "oauth") {
-      return NextResponse.redirect(`${marketplace}&error=unknown_plugin`);
+      return fail("unknown_plugin");
     }
     if (!oauthReady(plugin)) {
-      return NextResponse.redirect(
-        `${marketplace}&error=oauth_not_configured&plugin=${encodeURIComponent(plugin.id)}`,
-      );
+      return fail("oauth_not_configured");
     }
     const state = await signOAuthState({
       workspaceId,
       pluginId: plugin.id,
       userId: user.id,
+      next,
     });
     return NextResponse.redirect(oauthAuthorizeUrl(plugin, state));
   } catch (error) {

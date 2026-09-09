@@ -11,6 +11,7 @@ import type { AgentDTO } from "@/lib/job-types";
 type UsagePayload = {
   limits: {
     plan: string;
+    planLabel?: string;
     tokenUsed: number;
     tokenBudget: number;
     tokensLeft: number;
@@ -103,7 +104,7 @@ export function UsageDashboard({
         />
         <Stat
           label="Plan"
-          value={limits?.plan ?? "…"}
+          value={limits?.planLabel ?? limits?.plan ?? "…"}
           hint="Starter $20 · Pro $79 · Ultra $200"
         />
       </div>

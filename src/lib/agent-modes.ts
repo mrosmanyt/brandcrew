@@ -6,7 +6,7 @@ import {
   type LlmRoutingPreference,
   type LlmStatus,
 } from "@/lib/llm-routing";
-import { DISPLAY_MODELS } from "@/lib/model-catalog";
+import { DISPLAY_MODELS, MODEL_CAPABILITIES, type ModelCapability } from "@/lib/model-catalog";
 
 export const AGENT_MODE_PLANS: PlanId[] = ["demo", "starter", "pro", "ultra"];
 
@@ -16,6 +16,7 @@ export type ModelRoutingOption = {
   id: LlmRoutingPreference;
   label: string;
   hint: string;
+  capability?: ModelCapability;
 };
 
 export function planModeName(plan?: string | null) {
@@ -84,6 +85,20 @@ export const MODEL_ROUTING_OPTIONS: ModelRoutingOption[] = [
     id: row.id as LlmRoutingPreference,
     label: row.displayName,
     hint: row.hint,
+    capability: row.capability,
+  })),
+];
+
+export const MODEL_ROUTING_GROUPS = [
+  {
+    id: "auto" as const,
+    label: null,
+    options: MODEL_ROUTING_OPTIONS.filter((row) => row.id === "auto"),
+  },
+  ...MODEL_CAPABILITIES.map((capability) => ({
+    id: capability,
+    label: capability,
+    options: MODEL_ROUTING_OPTIONS.filter((row) => row.capability === capability),
   })),
 ];
 

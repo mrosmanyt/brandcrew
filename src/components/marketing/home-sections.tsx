@@ -87,7 +87,7 @@ const FEATURES = [
   },
   {
     title: "Token budget",
-    body: "Demo, Starter ($20), Pro ($79), and Ultra ($200) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
+    body: "Free, Starter ($20), Pro ($79), and Ultra ($200) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
   },
   {
     title: "Electron desktop",
@@ -341,7 +341,7 @@ export function PricingSection() {
       bordered
       kicker="Pricing"
       title="Starter, Pro, and Ultra"
-      lead="Signup starts on Demo. Get Starter, Pro, or Ultra to sign in and checkout — Whop when configured — so the workspace unlocks from the payment webhook."
+      lead="Signup starts on Free. Get Starter, Pro, or Ultra to sign in and checkout — Whop when configured — so the workspace unlocks from the payment webhook."
     >
       <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
@@ -468,7 +468,7 @@ const FAQS = [
   },
   {
     q: "How does pricing work?",
-    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Demo. Get Starter / Get Pro / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
+    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Starter / Get Pro / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
   },
   {
     q: "Can I call this from my own app?",

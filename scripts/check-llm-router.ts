@@ -122,7 +122,10 @@ try {
   assert.equal(pickRoute("draft", "general", "gpt-astra")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "opus-4.8")?.model, "claude-haiku-4-5");
   assert.equal(pickRoute("draft", "general", "fable-5.1")?.model, "claude-sonnet-5");
-  assert.equal(pickRoute("draft", "general", "gemini-3.8-flash")?.model, "gemini-2.5-flash");
+  assert.equal(pickRoute("draft", "general", "gpt-4o-mini")?.model, "gpt-4o-mini");
+  assert.equal(pickRoute("draft", "general", "gpt-sol")?.model, "gpt-4o-mini");
+  assert.equal(pickRoute("draft", "general", "claude-opus")?.model, "claude-haiku-4-5");
+  assert.equal(pickRoute("draft", "general", "gemini-flash")?.model, "gemini-2.5-flash");
   assert.equal(
     runWithRoutingPreference("anthropic", () => pickRoute("draft")?.model),
     "claude-haiku-4-5",

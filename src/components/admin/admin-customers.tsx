@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { AdminCustomer360, AdminCustomersPayload } from "@/lib/admin";
+import { planModeName } from "@/lib/agent-modes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,7 +144,7 @@ function CustomerProfile({
             disabled={busy}
             onClick={() => onPending({ kind: "revoke-user", email: profile.user.email })}
           >
-            Revoke to Demo
+            Revoke to Free
           </Button>
           <Button
             size="sm"
@@ -163,7 +164,7 @@ function CustomerProfile({
               <h3 className="text-sm font-medium">{ws.name}</h3>
               <p className="mt-1 font-mono text-[11px] text-muted-foreground">{ws.id}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Plan {ws.plan}
+                Plan {planModeName(ws.plan)}
                 {ws.suspended ? " · suspended" : ""} · tokens {ws.tokenUsed.toLocaleString()} /{" "}
                 {ws.tokenBudget.toLocaleString()}
                 {ws.whopMembershipId ? ` · Whop ${ws.whopMembershipId}` : ""}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DeskThemeToggle } from "@/components/desk/theme-toggle";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
+import { planModeName } from "@/lib/agent-modes";
 import { creditsFromTokens, formatCreditsLine } from "@/lib/credits";
 
 export function DeskChromeHeader({
@@ -26,7 +27,7 @@ export function DeskChromeHeader({
         href={`/desk/${workspaceId}/usage`}
         className="text-[11px] text-muted-foreground hover:text-foreground"
       >
-        {formatCreditsLine(credits)} · {jobsLeft} jobs/hr cap · {plan}
+        {formatCreditsLine(credits)} · {jobsLeft} jobs/hr cap · {planModeName(plan)}
       </Link>
       <NotificationBell workspaceId={workspaceId} initialItems={needsYou} />
       <DeskThemeToggle />

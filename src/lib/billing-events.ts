@@ -85,8 +85,9 @@ export function resolvePaidPlanFromWhop(input: {
 }
 
 /**
- * Cancel / deactivate → Demo when this membership is the one that granted
- * the current paid plan. A stale Starter cancel after an Ultra upgrade is ignored.
+ * Cancel / deactivate → Free (stored plan id `demo`) when this membership
+ * is the one that granted the current paid plan. A stale Starter cancel after
+ * an Ultra upgrade is ignored.
  */
 export function shouldDowngradeToDemo(input: {
   currentPlan: string;

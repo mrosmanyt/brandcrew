@@ -1,43 +1,52 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BrandMark } from "@/components/brand/logo";
-import { BrandKitForm } from "@/components/desk/brand-kit-form";
-import { Button } from "@/components/ui/button";
+import { OnboardingWizard } from "@/components/desk/onboarding-wizard";
 import { getCurrentUser } from "@/lib/auth";
 import { parseBrandKit } from "@/lib/brand-kit";
+import { getLlmStatus } from "@/lib/llm";
+import { normalizeModelRouting } from "@/lib/llm-routing";
+import { listPluginConnections } from "@/lib/plugins";
+import { hydrateOnboardingPlugins } from "@/lib/setup-wizard";
 import { listUserWorkspaces } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    workspace?: string;
+    step?: string;
+    connected?: string;
+    error?: string;
+    plugin?: string;
+  }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const query = await searchParams;
   const workspaces = await listUserWorkspaces(user.id);
-  const workspace = workspaces[0];
+  const requested = query.workspace?.trim();
+  const workspace =
+    (requested ? workspaces.find((row) => row.id === requested) : null) ?? workspaces[0];
   if (!workspace) redirect("/desk");
 
+  const connections = await listPluginConnections(workspace.id);
+
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-12">
-      <BrandMark />
-      <p className="page-kicker mt-10">Onboarding</p>
-      <h1 className="font-heading mt-2 text-3xl tracking-tight">Your demo desk is ready.</h1>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-        Hi {user.name.split(" ")[0]}. We loaded <strong>Northline Studio</strong> —
-        a hospitality brand system — so your agents have company facts to write
-        from. Edit it now or skip to Mission Control and create an agent.
-      </p>
-      <div className="mt-8 rounded-xl border border-border bg-card p-6">
-        <BrandKitForm
-          workspaceId={workspace.id}
-          workspaceName={workspace.name}
-          initial={parseBrandKit(workspace.brandKit)}
-        />
-      </div>
-      <div className="mt-6">
-        <Button variant="outline" nativeButton={false} render={<Link href={`/desk/${workspace.id}`} />}>
-          Skip to Mission Control
-        </Button>
-      </div>
-    </div>
+    <OnboardingWizard
+      workspaceId={workspace.id}
+      workspaceName={workspace.name}
+      initialKit={parseBrandKit(workspace.brandKit)}
+      initialStep={query.step}
+      initialModelRouting={normalizeModelRouting(
+        "modelRouting" in workspace ? String(workspace.modelRouting ?? "") : "",
+      )}
+      initialPlugins={hydrateOnboardingPlugins(connections)}
+      oauthConnected={query.connected ?? null}
+      oauthError={query.error ?? null}
+      oauthPlugin={query.plugin ?? null}
+      llm={getLlmStatus()}
+      userName={user.name}
+    />
   );
 }

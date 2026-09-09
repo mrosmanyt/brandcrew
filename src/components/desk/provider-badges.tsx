@@ -3,7 +3,7 @@ import type { LlmStatus } from "@/lib/llm";
 
 export function ProviderBadges({ llm }: { llm: LlmStatus }) {
   if (!llm.configured) {
-    return <Badge variant="secondary">Offline demo</Badge>;
+    return <Badge variant="secondary">Offline templates</Badge>;
   }
   return (
     <span className="flex flex-wrap items-center gap-1.5">
@@ -20,5 +20,5 @@ export function providerLabel(provider?: string) {
   if (provider === "anthropic") return "Anthropic";
   if (provider === "gemini") return "Gemini";
   if (provider === "xai") return "xAI";
-  return "Demo";
+  return "Offline";
 }
