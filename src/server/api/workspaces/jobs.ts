@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
 import { runDueSchedules } from "@/lib/schedules";
+import { runDueEventTriggers } from "@/lib/event-triggers";
 import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { isTeamLaunchIntent } from "@/lib/team-launch";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
@@ -27,6 +28,7 @@ export async function GET(
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     await runDueSchedules(workspaceId);
+    await runDueEventTriggers(workspaceId);
     await kickQueuedJobs(workspaceId);
 
     const [jobs, skills] = await Promise.all([

@@ -57,6 +57,10 @@ import * as workspaceDevice from "./workspaces/device";
 import * as workspaceApprovals from "./workspaces/approvals";
 import * as workspaceAudit from "./workspaces/audit";
 import * as workspacePhase2 from "./workspaces/phase2";
+import * as workspaceRoutines from "./workspaces/routines";
+import * as workspaceJobReplay from "./workspaces/job-replay";
+import * as workspaceTriggers from "./workspaces/triggers";
+import * as workspaceTriggerFire from "./workspaces/trigger-fire";
 import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
@@ -159,6 +163,18 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(workspacePhase2),
   },
   {
+    pattern: ["api", "workspaces", ":workspaceId", "routines"],
+    handlers: asHandlers(workspaceRoutines),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "triggers", "fire"],
+    handlers: asHandlers(workspaceTriggerFire),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "triggers"],
+    handlers: asHandlers(workspaceTriggers),
+  },
+  {
     pattern: ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],
     handlers: asHandlers(workspaceSchedule),
   },
@@ -237,6 +253,10 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "reply"],
     handlers: asHandlers(workspaceJobReply),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "replay"],
+    handlers: asHandlers(workspaceJobReplay),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],

@@ -92,6 +92,14 @@ export type JobContext = {
   screenshot?: string;
   browserMode?: string;
   pageCount?: number;
+  cost?: {
+    llmCalls: number;
+    llmSkipped: number;
+    cacheHits: number;
+    cacheMisses: number;
+    perception?: "dom" | "vision_fallback";
+  };
+  perception?: "dom" | "vision_fallback";
   userAnswer?: string;
   clarification?: { question: string; answer?: string; choices?: string[] };
   priorArtifact?: { id: string; title: string; type: string; content: string };
@@ -130,6 +138,7 @@ export type JobDTO = {
   plan: JobStep[];
   playbookKey: string | null;
   skillId: string | null;
+  routineId?: string | null;
   askPrompt: string;
   askKind: string;
   userAnswer: string;
@@ -142,6 +151,13 @@ export type JobDTO = {
   updatedAt: string;
   events: JobEventDTO[];
   artifacts: ArtifactDTO[];
+  cost?: {
+    llmCalls: number;
+    llmSkipped: number;
+    cacheHits: number;
+    cacheMisses: number;
+    perception?: "dom" | "vision_fallback";
+  };
 };
 
 export type SkillDTO = {

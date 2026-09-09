@@ -91,6 +91,7 @@ export function serializeJob(job: {
   plan: string;
   playbookKey: string | null;
   skillId: string | null;
+  routineId?: string | null;
   askPrompt: string;
   askKind?: string | null;
   userAnswer?: string | null;
@@ -125,6 +126,7 @@ export function serializeJob(job: {
     plan,
     playbookKey: job.playbookKey,
     skillId: job.skillId,
+    routineId: job.routineId ?? null,
     askPrompt: job.askPrompt,
     askKind,
     userAnswer: job.userAnswer || context.userAnswer || "",
@@ -146,6 +148,7 @@ export function serializeJob(job: {
       }),
     ),
     artifacts: (job.artifacts ?? []).map(serializeArtifact),
+    cost: context.cost,
   };
 }
 

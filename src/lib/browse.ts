@@ -48,6 +48,10 @@ export function resolveChromePath(): string | undefined {
  * Playwright is preferred for local `npm run dev` when Chrome is installed.
  * Vercel / serverless: default off (no Chrome). Set PLAYWRIGHT_ENABLED=false
  * explicitly in production. When off or Chrome fails, tools fall back to fetch.
+ *
+ * DOM-FIRST: snapshotPlaywrightPage uses ARIA snapshot + innerText + HTML text.
+ * It does not screenshot for the model. browser_screenshot is a separate human-
+ * facing capture and is never the default perception path.
  */
 export function playwrightEnabled(): boolean {
   const flag = (process.env.PLAYWRIGHT_ENABLED || "").trim().toLowerCase();

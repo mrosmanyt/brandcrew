@@ -17,7 +17,11 @@ const schema = z.object({
   title: z.string().min(1).max(120).optional(),
   message: z.string().min(1).max(4000),
   playbookKey: z.string().max(80).optional(),
+  skillId: z.string().max(80).optional(),
   cadence: z.string().min(1),
+  deliverSlack: z.boolean().optional(),
+  deliverEmail: z.boolean().optional(),
+  slackChannel: z.string().max(80).optional(),
 });
 
 export async function GET(
@@ -67,6 +71,10 @@ export async function POST(
         title: body.title?.trim() || body.message.slice(0, 80),
         message: body.message.trim(),
         playbookKey: body.playbookKey?.trim() || null,
+        skillId: body.skillId?.trim() || null,
+        deliverSlack: Boolean(body.deliverSlack),
+        deliverEmail: Boolean(body.deliverEmail),
+        slackChannel: body.slackChannel?.trim() || "",
         cadence: body.cadence,
         nextRunAt: computeNextRunAt(body.cadence),
       },

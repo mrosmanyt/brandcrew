@@ -368,7 +368,7 @@ export function PricingSection() {
         ))}
       </div>
       <p className="mt-6 text-sm leading-6 text-muted-foreground">
-        Demo is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
+        Free is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
         to create New Agent and run a first job. Checkout uses Whop when
         configured, then Stripe; otherwise the desk can apply a plan in mock
         billing. Get Starter, Pro, or Ultra signs you in first, then opens desk
@@ -377,7 +377,7 @@ export function PricingSection() {
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <PricingDemoCta />
         <p className="text-sm text-muted-foreground">
-          Demo: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
+          Free: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
         </p>
       </div>
     </Section>

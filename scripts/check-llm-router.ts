@@ -111,6 +111,8 @@ try {
   assert.equal(pickRoute("draft", "coding")?.model, "claude-sonnet-5");
   assert.equal(pickRoute("draft", "json")?.provider, "anthropic");
   assert.equal(pickRoute("draft", "json")?.model, "claude-haiku-4-5");
+  assert.equal(pickRoute("draft", "classify")?.provider, "gemini");
+  assert.equal(pickRoute("draft", "classify")?.model, "gemini-2.5-flash");
   assert.equal(pickRoute("draft", "research")?.provider, "gemini");
   assert.equal(pickRoute("draft", "outreach")?.provider, "gemini");
   assert.equal(pickRoute("draft", "whatsapp")?.provider, "gemini");

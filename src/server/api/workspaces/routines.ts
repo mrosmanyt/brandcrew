@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
-import { saveSkillFromJob } from "@/lib/job-runtime";
-import { serializeSkill } from "@/lib/job-serialize";
+import { listRoutines, saveRoutineFromJob } from "@/lib/routines";
+import { isScheduleCadence } from "@/lib/schedule-cadence";
 
 const postSchema = z.object({
-  name: z.string().min(1).max(80),
   jobId: z.string().min(1),
+  name: z.string().min(1).max(80).optional(),
   cadence: z.string().max(40).optional(),
   deliverSlack: z.boolean().optional(),
   deliverEmail: z.boolean().optional(),
@@ -23,11 +22,8 @@ export async function GET(
   try {
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
-    const skills = await prisma.skill.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: "desc" },
-    });
-    return jsonOk({ skills: skills.map(serializeSkill) });
+    const routines = await listRoutines(workspaceId);
+    return jsonOk({ routines });
   } catch (error) {
     return jsonError(error);
   }
@@ -41,7 +37,10 @@ export async function POST(
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
-    const skill = await saveSkillFromJob({
+    if (body.cadence && !isScheduleCadence(body.cadence)) {
+      return NextResponse.json({ error: "Choose a supported cadence." }, { status: 400 });
+    }
+    const saved = await saveRoutineFromJob({
       workspaceId,
       jobId: body.jobId,
       name: body.name,
@@ -51,10 +50,10 @@ export async function POST(
       slackChannel: body.slackChannel,
       emailTo: body.emailTo,
     });
-    return jsonOk({ skill: serializeSkill(skill) }, 201);
+    return jsonOk(saved, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Name a skill and pick a job." }, { status: 400 });
+      return NextResponse.json({ error: "Pick a finished job to save as a routine." }, { status: 400 });
     }
     return jsonError(error);
   }

@@ -94,13 +94,22 @@ import {
   lockAllowlist,
   parseAllowlist,
 } from "@/lib/domain-allowlist";
-import { PAGE_CONTENT_SYSTEM_RULE, wrapUntrustedPageText } from "@/lib/page-content";
+import { PAGE_CONTENT_SYSTEM_RULE, annotateUntrustedPageText } from "@/lib/page-content";
 import { appendResearchMeta } from "@/lib/sources";
 import {
   isWriteExternalTool,
   priorAskUserCompleted,
   writeGatePrompt,
 } from "@/lib/write-gate";
+import {
+  applyWorkspaceCacheToSteps,
+  rememberSuccessfulInteract,
+  stepNeedsLlm,
+} from "@/lib/action-cache";
+import { DOM_FIRST_RULE } from "@/lib/dom-first";
+import { persistSessionReplay } from "@/lib/session-replay-store";
+import { bumpCost, emptyCostStats } from "@/lib/session-replay";
+import { deliverRoutineOutput } from "@/lib/routines";
 import {
   auditDomainAbort,
   devicePageToBrowsed,
@@ -174,6 +183,7 @@ export async function createJobFromChat(input: {
   message: string;
   playbookKey?: string;
   skillId?: string;
+  routineId?: string;
   action?: GenerateAction;
 }): Promise<CreateJobResult> {
   await assertWorkspaceBudget(input.workspaceId);
@@ -217,6 +227,13 @@ export async function createJobFromChat(input: {
     playbook = resetPlaybook(playbook);
   }
 
+  const cached = await applyWorkspaceCacheToSteps({
+    workspaceId: input.workspaceId,
+    url: extractUrls(input.message)[0] || kit.website || "",
+    steps: playbook.steps,
+  });
+  playbook = { ...playbook, steps: cached.steps };
+
   const conversationKey = conversationKeyForAgent(agent.id);
   const conversation = await prisma.conversation.upsert({
     where: {
@@ -243,6 +260,11 @@ export async function createJobFromChat(input: {
       kit.website,
       ...defaultCompetitorUrls(input.message, kit.website),
     ]),
+    cost: {
+      ...emptyCostStats(),
+      cacheHits: cached.cacheHits,
+    },
+    perception: "dom",
   };
 
   const job = await prisma.job.create({
@@ -257,6 +279,7 @@ export async function createJobFromChat(input: {
       context: JSON.stringify(context),
       playbookKey: playbook.key,
       skillId: input.skillId || null,
+      routineId: input.routineId || null,
       askPrompt: "",
       allowedDomains: JSON.stringify(context.allowedDomains || []),
       runnerKind: "auto",
@@ -402,15 +425,18 @@ export async function tickJob(jobId: string): Promise<boolean> {
     const next = steps.find((step) => step.status === "pending");
     if (!next) {
       await closeBrowserSession(jobId);
+      const context = parseJobContext(job.context);
       await prisma.job.update({
         where: { id: jobId },
-        data: { status: "done", runnerLock: "" },
+        data: { status: "done", runnerLock: "", context: JSON.stringify(context) },
       });
       await appendEvent({
         jobId,
         type: "status",
         message: "Job finished.",
+        data: { cost: context.cost },
       });
+      await persistSessionReplay(jobId);
       return false;
     }
 
@@ -673,6 +699,17 @@ async function executeTool(input: {
       askPrompt: writeGatePrompt(step.tool, step.label),
       askKind: "approve",
     };
+  }
+
+  const interact = step.tool === "browser_click" || step.tool === "browser_type";
+  if (!interact) {
+    const decision = stepNeedsLlm(step.tool, step.args, Boolean(step.args.cacheHit));
+    context.cost = bumpCost(context.cost, {
+      llmCalls: decision.llm ? 1 : 0,
+      llmSkipped: decision.llm ? 0 : 1,
+      cacheHits: step.args.cacheHit ? 1 : 0,
+      perception: "dom",
+    });
   }
 
   if (step.tool === "read_brand_kit") {
@@ -959,6 +996,15 @@ async function executeTool(input: {
       url: context.currentPage?.url || context.userUrl || "",
       tool: step.tool,
       args: step.args,
+      digestText: context.snapshot || context.currentPage?.text || context.extracted,
+      title: context.currentPage?.title,
+    });
+    context.cost = bumpCost(context.cost, {
+      llmCalls: args.llmLocator ? 1 : 0,
+      llmSkipped: args.llmLocator ? 0 : 1,
+      cacheHits: args.cacheHit ? 1 : 0,
+      cacheMisses: args.llmLocator ? 1 : 0,
+      perception: "dom",
     });
     await appendEvent({
       jobId: input.jobId,
@@ -981,6 +1027,15 @@ async function executeTool(input: {
         if (page.url) assertHostAllowed(page.url, allowedDomains);
         rememberPage(context, page, { count: false });
       }
+      if (device.ok) {
+        await rememberSuccessfulInteract({
+          workspaceId: input.workspaceId,
+          url: device.page?.url || context.currentPage?.url || context.userUrl || "",
+          tool: step.tool,
+          args,
+          playbookKey: undefined,
+        });
+      }
       return {
         summary: device.ok
           ? `${step.tool} on your Chrome (CDP)`
@@ -997,6 +1052,14 @@ async function executeTool(input: {
     if (live.page) {
       const page = toBrowsedPage(live.page);
       rememberPage(context, page, { count: false });
+    }
+    if (live.ok) {
+      await rememberSuccessfulInteract({
+        workspaceId: input.workspaceId,
+        url: live.page?.url || context.currentPage?.url || context.userUrl || "",
+        tool: step.tool,
+        args,
+      });
     }
     return {
       summary: live.ok
@@ -1742,23 +1805,26 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
 
 function pageContextBlock(context?: JobContext): string {
   if (!context) return "Pages: (none)";
+  // DOM-first: never attach context.screenshot. Screenshots are human review /
+  // session replay only. The model sees wrapped page text (data, not instructions).
+  void context.screenshot;
   const pages = context.pages?.length
     ? context.pages
         .map((page) =>
-          wrapUntrustedPageText(
+          annotateUntrustedPageText(
             `- ${page.url} [${page.engine || "fetch"}${page.ok ? "" : ", partial"}]\n${(page.excerpt || page.text).slice(0, 800)}`,
             page.url,
           ),
         )
         .join("\n\n")
     : context.fetched
-      ? wrapUntrustedPageText(`${context.fetched.url}\n${context.fetched.text.slice(0, 1200)}`, context.fetched.url)
+      ? annotateUntrustedPageText(`${context.fetched.url}\n${context.fetched.text.slice(0, 1200)}`, context.fetched.url)
       : "(none)";
   const snap = context.snapshot
-    ? `\n\nSnapshot:\n${wrapUntrustedPageText(context.snapshot.slice(0, 2000), context.currentPage?.url)}`
+    ? `\n\nSnapshot:\n${annotateUntrustedPageText(context.snapshot.slice(0, 2000), context.currentPage?.url)}`
     : "";
   const extracted = context.extracted
-    ? `\n\nExtracted:\n${wrapUntrustedPageText(context.extracted.slice(0, 4000), context.currentPage?.url)}`
+    ? `\n\nExtracted:\n${annotateUntrustedPageText(context.extracted.slice(0, 4000), context.currentPage?.url)}`
     : "";
   const answer = context.userAnswer ? `\n\nUser answered: ${context.userAnswer}` : "";
   const search = context.search?.text
@@ -1767,7 +1833,7 @@ function pageContextBlock(context?: JobContext): string {
   const allow = context.allowedDomains?.length
     ? `\n\nDomain allowlist: ${context.allowedDomains.join(", ")}`
     : "";
-  return `${PAGE_CONTENT_SYSTEM_RULE}\n\nPages:\n${pages}${snap}${extracted}${answer}${search}${allow}`;
+  return `${PAGE_CONTENT_SYSTEM_RULE}\n${DOM_FIRST_RULE}\n\nPages:\n${pages}${snap}${extracted}${answer}${search}${allow}`;
 }
 
 function pageAwarePrompt(prompt: string, context: JobContext): string {
@@ -2360,6 +2426,12 @@ export async function completeJobIfApproved(jobId: string) {
     type: "status",
     message: "All artifacts approved. Job complete. Ops has schedule cards.",
   });
+  await persistSessionReplay(jobId);
+  try {
+    await deliverRoutineOutput({ workspaceId: job.workspaceId, jobId });
+  } catch {
+    // delivery is best-effort; the job is already approved
+  }
   return loadJob(jobId);
 }
 
@@ -2453,7 +2525,26 @@ export async function saveSkillFromJob(input: {
   workspaceId: string;
   jobId: string;
   name: string;
+  cadence?: string;
+  deliverSlack?: boolean;
+  deliverEmail?: boolean;
+  slackChannel?: string;
+  emailTo?: string;
 }) {
+  if (input.cadence) {
+    const { saveRoutineFromJob } = await import("@/lib/routines");
+    const saved = await saveRoutineFromJob({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      name: input.name,
+      cadence: input.cadence,
+      deliverSlack: input.deliverSlack,
+      deliverEmail: input.deliverEmail,
+      slackChannel: input.slackChannel,
+      emailTo: input.emailTo,
+    });
+    return prisma.skill.findFirstOrThrow({ where: { id: saved.skillId } });
+  }
   const job = await prisma.job.findFirst({
     where: { id: input.jobId, workspaceId: input.workspaceId },
   });

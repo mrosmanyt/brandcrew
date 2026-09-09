@@ -5,28 +5,32 @@ import { AuditTrail } from "@/components/desk/audit-trail";
 import { OnDeviceSetup } from "@/components/desk/on-device-setup";
 import { useEffect, useState } from "react";
 
+type Phase2Payload = {
+  title?: string;
+  actionCacheCount?: number;
+  replayCount?: number;
+  routines?: { id: string; title: string; cadenceLabel: string; enabled: boolean }[];
+  items?: Record<string, { note?: string }>;
+};
+
 export function OnDevicePage({ workspaceId }: { workspaceId: string }) {
-  const [phase2, setPhase2] = useState<string>("");
+  const [phase2, setPhase2] = useState<Phase2Payload | null>(null);
 
   useEffect(() => {
     void (async () => {
       const res = await fetch(`/api/workspaces/${workspaceId}/phase2`);
       if (!res.ok) return;
-      const data = await res.json();
-      setPhase2(
-        [
-          data.items?.scheduledRoutines?.note,
-          data.items?.eventTriggers?.note,
-          data.items?.saveAsSkill?.note,
-          data.items?.actionCache?.note,
-          data.items?.sessionReplay?.note,
-          data.items?.promptInjectionGuards?.note,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      );
+      setPhase2(await res.json());
     })();
   }, [workspaceId]);
+
+  const notes = [
+    phase2?.items?.scheduledRoutines?.note,
+    phase2?.items?.actionCache?.note,
+    phase2?.items?.eventTriggers?.note,
+    phase2?.items?.sessionReplay?.note,
+    phase2?.items?.domFirst?.note,
+  ].filter(Boolean);
 
   return (
     <div className="desk-page mx-auto max-w-3xl space-y-10">
@@ -58,11 +62,25 @@ export function OnDevicePage({ workspaceId }: { workspaceId: string }) {
         </div>
       </section>
       <section>
-        <h2 className="text-sm font-medium">Phase 2 scaffolding</h2>
+        <h2 className="text-sm font-medium">Cost controls</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          {phase2 ||
-            "Scheduled jobs already exist. Slack/email deliver, event triggers, and session replay are stubs. Save-as-skill and prompt-injection guards are live."}
+          {notes.join(" ") ||
+            "Routines re-run saved skills on a cadence with action caching. Email/Slack triggers start jobs cheaply. Session replay stores the run. Writes still need approval."}
         </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Cached selectors: {phase2?.actionCacheCount ?? 0}. Packed replays: {phase2?.replayCount ?? 0}.
+          Routines: {phase2?.routines?.length ?? 0}.
+        </p>
+        {phase2?.routines?.length ? (
+          <ul className="mt-3 space-y-1 text-sm">
+            {phase2.routines.map((row) => (
+              <li key={row.id}>
+                {row.title} · {row.cadenceLabel}
+                {row.enabled ? "" : " (paused)"}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
     </div>
   );
