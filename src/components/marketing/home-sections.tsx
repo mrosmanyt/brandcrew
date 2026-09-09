@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/logo";
 import { GetStartedButton, PricingDemoCta, PricingPlanCta } from "@/components/marketing/home-ctas";
 import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
@@ -517,8 +518,10 @@ export function SiteFooter() {
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-sm font-medium tracking-tight">CINEM Pro</p>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+          <Link href="/" className="inline-flex">
+            <BrandMark />
+          </Link>
+          <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
             From CINEM. An AI employee desk — not a CRM, not an ad account.
             Agents that email, post, and work the browser for you.
           </p>

@@ -7,6 +7,11 @@ import { Analytics } from "@/components/site/analytics";
 import { CookieBanner } from "@/components/site/cookie-banner";
 import { DESK_THEME_STORAGE_KEY } from "@/lib/desk-theme";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/constants";
+import {
+  CINEM_LOGO_SRC,
+  CINEM_MARK_SRC,
+  CINEM_OG_SRC,
+} from "@/lib/cinem-mark";
 import { COMPANY_SITE, siteOrigin } from "@/lib/site";
 import "./globals.css";
 
@@ -41,16 +46,30 @@ export const metadata: Metadata = {
     siteName: PRODUCT_NAME,
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: CINEM_OG_SRC,
+        width: 1200,
+        height: 630,
+        alt: `${PRODUCT_NAME} — ${PRODUCT_TAGLINE}`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: [CINEM_OG_SRC],
   },
   robots: { index: true, follow: true },
   icons: {
-    icon: [{ url: "/brand/cinem-mark.svg", type: "image/svg+xml" }],
-    apple: "/apple-icon",
+    icon: [
+      { url: CINEM_MARK_SRC, type: "image/svg+xml" },
+      { url: CINEM_LOGO_SRC, type: "image/png", sizes: "1024x1024" },
+      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 

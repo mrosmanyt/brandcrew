@@ -20,7 +20,7 @@ export function SiteNav() {
     <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-6">
         <Link href="/" className="shrink-0">
-          <BrandMark />
+          <BrandMark priority />
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
           {NAV.map((item) => (

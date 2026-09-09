@@ -1,4 +1,6 @@
+import Image from "next/image";
 import {
+  CINEM_LOGO_SRC,
   CINEM_MARK_PATHS,
   CINEM_MARK_VIEWBOX,
 } from "@/lib/cinem-mark";
@@ -26,20 +28,46 @@ export function CinemMark({
   );
 }
 
-export function BrandMark({
+export function CinemLogoImage({
   className,
   inverted = false,
+  alt = "",
+  priority = false,
 }: {
   className?: string;
   inverted?: boolean;
+  alt?: string;
+  priority?: boolean;
 }) {
   return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      <CinemMark
-        className={
-          inverted ? "text-sidebar-foreground" : "text-foreground"
-        }
-      />
+    <Image
+      src={CINEM_LOGO_SRC}
+      alt={alt}
+      width={96}
+      height={96}
+      className={cn(
+        "size-8 shrink-0",
+        inverted ? "invert" : "dark:invert",
+        className,
+      )}
+      priority={priority}
+      unoptimized
+    />
+  );
+}
+
+export function BrandMark({
+  className,
+  inverted = false,
+  priority = false,
+}: {
+  className?: string;
+  inverted?: boolean;
+  priority?: boolean;
+}) {
+  return (
+    <span className={cn("inline-flex items-center gap-2.5", className)}>
+      <CinemLogoImage inverted={inverted} priority={priority} />
       <span
         className={cn(
           "text-[0.95rem] font-medium tracking-tight whitespace-nowrap",

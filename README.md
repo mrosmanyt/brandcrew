@@ -414,14 +414,14 @@ Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name 
 
 | Item | Status |
 | --- | --- |
-| Logo in nav, desk, admin, favicon, apple-touch, OG | **Done** (SVG mark; `public/brand/cinem-mark.svg`) |
+| Logo in nav, desk, admin, favicon, apple-touch, OG | **Done** (official PNG `public/brand/cinem-logo.png` + SVG `public/brand/cinem-mark.svg`) |
 | Privacy (`/privacy`) + Terms (`/terms`) | **Done** |
 | Footer Privacy / Terms text links (no new top-nav menus) | **Done** (extended existing footer grid) |
 | Secrets off the frontend | **Already** server-only LLM/plugin keys; this pass sanitizes 500s in production |
 | Force HTTPS | **Already** Vercel HTTP→HTTPS; **Done** HSTS + upgrade-insecure-requests + README |
 | Cookie consent banner | **Done** (non-blocking; analytics only after Accept) |
 | Meta titles + descriptions | **Done** (`metadataBase`, title template, page titles) |
-| Social preview (`og:image` / Twitter) | **Done** (`opengraph-image.tsx`, `twitter-image.tsx`, `public/og.png`) |
+| Social preview (`og:image` / Twitter) | **Done** (`src/app/opengraph-image.png`, `twitter-image.png`, `public/og.png`) |
 | Favicon + apple touch icon | **Done** |
 | Sitemap + robots.txt | **Done** (`/sitemap.xml`, `/robots.txt`; desk/admin/api disallowed) |
 | Alt text on key marketing images | **Already** hero demo `aria-label`; live screenshot `alt`; connector marks decorative next to labels |
