@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Static metadata PNGs live at /apple-icon.png etc. Alias the
+  // extensionless Metadata API paths so crawlers and old bookmarks 200.
+  async rewrites() {
+    return [
+      { source: "/apple-icon", destination: "/apple-icon.png" },
+      { source: "/opengraph-image", destination: "/opengraph-image.png" },
+      { source: "/twitter-image", destination: "/twitter-image.png" },
+      { source: "/icon", destination: "/icon.png" },
+    ];
+  },
   // README and local tooling use 127.0.0.1; Next 16 treats that as a distinct
   // origin from localhost and otherwise blocks /_next client assets in dev.
   allowedDevOrigins: ["127.0.0.1"],

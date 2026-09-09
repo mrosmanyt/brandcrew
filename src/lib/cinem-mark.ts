@@ -1,7 +1,11 @@
 /**
  * Official CINEM mark: two mirrored hex-brackets with a vertical diamond void.
  * Geometry is a flat-top hexagon split down the middle (viewBox 0 0 64 64).
+ * Raster: `public/brand/cinem-logo.png` (black mark, transparent ground).
  */
+export const CINEM_LOGO_SRC = "/brand/cinem-logo.png";
+export const CINEM_MARK_SRC = "/brand/cinem-mark.svg";
+export const CINEM_OG_SRC = "/og.png";
 export const CINEM_MARK_VIEWBOX = "0 0 64 64";
 
 /** Left then right closed polygons (SVG path `d`). */

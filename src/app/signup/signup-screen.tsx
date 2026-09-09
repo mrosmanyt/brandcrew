@@ -9,7 +9,7 @@ import {
   GoogleContinueButton,
 } from "@/components/auth/google-continue";
 import { HoneypotField } from "@/components/auth/honeypot-field";
-import { BrandMark } from "@/components/brand/logo";
+import { BrandMark, CinemLogoImage } from "@/components/brand/logo";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +74,7 @@ function SignupForm() {
       <div className="flex flex-1 flex-col">
         <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
           <Link href="/">
-            <BrandMark />
+            <BrandMark priority />
           </Link>
           <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={authHrefWithNext("/login", next)} />}>
             Sign in
@@ -82,6 +82,7 @@ function SignupForm() {
         </header>
         <div className="flex flex-1 flex-col items-center justify-center px-6 pb-24">
           <div className="w-full max-w-sm">
+            <CinemLogoImage alt="CINEM" className="mb-6 size-12" priority />
             <h1 className="font-heading text-3xl tracking-tight">Get started</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               We create a demo workspace with the Northline Studio Brand Kit so you
