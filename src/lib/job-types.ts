@@ -18,6 +18,8 @@ export const JOB_TOOLS = [
   "slack_list_channels",
   "slack_draft_message",
   "slack_post_message",
+  "native_file_read",
+  "native_file_write",
   "write_artifact",
   "ask_user",
 ] as const;
@@ -100,6 +102,12 @@ export type JobContext = {
   gmailDraft?: { id: string; to: string; subject: string };
   slackChannels?: { id: string; name: string; isPrivate?: boolean }[];
   slackDraft?: { channel: string; channelName?: string; text: string };
+  allowedDomains?: string[];
+  interactApproved?: boolean;
+  runnerKind?: string;
+  deviceId?: string;
+  sources?: { url: string; title?: string; excerpt: string; ok?: boolean }[];
+  uncertainty?: "low" | "medium" | "high";
 };
 
 export type JobEventDTO = {
@@ -128,6 +136,8 @@ export type JobDTO = {
   askChoices: string[];
   screenshot?: string;
   error: string;
+  allowedDomains?: string[];
+  runnerKind?: string;
   createdAt: string;
   updatedAt: string;
   events: JobEventDTO[];

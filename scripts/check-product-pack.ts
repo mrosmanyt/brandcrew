@@ -30,7 +30,7 @@ assert.equal(limitsForPlan("starter").seats, 2);
 assert.equal(limitsForPlan("ultra").paid, true);
 console.log("ok: Starter $20 / Pro $79 / Ultra $200 caps");
 
-assert.equal(FEATURED_JOB_TEMPLATES.length, 7);
+assert.equal(FEATURED_JOB_TEMPLATES.length, 10);
 assert.deepEqual(
   FEATURED_JOB_TEMPLATES.map((row) => row.playbookKey).sort(),
   [
@@ -39,13 +39,19 @@ assert.deepEqual(
     "inbox_invoices",
     "linkedin_outreach_draft",
     "linkedin_week",
+    "outreach_draft_pack",
     "outreach_from_research",
+    "prospecting_scan",
     "website_builder",
+    "weekly_client_brief",
   ].sort(),
 );
 assert.equal(inferPlaybookKey("writer", "", "generate_week"), "linkedin_week");
 assert.equal(inferPlaybookKey("Website", "", "build_website"), "website_builder");
 assert.equal(inferPlaybookKey("Website", "", "build_deck"), "deck_builder");
+assert.equal(inferPlaybookKey("sales", "", "prospecting_scan"), "prospecting_scan");
+assert.equal(inferPlaybookKey("sales", "", "outreach_draft_pack"), "outreach_draft_pack");
+assert.equal(inferPlaybookKey("researcher", "", "weekly_client_brief"), "weekly_client_brief");
 console.log("ok: featured playbook pack");
 
 const empty = workspaceOnboarding({

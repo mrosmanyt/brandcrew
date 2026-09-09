@@ -52,6 +52,15 @@ import * as workspaceSkills from "./workspaces/skills";
 import * as workspaceTask from "./workspaces/task";
 import * as workspaceTasks from "./workspaces/tasks";
 import * as workspaceItem from "./workspaces/workspace";
+import * as workspaceDevices from "./workspaces/devices";
+import * as workspaceDevice from "./workspaces/device";
+import * as workspaceApprovals from "./workspaces/approvals";
+import * as workspaceAudit from "./workspaces/audit";
+import * as workspacePhase2 from "./workspaces/phase2";
+import * as deviceClaim from "./device/claim";
+import * as deviceHeartbeat from "./device/heartbeat";
+import * as deviceCommands from "./device/commands";
+import * as deviceCommandResult from "./device/command-result";
 
 export const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
@@ -108,6 +117,13 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
+  { pattern: ["api", "device", "claim"], handlers: asHandlers(deviceClaim) },
+  { pattern: ["api", "device", "heartbeat"], handlers: asHandlers(deviceHeartbeat) },
+  {
+    pattern: ["api", "device", "commands", ":commandId"],
+    handlers: asHandlers(deviceCommandResult),
+  },
+  { pattern: ["api", "device", "commands"], handlers: asHandlers(deviceCommands) },
   { pattern: ["api", "invites", ":token"], handlers: asHandlers(inviteToken) },
   { pattern: ["api", "workspaces"], handlers: asHandlers(workspacesCollection) },
   {
@@ -121,6 +137,26 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "usage"],
     handlers: asHandlers(workspaceUsage),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "devices", ":deviceId"],
+    handlers: asHandlers(workspaceDevice),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "devices"],
+    handlers: asHandlers(workspaceDevices),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "approvals"],
+    handlers: asHandlers(workspaceApprovals),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "audit"],
+    handlers: asHandlers(workspaceAudit),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "phase2"],
+    handlers: asHandlers(workspacePhase2),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],

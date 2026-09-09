@@ -14,7 +14,7 @@ export function isClarifyStep(step: JobStep | undefined | null): boolean {
 }
 
 export function pausedAskStep(steps: JobStep[]): JobStep | undefined {
-  return steps.find((step) => step.tool === "ask_user" && step.status === "paused");
+  return steps.find((step) => step.status === "paused");
 }
 
 export function clarifyChoices(args: Record<string, unknown> | undefined): string[] {

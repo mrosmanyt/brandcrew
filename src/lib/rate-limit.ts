@@ -92,6 +92,12 @@ export function sensitiveRateLimit(
   if (path === "api/billing/checkout" && verb === "POST") {
     return { key: "checkout", limit: 8, windowMs: 10 * 60 * 1000 };
   }
+  if (path === "api/device/claim" && verb === "POST") {
+    return { key: "device-claim", limit: 12, windowMs: AUTH_WINDOW_MS };
+  }
+  if (path.startsWith("api/device/") && (verb === "POST" || verb === "GET")) {
+    return { key: "device", limit: 120, windowMs: 60 * 1000 };
+  }
   if (path === "api/admin") {
     if (verb === "POST" || verb === "PUT" || verb === "PATCH" || verb === "DELETE") {
       return { key: "admin-write", limit: 20, windowMs: 60 * 1000 };

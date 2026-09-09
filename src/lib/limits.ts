@@ -97,6 +97,11 @@ export function serializeLimits(limits: WorkspaceLimits) {
     jobsLeftThisHour: Math.max(0, limits.jobsPerHour - limits.jobsThisHour),
     concurrentLeft: Math.max(0, limits.maxConcurrentJobs - limits.concurrentJobs),
     seatsLeft: Math.max(0, limits.seats - limits.seatUsed - limits.pendingInvites),
+    creditsUsed: limits.tokenUsed,
+    creditsBudget: limits.tokenBudget,
+    creditsLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
+    creditsHint:
+      "Credits wrap this plan’s token budget 1:1. Demo/Starter/Pro/Ultra caps are unchanged.",
   };
 }
 

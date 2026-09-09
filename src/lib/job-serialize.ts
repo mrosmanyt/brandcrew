@@ -13,6 +13,11 @@ import { parsePlan, parsePlaybookJson } from "@/lib/job-playbooks";
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
 import { parseAllowedTools } from "@/lib/companions";
 import { clarifyChoices, parseAskKind, pausedAskStep } from "@/lib/job-clarify";
+import { parseAllowlist } from "@/lib/domain-allowlist";
+
+function parseAllowlistJson(raw?: string | null) {
+  return parseAllowlist(raw);
+}
 
 export function serializeAgent(agent: {
   id: string;
@@ -91,6 +96,8 @@ export function serializeJob(job: {
   userAnswer?: string | null;
   context?: string | null;
   error: string;
+  allowedDomains?: string | null;
+  runnerKind?: string | null;
   createdAt: Date;
   updatedAt: Date;
   events?: {
@@ -124,6 +131,8 @@ export function serializeJob(job: {
     askChoices: paused ? clarifyChoices(paused.args) : [],
     screenshot: context.screenshot,
     error: job.error,
+    allowedDomains: parseAllowlistJson(job.allowedDomains) || context.allowedDomains || [],
+    runnerKind: job.runnerKind || context.runnerKind || "auto",
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
     events: (job.events ?? []).map(

@@ -52,6 +52,10 @@ model Workspace {
   apiKeys            ApiKey[]
   invites            WorkspaceInvite[]
   schedules          ScheduledJob[]
+  devices            LocalDevice[]
+  audits             WorkspaceAudit[]
+  actionCaches       ActionCache[]
+  eventTriggers      EventTrigger[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -249,8 +253,13 @@ model Job {
   askKind     String     @default("")
   /// Persisted human reply when askKind is clarify. Empty until answered.
   userAnswer  String     @default("")
+  /// JSON string array of allowed hostnames for this job. Browse/CDP aborts off-list.
+  allowedDomains String  @default("[]")
+  /// auto | cloud | extension — where browser tools should run.
+  runnerKind  String     @default("auto")
   runnerLock  String     @default("")
   error       String     @default("")
+  deviceCommands DeviceCommand[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -328,6 +337,93 @@ model FeatureFlag {
   note      String   @default("")
   updatedAt DateTime @default(now()) @updatedAt
   updatedBy String   @default("")
+}
+
+/// Paired Chrome MV3 extension + native messaging host (on-device CDP).
+model LocalDevice {
+  id               String          @id @default(cuid())
+  workspaceId      String
+  name             String          @default("Chrome")
+  tokenHash        String          @unique
+  pairingCode      String?         @unique
+  pairingExpiresAt DateTime?
+  status           String          @default("pending")
+  lastSeenAt       DateTime?
+  capabilities     String          @default("[]")
+  nativeHost       Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  workspace        Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  commands         DeviceCommand[]
+
+  @@index([workspaceId, status])
+}
+
+model DeviceCommand {
+  id        String      @id @default(cuid())
+  deviceId  String
+  jobId     String
+  stepId    String
+  tool      String
+  args      String      @default("{}")
+  status    String      @default("queued")
+  result    String      @default("{}")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  device    LocalDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  job       Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, status, createdAt])
+  @@index([jobId])
+}
+
+/// Durable workspace audit (device, approvals, domain aborts) — complements JobEvent.
+model WorkspaceAudit {
+  id          String    @id @default(cuid())
+  workspaceId String
+  jobId       String?
+  deviceId    String?
+  actor       String    @default("system")
+  action      String
+  detail      String    @default("")
+  data        String    @default("{}")
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([jobId])
+}
+
+/// Phase 2: cached selectors so a later job on the same domain can skip an LLM guess.
+model ActionCache {
+  id          String    @id @default(cuid())
+  workspaceId String
+  domain      String
+  actionKey   String
+  selector    String
+  hits        Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, domain, actionKey])
+  @@index([workspaceId, domain])
+}
+
+/// Phase 2 stub: event triggers (email / slack / schedule / webhook). Not a live runner.
+model EventTrigger {
+  id          String    @id @default(cuid())
+  workspaceId String
+  kind        String
+  enabled     Boolean   @default(false)
+  playbookKey String    @default("")
+  config      String    @default("{}")
+  note        String    @default("Phase 2 stub")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind])
 }
 
 /// Dedupes inbound provider webhooks (Whop webhook-id / payment id).

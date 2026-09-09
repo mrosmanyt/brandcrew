@@ -14,6 +14,9 @@ type UsagePayload = {
     tokenUsed: number;
     tokenBudget: number;
     tokensLeft: number;
+    creditsUsed?: number;
+    creditsBudget?: number;
+    creditsLeft?: number;
     jobsThisHour: number;
     jobsPerHour: number;
     jobsLeftThisHour: number;
@@ -54,19 +57,23 @@ export function UsageDashboard({
       <p className="page-kicker">Usage</p>
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Workspace usage</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Tokens and jobs are capped by the current plan. Remaining counts update
-        as jobs run.
+        Tokens remain the billing unit. The desk shows them as <strong>credits</strong> 1:1
+        (Demo / Starter / Pro / Ultra caps are unchanged).
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <Stat
-          label="Tokens remaining"
+          label="Credits remaining"
           value={
             limits
-              ? `${limits.tokensLeft.toLocaleString()} / ${limits.tokenBudget.toLocaleString()}`
+              ? `${(limits.creditsLeft ?? limits.tokensLeft).toLocaleString()} / ${(limits.creditsBudget ?? limits.tokenBudget).toLocaleString()}`
               : "…"
           }
-          hint={limits ? `${limits.tokenUsed.toLocaleString()} used this cycle` : ""}
+          hint={
+            limits
+              ? `${(limits.creditsUsed ?? limits.tokenUsed).toLocaleString()} credits used this cycle (token budget)`
+              : ""
+          }
         />
         <Stat
           label="Jobs this hour"

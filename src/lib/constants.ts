@@ -82,6 +82,9 @@ export const GENERATE_ACTIONS = [
   "whatsapp_drafts",
   "linkedin_outreach_draft",
   "inbox_invoices",
+  "prospecting_scan",
+  "outreach_draft_pack",
+  "weekly_client_brief",
   "regenerate",
 ] as const;
 
@@ -116,6 +119,12 @@ export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
     "Browse this public page (or the Brand Kit site), extract who they are, then draft LinkedIn-style outreach. Ask me Yes/No before drafting. Do not send.",
   inbox_invoices:
     "Find invoices in connected Gmail (invoice, receipt, or bill). List them. Do not send. Do not write to QuickBooks.",
+  prospecting_scan:
+    "Prospecting scan: browse the public URL in this message (or the Brand Kit site), extract who they are, and write sourced notes with uncertainty. Do not invent contacts. Do not send.",
+  outreach_draft_pack:
+    "Outreach draft pack: from the latest research or this public page, write 5 outreach drafts. Pause for approval. Do not send.",
+  weekly_client_brief:
+    "Weekly client brief: browse the public URL (or Brand Kit site) and write a sourced weekly brief. Cite sources. Do not invent results. Pause for approval.",
   regenerate: "Regenerate the last artifact with the same brief.",
 };
 
@@ -143,9 +152,14 @@ export function jobChipsForHint(hint: AgentRole): JobChip[] {
       return [
         { action: "research_pack", label: "Research pack" },
         { action: "competitor_scan", label: "Competitor scan" },
+        { action: "prospecting_scan", label: "Prospecting scan" },
+        { action: "weekly_client_brief", label: "Weekly client brief" },
       ];
     case "sales":
       return [
+        { action: "prospecting_scan", label: "Prospecting scan" },
+        { action: "outreach_draft_pack", label: "Outreach draft pack" },
+        { action: "weekly_client_brief", label: "Weekly client brief" },
         { action: "sales_pack", label: "Sales pack" },
         { action: "outreach_from_research", label: "Outreach from research" },
         { action: "linkedin_outreach_draft", label: "Outreach from page" },

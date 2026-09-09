@@ -12,7 +12,7 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 
 1. Sign up with **Continue with Google** or email/password. Landing **Account** goes to `/login` when signed out and to desk settings when signed in. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
 2. Open **Mission Control** (`/desk/[workspaceId]`). A 3-step first-run card (New Agent → first job → Approve) can be dismissed; completion is stored per workspace member.
-3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, **Companions**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft, LinkedIn-style outreach, Inbox invoices).
+3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, **Companions**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft, LinkedIn-style outreach, Inbox invoices, **Prospecting scan**, **Outreach draft pack**, **Weekly client brief**).
 4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed. **Add companion** (Prospect Peter, Recruiter Ryan, Invoice Ivy, Content Casey, Research Riley) → real `Agent` with that name, instructions, and allowed tools. Custom companion: name + instructions + tool groups.
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
 6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_type` / `browser_extract` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Clarify pauses show **Yes/No** on the desk and persist `Job.askKind` + `Job.userAnswer` in Postgres. Browse events show the **tool name + URL**.
@@ -38,6 +38,46 @@ Playbooks run on the **user agent you selected** (`agentId`). Role is only a hin
 | **Ad angles from URL** | Ads | Browse a landing page → 5 angles. No media buy |
 | **Build website** | Website | Brand Kit → HTML landing page artifact → in-desk iframe preview. Not published |
 | **Build app** | App | Brand Kit → HTML mini-app artifact → iframe preview. No Replit login |
+| **Prospecting scan** | Sales | Brand Kit → navigate + snapshot + extract → sourced notes + Uncertainty → `needs_you`. Does not invent contacts or send |
+| **Outreach draft pack** | Sales | Latest research (or a pasted URL) → 5 drafts → approval. Does not send |
+| **Weekly client brief** | Research | Navigate + snapshot + short crawl → sourced brief. Does not invent results or email the client |
+
+### On-device Chrome (Phase 1)
+
+The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer **your Chrome** (MV3 + `chrome.debugger` CDP). CINEM Pro is **supervised** — not a fully autonomous employee. Every click, type, Gmail draft, Slack post, and local file write **pauses** until you approve.
+
+**Install path**
+
+1. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → select the repo `extension/` folder.
+2. Mission Control → **On-device Chrome** (`/desk/[workspaceId]/on-device`) → **Generate pairing code**.
+3. Paste the desk origin (`http://127.0.0.1:43180` locally, or `https://app.cinem.tech` / `https://brandcrew.vercel.app`) and the code in the extension popup.
+4. Optional local agent (files, long jobs, Electron keepalive):
+   ```bash
+   node native-host/install.mjs --extension-id=<id from chrome://extensions>
+   node native-host/host.mjs --http   # 127.0.0.1:43181 — also spawned by Electron
+   ```
+5. **Demo:** open a public page → run **Prospecting scan** from a Sales agent → watch Live results (narration + sources) → approve before any write.
+
+Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>` (data, never instructions); writes go through the approval queue; each job has a **domain allowlist** and aborts if the agent leaves allowed hosts. Audit lines live on the On-device page and in `WorkspaceAudit`.
+
+Credits in the desk header wrap Demo / Starter / Pro / Ultra **token budgets 1:1**. Billing is unchanged.
+
+Phase 2 (scheduled Slack/email deliver, event triggers, session replay blobs) is **scaffolding only** — see `GET /api/workspaces/:id/phase2`.
+
+### Production logo URLs
+
+After this branch deploys, these must **HTTP 200** (not `/404`):
+
+```bash
+curl -sI https://app.cinem.tech/brand/cinem-logo.png
+curl -sI https://app.cinem.tech/brand/cinem-mark.svg
+curl -sI https://app.cinem.tech/og.png
+curl -sI https://brandcrew.vercel.app/brand/cinem-logo.png
+curl -sI https://brandcrew.vercel.app/brand/cinem-mark.svg
+curl -sI https://brandcrew.vercel.app/og.png
+```
+
+Expect `200` and `content-type: image/png` (or `image/svg+xml` for the mark). Login / nav / signup render `<img src="/brand/cinem-logo.png">` via `BrandMark`, not a CP badge. Files live at `public/brand/cinem-logo.png`, `public/brand/cinem-mark.svg`, `public/og.png`. Production was previously stuck on an old deploy because `next build` typechecked `scripts/check-launch.ts` (`process.env.NODE_ENV` is readonly) — that assignment now goes through a mutable env bag.
 
 ### Live vs offline demo
 
@@ -510,7 +550,7 @@ Founder Admin HQ lives at `/admin` (path-based internal ops console, not a custo
 | Pro | $79/mo | 5 | 200,000 | 30 | 3 |
 | Ultra | $200/mo | 12 | 600,000 | 90 | 6 |
 
-Existing workspaces stored as `growth` map to Pro. Token budget, hourly jobs, concurrent jobs, and seats are enforced on job create and invites. The desk header shows remaining tokens.
+Existing workspaces stored as `growth` map to Pro. Token budget, hourly jobs, concurrent jobs, and seats are enforced on job create and invites. The desk header shows remaining **credits** (token budget 1:1).
 
 Token budget, hourly jobs, and concurrent running jobs are enforced on job create. The desk header shows remaining caps.
 
@@ -529,6 +569,7 @@ npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML 
 npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule math, export PDF
 npm run test:billing       # Whop-first provider, webhook signature, cancel rules
 npm run test:launch        # logo, privacy/terms, headers, rate limit, honeypot, SEO files
+npm run test:on-device     # MV3 extension, native host, allowlist, write-gate, agency playbooks
 ```
 
 ## Job runtime
@@ -538,15 +579,16 @@ Jobs live in Postgres (`Job`, `JobEvent`, `Skill`, `Agent`). Each job has a JSON
 v1 tools:
 
 - `read_brand_kit`
-- `browser_navigate` / `browser_snapshot` (Playwright + system Chrome when `PLAYWRIGHT_ENABLED`; otherwise fetch)
-- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **real on a job-scoped Playwright tab** (desktop / `npm run dev`). On Vercel they return “needs desktop” and never fake success. Still refuse login, password fields, and send.
-- `crawl_links` (depth 1–2, hard cap of 4 pages per job)
+- `browser_navigate` / `browser_snapshot` (paired Chrome CDP first; Playwright + system Chrome when `PLAYWRIGHT_ENABLED`; otherwise fetch)
+- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **user Chrome via the MV3 extension**, else a job-scoped Playwright tab on desktop. On Vercel without a paired device they return “needs desktop” and never fake success. Still refuse login, password fields, and send. Click/type **pause for approval**.
+- `crawl_links` (depth 1–2, hard cap of 4 pages per job; off-allowlist hosts abort)
 - `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
 - `web_search` (Tavily; requires Connected Web Search plugin)
-- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send). `gmail_list_recent` accepts a Gmail `q` search (invoice finder uses it).
+- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send). `gmail_create_draft` pauses for approval.
 - `slack_list_channels` / `slack_draft_message` / `slack_post_message` (Connected Slack; post only after `ask_user`)
+- `native_file_read` / `native_file_write` (native messaging host; writes pause for approval)
 - `read_artifact` (outreach pack reads the latest research/competitor artifact)
-- `write_artifact` (markdown artifact on the workspace)
+- `write_artifact` (markdown artifact on the workspace; research kinds append Sources + Uncertainty)
 - `ask_user` — `kind: "approve"` waits for artifact approval; `kind: "clarify"` waits for Yes/No (or a short answer) stored on `Job.userAnswer`, then resumes the same job
 
 Jobs bind to a user `Agent` (`agentId`). Activity events include `{ tool, url, excerpt }` for browse steps. Companion `allowedTools` (JSON on `Agent`) can restrict which tools that companion may run.
@@ -559,20 +601,21 @@ CINEM Pro does **not** spin a VM per agent and does not require a paid browser v
 
 | Environment | Navigate / snapshot / crawl | Click / type / extract / screenshot |
 | --- | --- | --- |
-| `npm run dev` or Electron desktop (`npm run desktop:dev`) | Playwright against system Chrome when `PLAYWRIGHT_ENABLED` and Chrome is found; otherwise fetch | **Live Playwright tab per job** (in-memory session in the Next process). Kept across Yes/No pauses. Closed when the job finishes or sits idle ~10 minutes. |
-| Vercel Hobby | Fetch fallback (no Chrome on serverless). `PLAYWRIGHT_ENABLED` defaults off. | Honest `desktop_required` result — **not** fake success. Run the same job on desktop. |
+| Paired **CINEM Pro** Chrome extension | **User Chrome via CDP** (`chrome.debugger`). Domain allowlist enforced. | Same tab. Writes still pause for approval. |
+| `npm run dev` or Electron (no extension online) | Playwright against system Chrome when `PLAYWRIGHT_ENABLED` and Chrome is found; otherwise fetch | **Live Playwright tab per job**. Closed when the job finishes or sits idle ~10 minutes. |
+| Vercel Hobby, no paired device | Fetch fallback (no Chrome on serverless). `PLAYWRIGHT_ENABLED` defaults off. | Honest `desktop_required` unless the MV3 extension is paired and polling. |
 
-There is no separate Electron IPC bridge in this slice: desktop already hosts Next locally, so Playwright in the job runtime is the worker. Browserbase / a remote Chrome worker is out of scope.
+Electron also starts `native-host/host.mjs --http` on `127.0.0.1:43181` for files / keepalive. Browserbase / a remote Chrome worker / a Chromium fork is out of scope.
 
 **Local test**
 
 1. `npm install`. Playwright **core** uses the Chrome already on your machine.
 2. Leave `PLAYWRIGHT_ENABLED=true` in `.env`. Custom binary: `PLAYWRIGHT_CHROME_PATH`.
-3. `npm run dev` (or `npm run desktop:dev`). Marketplace → Companions → add **Prospect Peter** (or New Agent with browser tools).
-4. Job: “Browse https://example.com, extract the heading, ask me Yes/No before drafting outreach. Do not send.”
-5. Desk shows a **Yes/No** card (`Job.status=needs_you`, `askKind=clarify`). Yes resumes the same job with `Job.userAnswer` in context. No stops remaining steps.
+3. `npm run dev` (or `npm run desktop:dev`). Load unpacked `extension/`, pair from **On-device Chrome**, then Marketplace → Companions → add **Prospect Peter** (or New Agent with browser tools).
+4. Job: “Prospecting scan https://example.com” (or “Browse https://example.com, extract the heading, ask me Yes/No before drafting outreach. Do not send.”)
+5. Desk shows narration, then **needs you** before a write. Yes resumes. No stops remaining steps.
 6. `npm run test:browse` — Playwright against example.com when Chrome is present.
-7. `npm run test:companions` and `npm run test:jobs` — playbooks, clarify helpers, gallery (no database).
+7. `npm run test:companions`, `npm run test:jobs`, and `npm run test:on-device` — playbooks, allowlist, write-gate, gallery (no database).
 
 **Limits this phase:** no auto-login, no password automation, no LinkedIn send, no file downloads, max 4 pages/job. Gmail creates drafts only. Slack posts only after you approve. Live keys never persist canned browse copy — if the model fails, the artifact is the captured page text. QuickBooks write on the invoice finder is labeled **TODO**.
 
@@ -596,6 +639,7 @@ npm run test:developer-api
 npm run test:limits
 npm run test:billing
 npm run test:launch
+npm run test:on-device
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS
@@ -606,4 +650,4 @@ npx prisma studio        # inspect rows
 
 ## Out of scope (this slice)
 
-Per-agent VMs, auto-login browse, auto-post to LinkedIn/Meta, auto WhatsApp/Gmail send, full CRM, audit suite, user-managed LLM keys, mobile apps, claiming feature-complete parity with Strawberry.
+Per-agent VMs, Chromium forks, auto-login browse, auto-post to LinkedIn/Meta, auto WhatsApp/Gmail send, meeting transcription, 93 integrations, own LLM, unlimited plans, full CRM, user-managed LLM keys, mobile apps, claiming “fully autonomous” or feature-complete parity with Strawberry. Fundraising banner is out of this PR.

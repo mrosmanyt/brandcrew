@@ -38,6 +38,9 @@ import {
   appBuilderPlaybook,
   brandKitDraftPlaybook,
   deckBuilderPlaybook,
+  prospectingScanPlaybook,
+  outreachDraftPackPlaybook,
+  weeklyClientBriefPlaybook,
 } from "../src/lib/job-playbooks";
 import { slackPostAllowed } from "../src/lib/slack";
 import { resolveRunOutput } from "../src/lib/live-output";
@@ -47,6 +50,10 @@ import {
   jobChipsForHint,
   missingRoleMarketplaceChips,
 } from "../src/lib/constants";
+import { JOB_TOOLS } from "../src/lib/job-types";
+import { PAGE_CONTENT_START, wrapUntrustedPageText } from "../src/lib/page-content";
+import { hostAllowed } from "../src/lib/domain-allowlist";
+import { isWriteExternalTool } from "../src/lib/write-gate";
 
 const week = linkedinWeekPlaybook();
 assert.equal(week.agentRole, "writer");
@@ -112,6 +119,9 @@ assert.equal(inferPlaybookKey("builder", "Build a pitch deck"), "deck_builder");
 assert.equal(inferPlaybookKey("strategist", "Brand Kit creative draft"), "brand_kit_draft");
 assert.equal(inferPlaybookKey("writer", "", "build_deck"), "deck_builder");
 assert.equal(inferPlaybookKey("writer", "", "brand_kit_draft"), "brand_kit_draft");
+assert.equal(inferPlaybookKey("sales", "", "prospecting_scan"), "prospecting_scan");
+assert.equal(inferPlaybookKey("sales", "outreach draft pack"), "outreach_draft_pack");
+assert.equal(inferPlaybookKey("researcher", "weekly client brief"), "weekly_client_brief");
 console.log("ok: playbook inference");
 
 const website = websiteBuilderPlaybook();
@@ -294,5 +304,16 @@ assert.equal(
   true,
 );
 console.log("ok: chips bind to role hints; no named Mission Control cast");
+
+assert.ok(JOB_TOOLS.includes("native_file_read"));
+assert.ok(JOB_TOOLS.includes("native_file_write"));
+assert.equal(isWriteExternalTool("browser_click"), true);
+assert.equal(hostAllowed("https://evil.test/x", ["example.com"]).ok, false);
+assert.match(wrapUntrustedPageText("hi", "https://example.com"), new RegExp(PAGE_CONTENT_START));
+const prospect = prospectingScanPlaybook("https://example.com");
+assert.equal(prospect.steps.at(-1)?.tool, "ask_user");
+assert.equal(outreachDraftPackPlaybook().steps.some((step) => step.args.kind === "outreach_pack"), true);
+assert.equal(weeklyClientBriefPlaybook().steps.some((step) => step.args.kind === "weekly_client_brief"), true);
+console.log("ok: native tools, write-gate, allowlist, page delimiters, agency playbooks");
 
 console.log("Job runtime checks passed.");

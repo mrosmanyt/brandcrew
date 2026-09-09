@@ -9,6 +9,7 @@ import {
   CreditCard,
   KeyRound,
   Mail,
+  MonitorSmartphone,
   Plug,
   Store,
 } from "lucide-react";
@@ -150,6 +151,7 @@ export function SettingsHub({
     { href: `/desk/${workspaceId}/marketplace?tab=plugins`, label: "Plugins", icon: Plug },
     { href: `/desk/${workspaceId}/marketplace?tab=bots`, label: "Bots", icon: Bot },
     { href: `/desk/${workspaceId}/marketplace`, label: "Marketplace", icon: Store },
+    { href: `/desk/${workspaceId}/on-device`, label: "On-device Chrome", icon: MonitorSmartphone },
     { href: `/desk/${workspaceId}/billing`, label: "Plans", icon: CreditCard },
     { href: `/desk/${workspaceId}/usage`, label: "Usage", icon: BarChart3 },
   ];

@@ -224,9 +224,16 @@ async function main() {
   const nextConfig = readFileSync("next.config.ts", "utf8");
   assert.match(nextConfig, /securityHeaderList/);
   assert.match(nextConfig, /poweredByHeader: false/);
+  assert.match(nextConfig, /\/brand\/:path\*/);
+  assert.match(nextConfig, /\/og\.png/);
   const router = readFileSync("src/server/api/router.ts", "utf8");
   assert.match(router, /enforceSensitiveRateLimit/);
   console.log("ok: headers wired in next.config + proxy; API dispatch rate-limits sensitive routes");
+
+  assert.ok(existsSync("extension/manifest.json"));
+  assert.ok(existsSync("native-host/host.mjs"));
+  assert.match(readFileSync("extension/manifest.json", "utf8"), /"manifest_version": 3/);
+  console.log("ok: unpacked MV3 extension + native host files ship with the repo");
 
   const hero = readFileSync("src/components/marketing/hero-demo.tsx", "utf8");
   assert.match(hero, /aria-label/);

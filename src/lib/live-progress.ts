@@ -27,12 +27,16 @@ const TOOL_NOW: Record<string, string> = {
   browser_extract: "Extracting page text…",
   browser_screenshot: "Capturing a screenshot…",
   crawl_links: "Crawling links…",
+  narration: "Working…",
+  domain_abort: "Left the allowed domain — stopped.",
   read_artifact: "Reading a previous draft…",
   gmail_list_recent: "Checking Gmail…",
   gmail_create_draft: "Drafting an email…",
   slack_list_channels: "Listing Slack channels…",
   slack_draft_message: "Drafting a Slack message…",
   slack_post_message: "Posting to Slack…",
+  native_file_read: "Reading a local file…",
+  native_file_write: "Writing a local file…",
   write_artifact: "Writing draft…",
   ask_user: "Waiting for your approval…",
 };
@@ -92,6 +96,10 @@ function doneLabel(tool: string, message: string, url?: string): string {
       return "Drafted a Slack message.";
     case "slack_post_message":
       return "Posted to Slack.";
+    case "native_file_read":
+      return "Read a local file.";
+    case "native_file_write":
+      return "Wrote a local file.";
     case "ask_user":
       return "Waiting for your approval…";
     default:
@@ -120,10 +128,10 @@ function friendlyRaw(message: string): string {
 }
 
 function toneForType(type: string, tool?: string): LiveProgressTone {
-  if (type === "error") return "error";
+  if (type === "error" || type === "domain_abort") return "error";
   if (type === "ask_user" || tool === "ask_user") return "wait";
   if (type === "user_reply") return "success";
-  if (type === "step_start" || type === "created" || type === "tool_call") {
+  if (type === "narration" || type === "step_start" || type === "created" || type === "tool_call") {
     return type === "created" ? "info" : "working";
   }
   if (type === "tool_result" || type === "status" || type === "plan") return "success";
@@ -205,11 +213,22 @@ export function liveProgressFromEvents(events: JobEventDTO[]): LiveProgressLine[
       continue;
     }
 
-    if (event.type === "error") {
+    if (event.type === "error" || event.type === "domain_abort") {
       standalone.push({
         id: event.id,
         tone: "error",
         label: event.message || "Something went wrong.",
+        createdAt: String(event.createdAt),
+      });
+      continue;
+    }
+
+    if (event.type === "narration") {
+      put(stepKey, {
+        id: event.id,
+        tone: "working",
+        label: event.message || "Working…",
+        url,
         createdAt: String(event.createdAt),
       });
       continue;
@@ -342,6 +361,8 @@ export function eventTypeLabel(type: string) {
     user_reply: "reply",
     ask_user: "needs you",
     status: "status",
+    narration: "now",
+    domain_abort: "stopped",
     error: "error",
   };
   return labels[type] ?? type.replaceAll("_", " ");

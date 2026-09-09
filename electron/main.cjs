@@ -23,6 +23,7 @@ if (process.platform === "linux") {
 }
 
 let serverChild = null;
+let nativeChild = null;
 let spawnedServer = false;
 let mainWindow = null;
 
@@ -152,6 +153,22 @@ function npmCmd() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
+function startNativeAgent() {
+  const host = path.join(projectRoot(), "native-host", "host.mjs");
+  if (!fs.existsSync(host) || nativeChild) return;
+  const bin = packaged() ? process.execPath : "node";
+  const env = { ...process.env, CINEM_NATIVE_PORT: "43181" };
+  if (packaged()) env.ELECTRON_RUN_AS_NODE = "1";
+  nativeChild = spawn(bin, [host, "--http"], {
+    cwd: projectRoot(),
+    env,
+    stdio: "inherit",
+  });
+  nativeChild.on("exit", () => {
+    nativeChild = null;
+  });
+}
+
 function startDevServer() {
   serverChild = spawn(npmCmd(), ["run", "dev"], {
     cwd: projectRoot(),
@@ -239,6 +256,12 @@ async function boot() {
     await waitForServer();
   }
 
+  try {
+    startNativeAgent();
+  } catch (error) {
+    console.error("CINEM local agent did not start", error);
+  }
+
   await createWindow();
 }
 
@@ -280,5 +303,9 @@ app.on("before-quit", () => {
   if (spawnedServer && serverChild && !serverChild.killed) {
     serverChild.kill();
     serverChild = null;
+  }
+  if (nativeChild && !nativeChild.killed) {
+    nativeChild.kill();
+    nativeChild = null;
   }
 });

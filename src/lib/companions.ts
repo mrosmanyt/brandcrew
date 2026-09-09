@@ -7,7 +7,7 @@ export const COMPANION_ALWAYS_TOOLS: JobTool[] = [
   "ask_user",
 ];
 
-export type CompanionToolGroupId = "browser" | "gmail" | "slack" | "search";
+export type CompanionToolGroupId = "browser" | "gmail" | "slack" | "search" | "files";
 
 export type CompanionToolGroup = {
   id: CompanionToolGroupId;
@@ -21,7 +21,7 @@ export const COMPANION_TOOL_GROUPS: CompanionToolGroup[] = [
   {
     id: "browser",
     label: "Browser",
-    hint: "Navigate, snapshot, click, type, extract, screenshot. Click/type need desktop Playwright.",
+    hint: "Navigate, snapshot, click, type, extract, screenshot. Prefer the user’s Chrome (MV3 + CDP); desktop Playwright is fallback.",
     tools: [
       "browser_navigate",
       "browser_snapshot",
@@ -53,6 +53,12 @@ export const COMPANION_TOOL_GROUPS: CompanionToolGroup[] = [
     hint: "Tavily search when the Web Search plugin is Connected.",
     tools: ["web_search"],
     needsPlugin: "web-search",
+  },
+  {
+    id: "files",
+    label: "Local files",
+    hint: "Read/write via the native messaging host. Writes pause for approval.",
+    tools: ["native_file_read", "native_file_write"],
   },
 ];
 
