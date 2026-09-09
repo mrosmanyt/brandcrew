@@ -57,7 +57,15 @@ assert.match(signup, /BrandMark/);
 assert.match(signup, /CinemLogoImage/);
 const nav = readFileSync("src/components/marketing/site-nav.tsx", "utf8");
 assert.match(nav, /BrandMark/);
+const announce = readFileSync("src/components/marketing/announcement-banner.tsx", "utf8");
+assert.match(announce, /raising a \$5M round/);
+assert.match(announce, /Talk to the founder/);
+assert.doesNotMatch(announce, /we raised|we've raised|round is closed/i);
+const mktShell = readFileSync("src/components/marketing/marketing-shell.tsx", "utf8");
+assert.match(mktShell, /AnnouncementBanner/);
+assert.doesNotMatch(readFileSync("src/app/desk/[workspaceId]/layout.tsx", "utf8"), /AnnouncementBanner/);
 console.log("ok: favicon SVG + PNG logo + OG + apple-icon files exist; login + nav render BrandMark");
+console.log("ok: marketing announcement banner is raising (not raised) and stays off the desk");
 
 const footer = readFileSync("src/components/marketing/home-sections.tsx", "utf8");
 assert.match(footer, /href: "\/privacy"/);
@@ -185,6 +193,7 @@ async function main() {
   const clientFiles = [
     "src/components/marketing/site-nav.tsx",
     "src/components/marketing/home-ctas.tsx",
+    "src/components/marketing/announcement-banner.tsx",
     "src/app/login/login-screen.tsx",
     "src/app/signup/signup-screen.tsx",
     "src/components/site/analytics.tsx",

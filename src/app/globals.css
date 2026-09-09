@@ -147,6 +147,7 @@
 
 /* Public site: warm paper, one dark CTA — Replit-simple, not Cursor glow. */
 .marketing-canvas {
+  --announce-h: 0px;
   --background: #f7f5f2;
   --foreground: #171717;
   --card: #ffffff;
