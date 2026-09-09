@@ -133,7 +133,7 @@ function fallbackArtifact(
     return {
       type: "app",
       title: `${brandLabel(kit)} mini app`,
-      summary: "Offline demo app HTML.",
+      summary: "Offline template app HTML.",
       content: demoAppHtml(kit),
     };
   }
@@ -141,7 +141,7 @@ function fallbackArtifact(
     return {
       type: "deck",
       title: `${brandLabel(kit)} deck`,
-      summary: "Offline demo pitch deck HTML.",
+      summary: "Offline template pitch deck HTML.",
       content: demoDeckHtml(kit),
     };
   }
@@ -150,7 +150,7 @@ function fallbackArtifact(
     return {
       type: "website",
       title: `${brandLabel(kit)} site`,
-      summary: "Offline demo landing page.",
+      summary: "Offline template landing page.",
       content: demoWebsiteHtml(kit),
     };
   }
@@ -251,7 +251,7 @@ export async function generateAgentArtifact(input: {
 
   if (!llm.isLiveFor(kind)) {
     const artifact = fallbackArtifact(input.role, input.kit, action);
-    const assistantText = `${artifact.summary}\n\n(Offline demo draft — add OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or XAI_API_KEY on the server. This template is not live work.)`;
+    const assistantText = `${artifact.summary}\n\n(Offline template draft — add OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or XAI_API_KEY on the server. This template is not live work.)`;
     return {
       artifact,
       assistantText,

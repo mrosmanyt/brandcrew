@@ -23,7 +23,7 @@ export function AdminBilling({ initial }: { initial: AdminBillingPayload }) {
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Billing"
-      hint="Paid workspaces only (plan ≠ demo). Whop membership id is shown when stored. No fake credit balances."
+      hint="Paid workspaces only (not the Free plan). Whop membership id is shown when stored. No fake credit balances."
     >
       <section className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-4">

@@ -10,7 +10,7 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 
 ## What you can do
 
-1. Sign up with **Continue with Google** or email/password. Landing **Account** goes to `/login` when signed out and to desk settings when signed in. Onboarding creates a demo workspace with the Northline Studio Brand Kit (sample company facts, not fake job output).
+1. Sign up with **Continue with Google** or email/password. Landing **Account** goes to `/login` when signed out and to desk settings when signed in. Onboarding creates a free workspace with the Northline Studio Brand Kit (sample company facts, not fake job output). The first-run flow is a one-step-at-a-time wizard (agent → website → integrations → Brand Kit → model), with Skip to Mission Control.
 2. Open **Mission Control** (`/desk/[workspaceId]`). A 3-step first-run card (New Agent → first job → Approve) can be dismissed; completion is stored per workspace member.
 3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, **Companions**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft, LinkedIn-style outreach, Inbox invoices, **Prospecting scan**, **Outreach draft pack**, **Weekly client brief**).
 4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed. **Add companion** (Prospect Peter, Recruiter Ryan, Invoice Ivy, Content Casey, Research Riley) → real `Agent` with that name, instructions, and allowed tools. Custom companion: name + instructions + tool groups.
@@ -56,11 +56,11 @@ The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer
    node native-host/install.mjs --extension-id=<id from chrome://extensions>
    node native-host/host.mjs --http   # 127.0.0.1:43181 — also spawned by Electron
    ```
-5. **Demo:** open a public page → run **Prospecting scan** from a Sales agent → watch Live results (narration + sources) → approve before any write.
+5. **Try it:** open a public page → run **Prospecting scan** from a Sales agent → watch Live results (narration + sources) → approve before any write.
 
 Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>` (data, never instructions); writes go through the approval queue; each job has a **domain allowlist** and aborts if the agent leaves allowed hosts. Audit lines live on the On-device page and in `WorkspaceAudit`.
 
-Credits in the desk header wrap Demo / Starter / Pro / Ultra **token budgets 1:1**. Billing is unchanged.
+Credits in the desk header wrap Free / Starter / Pro / Ultra **token budgets 1:1**. Billing is unchanged.
 
 Phase 2 (scheduled Slack/email deliver, event triggers, session replay blobs) is **scaffolding only** — see `GET /api/workspaces/:id/phase2`.
 
@@ -79,12 +79,12 @@ curl -sI https://brandcrew.vercel.app/og.png
 
 Expect `200` and `content-type: image/png` (or `image/svg+xml` for the mark). Login / nav / signup render `<img src="/brand/cinem-logo.png">` via `BrandMark`, not a CP badge. Files live at `public/brand/cinem-logo.png`, `public/brand/cinem-mark.svg`, `public/og.png`. Production was previously stuck on an old deploy because `next build` typechecked `scripts/check-launch.ts` (`process.env.NODE_ENV` is readonly) — that assignment now goes through a mutable env bag.
 
-### Live vs offline demo
+### Live vs offline templates
 
 | Server keys | What jobs persist |
 | --- | --- |
 | Any of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY` | Model text, or tool-captured **browse/search** text. **Never** canned Northline “tasting menu” copy. |
-| None | Labeled **offline demo** templates from the Brand Kit. Banner says so. |
+| None | Labeled **offline templates** from the Brand Kit. Banner says so. |
 
 `PLAYWRIGHT_ENABLED` turns on headless Chrome when a binary is present. If Playwright is off or Chrome is missing, browse tools **fall back to fetch** and still crawl a couple of public links. They never invent page text.
 
@@ -390,7 +390,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 | `WHOP_COMPANY_ID` | `biz_…` from the Whop dashboard |
 | `WHOP_WEBHOOK_SECRET` | Webhook signing secret |
 | `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | optional existing plan ids |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional; no keys → offline demo |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional; no keys → offline templates |
 | `ADMIN_EMAILS` | comma-separated staff emails that may open `/admin`. `cinemtech@gmail.com` is always included. **Set this on Vercel** for every operator (QA included) or they get 403. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional; Gmail Connect |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | optional |
@@ -412,7 +412,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 6. Copy the signing secret (`ws_…`) into `WHOP_WEBHOOK_SECRET` on Vercel. Never commit it.
 7. Set `BILLING_MOCK=false` (or unset it) so desk Plans redirects to Whop instead of applying a fake upgrade.
 
-**Cancel behavior:** `membership.deactivated` returns the workspace to Demo when that membership is the one that granted the current paid plan (matched by `whopMembershipId` or `metadata.plan`). Upgrading Starter → Ultra then cancelling the old Starter membership does not drop Ultra.
+**Cancel behavior:** `membership.deactivated` returns the workspace to Free when that membership is the one that granted the current paid plan (matched by `whopMembershipId` or `metadata.plan`). Upgrading Starter → Ultra then cancelling the old Starter membership does not drop Ultra.
 
 ### 3. OAuth redirect URIs (production)
 
@@ -489,7 +489,7 @@ Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name 
 - **No Chrome on Vercel.** Playwright is off. Browse tools fall back to `fetch` + a short public crawl. Not Browserbase.
 - Function timeout/size limits apply to long jobs; this slice does not add a queue worker.
 - Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
-- **Whop is the live billing provider.** Register webhook `https://brandcrew.vercel.app/api/webhooks/whop` for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Demo when that membership matches the current plan (a stale Starter cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
+- **Whop is the live billing provider.** Register webhook `https://brandcrew.vercel.app/api/webhooks/whop` for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Free when that membership matches the current plan (a stale Starter cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
 - **Scheduled jobs** enqueue when someone opens Mission Control (`GET /jobs`) or when `/api/cron/jobs` is called with `CRON_SECRET`. Vercel Hobby cron is daily (`0 12 * * *`) — not an always-on worker. Times are 09:00 UTC.
 
 ## Model routing
@@ -516,7 +516,7 @@ When the UI does not pick a model (`Auto`):
 | Real code / complex apps | Sonnet |
 | Ultra plan or Boost | Sonnet max (`ANTHROPIC_BOOST_MODEL` or Sonnet; never Opus) |
 
-Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline demo**.
+Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline templates**.
 
 Founder Admin HQ lives at `/admin` (path-based internal ops console, not a customer product). Access is emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com`). **Set `ADMIN_EMAILS` on Vercel** to every staff email or they get 403. Non-admins get 403. Plan assign / revoke / suspend and flag writes are audited in `AdminAuditLog`.
 
@@ -532,7 +532,7 @@ Founder Admin HQ lives at `/admin` (path-based internal ops console, not a custo
 | **Model / cost** | Display→backend map, provider key present/absent (booleans only), `UsageEvent` totals by `model` |
 | **Access** | Effective admin emails from env (local part masked, domain visible). Role is `superadmin` via `ADMIN_EMAILS` only. SSO later |
 | **Audit** | Full `AdminAuditLog` with action / actor / target filters |
-| **Trust & safety** | User or workspace search + revoke to Demo / suspend (ban-lite) |
+| **Trust & safety** | User or workspace search + revoke to Free / suspend (ban-lite) |
 | **Feature flags** | `FeatureFlag { key, enabled, note }` with confirm + audit |
 
 `ADMIN_EMAILS` parsing always unions `cinemtech@gmail.com`. Add each extra operator on Vercel (Production and Preview), comma-separated. QA accounts belong in that env var, not in source.
@@ -545,7 +545,7 @@ Founder Admin HQ lives at `/admin` (path-based internal ops console, not a custo
 
 | Plan | Price | Seats | Tokens | Jobs/hour | Concurrent |
 | --- | --- | --- | --- | --- | --- |
-| Demo (free) | $0 | 1 | 15,000 | 4 | 1 |
+| Free | $0 | 1 | 15,000 | 4 | 1 |
 | Starter | $20/mo | 2 | 50,000 | 8 | 1 |
 | Pro | $79/mo | 5 | 200,000 | 30 | 3 |
 | Ultra | $200/mo | 12 | 600,000 | 90 | 6 |
@@ -557,6 +557,7 @@ Token budget, hourly jobs, and concurrent running jobs are enforced on job creat
 ```bash
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
 npm run test:models        # display-name catalog → cheap backend ids
+npm run test:onboarding    # one-box wizard, OAuth return, Free plan copy
 npm run test:admin         # Admin HQ allow-list, masking, section APIs, 403 authz
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:companions    # gallery templates, allowed tools, Yes/No clarify helpers

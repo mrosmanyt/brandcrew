@@ -85,7 +85,7 @@ function SignupForm() {
             <CinemLogoImage alt="CINEM" className="mb-6 size-12" priority />
             <h1 className="font-heading text-3xl tracking-tight">Get started</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              We create a demo workspace with the Northline Studio Brand Kit so you
+              We create a free workspace with the Northline Studio Brand Kit so you
               can open Mission Control, create agents, and give a real job. Prefer
               Continue with Google — Google already verifies your email. Email/password
               does not send a confirmation mail (no mailer in this stack).

@@ -65,7 +65,7 @@ async function MissionControlPage({
     }),
     prisma.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId: workspace.id, userId: user.id } },
-      select: { onboardingDismissed: true },
+      select: { onboardingDismissed: true, setupWizardDone: true },
     }),
   ]);
 
@@ -79,6 +79,10 @@ async function MissionControlPage({
     const key = conversation.agentId || conversation.agentRole;
     initialMessages[key] = conversation.messages;
     initialArtifacts[key] = conversation.artifacts;
+  }
+
+  if (membership && !membership.setupWizardDone) {
+    redirect(`/onboarding?workspace=${encodeURIComponent(workspace.id)}`);
   }
 
   return (

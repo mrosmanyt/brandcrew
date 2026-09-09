@@ -13,6 +13,7 @@ import {
 import {
   AGENT_MODE_PLANS,
   AGENT_MODES_SHORTCUT,
+  MODEL_ROUTING_GROUPS,
   MODEL_ROUTING_OPTIONS,
   SERVER_KEYS_COPY,
   modelRoutingLocked,
@@ -207,33 +208,44 @@ export function AgentModesMenu({
           </span>
         </div>
         <ul className="px-1.5 pb-1">
-          {MODEL_ROUTING_OPTIONS.map((option) => {
-            const locked = modelRoutingLocked(option.id, llm);
-            const selected = option.id === routing;
-            return (
-              <li key={option.id}>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-start justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
-                    selected && !locked && "text-chart-2",
-                    locked && "opacity-70",
-                  )}
-                  onClick={() => void applyRouting(option.id)}
-                >
-                  <span>
-                    <span className="block font-medium">{option.label}</span>
-                    <span className="block text-[11px] text-muted-foreground">
-                      {locked ? "Add key on server" : option.hint}
-                    </span>
-                  </span>
-                  {locked ? (
-                    <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
+          {MODEL_ROUTING_GROUPS.map((group) => (
+            <li key={group.id}>
+              {group.label ? (
+                <p className="px-2 pt-1.5 pb-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  {group.label}
+                </p>
+              ) : null}
+              <ul>
+                {group.options.map((option) => {
+                  const locked = modelRoutingLocked(option.id, llm);
+                  const selected = option.id === routing;
+                  return (
+                    <li key={option.id}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-start justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
+                          selected && !locked && "text-chart-2",
+                          locked && "opacity-70",
+                        )}
+                        onClick={() => void applyRouting(option.id)}
+                      >
+                        <span>
+                          <span className="block font-medium">{option.label}</span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            {locked ? "Add key on server" : option.hint}
+                          </span>
+                        </span>
+                        {locked ? (
+                          <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
         </ul>
         <DropdownMenuSeparator className="mx-0" />
         <div className="flex flex-col gap-1 px-3 py-2 text-[11px] leading-5 text-muted-foreground">

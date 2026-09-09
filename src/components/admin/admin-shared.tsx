@@ -285,19 +285,19 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
   if (pending.kind === "revoke") {
     return {
       title: "End this plan?",
-      body: `Force ${pending.name} to Demo, reset the token budget to ${PLANS.demo.tokenBudget.toLocaleString()}, and clear usage.`,
+      body: `Force ${pending.name} to Free, reset the token budget to ${PLANS.demo.tokenBudget.toLocaleString()}, and clear usage.`,
     };
   }
   if (pending.kind === "suspend") {
     return {
       title: "Suspend this workspace?",
-      body: `Force ${pending.name} to Demo, reset usage, and block new jobs. This is a ban-lite, not a hard delete.`,
+      body: `Force ${pending.name} to Free, reset usage, and block new jobs. This is a ban-lite, not a hard delete.`,
     };
   }
   if (pending.kind === "unsuspend") {
     return {
       title: "Unsuspend this workspace?",
-      body: `Clear the suspend flag on ${pending.name}. Plan stays as-is (usually Demo). Assign a paid plan separately if needed.`,
+      body: `Clear the suspend flag on ${pending.name}. Plan stays as-is (usually Free). Assign a paid plan separately if needed.`,
     };
   }
   if (pending.kind === "assign-user") {
@@ -309,13 +309,13 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
   if (pending.kind === "revoke-user") {
     return {
       title: "End plans for this user?",
-      body: `Every workspace for ${pending.email} is forced to Demo with a reset budget.`,
+      body: `Every workspace for ${pending.email} is forced to Free with a reset budget.`,
     };
   }
   if (pending.kind === "suspend-user") {
     return {
       title: "Suspend this user?",
-      body: `Every workspace for ${pending.email} is forced to Demo and new jobs are blocked.`,
+      body: `Every workspace for ${pending.email} is forced to Free and new jobs are blocked.`,
     };
   }
   return {
@@ -379,7 +379,7 @@ export function useAdminMutation(onDone?: () => Promise<void> | void) {
         toast.success("Plan assigned.");
       } else if (pending.kind === "revoke") {
         await postAdmin({ action: "revoke", workspaceId: pending.workspaceId });
-        toast.success("Plan revoked. Workspace is on Demo.");
+        toast.success("Plan revoked. Workspace is on Free.");
       } else if (pending.kind === "suspend") {
         await postAdmin({ action: "suspend", workspaceId: pending.workspaceId });
         toast.success("Workspace suspended.");
@@ -391,7 +391,7 @@ export function useAdminMutation(onDone?: () => Promise<void> | void) {
         toast.success("Plan assigned to every workspace for that user.");
       } else if (pending.kind === "revoke-user") {
         await postAdmin({ action: "revoke", userEmail: pending.email });
-        toast.success("Plans revoked to Demo.");
+        toast.success("Plans revoked to Free.");
       } else if (pending.kind === "suspend-user") {
         await postAdmin({ action: "suspend", userEmail: pending.email });
         toast.success("User workspaces suspended.");

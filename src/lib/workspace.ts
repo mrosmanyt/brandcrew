@@ -23,7 +23,7 @@ export async function createDemoWorkspace(userId: string, name?: string) {
       tokenBudget: PLANS.demo.tokenBudget,
       brandKit: stringifyBrandKit(DEMO_BRAND_KIT),
       members: {
-        create: { userId, role: "owner" },
+        create: { userId, role: "owner", setupWizardDone: false },
       },
       tasks: {
         create: [

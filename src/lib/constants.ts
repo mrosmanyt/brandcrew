@@ -10,7 +10,7 @@ export const DEFAULT_AGENT_NAME = "New Agent";
 export const PLANS = {
   demo: {
     id: "demo",
-    name: "Demo",
+    name: "Free",
     price: 0,
     seats: 1,
     tokenBudget: 15_000,
@@ -244,7 +244,7 @@ export function missingRoleMarketplaceChips(
   }));
 }
 
-/** Demo-plan default. Paid plans use `PLANS[plan].jobsPerHour`. */
+/** Free-plan default. Paid plans use `PLANS[plan].jobsPerHour`. */
 export const HOURLY_GENERATION_CAP = PLANS.demo.jobsPerHour;
 
 export const TASK_COLUMNS = [

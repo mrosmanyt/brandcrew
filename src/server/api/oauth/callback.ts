@@ -7,6 +7,7 @@ import {
   persistOAuthConnection,
   readOAuthState,
 } from "@/lib/plugins";
+import { pluginOAuthReturnPath } from "@/lib/setup-wizard";
 
 /** Marketplace plugin OAuth only. User Google sign-in is `/api/auth/google/callback`. */
 export async function GET(request: Request) {
@@ -16,22 +17,32 @@ export async function GET(request: Request) {
   const providerError = url.searchParams.get("error") || "";
 
   let workspaceId = "";
+  let next = "";
   try {
     if (!state) throw new Error("Missing OAuth state.");
     const parsed = await readOAuthState(state);
     workspaceId = parsed.workspaceId;
-    const marketplace = `${appOrigin()}/desk/${workspaceId}/marketplace?tab=plugins`;
-    if (providerError) {
-      return NextResponse.redirect(
-        `${marketplace}&error=${encodeURIComponent(providerError)}`,
+    next = parsed.next;
+    const origin = appOrigin();
+    const bounce = (error?: string, connected?: string) =>
+      NextResponse.redirect(
+        `${origin}${pluginOAuthReturnPath({
+          workspaceId,
+          next,
+          error,
+          connected,
+          plugin: parsed.pluginId,
+        })}`,
       );
+    if (providerError) {
+      return bounce(providerError);
     }
     if (!code) {
-      return NextResponse.redirect(`${marketplace}&error=missing_code`);
+      return bounce("missing_code");
     }
     const plugin = getMarketplacePlugin(parsed.pluginId);
     if (!plugin || plugin.auth !== "oauth") {
-      return NextResponse.redirect(`${marketplace}&error=unknown_plugin`);
+      return bounce("unknown_plugin");
     }
     const member = await prisma.workspaceMember.findUnique({
       where: {
@@ -39,7 +50,7 @@ export async function GET(request: Request) {
       },
     });
     if (!member) {
-      return NextResponse.redirect(`${marketplace}&error=forbidden`);
+      return bounce("forbidden");
     }
     const exchanged = await exchangeOAuthCode(plugin, code);
     await persistOAuthConnection({
@@ -48,12 +59,14 @@ export async function GET(request: Request) {
       tokens: exchanged.tokens,
       metadata: exchanged.metadata,
     });
-    return NextResponse.redirect(
-      `${marketplace}&connected=${encodeURIComponent(plugin.id)}`,
-    );
+    return bounce(undefined, plugin.id);
   } catch {
     const fallback = workspaceId
-      ? `${appOrigin()}/desk/${workspaceId}/marketplace?tab=plugins&error=oauth_failed`
+      ? `${appOrigin()}${pluginOAuthReturnPath({
+          workspaceId,
+          next,
+          error: "oauth_failed",
+        })}`
       : `${appOrigin()}/desk`;
     return NextResponse.redirect(fallback);
   }

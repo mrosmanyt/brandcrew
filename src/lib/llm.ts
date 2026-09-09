@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { normalizePlanId } from "@/lib/limits";
 import {
+  displayModelById,
   geminiFlashModelId,
   gptTerraModelId,
   haikuModelId,
@@ -302,10 +303,12 @@ function pickRouteDefault(
 }
 
 function catalogRoute(prefer: LlmRoutingPreference): LlmRoute | null {
-  if (prefer === "opus-4.8") return firstCheap([anthropicHaikuRoute()]);
-  if (prefer === "fable-5.1") return firstCheap([anthropicSonnetRoute()]);
-  if (prefer === "gpt-astra") return firstCheap([openaiTerraRoute()]);
-  if (prefer === "gemini-3.8-flash") return firstCheap([geminiFlashRoute()]);
+  const row = displayModelById(prefer);
+  if (!row) return null;
+  if (row.backendClass === "haiku") return firstCheap([anthropicHaikuRoute()]);
+  if (row.backendClass === "sonnet") return firstCheap([anthropicSonnetRoute()]);
+  if (row.backendClass === "terra") return firstCheap([openaiTerraRoute()]);
+  if (row.backendClass === "flash") return firstCheap([geminiFlashRoute()]);
   return null;
 }
 

@@ -31,7 +31,7 @@ assert.match(sidebar, /onClick=\{\(\) => void createWorkspace\(\)\}/);
 assert.match(sidebar, /if \(e\.key !== "Enter"\) return/);
 assert.match(sidebar, /Enter a workspace name/);
 assert.match(sidebar, /Could not create workspace/);
-assert.match(sidebar, /router\.push\(`\/desk\/\$\{data\.workspace\.id\}`\)/);
+assert.match(sidebar, /router\.push\(`\/onboarding\?workspace=\$\{encodeURIComponent\(data\.workspace\.id\)\}`\)/);
 console.log("ok: + click and Enter POST /api/workspaces then switch desk");
 
 const router = readFileSync(join(root, "src/server/api/router.ts"), "utf8");

@@ -143,7 +143,7 @@ function CustomerProfile({
             disabled={busy}
             onClick={() => onPending({ kind: "revoke-user", email: profile.user.email })}
           >
-            Revoke to Demo
+            Revoke to Free
           </Button>
           <Button
             size="sm"

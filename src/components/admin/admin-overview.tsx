@@ -62,7 +62,7 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
         <div className="border-b border-border px-5 py-4">
           <h2 className="text-sm font-medium">Recent workspaces</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Assign, revoke to Demo, or suspend. Every change is audited.
+            Assign, revoke to Free, or suspend. Every change is audited.
           </p>
         </div>
         <WorkspaceTable

@@ -247,11 +247,13 @@ export async function signOAuthState(input: {
   workspaceId: string;
   pluginId: string;
   userId: string;
+  next?: string;
 }) {
   return new SignJWT({
     workspaceId: input.workspaceId,
     pluginId: input.pluginId,
     userId: input.userId,
+    next: input.next?.slice(0, 240) || "",
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -265,7 +267,7 @@ export async function readOAuthState(token: string) {
   const pluginId = String(payload.pluginId || "");
   const userId = String(payload.userId || "");
   if (!workspaceId || !pluginId || !userId) throw new Error("Invalid OAuth state.");
-  return { workspaceId, pluginId, userId };
+  return { workspaceId, pluginId, userId, next: String(payload.next || "") };
 }
 
 export type OAuthTokens = {
