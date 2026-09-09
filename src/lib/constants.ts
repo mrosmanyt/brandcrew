@@ -48,6 +48,17 @@ export const PLANS = {
 
 export type PlanId = keyof typeof PLANS;
 
+/** User-facing plan name. Internal id stays `demo`; customers see Free. */
+export function planDisplayName(plan?: string | null): string {
+  if (plan === "ultra") return PLANS.ultra.name;
+  if (plan === "growth" || plan === "pro") return PLANS.pro.name;
+  if (plan === "starter") return PLANS.starter.name;
+  return PLANS.demo.name;
+}
+
+/** There is no unlimited plan — every id is capped in PLANS. */
+export const PLAN_IDS_CAPPED = ["demo", "starter", "pro", "ultra"] as const;
+
 /** Paid plans shown in billing UI and mock checkout. */
 export const CHECKOUT_PLANS = ["starter", "pro", "ultra"] as const;
 export type CheckoutPlanId = (typeof CHECKOUT_PLANS)[number];

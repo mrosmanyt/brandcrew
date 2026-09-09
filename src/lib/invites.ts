@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { PLANS } from "@/lib/constants";
+import { planDisplayName } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { ClientError } from "@/lib/http";
 import { getWorkspaceLimits, limitsForPlan } from "@/lib/limits";
@@ -35,7 +35,7 @@ export async function assertSeatAvailable(workspaceId: string, extra = 1) {
   const limits = await getWorkspaceLimits(workspaceId);
   const nextUsed = limits.seatUsed + limits.pendingInvites + extra;
   if (nextUsed > limits.seats) {
-    const label = limits.paid ? PLANS[limits.plan].name : PLANS.demo.name;
+    const label = limits.paid ? planDisplayName(limits.plan) : planDisplayName("demo");
     throw new ClientError(
       `${label} plan includes ${limits.seats} seat${limits.seats === 1 ? "" : "s"}. Upgrade to invite more teammates.`,
       403,

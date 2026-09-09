@@ -17,6 +17,7 @@ import {
   type LlmRoutingPreference,
   type LlmStatus,
 } from "@/lib/llm-routing";
+import { anthropicCachedSystem, promptCacheForProvider } from "@/lib/prompt-cache";
 
 export type { LlmRoutingPreference, LlmStatus } from "@/lib/llm-routing";
 export { normalizeModelRouting } from "@/lib/llm-routing";
@@ -80,6 +81,7 @@ export type LlmJobKind =
   | "whatsapp"
   | "summaries"
   | "json"
+  | "classify"
   | "code"
   | "boost";
 
@@ -98,6 +100,7 @@ export type LlmCompleteResult = {
   displayName: string;
   provider: LlmProviderName;
   demo: boolean;
+  promptCached?: boolean;
 };
 
 export function openaiKey() {
@@ -270,6 +273,11 @@ function isJsonKind(kind: LlmJobKind, json: boolean) {
   return kind === "json" || (json && kind === "general");
 }
 
+/** Locator / classification — cheapest live engine, never Sonnet. */
+function isClassifyKind(kind: LlmJobKind) {
+  return kind === "classify";
+}
+
 function wantsSonnetMax(kind: LlmJobKind, plan: string, boost: boolean) {
   return boost || kind === "boost" || normalizePlanId(plan) === "ultra";
 }
@@ -292,6 +300,9 @@ function pickRouteDefault(
   }
   if (isCodeKind(kind)) {
     return firstCheap([anthropicSonnetRoute()]);
+  }
+  if (isClassifyKind(kind)) {
+    return firstCheap();
   }
   if (isJsonKind(kind, json)) {
     return firstCheap([anthropicHaikuRoute()]);
@@ -422,6 +433,7 @@ export class LLMProvider {
       displayName: publicModelLabel(route.model),
       provider: "openai",
       demo: false,
+      promptCached: promptCacheForProvider("openai").enabled,
     };
   }
 
@@ -449,11 +461,12 @@ export class LLMProvider {
         content: message.content,
       }));
 
+    const systemText = `${system}${jsonHint}`.trim();
     const response = await client.messages.create({
       model: route.model,
       max_tokens: 4096,
       temperature: input.mode === "final" ? 0.4 : 0.7,
-      system: `${system}${jsonHint}`.trim() || undefined,
+      system: systemText ? anthropicCachedSystem(systemText) : undefined,
       messages: conversation,
     });
 
@@ -468,6 +481,7 @@ export class LLMProvider {
       displayName: publicModelLabel(route.model),
       provider: "anthropic",
       demo: false,
+      promptCached: promptCacheForProvider("anthropic").enabled,
     };
   }
 
@@ -517,6 +531,7 @@ export class LLMProvider {
       displayName: publicModelLabel(route.model),
       provider: "gemini",
       demo: false,
+      promptCached: promptCacheForProvider("gemini").enabled,
     };
   }
 
@@ -548,6 +563,7 @@ export class LLMProvider {
       displayName: publicModelLabel(route.model),
       provider: "xai",
       demo: false,
+      promptCached: promptCacheForProvider("xai").enabled,
     };
   }
 }

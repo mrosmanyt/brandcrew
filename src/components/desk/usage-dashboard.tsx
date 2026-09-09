@@ -11,6 +11,7 @@ import type { AgentDTO } from "@/lib/job-types";
 type UsagePayload = {
   limits: {
     plan: string;
+    planLabel?: string;
     tokenUsed: number;
     tokenBudget: number;
     tokensLeft: number;
@@ -58,7 +59,7 @@ export function UsageDashboard({
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Workspace usage</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Tokens remain the billing unit. The desk shows them as <strong>credits</strong> 1:1
-        (Free / Starter / Pro / Ultra caps are unchanged).
+        (Free / Starter / Pro / Ultra caps — there is no unlimited plan).
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -103,7 +104,7 @@ export function UsageDashboard({
         />
         <Stat
           label="Plan"
-          value={limits?.plan ?? "…"}
+          value={limits?.planLabel ?? limits?.plan ?? "…"}
           hint="Starter $20 · Pro $79 · Ultra $200"
         />
       </div>

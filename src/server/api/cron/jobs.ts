@@ -22,7 +22,9 @@ export async function GET(request: Request) {
   try {
     authorizeCron(request);
     const result = await runDueSchedules();
-    return jsonOk({ ...result, note: SCHEDULE_SERVERLESS_NOTE });
+    const { runDueEventTriggers } = await import("@/lib/event-triggers");
+    const triggers = await runDueEventTriggers();
+    return jsonOk({ ...result, triggers, note: SCHEDULE_SERVERLESS_NOTE });
   } catch (error) {
     return jsonError(error);
   }

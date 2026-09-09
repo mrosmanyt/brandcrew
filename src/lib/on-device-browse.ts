@@ -3,7 +3,8 @@
  * Fall back to Playwright/fetch when no device is online.
  */
 import { recordWorkspaceAudit } from "@/lib/audit";
-import { rememberCachedSelector, actionKeyFor, lookupCachedSelector } from "@/lib/action-cache";
+import { rememberCachedSelector, actionKeyFor, lookupCachedAction, recordCacheMiss } from "@/lib/action-cache";
+import { guessSelectorFromDigest } from "@/lib/selector-guess";
 import {
   enqueueDeviceCommand,
   waitForDeviceCommand,
@@ -51,16 +52,33 @@ export async function resolveClickSelector(input: {
   url: string;
   tool: string;
   args: Record<string, unknown>;
-}): Promise<Record<string, unknown>> {
-  const selector = String(input.args.selector || "").trim();
-  if (selector) return input.args;
-  const cached = await lookupCachedSelector({
+  digestText?: string;
+  title?: string;
+}): Promise<Record<string, unknown> & { cacheHit?: boolean; llmLocator?: boolean }> {
+  const existing = String(input.args.selector || "").trim();
+  if (existing) return input.args;
+  const domain = hostFromUrl(input.url);
+  const actionKey = actionKeyFor(input.tool, input.args);
+  const cached = await lookupCachedAction({
     workspaceId: input.workspaceId,
-    domain: hostFromUrl(input.url),
-    actionKey: actionKeyFor(input.tool, input.args),
+    domain,
+    actionKey,
   });
-  if (!cached) return input.args;
-  return { ...input.args, selector: cached };
+  if (cached?.selector) {
+    return { ...input.args, selector: cached.selector, cacheHit: true };
+  }
+  const guessed = await guessSelectorFromDigest({
+    tool: input.tool,
+    goal: String(input.args.label || input.args.text || input.tool),
+    url: input.url,
+    title: input.title,
+    text: input.digestText,
+  });
+  if (guessed) {
+    return { ...input.args, selector: guessed, llmLocator: true };
+  }
+  await recordCacheMiss({ workspaceId: input.workspaceId, domain, actionKey });
+  return input.args;
 }
 
 export function devicePageToBrowse(page: NonNullable<DeviceCommandResult["page"]>): BrowsePage {

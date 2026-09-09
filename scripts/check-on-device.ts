@@ -138,9 +138,9 @@ for (const id of agencyIds) {
 console.log("ok: three agency playbooks are real jobs, not invented results");
 
 assert.equal(PHASE2_STATUS.saveAsSkill.status, "shipped");
-assert.equal(PHASE2_STATUS.eventTriggers.status, "stub");
-assert.equal(PHASE2_STATUS.sessionReplay.status, "stub");
-assert.equal(PHASE2_STATUS.deliverSlack.status, "stub");
+assert.equal(PHASE2_STATUS.eventTriggers.status, "shipped");
+assert.equal(PHASE2_STATUS.sessionReplay.status, "shipped");
+assert.equal(PHASE2_STATUS.deliverSlack.status, "shipped");
 assert.match(readFileSync("src/lib/phase2.ts", "utf8"), /CINEM_UNTRUSTED_PAGE_CONTENT/);
 assert.ok(existsSync("src/app/desk/[workspaceId]/[[...section]]/page.tsx"));
 assert.match(
@@ -148,7 +148,7 @@ assert.match(
   /on-device/,
 );
 assert.match(readFileSync("src/lib/desk-settings.ts", "utf8"), /On-device Chrome/);
-console.log("ok: Phase 2 stays scaffolding; desk On-device route exists");
+console.log("ok: cost controls shipped; desk On-device route exists");
 
 const launch = readFileSync("scripts/check-launch.ts", "utf8");
 assert.match(launch, /assignNodeEnv/);

@@ -56,6 +56,8 @@ model Workspace {
   audits             WorkspaceAudit[]
   actionCaches       ActionCache[]
   eventTriggers      EventTrigger[]
+  routines           Routine[]
+  sessionReplays     SessionReplay[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -135,22 +137,28 @@ model WorkspaceInvite {
 }
 
 model ScheduledJob {
-  id          String    @id @default(cuid())
-  workspaceId String
-  agentId     String?
-  title       String
-  message     String
-  playbookKey String?
-  cadence     String
-  timezone    String    @default("UTC")
-  nextRunAt   DateTime
-  lastRunAt   DateTime?
-  lastJobId   String?
-  enabled     Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  id           String    @id @default(cuid())
+  workspaceId  String
+  agentId      String?
+  title        String
+  message      String
+  playbookKey  String?
+  /// Optional saved skill this schedule re-runs (routines).
+  skillId      String?
+  deliverSlack Boolean   @default(false)
+  deliverEmail Boolean   @default(false)
+  slackChannel String    @default("")
+  sourceJobId  String?
+  cadence      String
+  timezone     String    @default("UTC")
+  nextRunAt    DateTime
+  lastRunAt    DateTime?
+  lastJobId    String?
+  enabled      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent        Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, enabled, nextRunAt])
   @@index([enabled, nextRunAt])
@@ -251,6 +259,7 @@ model Job {
   context     String     @default("{}")
   playbookKey String?
   skillId     String?
+  routineId   String?
   askPrompt   String     @default("")
   /// "clarify" (Yes/No or short answer) or "approve" (artifact approval).
   askKind     String     @default("")
@@ -268,6 +277,8 @@ model Job {
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   agent       Agent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
   skill       Skill?     @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  routine     Routine?   @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  replay      SessionReplay?
   events      JobEvent[]
   artifacts   Artifact[]
 
@@ -397,14 +408,18 @@ model WorkspaceAudit {
   @@index([jobId])
 }
 
-/// Phase 2: cached selectors so a later job on the same domain can skip an LLM guess.
+/// Cached selectors + step recipes so a later job on the same domain can skip an LLM guess.
 model ActionCache {
   id          String    @id @default(cuid())
   workspaceId String
   domain      String
   actionKey   String
   selector    String
+  /// JSON args recipe from a successful step (Stagehand-style).
+  recipe      String    @default("{}")
+  playbookKey String    @default("")
   hits        Int       @default(0)
+  misses      Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -413,20 +428,69 @@ model ActionCache {
   @@index([workspaceId, domain])
 }
 
-/// Phase 2 stub: event triggers (email / slack / schedule / webhook). Not a live runner.
+/// Cheap event triggers: schedule (cron), email-received (Gmail poll), Slack inbound.
 model EventTrigger {
   id          String    @id @default(cuid())
   workspaceId String
   kind        String
   enabled     Boolean   @default(false)
   playbookKey String    @default("")
+  agentId     String?
   config      String    @default("{}")
-  note        String    @default("Phase 2 stub")
+  note        String    @default("")
+  /// Dedup cursor (last Gmail message id / Slack ts / last fire).
+  cursor      String    @default("")
+  lastFiredAt DateTime?
+  lastJobId   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, kind])
+  @@index([enabled, kind])
+}
+
+/// Scheduled re-run of a successful workflow (skill + cadence + optional Slack/email deliver).
+model Routine {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  agentId        String?
+  skillId        String?
+  scheduleId     String?
+  playbookKey    String    @default("")
+  title          String
+  message        String
+  cadence        String
+  deliverSlack   Boolean   @default(false)
+  deliverEmail   Boolean   @default(false)
+  slackChannel   String    @default("")
+  emailTo        String    @default("")
+  sourceJobId    String?
+  lastJobId      String?
+  enabled        Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs           Job[]
+
+  @@index([workspaceId, enabled])
+}
+
+/// Packed job timeline for later review (cheaper than live view as the headline).
+model SessionReplay {
+  id          String    @id @default(cuid())
+  workspaceId String
+  jobId       String    @unique
+  packed      String    @default("{}")
+  stepCount   Int       @default(0)
+  llmCalls    Int       @default(0)
+  llmSkipped  Int       @default(0)
+  cacheHits   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
 }
 
 /// Dedupes inbound provider webhooks (Whop webhook-id / payment id).

@@ -512,11 +512,29 @@ When the UI does not pick a model (`Auto`):
 | Task | Backend |
 | --- | --- |
 | Research / outreach drafts / WhatsApp / summaries / website | Gemini Flash |
+| Classification / selector guess | Cheapest live engine (Flash → Terra → Haiku) |
 | Structured JSON / short tools (planner) | Haiku |
 | Real code / complex apps | Sonnet |
 | Ultra plan or Boost | Sonnet max (`ANTHROPIC_BOOST_MODEL` or Sonnet; never Opus) |
 
 Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline templates**.
+
+## Cost controls
+
+Keep useful work on APIs while driving spend toward zero. There is **no unlimited plan**.
+
+| Control | How it works |
+| --- | --- |
+| **Action cache + routines** | Successful `browser_click` / `browser_type` selectors are stored per workspace+domain. Repeat routine runs skip the LLM locator (Stagehand-style) and only call a model on cache miss or `write_artifact`. Save a finished job as a skill/routine (`POST /api/workspaces/:id/routines`) with a cadence. |
+| **DOM-first browse** | Perception is a text DOM digest (ARIA + visible text). Screenshots are for humans / session replay — never the default model input. Vision is opt-in fallback when the digest is empty. |
+| **Model routing** | Classify/locator → cheapest live engine. Writes stay on Flash/Haiku; code on Sonnet. User-facing free plan is **Free** (internal id `demo`). |
+| **Prompt caching** | Anthropic system prompts use `cache_control=ephemeral`. OpenAI/Gemini keep a stable system prefix (automatic/implicit cache). |
+| **Credits** | Token budget 1:1 as credits. Free/Starter/Pro/Ultra are all capped. |
+| **Event triggers** | Schedule uses existing cron/desk load. Email-received polls Connected Gmail. Slack mention is `POST /api/workspaces/:id/triggers/fire` (no Events API fleet). |
+| **Session replay** | Finished jobs pack plan + events + sources + cost (`GET .../jobs/:jobId/replay`). Cheaper than live view as the headline. |
+| **Guards** | Page text is `CINEM_UNTRUSTED_PAGE_CONTENT` (data only). Writes pause for approval. Domain allowlist aborts off-host. Slack/email deliver after approval; Gmail never sends. |
+
+`npm run test:cost` is the fixture: a weekly-client-brief replay skips the LLM for the majority of steps once selectors are cached.
 
 Founder Admin HQ lives at `/admin` (path-based internal ops console, not a customer product). Access is emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com`). **Set `ADMIN_EMAILS` on Vercel** to every staff email or they get 403. Non-admins get 403. Plan assign / revoke / suspend and flag writes are audited in `AdminAuditLog`.
 
@@ -571,6 +589,7 @@ npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule
 npm run test:billing       # Whop-first provider, webhook signature, cancel rules
 npm run test:launch        # logo, privacy/terms, headers, rate limit, honeypot, SEO files
 npm run test:on-device     # MV3 extension, native host, allowlist, write-gate, agency playbooks
+npm run test:cost          # action cache, DOM-first, cheap routing, credits/Free, triggers, replay
 ```
 
 ## Job runtime

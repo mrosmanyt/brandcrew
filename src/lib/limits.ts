@@ -1,4 +1,4 @@
-import { PLANS, type PlanId } from "@/lib/constants";
+import { planDisplayName, PLANS, type PlanId } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 
 export type PlanLimits = {
@@ -83,6 +83,7 @@ export async function getWorkspaceLimits(workspaceId: string): Promise<Workspace
 export function serializeLimits(limits: WorkspaceLimits) {
   return {
     plan: limits.plan,
+    planLabel: planDisplayName(limits.plan),
     paid: limits.paid,
     tokenUsed: limits.tokenUsed,
     tokenBudget: limits.tokenBudget,
@@ -101,7 +102,7 @@ export function serializeLimits(limits: WorkspaceLimits) {
     creditsBudget: limits.tokenBudget,
     creditsLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
     creditsHint:
-      "Credits wrap this plan’s token budget 1:1. Free/Starter/Pro/Ultra caps are unchanged.",
+      "Credits wrap this plan’s token budget 1:1. Free/Starter/Pro/Ultra are capped — there is no unlimited plan.",
   };
 }
 

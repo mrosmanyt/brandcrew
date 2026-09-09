@@ -39,6 +39,9 @@ const PATTERNS: string[][] = [
   ["api", "workspaces", ":workspaceId", "approvals"],
   ["api", "workspaces", ":workspaceId", "audit"],
   ["api", "workspaces", ":workspaceId", "phase2"],
+  ["api", "workspaces", ":workspaceId", "routines"],
+  ["api", "workspaces", ":workspaceId", "triggers", "fire"],
+  ["api", "workspaces", ":workspaceId", "triggers"],
   ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],
   ["api", "workspaces", ":workspaceId", "schedules"],
   ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
@@ -57,6 +60,7 @@ const PATTERNS: string[][] = [
   ["api", "workspaces", ":workspaceId", "tasks", ":taskId"],
   ["api", "workspaces", ":workspaceId", "tasks"],
   ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "reply"],
+  ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "replay"],
   ["api", "workspaces", ":workspaceId", "jobs", ":jobId"],
   ["api", "workspaces", ":workspaceId", "jobs"],
   ["api", "workspaces", ":workspaceId", "companions"],
@@ -158,6 +162,21 @@ const cases: Array<[string, string[], Record<string, string>]> = [
     { workspaceId: "ws_1" },
   ],
   [
+    "/api/workspaces/ws_1/routines",
+    ["api", "workspaces", ":workspaceId", "routines"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/triggers/fire",
+    ["api", "workspaces", ":workspaceId", "triggers", "fire"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/triggers",
+    ["api", "workspaces", ":workspaceId", "triggers"],
+    { workspaceId: "ws_1" },
+  ],
+  [
     "/api/workspaces/ws_1/schedules",
     ["api", "workspaces", ":workspaceId", "schedules"],
     { workspaceId: "ws_1" },
@@ -180,6 +199,11 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   [
     "/api/workspaces/ws_1/jobs/job_9/reply",
     ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "reply"],
+    { workspaceId: "ws_1", jobId: "job_9" },
+  ],
+  [
+    "/api/workspaces/ws_1/jobs/job_9/replay",
+    ["api", "workspaces", ":workspaceId", "jobs", ":jobId", "replay"],
     { workspaceId: "ws_1", jobId: "job_9" },
   ],
   [
@@ -257,8 +281,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 59);
-console.log("ok: 59 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 63);
+console.log("ok: 63 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

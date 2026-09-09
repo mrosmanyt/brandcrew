@@ -28,6 +28,10 @@ export function serializeSchedule(row: {
   nextRunAt: Date;
   lastRunAt: Date | null;
   lastJobId: string | null;
+  skillId?: string | null;
+  deliverSlack?: boolean;
+  deliverEmail?: boolean;
+  slackChannel?: string;
   enabled: boolean;
   createdAt: Date;
 }) {
@@ -38,12 +42,16 @@ export function serializeSchedule(row: {
     title: row.title,
     message: row.message,
     playbookKey: row.playbookKey,
+    skillId: row.skillId ?? null,
     cadence: row.cadence,
     cadenceLabel: cadenceLabel(row.cadence),
     timezone: row.timezone,
     nextRunAt: row.nextRunAt.toISOString(),
     lastRunAt: row.lastRunAt?.toISOString() ?? null,
     lastJobId: row.lastJobId,
+    deliverSlack: Boolean(row.deliverSlack),
+    deliverEmail: Boolean(row.deliverEmail),
+    slackChannel: row.slackChannel || "",
     enabled: row.enabled,
     createdAt: row.createdAt.toISOString(),
   };
@@ -92,11 +100,29 @@ export async function runDueSchedules(workspaceId?: string) {
         agentId: row.agentId,
         message: row.message,
         playbookKey: row.playbookKey || undefined,
+        skillId: row.skillId || undefined,
       });
+      const routine = row.skillId
+        ? await prisma.routine.findFirst({
+            where: { workspaceId: row.workspaceId, skillId: row.skillId, enabled: true },
+          })
+        : await prisma.routine.findFirst({
+            where: { workspaceId: row.workspaceId, scheduleId: row.id, enabled: true },
+          });
       await prisma.scheduledJob.update({
         where: { id: row.id },
         data: { lastJobId: result.job.id },
       });
+      if (routine) {
+        await prisma.job.update({
+          where: { id: result.job.id },
+          data: { routineId: routine.id },
+        });
+        await prisma.routine.update({
+          where: { id: routine.id },
+          data: { lastJobId: result.job.id },
+        });
+      }
       started.push(result.job.id);
     } catch (error) {
       await prisma.scheduledJob.update({
