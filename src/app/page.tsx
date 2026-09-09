@@ -36,8 +36,9 @@ export default function HomePage() {
               Approve the work.
             </h1>
             <p className="mkt-hero-lead mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
-              Most AI tools dump a draft and walk away. CINEM Pro is a desk: staff
-              you create, jobs that use tools, and a pause before anything leaves.
+              Most AI tools dump a draft and walk away. CINEM Pro is a desk of AI
+              employees: they email, post, scrape, and work the browser — you
+              approve what leaves.
             </p>
             <div className="mkt-hero-cta mt-10">
               <HomeHeroCtas />
@@ -47,7 +48,8 @@ export default function HomePage() {
           <div id="product" className="mkt-hero-demo scroll-mt-20 mt-10 md:mt-12">
             <HeroDemo />
             <p className="mt-5 text-sm leading-6 text-muted-foreground">
-              Agents plan, tools run, you approve. The loop resets — nothing posts.
+              Agents plan, tools run, you approve. Email, LinkedIn, posts, and
+              browser work — with you in control.
             </p>
           </div>
         </section>

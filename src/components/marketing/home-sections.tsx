@@ -101,7 +101,7 @@ export function FeaturesSection() {
       bordered
       kicker="Features"
       title="A desk, not another chat box"
-      lead="CINEM Pro staffs work you can inspect. Tools run when they are real. Nothing posts, sends, or spends until you say so."
+      lead="CINEM Pro staffs work you can inspect. Agents email, post, and run tools. Nothing leaves until you say so."
     >
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature) => (
@@ -213,7 +213,7 @@ export function HowItWorksSection() {
 const USE_CASES = [
   {
     title: "Founders",
-    body: "One desk for research, a week of posts, and outbound you still send yourself. Brand Kit holds the offer so every job sounds like your company — not a generic model.",
+    body: "One desk for research, a week of posts, and outbound your agents run. Brand Kit holds the offer so every job sounds like your company — not a generic model.",
   },
   {
     title: "Agencies",
@@ -434,7 +434,7 @@ export function TrustSection() {
       bordered
       kicker="Trust"
       title="Nothing leaves without you"
-      lead="CINEM Pro is a desk you supervise. It is not a robot that posts, and it is not a CRM that syncs behind your back."
+      lead="CINEM Pro is a desk of AI employees. They email, post, scrape, and work the browser for you — you approve what goes out."
     >
       <ul className="grid gap-10 md:grid-cols-3">
         {TRUST.map((item) => (
@@ -455,7 +455,7 @@ const FAQS = [
   },
   {
     q: "Does it post to LinkedIn or send email?",
-    a: "No. Jobs write artifacts and pause. Gmail creates drafts only. Slack posts only after you approve. There is no LinkedIn auto-post and no live WhatsApp send.",
+    a: "That's the work. Agents draft email, LinkedIn, and posts, and they work the browser. Approve-before-send is the default — Gmail stays a draft, Slack posts after you approve, and LinkedIn copy waits on the desk until you say it can go.",
   },
   {
     q: "Are Gmail and Slack real?",
@@ -519,8 +519,8 @@ export function SiteFooter() {
         <div>
           <p className="text-sm font-medium tracking-tight">CINEM Pro</p>
           <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-            From CINEM. A desk — not a CRM, not an ad account, not a robot that
-            posts for you.
+            From CINEM. An AI employee desk — not a CRM, not an ad account.
+            Agents that email, post, and work the browser for you.
           </p>
         </div>
         <nav className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm text-muted-foreground sm:grid-cols-3">

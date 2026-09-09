@@ -46,10 +46,17 @@ assert.match(footer, /href: "\/privacy"/);
 assert.match(footer, /href: "\/terms"/);
 assert.match(footer, /label: "Privacy"/);
 assert.match(footer, /label: "Terms"/);
+assert.match(footer, /From CINEM/);
+assert.match(footer, /AI employee desk/);
+assert.doesNotMatch(footer, /not a robot that posts/i);
+assert.doesNotMatch(footer, /not a robot/i);
+const landing = readFileSync("src/app/page.tsx", "utf8");
+assert.doesNotMatch(landing, /nothing posts/i);
+assert.doesNotMatch(landing, /not a robot that posts/i);
 const nav = readFileSync("src/components/marketing/site-nav.tsx", "utf8");
 assert.doesNotMatch(nav, /\/privacy/);
 assert.match(nav, /Get started|Open desk/);
-console.log("ok: Privacy/Terms in existing footer; top nav unchanged");
+console.log("ok: Privacy/Terms in footer; tagline sells the agent desk; top nav unchanged");
 
 assert.ok(existsSync("src/app/privacy/page.tsx"));
 assert.ok(existsSync("src/app/terms/page.tsx"));

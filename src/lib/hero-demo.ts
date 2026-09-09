@@ -12,7 +12,7 @@ export const HERO_DEMO_AGENT_NAME = "New Agent";
 export const HERO_DEMO_AGENT_ROLE = "Writer";
 
 export const HERO_DEMO_PLAN_COPY =
-  "I’ll read the Northline Brand Kit, browse the public site, write five LinkedIn posts, then pause for your approval. Nothing is published.";
+  "I’ll read the Northline Brand Kit, browse the public site, write five LinkedIn posts, then pause for your approval before they go out.";
 
 export const HERO_DEMO_JOB_TITLE = "LinkedIn week";
 
@@ -23,7 +23,7 @@ export const HERO_DEMO_ARTIFACT = {
   posts: [
     "The rooms feel specific. The feed should too.",
     "Brand Kit first. Then the week.",
-    "Tools ran. The posts did not leave.",
+    "Tools ran. Five posts, ready for you.",
     "Five drafts. You still sign the work.",
     "Approve what leaves.",
   ],
