@@ -176,6 +176,12 @@
   color-scheme: light;
 }
 
+/* Marketing canvas stays light even when <html> is .dark (desk theme).
+   Do not invert the black mark onto cream. */
+.marketing-canvas img.cinem-logo {
+  filter: none;
+}
+
 .marketing-canvas [data-slot="input"] {
   background: #fff;
   border-color: #d6d1c7;

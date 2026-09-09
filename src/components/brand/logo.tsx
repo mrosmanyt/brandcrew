@@ -30,12 +30,10 @@ export function CinemMark({
 
 export function CinemLogoImage({
   className,
-  inverted = false,
   alt = "",
   priority = false,
 }: {
   className?: string;
-  inverted?: boolean;
   alt?: string;
   priority?: boolean;
 }) {
@@ -45,11 +43,7 @@ export function CinemLogoImage({
       alt={alt}
       width={96}
       height={96}
-      className={cn(
-        "size-8 shrink-0",
-        inverted ? "invert" : "dark:invert",
-        className,
-      )}
+      className={cn("cinem-logo size-8 shrink-0 dark:invert", className)}
       priority={priority}
       unoptimized
     />
@@ -67,7 +61,7 @@ export function BrandMark({
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <CinemLogoImage inverted={inverted} priority={priority} />
+      <CinemLogoImage priority={priority} />
       <span
         className={cn(
           "text-[0.95rem] font-medium tracking-tight whitespace-nowrap",
