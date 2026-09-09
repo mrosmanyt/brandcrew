@@ -142,17 +142,26 @@ assert.equal(hibpRangeContainsSuffix(sha1Password, `${sha1Password.slice(5)}:99\
 assert.equal(hibpRangeContainsSuffix(sha1Password, "DEADBEEF:1\n"), false);
 console.log("ok: honeypot + auth form validation + password rules");
 
+/** Next.js types NODE_ENV as readonly; mutate a bag so tsc allows the leakage test. */
+function assignNodeEnv(value: string | undefined) {
+  const env = process.env as Record<string, string | undefined>;
+  if (value === undefined) delete env.NODE_ENV;
+  else env.NODE_ENV = value;
+}
+
+const saved = process.env.NODE_ENV;
+assignNodeEnv("production");
 const errorLog = console.error;
 console.error = () => undefined;
 const leaked = jsonError(new Error("DATABASE_URL=postgres://secret"));
+assignNodeEnv(undefined);
 const leakedDev = jsonError(
   new Error("error: Environment variable not found: DATABASE_URL."),
 );
 console.error = errorLog;
+if (saved) assignNodeEnv(saved);
+else assignNodeEnv("test");
 assert.equal(leaked.status, 500);
-const httpSrc = readFileSync("src/lib/http.ts", "utf8");
-assert.match(httpSrc, /process\.env\.NODE_ENV === "production"/);
-assert.match(httpSrc, /Something went wrong\. Try again\./);
 
 async function main() {
     const body = (await leaked.json()) as { error?: string };
