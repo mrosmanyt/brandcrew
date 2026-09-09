@@ -90,6 +90,42 @@ export const FEATURED_JOB_TEMPLATES: JobTemplate[] = [
     roleHint: "Finance",
     featured: true,
   },
+  {
+    id: "tpl-prospecting-scan",
+    title: "Prospecting scan",
+    blurb:
+      "Browse a public page, extract who they are, write sourced notes with uncertainty. Does not invent contacts or send.",
+    playbookKey: "prospecting_scan",
+    action: "prospecting_scan",
+    message:
+      "Prospecting scan: browse the public URL in this message (or the Brand Kit site), extract who they are, and write sourced notes with uncertainty. Do not invent contacts. Do not send.",
+    roleHint: "Sales",
+    featured: true,
+  },
+  {
+    id: "tpl-outreach-draft-pack",
+    title: "Outreach draft pack",
+    blurb:
+      "Five outreach drafts from research or a public page. You approve. CINEM Pro does not send.",
+    playbookKey: "outreach_draft_pack",
+    action: "outreach_draft_pack",
+    message:
+      "Outreach draft pack: from the latest research or this public page, write 5 outreach drafts. Pause for approval. Do not send.",
+    roleHint: "Sales",
+    featured: true,
+  },
+  {
+    id: "tpl-weekly-client-brief",
+    title: "Weekly client brief",
+    blurb:
+      "Sourced weekly brief from a public page. Cite sources. Does not invent results or email the client.",
+    playbookKey: "weekly_client_brief",
+    action: "weekly_client_brief",
+    message:
+      "Weekly client brief: browse the public URL (or Brand Kit site) and write a sourced weekly brief. Cite sources. Do not invent results. Pause for approval.",
+    roleHint: "Research",
+    featured: true,
+  },
 ];
 
 export function getJobTemplate(id: string) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DeskThemeToggle } from "@/components/desk/theme-toggle";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
+import { creditsFromTokens, formatCreditsLine } from "@/lib/credits";
 
 export function DeskChromeHeader({
   workspaceId,
@@ -17,14 +18,15 @@ export function DeskChromeHeader({
   plan: string;
   needsYou: NeedsYouItem[];
 }) {
+  const credits = creditsFromTokens(Math.max(0, tokenBudget - tokensLeft), tokenBudget);
+  credits.creditsLeft = Math.max(0, tokensLeft);
   return (
     <header className="hidden h-11 shrink-0 items-center justify-end gap-3 border-b border-border bg-background px-4 md:flex">
       <Link
         href={`/desk/${workspaceId}/usage`}
         className="text-[11px] text-muted-foreground hover:text-foreground"
       >
-        {tokensLeft.toLocaleString()} / {tokenBudget.toLocaleString()} tokens · {jobsLeft}{" "}
-        jobs/hr cap · {plan}
+        {formatCreditsLine(credits)} · {jobsLeft} jobs/hr cap · {plan}
       </Link>
       <NotificationBell workspaceId={workspaceId} initialItems={needsYou} />
       <DeskThemeToggle />

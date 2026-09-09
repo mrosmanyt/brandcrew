@@ -622,6 +622,106 @@ export function slackPostPlaybook(): JobPlaybook {
   };
 }
 
+export function prospectingScanPlaybook(url?: string): JobPlaybook {
+  return {
+    key: "prospecting_scan",
+    title: "Prospecting scan",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open the public prospect page",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep("browser_snapshot", "Snapshot the public page", {}, "snap"),
+      makeStep(
+        "browser_extract",
+        "Extract visible company/person text",
+        { selector: "body" },
+        "extract",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write sourced prospecting notes",
+        { kind: "prospecting_scan" },
+        "notes",
+      ),
+      approveStep(
+        "Approve these prospecting notes. CINEM Pro did not invent contacts or send outreach.",
+      ),
+    ],
+  };
+}
+
+export function outreachDraftPackPlaybook(url?: string): JobPlaybook {
+  const browse = url
+    ? [
+        makeStep("browser_navigate", `Open ${url}`, { url }, "nav"),
+        makeStep("browser_extract", "Extract visible page text", { selector: "body" }, "extract"),
+      ]
+    : [
+        makeStep(
+          "read_artifact",
+          "Read the latest research or prospecting artifact",
+          { types: ["research_pack", "competitor_scan", "prospecting_scan", "weekly_client_brief"] },
+          "research",
+        ),
+      ];
+  return {
+    key: "outreach_draft_pack",
+    title: "Outreach draft pack",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      ...browse,
+      makeStep(
+        "write_artifact",
+        "Write 5 outreach drafts (do not send)",
+        { kind: "outreach_pack" },
+        "pack",
+      ),
+      approveStep(
+        "Approve this outreach draft pack. CINEM Pro will not send email, LinkedIn, or Slack.",
+      ),
+    ],
+  };
+}
+
+export function weeklyClientBriefPlaybook(url?: string): JobPlaybook {
+  return {
+    key: "weekly_client_brief",
+    title: "Weekly client brief",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_navigate",
+        url ? `Open ${url}` : "Open the client or Brand Kit site",
+        { url: url || "" },
+        "nav",
+      ),
+      makeStep("browser_snapshot", "Snapshot the public page", {}, "snap"),
+      makeStep(
+        "crawl_links",
+        "Follow a couple of public links on the same site",
+        { depth: 1, maxPages: 2 },
+        "crawl",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write a sourced weekly client brief",
+        { kind: "weekly_client_brief" },
+        "brief",
+      ),
+      approveStep(
+        "Approve this weekly client brief. Sources and uncertainty are attached. Nothing was sent to the client.",
+      ),
+    ],
+  };
+}
+
 /** Public URLs from the user message, then Brand Kit website. Never invents example.com competitors. */
 export function defaultCompetitorUrls(message: string, website?: string): string[] {
   const fromMessage = extractUrls(message).slice(0, 3);
@@ -671,6 +771,9 @@ export function playbookFromKey(
   if (key === "app_builder") return appBuilderPlaybook();
   if (key === "deck_builder") return deckBuilderPlaybook();
   if (key === "brand_kit_draft") return brandKitDraftPlaybook();
+  if (key === "prospecting_scan") return prospectingScanPlaybook(url);
+  if (key === "outreach_draft_pack") return outreachDraftPackPlaybook(extractUrls(message)[0] || url || "");
+  if (key === "weekly_client_brief") return weeklyClientBriefPlaybook(url);
   return genericPlaybook(role, undefined, url);
 }
 
@@ -686,6 +789,9 @@ export function inferPlaybookKey(
   if (action === "outreach_from_research") return "outreach_from_research";
   if (action === "linkedin_outreach_draft") return "linkedin_outreach_draft";
   if (action === "inbox_invoices") return "inbox_invoices";
+  if (action === "prospecting_scan") return "prospecting_scan";
+  if (action === "outreach_draft_pack") return "outreach_draft_pack";
+  if (action === "weekly_client_brief") return "weekly_client_brief";
   if (action === "ad_angles_from_url") return "ad_angles_from_url";
   if (action === "build_website") return "website_builder";
   if (action === "build_app") return "app_builder";
@@ -739,6 +845,19 @@ export function inferPlaybookKey(
     return "competitor_scan";
   }
   if (
+    /prospecting scan|prospect scan|who is this (company|page)|scan this (public )?page/.test(
+      text,
+    )
+  ) {
+    return "prospecting_scan";
+  }
+  if (/outreach draft pack|draft pack|5 outreach drafts/.test(text)) {
+    return "outreach_draft_pack";
+  }
+  if (/weekly client brief|client brief|weekly brief/.test(text)) {
+    return "weekly_client_brief";
+  }
+  if (
     /research pack|research (the )?(site|company|page)|browse (the )?(site|company)/.test(
       text,
     ) ||
@@ -766,6 +885,26 @@ export function inferPlaybookKey(
   }
   if (hint === "sales" && /sales pack|outbound|linkedin dm|email script/.test(text)) {
     return "sales_pack";
+  }
+  if (
+    /prospecting scan|prospect scan|who is this (company|page)|scan this (public )?page/.test(
+      text,
+    ) ||
+    ((hint === "sales" || hint === "researcher") && /prospect/.test(text) && /scan|research|page/.test(text))
+  ) {
+    return "prospecting_scan";
+  }
+  if (
+    /outreach draft pack|draft pack|5 outreach drafts/.test(text) ||
+    (hint === "sales" && /draft pack/.test(text))
+  ) {
+    return "outreach_draft_pack";
+  }
+  if (
+    /weekly client brief|client brief|weekly brief/.test(text) ||
+    (hint === "researcher" && /weekly brief|client update/.test(text))
+  ) {
+    return "weekly_client_brief";
   }
   if (
     hint === "ads" &&

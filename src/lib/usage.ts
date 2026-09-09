@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getWorkspaceLimits, limitsForPlan } from "@/lib/limits";
+import { getWorkspaceLimits, limitsForPlan, serializeLimits } from "@/lib/limits";
 
 export class BudgetError extends Error {
   status = 429;
@@ -86,22 +86,7 @@ export async function getUsageSnapshot(workspaceId: string) {
     }),
   ]);
   return {
-    limits: {
-      plan: limits.plan,
-      paid: limits.paid,
-      tokenUsed: limits.tokenUsed,
-      tokenBudget: limits.tokenBudget,
-      tokensLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
-      jobsThisHour: limits.jobsThisHour,
-      jobsPerHour: limits.jobsPerHour,
-      jobsLeftThisHour: Math.max(0, limits.jobsPerHour - limits.jobsThisHour),
-      concurrentJobs: limits.concurrentJobs,
-      maxConcurrentJobs: limits.maxConcurrentJobs,
-      seats: limits.seats,
-      seatUsed: limits.seatUsed,
-      pendingInvites: limits.pendingInvites,
-      seatsLeft: Math.max(0, limits.seats - limits.seatUsed - limits.pendingInvites),
-    },
+    limits: serializeLimits(limits),
     jobs: jobCount,
     approved: approvedCount,
     estimateUsd: estimateUsdStub(limits.tokenUsed),

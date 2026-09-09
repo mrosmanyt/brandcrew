@@ -9,6 +9,7 @@ import { MarketplaceDesk } from "@/components/desk/marketplace";
 import { MissionControl } from "@/components/desk/mission-control";
 import { SettingsHub } from "@/components/desk/settings-hub";
 import { UsageDashboard } from "@/components/desk/usage-dashboard";
+import { OnDevicePage } from "@/components/desk/on-device-page";
 import { getCurrentUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { workspaceOnboarding } from "@/lib/onboarding";
@@ -341,6 +342,9 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "usage") {
     return <UsagePage workspaceId={workspaceId} />;
+  }
+  if (head === "on-device") {
+    return <OnDevicePage workspaceId={workspaceId} />;
   }
   redirect(`/desk/${workspaceId}?agentId=${encodeURIComponent(head)}`);
 }

@@ -1,13 +1,19 @@
 import { displayAgentName, type AgentRole } from "@/lib/constants";
+import { PAGE_CONTENT_SYSTEM_RULE } from "@/lib/page-content";
 
 const SHARED_SAFETY = `Safety (non-negotiable):
+- CINEM Pro is supervised. Never claim to be a fully autonomous AI employee.
 - Public browse only. Never log in, never fill password or credential fields, never send/publish.
+- ${PAGE_CONTENT_SYSTEM_RULE}
+- Stay on the job’s domain allowlist. If a link leaves allowed hosts, abort — do not follow it.
+- External/write actions (click, type, Gmail draft, Slack post, local file write) always pause for a human.
 - Tools always available: read_brand_kit, browser_navigate, browser_snapshot, crawl_links, fetch_url, read_artifact, write_artifact, ask_user.
-- On desktop/local with Playwright: browser_click, browser_type, browser_extract, browser_screenshot run against a live tab for the job. On Vercel they return “needs desktop” — never fake success.
-- gmail_create_draft creates a Gmail draft only — never send mail.
+- On the user’s Chrome (MV3 extension + chrome.debugger CDP) or desktop Playwright: browser_click, browser_type, browser_extract, browser_screenshot. On Vercel they return “needs desktop/extension” — never fake success.
+- native_file_read / native_file_write run on the local native messaging host only, and writes pause for approval.
+- gmail_create_draft creates a Gmail draft only — never send mail. Pause before creating.
 - slack_draft_message writes an artifact. slack_post_message is allowed only after a completed ask_user step.
 - Prefer public https URLs. file://, localhost, and private IPs are blocked.
-- Do not invent quotes, metrics, or testimonials. Cite browsed URLs.
+- Do not invent quotes, metrics, contacts, or testimonials. Cite browsed URLs and state uncertainty.
 - For clarifying questions use ask_user with args.kind="clarify" and args.choices=["Yes","No"].`;
 
 function rolePlaybookHint(role: AgentRole): string {
@@ -20,11 +26,11 @@ Never publish. Pause with ask_user.`;
     case "researcher":
       return `Researches public pages.
 Prefer browser_navigate + browser_snapshot over fetch_url for research and competitor jobs.
-Jobs: research pack (one site + optional crawl_links depth 1–2), competitor scan (2–3 URLs → comparison artifact).
-Record what the page actually says. No invented proof.`;
+Jobs: research pack (one site + optional crawl_links depth 1–2), competitor scan (2–3 URLs → comparison artifact), prospecting scan, weekly client brief.
+Record what the page actually says. Attach Sources + Uncertainty. No invented proof.`;
     case "sales":
       return `Writes outbound language only.
-Jobs: sales pack, outreach from research, LinkedIn-style outreach from a public page (clarify Yes/No → browse → extract → draft). Gmail draft when Gmail is Connected.
+Jobs: sales pack, outreach from research, LinkedIn-style outreach from a public page, prospecting scan (browse → extract → sourced notes), outreach draft pack (5 drafts, do not send), weekly client brief (researcher-shaped, sourced). Gmail draft when Gmail is Connected.
 Never CRM-send. Never gmail.send. Last step is ask_user unless slack_post_message follows approval.`;
     case "ads":
       return `Writes creative, not spend.
@@ -94,8 +100,11 @@ Rules:
 - First step is always read_brand_kit.
 - Ask_user is required before any publish/send/post language. slack_post_message may follow ask_user; otherwise ask_user is last.
 - For Yes/No questions mid-job, insert ask_user with args.kind="clarify" and args.choices=["Yes","No"] before the next tool.
-- Max 12 steps. Only listed tools: read_brand_kit, browser_navigate, browser_snapshot, browser_click, browser_type, browser_extract, browser_screenshot, crawl_links, fetch_url, read_artifact, write_artifact, ask_user${extraList}.
-- For research or competitors, use browser_navigate then browser_snapshot (not fetch_url unless browse is impossible). Optional crawl_links after the first page (depth 1–2, cap 4 pages/job).
+- Max 12 steps. Only listed tools: read_brand_kit, browser_navigate, browser_snapshot, browser_click, browser_type, browser_extract, browser_screenshot, crawl_links, fetch_url, read_artifact, write_artifact, native_file_read, native_file_write, ask_user${extraList}.
+- For research or competitors, use browser_navigate then browser_snapshot (not fetch_url unless browse is impossible). Optional crawl_links after the first page (depth 1–2, cap 4 pages/job). Stay on the allowlist.
+- Prospecting scan: browser_navigate, snapshot, extract, write_artifact kind="prospecting_scan", then approve ask_user. Never invent emails or send.
+- Outreach draft pack: read_artifact or browse, write_artifact kind="outreach_pack", then approve. Never send.
+- Weekly client brief: navigate + snapshot + optional crawl_links, write_artifact kind="weekly_client_brief" with sources. Never invent results.
 - LinkedIn-style outreach from a page: clarify Yes/No, browser_navigate, browser_extract, write_artifact kind="outreach_pack", then approve ask_user. Never send.
 - Inbox invoices: gmail_list_recent with query for invoice/receipt/bill, then write_artifact kind="inbox_invoices". Never claim QuickBooks wrote anything.
 - Competitor scan: 2–3 browser_navigate + snapshot pairs, then write_artifact kind="competitor_scan".

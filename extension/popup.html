@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CINEM Pro</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="icons/cinem-logo.png" alt="" width="28" height="28" />
+      <div>
+        <strong>CINEM Pro</strong>
+        <p>Supervised on-device agent</p>
+      </div>
+    </header>
+    <section id="paired" hidden>
+      <p id="status-line">Paired.</p>
+      <p class="hint">Keep this popup open (or install the local agent) while a job runs so Chrome CDP stays attached.</p>
+      <button type="button" id="poll">Poll now</button>
+      <button type="button" id="unpair" class="ghost">Unpair</button>
+    </section>
+    <form id="pair-form">
+      <label>
+        Desk origin
+        <input id="origin" type="url" required placeholder="http://127.0.0.1:43180" />
+      </label>
+      <label>
+        Pairing code
+        <input id="code" type="text" required maxlength="8" placeholder="ABC123" autocomplete="off" />
+      </label>
+      <button type="submit">Pair this Chrome</button>
+      <p class="hint">Desk → On-device Chrome → generate a code. Writes always pause for you.</p>
+    </form>
+    <p id="error" class="error" hidden></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

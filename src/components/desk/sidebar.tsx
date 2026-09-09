@@ -10,6 +10,7 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  MonitorSmartphone,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -396,6 +397,14 @@ function NavBody({
               icon={<ListChecks className="size-3.5" />}
             >
               Ops board
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/on-device`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<MonitorSmartphone className="size-3.5" />}
+            >
+              On-device Chrome
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/developers`}

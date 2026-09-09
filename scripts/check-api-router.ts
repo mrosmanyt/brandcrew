@@ -25,11 +25,20 @@ const PATTERNS: string[][] = [
   ["api", "billing", "checkout"],
   ["api", "webhooks", "whop"],
   ["api", "cron", "jobs"],
+  ["api", "device", "claim"],
+  ["api", "device", "heartbeat"],
+  ["api", "device", "commands", ":commandId"],
+  ["api", "device", "commands"],
   ["api", "invites", ":token"],
   ["api", "workspaces"],
   ["api", "workspaces", ":workspaceId", "invites", ":inviteId"],
   ["api", "workspaces", ":workspaceId", "invites"],
   ["api", "workspaces", ":workspaceId", "usage"],
+  ["api", "workspaces", ":workspaceId", "devices", ":deviceId"],
+  ["api", "workspaces", ":workspaceId", "devices"],
+  ["api", "workspaces", ":workspaceId", "approvals"],
+  ["api", "workspaces", ":workspaceId", "audit"],
+  ["api", "workspaces", ":workspaceId", "phase2"],
   ["api", "workspaces", ":workspaceId", "schedules", ":scheduleId"],
   ["api", "workspaces", ":workspaceId", "schedules"],
   ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
@@ -94,6 +103,14 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/billing/checkout", ["api", "billing", "checkout"], {}],
   ["/api/webhooks/whop", ["api", "webhooks", "whop"], {}],
   ["/api/cron/jobs", ["api", "cron", "jobs"], {}],
+  ["/api/device/claim", ["api", "device", "claim"], {}],
+  ["/api/device/heartbeat", ["api", "device", "heartbeat"], {}],
+  ["/api/device/commands", ["api", "device", "commands"], {}],
+  [
+    "/api/device/commands/cmd_1",
+    ["api", "device", "commands", ":commandId"],
+    { commandId: "cmd_1" },
+  ],
   [
     "/api/invites/tok_1",
     ["api", "invites", ":token"],
@@ -113,6 +130,31 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   [
     "/api/workspaces/ws_1/usage",
     ["api", "workspaces", ":workspaceId", "usage"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/devices",
+    ["api", "workspaces", ":workspaceId", "devices"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/devices/dev_1",
+    ["api", "workspaces", ":workspaceId", "devices", ":deviceId"],
+    { workspaceId: "ws_1", deviceId: "dev_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/approvals",
+    ["api", "workspaces", ":workspaceId", "approvals"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/audit",
+    ["api", "workspaces", ":workspaceId", "audit"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/phase2",
+    ["api", "workspaces", ":workspaceId", "phase2"],
     { workspaceId: "ws_1" },
   ],
   [
@@ -215,8 +257,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 50);
-console.log("ok: 50 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 59);
+console.log("ok: 59 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

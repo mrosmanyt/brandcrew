@@ -86,6 +86,29 @@ import {
 import { assertWorkspaceBudget, recordUsage } from "@/lib/usage";
 import { tavilySearch } from "@/lib/web-search";
 import { ClientError } from "@/lib/http";
+import { recordWorkspaceAudit } from "@/lib/audit";
+import {
+  allowlistFromUrls,
+  assertHostAllowed,
+  hostAllowed,
+  lockAllowlist,
+  parseAllowlist,
+} from "@/lib/domain-allowlist";
+import { PAGE_CONTENT_SYSTEM_RULE, wrapUntrustedPageText } from "@/lib/page-content";
+import { appendResearchMeta } from "@/lib/sources";
+import {
+  isWriteExternalTool,
+  priorAskUserCompleted,
+  writeGatePrompt,
+} from "@/lib/write-gate";
+import {
+  auditDomainAbort,
+  devicePageToBrowsed,
+  DomainAllowlistAbort,
+  resolveClickSelector,
+  tryDeviceBrowser,
+} from "@/lib/on-device-browse";
+import { isDeviceTool } from "@/lib/device-protocol";
 
 const STEP_GAP_MS = 280;
 
@@ -215,6 +238,11 @@ export async function createJobFromChat(input: {
     competitorUrls: defaultCompetitorUrls(input.message, kit.website),
     pages: [],
     pageCount: 0,
+    allowedDomains: allowlistFromUrls([
+      extractUrls(input.message)[0],
+      kit.website,
+      ...defaultCompetitorUrls(input.message, kit.website),
+    ]),
   };
 
   const job = await prisma.job.create({
@@ -230,6 +258,8 @@ export async function createJobFromChat(input: {
       playbookKey: playbook.key,
       skillId: input.skillId || null,
       askPrompt: "",
+      allowedDomains: JSON.stringify(context.allowedDomains || []),
+      runnerKind: "auto",
     },
   });
 
@@ -388,6 +418,13 @@ export async function tickJob(jobId: string): Promise<boolean> {
     await savePlan(jobId, steps);
     await appendEvent({
       jobId,
+      type: "narration",
+      message: next.label,
+      stepId: next.id,
+      data: { tool: next.tool },
+    });
+    await appendEvent({
+      jobId,
       type: "step_start",
       message: next.label,
       stepId: next.id,
@@ -417,6 +454,9 @@ export async function tickJob(jobId: string): Promise<boolean> {
       }),
     );
 
+    if (!result.pause && isWriteExternalTool(next.tool)) {
+      result.context.interactApproved = false;
+    }
     next.status = result.pause ? "paused" : "done";
     next.result = result.summary;
     await savePlan(jobId, steps);
@@ -445,6 +485,14 @@ export async function tickJob(jobId: string): Promise<boolean> {
           runnerLock: "",
         },
       });
+      await recordWorkspaceAudit({
+        workspaceId: job.workspaceId,
+        jobId,
+        actor: "agent",
+        action: "approval_gate",
+        detail: result.askPrompt || next.label,
+        data: { tool: next.tool, askKind: result.askKind || "approve" },
+      });
       const conversationKey = job.agentId
         ? conversationKeyForAgent(job.agentId)
         : job.agentRole;
@@ -472,6 +520,15 @@ export async function tickJob(jobId: string): Promise<boolean> {
 
     return true;
   } catch (error) {
+    if (error instanceof DomainAllowlistAbort) {
+      await auditDomainAbort({
+        workspaceId: (await prisma.job.findUnique({ where: { id: jobId } }))?.workspaceId || "",
+        jobId,
+        reason: error.message,
+      });
+      await failJob(jobId, error.message, "domain_abort");
+      return false;
+    }
     const message = error instanceof Error ? error.message : "Job failed.";
     await failJob(jobId, message);
     return false;
@@ -483,13 +540,13 @@ export async function tickJob(jobId: string): Promise<boolean> {
   }
 }
 
-async function failJob(jobId: string, message: string) {
+async function failJob(jobId: string, message: string, type = "error") {
   await closeBrowserSession(jobId);
   await prisma.job.update({
     where: { id: jobId },
     data: { status: "failed", error: message, runnerLock: "" },
   });
-  await appendEvent({ jobId, type: "error", message });
+  await appendEvent({ jobId, type, message });
 }
 
 async function planSteps(input: {
@@ -593,6 +650,31 @@ async function executeTool(input: {
     };
   }
 
+  const jobRow = await prisma.job.findUnique({
+    where: { id: input.jobId },
+    select: { allowedDomains: true, plan: true },
+  });
+  let allowedDomains =
+    context.allowedDomains?.length
+      ? context.allowedDomains
+      : parseAllowlist(jobRow?.allowedDomains);
+  context.allowedDomains = allowedDomains;
+  const planSteps = parsePlan(jobRow?.plan || "[]");
+
+  if (
+    isWriteExternalTool(step.tool) &&
+    !context.interactApproved &&
+    !priorAskUserCompleted(planSteps, step.id)
+  ) {
+    return {
+      summary: writeGatePrompt(step.tool, step.label),
+      context,
+      pause: true,
+      askPrompt: writeGatePrompt(step.tool, step.label),
+      askKind: "approve",
+    };
+  }
+
   if (step.tool === "read_brand_kit") {
     context.brandBrief = brandKitBrief(kit);
     context.website = kit.website || context.userUrl;
@@ -616,6 +698,9 @@ async function executeTool(input: {
         context,
       };
     }
+    allowedDomains = lockAllowlist(url, allowedDomains);
+    context.allowedDomains = allowedDomains;
+    assertHostAllowed(url, allowedDomains);
     await appendEvent({
       jobId: input.jobId,
       type: "tool_call",
@@ -656,6 +741,15 @@ async function executeTool(input: {
         context,
       };
     }
+    allowedDomains = lockAllowlist(url, allowedDomains);
+    context.allowedDomains = allowedDomains;
+    if (JSON.stringify(allowedDomains) !== (jobRow?.allowedDomains || "[]")) {
+      await prisma.job.update({
+        where: { id: input.jobId },
+        data: { allowedDomains: JSON.stringify(allowedDomains) },
+      });
+    }
+    assertHostAllowed(url, allowedDomains);
     if ((context.pageCount ?? 0) >= MAX_PAGES_PER_JOB) {
       return {
         summary: `Browse cap reached (${MAX_PAGES_PER_JOB} pages). Skipping ${url}.`,
@@ -671,6 +765,25 @@ async function executeTool(input: {
       data: { tool: "browser_navigate", url },
     });
     try {
+      const device = await tryDeviceBrowser({
+        workspaceId: input.workspaceId,
+        jobId: input.jobId,
+        stepId: step.id,
+        tool: "browser_navigate",
+        args: { url },
+        allowedDomains,
+      });
+      if (device?.ok && device.page) {
+        const page = devicePageToBrowsed(device.page);
+        rememberPage(context, page);
+        context.browserMode = "extension";
+        return {
+          summary: `browser_navigate ${page.url} (Chrome CDP)`,
+          context,
+          url: page.url,
+          excerpt: page.excerpt,
+        };
+      }
       const live = await sessionNavigate(input.jobId, url);
       if (live.ok && live.page) {
         const page = toBrowsedPage(live.page);
@@ -696,6 +809,7 @@ async function executeTool(input: {
         excerpt: page.excerpt,
       };
     } catch (error) {
+      if (error instanceof DomainAllowlistAbort) throw error;
       const message = error instanceof Error ? error.message : "Navigate failed";
       return {
         summary: `Could not open ${url} — ${message}`,
@@ -706,6 +820,34 @@ async function executeTool(input: {
   }
 
   if (step.tool === "browser_snapshot") {
+    const device = await tryDeviceBrowser({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      stepId: step.id,
+      tool: "browser_snapshot",
+      args: {},
+      allowedDomains,
+    });
+    if (device?.ok && device.page) {
+      const page = devicePageToBrowsed(device.page);
+      if (page.url) assertHostAllowed(page.url, allowedDomains);
+      context.currentPage = page;
+      context.snapshot = formatSnapshot(page);
+      context.browserMode = "extension";
+      await appendEvent({
+        jobId: input.jobId,
+        type: "tool_call",
+        message: `browser_snapshot ${page.url}`,
+        stepId: step.id,
+        data: { tool: "browser_snapshot", url: page.url, excerpt: page.excerpt },
+      });
+      return {
+        summary: `browser_snapshot ${page.url} (Chrome CDP)`,
+        context,
+        url: page.url,
+        excerpt: page.excerpt,
+      };
+    }
     const live = await sessionSnapshot(input.jobId);
     if (live.ok && live.page) {
       const page = toBrowsedPage(live.page);
@@ -771,7 +913,7 @@ async function executeTool(input: {
         title: start.title,
         text: start.text,
         excerpt: start.excerpt,
-        links: start.links || [],
+        links: (start.links || []).filter((link) => hostAllowed(link, allowedDomains).ok),
         engine: (start.engine as "playwright" | "fetch") || "fetch",
         error: start.error,
       },
@@ -783,6 +925,10 @@ async function executeTool(input: {
     );
     for (const raw of extra) {
       const page = toBrowsedPage(raw);
+      const allowed = hostAllowed(page.url, allowedDomains);
+      if (!allowed.ok) {
+        throw new DomainAllowlistAbort(allowed.reason, allowed.host);
+      }
       rememberPage(context, page);
       await appendEvent({
         jobId: input.jobId,
@@ -808,17 +954,46 @@ async function executeTool(input: {
     if (!guard.ok) {
       return { summary: guard.reason, context };
     }
+    const args = await resolveClickSelector({
+      workspaceId: input.workspaceId,
+      url: context.currentPage?.url || context.userUrl || "",
+      tool: step.tool,
+      args: step.args,
+    });
     await appendEvent({
       jobId: input.jobId,
       type: "tool_call",
-      message: `${step.tool} ${String(step.args.selector || step.args.text || "")}`.trim(),
+      message: `${step.tool} ${String(args.selector || args.text || "")}`.trim(),
       stepId: step.id,
       data: { tool: step.tool },
     });
+    const device = await tryDeviceBrowser({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      stepId: step.id,
+      tool: step.tool,
+      args,
+      allowedDomains,
+    });
+    if (device) {
+      if (device.page) {
+        const page = devicePageToBrowsed(device.page);
+        if (page.url) assertHostAllowed(page.url, allowedDomains);
+        rememberPage(context, page, { count: false });
+      }
+      return {
+        summary: device.ok
+          ? `${step.tool} on your Chrome (CDP)`
+          : `${step.tool} did not run — ${device.error || "device"}`,
+        context,
+        url: device.page?.url,
+        excerpt: device.excerpt,
+      };
+    }
     const live =
       step.tool === "browser_click"
-        ? await sessionClick(input.jobId, step.args)
-        : await sessionType(input.jobId, step.args);
+        ? await sessionClick(input.jobId, args)
+        : await sessionType(input.jobId, args);
     if (live.page) {
       const page = toBrowsedPage(live.page);
       rememberPage(context, page, { count: false });
@@ -841,6 +1016,30 @@ async function executeTool(input: {
       stepId: step.id,
       data: { tool: "browser_extract" },
     });
+    const device = await tryDeviceBrowser({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      stepId: step.id,
+      tool: "browser_extract",
+      args: step.args,
+      allowedDomains,
+    });
+    if (device?.extracted || device?.page) {
+      if (device.extracted) context.extracted = device.extracted;
+      if (device.page) {
+        const page = devicePageToBrowsed(device.page);
+        rememberPage(context, page, { count: false });
+        if (!context.extracted) context.extracted = page.text;
+      }
+      return {
+        summary: device.ok
+          ? `browser_extract (${(device.extracted || "").length} chars, Chrome CDP)`
+          : `browser_extract used last page — ${device.error || "device"}`,
+        context,
+        url: device.page?.url,
+        excerpt: device.excerpt,
+      };
+    }
     const live = await sessionExtract(input.jobId, step.args);
     if (live.extracted) context.extracted = live.extracted;
     if (live.page) {
@@ -874,6 +1073,28 @@ async function executeTool(input: {
       stepId: step.id,
       data: { tool: "browser_screenshot" },
     });
+    const device = await tryDeviceBrowser({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      stepId: step.id,
+      tool: "browser_screenshot",
+      args: {},
+      allowedDomains,
+    });
+    if (device?.screenshot || device?.page) {
+      if (device.screenshot) context.screenshot = device.screenshot;
+      if (device.page) rememberPage(context, devicePageToBrowsed(device.page), { count: false });
+      return {
+        summary: device.ok
+          ? device.screenshot
+            ? "browser_screenshot captured (Chrome CDP)"
+            : device.error || "browser_screenshot captured"
+          : `browser_screenshot did not run — ${device.error || "device"}`,
+        context,
+        url: device.page?.url,
+        excerpt: device.excerpt,
+      };
+    }
     const live = await sessionScreenshot(input.jobId);
     if (live.screenshot) context.screenshot = live.screenshot;
     if (live.page) rememberPage(context, toBrowsedPage(live.page), { count: false });
@@ -1078,6 +1299,53 @@ async function executeTool(input: {
     });
     return {
       summary: `Posted to Slack ${posted.channel} (ts ${posted.ts})`,
+      context,
+    };
+  }
+
+  if (step.tool === "native_file_read" || step.tool === "native_file_write") {
+    const pathArg = String(step.args.path || step.args.file || "").trim();
+    if (!pathArg) {
+      return { summary: `${step.tool} needs a path.`, context };
+    }
+    if (!isDeviceTool(step.tool)) {
+      return { summary: `${step.tool} is not a device tool.`, context };
+    }
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `${step.tool} ${pathArg}`,
+      stepId: step.id,
+      data: { tool: step.tool, path: pathArg },
+    });
+    const device = await tryDeviceBrowser({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      stepId: step.id,
+      tool: step.tool,
+      args: { ...step.args, path: pathArg },
+      allowedDomains,
+    });
+    if (!device) {
+      return {
+        summary: `${step.tool} needs the CINEM local agent (native messaging host). Install it from Desk → On-device Chrome.`,
+        context,
+      };
+    }
+    if (device.fileText) {
+      context.extracted = device.fileText.slice(0, 12_000);
+    }
+    await recordWorkspaceAudit({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      actor: "device",
+      action: step.tool,
+      detail: device.ok ? `${step.tool} ${pathArg}` : device.error || step.tool,
+    });
+    return {
+      summary: device.ok
+        ? `${step.tool} ${pathArg}`
+        : `${step.tool} failed — ${device.error || "native host"}`,
       context,
     };
   }
@@ -1355,6 +1623,34 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
     type = "slack_draft";
     model = "slack";
     provider = "slack";
+  } else if (kind === "prospecting_scan") {
+    const pack = await generateResearchPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite sourced prospecting notes from the page. Do not invent contacts, emails, or titles that were not on the page. Include Sources and Uncertainty.`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Prospecting scan";
+    content = pack.content;
+    type = "prospecting_scan";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "weekly_client_brief") {
+    const pack = await generateResearchPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite a weekly client brief from captured pages only. Sections: What we saw, What it means, Open questions. Do not invent results, revenue, or meetings. Include Sources and Uncertainty.`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Weekly client brief";
+    content = pack.content;
+    type = "weekly_client_brief";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
   } else {
     const generated = await generateAgentArtifact({
       role: input.agentRole,
@@ -1381,6 +1677,22 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
     if (live && generated.demo) {
       throw new Error("Live job refused to persist a demo template.");
     }
+  }
+
+  if (
+    type === "research_pack" ||
+    type === "competitor_scan" ||
+    type === "prospecting_scan" ||
+    type === "weekly_client_brief"
+  ) {
+    const attributed = appendResearchMeta(content, {
+      live,
+      pages: context.pages,
+      searchOk: Boolean(context.search?.text),
+    });
+    content = attributed.content;
+    context.sources = attributed.meta.sources;
+    context.uncertainty = attributed.meta.uncertainty;
   }
 
   const conversationKey = input.agentId
@@ -1432,23 +1744,30 @@ function pageContextBlock(context?: JobContext): string {
   if (!context) return "Pages: (none)";
   const pages = context.pages?.length
     ? context.pages
-        .map(
-          (page) =>
+        .map((page) =>
+          wrapUntrustedPageText(
             `- ${page.url} [${page.engine || "fetch"}${page.ok ? "" : ", partial"}]\n${(page.excerpt || page.text).slice(0, 800)}`,
+            page.url,
+          ),
         )
         .join("\n\n")
     : context.fetched
-      ? `${context.fetched.url}\n${context.fetched.text.slice(0, 1200)}`
+      ? wrapUntrustedPageText(`${context.fetched.url}\n${context.fetched.text.slice(0, 1200)}`, context.fetched.url)
       : "(none)";
-  const snap = context.snapshot ? `\n\nSnapshot:\n${context.snapshot.slice(0, 2000)}` : "";
+  const snap = context.snapshot
+    ? `\n\nSnapshot:\n${wrapUntrustedPageText(context.snapshot.slice(0, 2000), context.currentPage?.url)}`
+    : "";
   const extracted = context.extracted
-    ? `\n\nExtracted:\n${context.extracted.slice(0, 4000)}`
+    ? `\n\nExtracted:\n${wrapUntrustedPageText(context.extracted.slice(0, 4000), context.currentPage?.url)}`
     : "";
   const answer = context.userAnswer ? `\n\nUser answered: ${context.userAnswer}` : "";
   const search = context.search?.text
     ? `\n\nWeb search for “${context.search.query}”:\n${context.search.text.slice(0, 4000)}`
     : "";
-  return `Pages:\n${pages}${snap}${extracted}${answer}${search}`;
+  const allow = context.allowedDomains?.length
+    ? `\n\nDomain allowlist: ${context.allowedDomains.join(", ")}`
+    : "";
+  return `${PAGE_CONTENT_SYSTEM_RULE}\n\nPages:\n${pages}${snap}${extracted}${answer}${search}${allow}`;
 }
 
 function pageAwarePrompt(prompt: string, context: JobContext): string {
@@ -1999,10 +2318,24 @@ export async function completeJobIfApproved(jobId: string) {
   });
   if (pending.length > 0) return job;
 
-  const steps = parsePlan(job.plan).map((step) =>
-    step.status === "paused" ? { ...step, status: "done" as const } : step,
-  );
+  const context = parseJobContext(job.context);
+  const steps = parsePlan(job.plan).map((step) => {
+    if (step.status !== "paused") return step;
+    if (step.tool !== "ask_user" && isWriteExternalTool(step.tool)) {
+      context.interactApproved = true;
+      return { ...step, status: "pending" as const };
+    }
+    return { ...step, status: "done" as const };
+  });
   await savePlan(jobId, steps);
+  await saveContext(jobId, context);
+  await recordWorkspaceAudit({
+    workspaceId: job.workspaceId,
+    jobId,
+    actor: "user",
+    action: "approval",
+    detail: "Human approved the paused step / artifacts.",
+  });
   const remaining = steps.filter((step) => step.status === "pending");
   if (remaining.length) {
     await prisma.job.update({

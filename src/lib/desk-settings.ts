@@ -16,6 +16,11 @@ export function settingsDeskLinks(workspaceId: string) {
       hint: "Plugins and bots in one place.",
     },
     {
+      href: `/desk/${workspaceId}/on-device`,
+      label: "On-device Chrome",
+      hint: "Load the MV3 extension, pair this desk, run jobs on your Chrome via CDP.",
+    },
+    {
       href: `/desk/${workspaceId}/usage`,
       label: "Usage",
       hint: "Tokens remaining, jobs this hour, seat count, scheduled jobs.",

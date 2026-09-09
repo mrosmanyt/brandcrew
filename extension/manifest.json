@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "CINEM Pro — on-device agent",
+  "version": "0.1.0",
+  "description": "Drive this Chrome with CINEM Pro. Supervised CDP automation — every write waits for you.",
+  "icons": {
+    "16": "icons/cinem-logo.png",
+    "48": "icons/cinem-logo.png",
+    "128": "icons/cinem-logo.png"
+  },
+  "action": {
+    "default_title": "CINEM Pro",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/cinem-logo.png",
+      "48": "icons/cinem-logo.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "debugger",
+    "tabs",
+    "storage",
+    "nativeMessaging",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:*/*",
+    "http://localhost:*/*",
+    "https://*.cinem.tech/*",
+    "https://brandcrew.vercel.app/*",
+    "https://*/*"
+  ]
+}

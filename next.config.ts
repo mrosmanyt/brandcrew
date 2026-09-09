@@ -6,14 +6,6 @@ const desktop = process.env.DESKTOP === "1";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["@prisma/client", "prisma", "playwright-core"],
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: securityHeaderList(),
-      },
-    ];
-  },
   // Static metadata PNGs live at /apple-icon.png etc. Alias the
   // extensionless Metadata API paths so crawlers and old bookmarks 200.
   async rewrites() {
@@ -22,6 +14,27 @@ const nextConfig: NextConfig = {
       { source: "/opengraph-image", destination: "/opengraph-image.png" },
       { source: "/twitter-image", destination: "/twitter-image.png" },
       { source: "/icon", destination: "/icon.png" },
+    ];
+  },
+  async headers() {
+    const security = securityHeaderList();
+    return [
+      {
+        source: "/:path*",
+        headers: security,
+      },
+      {
+        source: "/brand/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/og.png",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
     ];
   },
   // README and local tooling use 127.0.0.1; Next 16 treats that as a distinct
