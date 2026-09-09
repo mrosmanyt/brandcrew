@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { jobDeskHref } from "@/lib/desk-settings";
+import { APPROVAL_QUEUE_EMPTY } from "@/lib/write-gate";
 
 type ApprovalRow = {
   prompt: string;
@@ -27,7 +28,7 @@ export function ApprovalQueue({ workspaceId }: { workspaceId: string }) {
   if (!rows.length) {
     return (
       <p className="text-sm text-muted-foreground">
-        Nothing waiting. External writes (click, type, Gmail draft, Slack post, file write) pause here.
+        {APPROVAL_QUEUE_EMPTY}
       </p>
     );
   }

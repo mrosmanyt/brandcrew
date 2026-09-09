@@ -49,6 +49,11 @@ import {
 } from "@/lib/composer";
 import { nextAgentModePlan, planModeName } from "@/lib/agent-modes";
 import {
+  ALWAYS_APPROVED_HINT,
+  ALWAYS_APPROVED_LABEL,
+  parseAutoApproveSafe,
+} from "@/lib/write-gate";
+import {
   BUILD_PROMPT_CATEGORIES,
   BUILD_PROMPT_HEADLINE,
   BUILD_PROMPT_SUBCOPY,
@@ -101,6 +106,8 @@ export function ChatComposer({
   workingStatus,
   onPlanApplied,
   onRoutingApplied,
+  autoApproveSafe,
+  onAutoApproveSafeApplied,
 }: {
   workspaceId: string;
   value: string;
@@ -123,6 +130,8 @@ export function ChatComposer({
   workingStatus?: "queued" | "running" | null;
   onPlanApplied?: (next: { plan: PlanId; tokenBudget: number }) => void;
   onRoutingApplied?: (next: LlmRoutingPreference) => void;
+  autoApproveSafe?: boolean;
+  onAutoApproveSafeApplied?: (next: boolean) => void;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -163,6 +172,27 @@ export function ChatComposer({
       cancelled = true;
     };
   }, [workspaceId]);
+
+  async function toggleAlwaysApproved() {
+    const next = !parseAutoApproveSafe(autoApproveSafe);
+    const res = await fetch(`/api/workspaces/${workspaceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoApproveSafe: next }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast.error(data.error || "Could not save Always approved.");
+      return;
+    }
+    const saved = parseAutoApproveSafe(data.workspace?.autoApproveSafe ?? next);
+    onAutoApproveSafeApplied?.(saved);
+    toast.message(
+      saved
+        ? "Always approved on. Safe clicks and typing run without a prompt. Sends, Slack posts, and file writes still wait."
+        : "Always approved off. Safe clicks and typing pause again. High-risk writes still always wait.",
+    );
+  }
 
   async function addFiles(list: FileList | File[] | null) {
     if (!list?.length) return;
@@ -447,6 +477,22 @@ export function ChatComposer({
             </DropdownMenu>
 
             <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(autoApproveSafe)}
+                aria-label={ALWAYS_APPROVED_LABEL}
+                title={ALWAYS_APPROVED_HINT}
+                onClick={() => void toggleAlwaysApproved()}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                  autoApproveSafe
+                    ? "bg-composer-send text-composer-send-foreground"
+                    : "bg-composer-control text-composer-muted hover:text-composer-foreground",
+                )}
+              >
+                {ALWAYS_APPROVED_LABEL}
+              </button>
               <AgentModesMenu
                 workspaceId={workspaceId}
                 plan={plan}

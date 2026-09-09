@@ -52,7 +52,7 @@ console.log("ok: free vs paid job/hour and concurrent caps");
 
 const site = websiteBuilderPlaybook();
 assert.equal(site.steps.some((step) => step.args.kind === "website"), true);
-assert.equal(site.steps.at(-1)?.tool, "ask_user");
+assert.equal(site.steps.at(-1)?.tool, "write_artifact");
 const app = appBuilderPlaybook();
 assert.equal(app.steps.some((step) => step.args.kind === "app"), true);
 assert.equal(inferPlaybookKey("builder", "Build a website from the Brand Kit"), "website_builder");

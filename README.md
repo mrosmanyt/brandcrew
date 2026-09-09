@@ -44,7 +44,7 @@ Playbooks run on the **user agent you selected** (`agentId`). Role is only a hin
 
 ### On-device Chrome (Phase 1)
 
-The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer **your Chrome** (MV3 + `chrome.debugger` CDP). CINEM Pro is **supervised** — not a fully autonomous employee. Every click, type, Gmail draft, Slack post, and local file write **pauses** until you approve.
+The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer **your Chrome** (MV3 + `chrome.debugger` CDP). CINEM Pro is **supervised** — not a fully autonomous employee. High-risk writes (**send email, Slack post, payments, local file write**) always pause. Gmail drafts, list mail, research, and in-desk artifacts do not. **Always approved** on the composer auto-runs safe click/type; it never skips sends, posts, or payments.
 
 **Install path**
 
@@ -142,8 +142,9 @@ Optional dedicated login client: `GOOGLE_LOGIN_CLIENT_ID` / `GOOGLE_LOGIN_CLIENT
 6. Set `OAUTH_REDIRECT_BASE` (or `APP_URL` / `NEXT_PUBLIC_APP_URL`) to that same origin.
 7. Restart `npm run dev`. Marketplace → Plugins → **Connect** on Gmail → Google consent → redirect back. **Connected** only after token exchange. **Reconnect** repeats consent. **Disconnect** clears encrypted tokens.
 8. Without client ids, Connect shows a clear error and stays disconnected.
+9. **Testing mode (the usual “Access blocked” / Error 403 `access_denied`):** while the OAuth consent screen is in **Testing**, Google only allows listed Test users. Add each Gmail (for example the founder’s account) under Google Cloud → APIs & Services → **OAuth consent screen** → **Test users**, *or* publish the app to **Production**. CINEM Pro shows this on Connect failure and **does not** mark Gmail Connected. User-cancelled consent is also `access_denied`; the desk still stays disconnected.
 
-Job tools when Connected: `gmail_list_recent` (subject / from / date), `gmail_create_draft` (creates a Gmail draft — **does not send**). Access tokens refresh via the stored refresh_token; Google only returns refresh_token on the first consent (`prompt=consent` + `access_type=offline`).
+Job tools when Connected: `gmail_list_recent` (subject / from / date), `gmail_create_draft` (creates a Gmail draft — **does not send**, no approval prompt). Sending mail is always gated if it is ever added. Access tokens refresh via the stored refresh_token; Google only returns refresh_token on the first consent (`prompt=consent` + `access_type=offline`).
 
 ### Slack OAuth — live Connect
 
@@ -187,7 +188,7 @@ Auth: `Authorization: Bearer cinem_live_…` (session cookies are ignored). Erro
 | `GET` | `/api/v1/artifacts` | List (`?jobId=` / `?agentId=`) |
 | `GET` | `/api/v1/artifacts/:artifactId` | One artifact |
 
-Jobs do **not** auto-publish. Slack `chat.postMessage` still requires a prior `ask_user` in the desk. Gmail creates drafts only.
+Jobs do **not** auto-publish. Slack `chat.postMessage` still requires a prior `ask_user` in the desk (Always approved does not skip it). Gmail creates drafts without a prompt and never sends.
 
 ```bash
 curl -sS http://127.0.0.1:43180/api/v1 \
@@ -589,6 +590,7 @@ npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule
 npm run test:billing       # Whop-first provider, webhook signature, cancel rules
 npm run test:launch        # logo, privacy/terms, headers, rate limit, honeypot, SEO files
 npm run test:on-device     # MV3 extension, native host, allowlist, write-gate, agency playbooks
+npm run test:write-gate    # approval class, Always approved preference, Gmail OAuth testing errors
 npm run test:cost          # action cache, DOM-first, cheap routing, credits/Free, triggers, replay
 ```
 
@@ -600,16 +602,16 @@ v1 tools:
 
 - `read_brand_kit`
 - `browser_navigate` / `browser_snapshot` (paired Chrome CDP first; Playwright + system Chrome when `PLAYWRIGHT_ENABLED`; otherwise fetch)
-- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **user Chrome via the MV3 extension**, else a job-scoped Playwright tab on desktop. On Vercel without a paired device they return “needs desktop” and never fake success. Still refuse login, password fields, and send. Click/type **pause for approval**.
+- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **user Chrome via the MV3 extension**, else a job-scoped Playwright tab on desktop. On Vercel without a paired device they return “needs desktop” and never fake success. Still refuse login, password fields, and send. Click/type pause unless **Always approved** is on.
 - `crawl_links` (depth 1–2, hard cap of 4 pages per job; off-allowlist hosts abort)
 - `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
 - `web_search` (Tavily; requires Connected Web Search plugin)
-- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send). `gmail_create_draft` pauses for approval.
-- `slack_list_channels` / `slack_draft_message` / `slack_post_message` (Connected Slack; post only after `ask_user`)
-- `native_file_read` / `native_file_write` (native messaging host; writes pause for approval)
+- `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send). Drafts do not pause. Send is always gated if added later.
+- `slack_list_channels` / `slack_draft_message` / `slack_post_message` (Connected Slack; post only after `ask_user`; Always approved does not skip posts)
+- `native_file_read` / `native_file_write` (native messaging host; writes always pause for approval)
 - `read_artifact` (outreach pack reads the latest research/competitor artifact)
 - `write_artifact` (markdown artifact on the workspace; research kinds append Sources + Uncertainty)
-- `ask_user` — `kind: "approve"` waits for artifact approval; `kind: "clarify"` waits for Yes/No (or a short answer) stored on `Job.userAnswer`, then resumes the same job
+- `ask_user` — `kind: "approve"` waits for high-risk writes; `kind: "clarify"` waits for Yes/No (or a short answer) stored on `Job.userAnswer`, then resumes the same job. In-desk drafts and Gmail list do not add a trailing approve.
 
 Jobs bind to a user `Agent` (`agentId`). Activity events include `{ tool, url, excerpt }` for browse steps. Companion `allowedTools` (JSON on `Agent`) can restrict which tools that companion may run.
 

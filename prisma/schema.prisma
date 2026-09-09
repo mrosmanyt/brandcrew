@@ -33,6 +33,8 @@ model Workspace {
   tokenBudget        Int               @default(15000)
   brandKit           String            @default("{}")
   modelRouting       String            @default("auto")
+  /// Auto-run safe click/type. High-risk sends, Slack posts, payments, and file writes still wait.
+  autoApproveSafe    Boolean           @default(false)
   /// Last Whop membership that granted the current paid plan. Used to match deactivates.
   whopMembershipId   String?
   /// Soft suspend from Admin HQ: workspace is forced to Free and new jobs are blocked.

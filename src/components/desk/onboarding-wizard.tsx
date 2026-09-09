@@ -39,6 +39,7 @@ import {
   type OnboardingPluginRow,
   type SetupWizardStepId,
 } from "@/lib/setup-wizard";
+import { pluginOAuthErrorMessage } from "@/lib/plugin-oauth-errors";
 import { cn } from "@/lib/utils";
 
 export function OnboardingWizard({
@@ -90,13 +91,9 @@ export function OnboardingWizard({
   const deskHref = `/desk/${workspaceId}${agentId ? `?agentId=${encodeURIComponent(agentId)}` : ""}`;
   const oauthNotice = oauthConnected
     ? `${oauthConnected} connected.`
-    : oauthError === "oauth_not_configured"
-      ? oauthPlugin
-        ? `${oauthPlugin}: OAuth client id/secret missing. Connect stays disconnected.`
-        : "OAuth is not configured on the server. Connect stays disconnected."
-      : oauthError
-        ? `OAuth did not finish (${oauthError}). Not marked Connected.`
-        : null;
+    : oauthError
+      ? pluginOAuthErrorMessage(oauthError, oauthPlugin)
+      : null;
 
   async function refreshPlugins() {
     const res = await fetch(`/api/workspaces/${workspaceId}/marketplace`);

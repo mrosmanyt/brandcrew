@@ -42,6 +42,7 @@
     "test:launch": "tsx scripts/check-launch.ts",
     "test:onboarding": "tsx scripts/check-onboarding-wizard.ts",
     "test:on-device": "tsx scripts/check-on-device.ts",
+    "test:write-gate": "tsx scripts/check-write-gate.ts",
     "test:cost": "tsx scripts/check-cost-controls.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:build": "node scripts/desktop-build.mjs",

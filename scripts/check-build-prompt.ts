@@ -109,7 +109,8 @@ for (const category of BUILD_PROMPT_CATEGORIES) {
   const playbook = playbookFromKey(category.playbookKey, "writer");
   assert.equal(playbook.key, category.playbookKey);
   assert.equal(playbook.steps[0]?.tool, "read_brand_kit");
-  assert.equal(playbook.steps.at(-1)?.tool, "ask_user");
+  assert.equal(playbook.steps.at(-1)?.tool, "write_artifact");
+  assert.equal(playbook.steps.some((step) => step.tool === "ask_user"), false);
   assert.equal(inferPlaybookKey("writer", "", category.action), category.playbookKey);
 }
 const deckHtml = demoDeckHtml(DEMO_BRAND_KIT);

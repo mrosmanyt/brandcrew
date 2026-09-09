@@ -6,6 +6,7 @@ import {
 } from "@/lib/constants";
 import { extractUrls } from "@/lib/fetch-url";
 import { JOB_TOOLS, type JobPlaybook, type JobStep, type JobTool } from "@/lib/job-types";
+import { planHasAlwaysGatedTool } from "@/lib/write-gate";
 
 function stepId(tool: string, hint: string) {
   return `${tool}-${hint}`.replace(/[^a-z0-9-]+/gi, "-").toLowerCase();
@@ -73,10 +74,7 @@ export function linkedinWeekPlaybook(url?: string): JobPlaybook {
           { kind: "linkedin_post", index, count: 5 },
           `post-${index}`,
         ),
-      ),
-      approveStep(
-        "Approve these five LinkedIn posts before they leave the desk. Nothing is published yet.",
-      ),
+      )
     ],
   };
 }
@@ -100,8 +98,7 @@ export function writerFromUrlPlaybook(url?: string): JobPlaybook {
         "Write a draft from the page",
         { kind: "linkedin_post", index: 1, count: 1 },
         "draft",
-      ),
-      approveStep("Approve this draft before it leaves the desk. Nothing is published yet."),
+      )
     ],
   };
 }
@@ -131,8 +128,7 @@ export function researchPackPlaybook(url?: string): JobPlaybook {
         "Write sourced notes",
         { kind: "research_pack" },
         "summary",
-      ),
-      approveStep("Approve these sourced notes before they are shared."),
+      )
     ],
   };
 }
@@ -165,10 +161,7 @@ export function competitorScanPlaybook(urls: string[] = []): JobPlaybook {
         "Write comparison artifact",
         { kind: "competitor_scan" },
         "compare",
-      ),
-      approveStep(
-        "Approve this competitor scan before it is shared. This was read-only browse — nothing was sent.",
-      ),
+      )
     ],
   };
 }
@@ -185,8 +178,7 @@ export function salesPackPlaybook(): JobPlaybook {
         "Write outbound email + LinkedIn DMs",
         { kind: "sales_pack" },
         "pack",
-      ),
-      approveStep("Approve these outbound drafts. CINEM Pro will not send them."),
+      )
     ],
   };
 }
@@ -218,10 +210,7 @@ export function linkedinOutreachDraftPlaybook(url?: string): JobPlaybook {
         "Draft LinkedIn-style outreach (do not send)",
         { kind: "outreach_pack" },
         "dms",
-      ),
-      approveStep(
-        "Approve these outreach drafts. CINEM Pro will not send them — copy/paste yourself after Yes.",
-      ),
+      )
     ],
   };
 }
@@ -253,8 +242,7 @@ export function recruiterSheetPlaybook(url?: string): JobPlaybook {
         "Fill a markdown sheet from the page",
         { kind: "recruiter_sheet" },
         "sheet",
-      ),
-      approveStep("Approve this sheet. CINEM Pro did not email candidates or write an ATS."),
+      )
     ],
   };
 }
@@ -285,10 +273,7 @@ export function inboxInvoicesPlaybook(gmailConnected = false): JobPlaybook {
         "List invoices from Gmail",
         { kind: "inbox_invoices" },
         "invoices",
-      ),
-      approveStep(
-        "Approve this invoice list. CINEM Pro did not send mail. QuickBooks write is TODO — not wired in this slice.",
-      ),
+      )
     ],
   };
 }
@@ -311,8 +296,7 @@ export function outreachFromResearchPlaybook(): JobPlaybook {
         "Write 5 LinkedIn DMs from the research",
         { kind: "outreach_pack" },
         "dms",
-      ),
-      approveStep("Approve these 5 DMs before anyone sends them. CINEM Pro will not send."),
+      )
     ],
   };
 }
@@ -336,8 +320,7 @@ export function adAnglesFromUrlPlaybook(url?: string): JobPlaybook {
         "Write 5 ad angles from the page",
         { kind: "ad_angles" },
         "angles",
-      ),
-      approveStep("Approve these ad angles. CINEM Pro does not buy media or publish ads."),
+      )
     ],
   };
 }
@@ -361,8 +344,7 @@ export function strategyFromSitePlaybook(url?: string): JobPlaybook {
         "Write ICP / offer / pillars brief",
         { kind: "generic" },
         "brief",
-      ),
-      approveStep("Approve this strategy brief before the crew uses it."),
+      )
     ],
   };
 }
@@ -379,10 +361,7 @@ export function websiteBuilderPlaybook(): JobPlaybook {
         "Write the website HTML",
         { kind: "website" },
         "site",
-      ),
-      approveStep(
-        "Approve this website before it leaves the desk. Preview is local — nothing is published.",
-      ),
+      )
     ],
   };
 }
@@ -399,10 +378,7 @@ export function appBuilderPlaybook(): JobPlaybook {
         "Write the app HTML",
         { kind: "app" },
         "app",
-      ),
-      approveStep(
-        "Approve this app preview. It runs in the desk iframe — no Replit login required.",
-      ),
+      )
     ],
   };
 }
@@ -419,10 +395,7 @@ export function deckBuilderPlaybook(): JobPlaybook {
         "Write the deck HTML",
         { kind: "deck" },
         "deck",
-      ),
-      approveStep(
-        "Approve this deck. Preview is local — nothing is published.",
-      ),
+      )
     ],
   };
 }
@@ -439,8 +412,7 @@ export function brandKitDraftPlaybook(): JobPlaybook {
         "Write Brand Kit creative",
         { kind: "brand_kit_draft" },
         "draft",
-      ),
-      approveStep("Approve this Brand Kit creative before it leaves the desk."),
+      )
     ],
   };
 }
@@ -459,8 +431,7 @@ export function genericPlaybook(role: AgentRole, title?: string, url?: string): 
     steps: [
       makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
       ...browse,
-      makeStep("write_artifact", "Write the draft", { kind: "generic" }, "artifact"),
-      approveStep("Approve this draft before it leaves the desk. Nothing is sent or published."),
+      makeStep("write_artifact", "Write the draft", { kind: "generic" }, "artifact")
     ],
   };
 }
@@ -483,8 +454,7 @@ export function webSearchPlaybook(query?: string): JobPlaybook {
         "Write notes from search",
         { kind: "research_pack" },
         "summary",
-      ),
-      approveStep("Approve these search notes before they are shared."),
+      )
     ],
   };
 }
@@ -505,10 +475,7 @@ export function inboxRepliesPlaybook(gmailConnected = false): JobPlaybook {
         "Draft inbox replies",
         { kind: "inbox_replies" },
         "replies",
-      ),
-      approveStep(
-        "Approve these replies before anyone sends them. CINEM Pro will not send email or WhatsApp.",
-      ),
+      )
     ],
   };
 }
@@ -525,10 +492,7 @@ export function whatsappDraftsPlaybook(): JobPlaybook {
         "Draft WhatsApp replies",
         { kind: "whatsapp_drafts" },
         "wa",
-      ),
-      approveStep(
-        "Approve these WhatsApp drafts. CINEM Pro never sends WhatsApp — even if Twilio credentials are stored.",
-      ),
+      )
     ],
   };
 }
@@ -546,8 +510,7 @@ export function gmailInboxPlaybook(): JobPlaybook {
         "Write inbox notes",
         { kind: "gmail_inbox" },
         "notes",
-      ),
-      approveStep("Approve these inbox notes. CINEM Pro did not send any mail."),
+      )
     ],
   };
 }
@@ -570,8 +533,7 @@ export function gmailDraftPlaybook(): JobPlaybook {
         "Record the Gmail draft",
         { kind: "gmail_draft" },
         "record",
-      ),
-      approveStep("A Gmail draft was created. CINEM Pro will not send it."),
+      )
     ],
   };
 }
@@ -589,8 +551,7 @@ export function slackChannelsPlaybook(): JobPlaybook {
         "Write channel list",
         { kind: "slack_channels" },
         "notes",
-      ),
-      approveStep("Approve this channel list. Nothing was posted."),
+      )
     ],
   };
 }
@@ -647,10 +608,7 @@ export function prospectingScanPlaybook(url?: string): JobPlaybook {
         "Write sourced prospecting notes",
         { kind: "prospecting_scan" },
         "notes",
-      ),
-      approveStep(
-        "Approve these prospecting notes. CINEM Pro did not invent contacts or send outreach.",
-      ),
+      )
     ],
   };
 }
@@ -681,10 +639,7 @@ export function outreachDraftPackPlaybook(url?: string): JobPlaybook {
         "Write 5 outreach drafts (do not send)",
         { kind: "outreach_pack" },
         "pack",
-      ),
-      approveStep(
-        "Approve this outreach draft pack. CINEM Pro will not send email, LinkedIn, or Slack.",
-      ),
+      )
     ],
   };
 }
@@ -714,10 +669,7 @@ export function weeklyClientBriefPlaybook(url?: string): JobPlaybook {
         "Write a sourced weekly client brief",
         { kind: "weekly_client_brief" },
         "brief",
-      ),
-      approveStep(
-        "Approve this weekly client brief. Sources and uncertainty are attached. Nothing was sent to the client.",
-      ),
+      )
     ],
   };
 }
@@ -994,6 +946,7 @@ function normalizeStep(input: unknown, index: number): JobStep {
 export function ensureAskUser(steps: JobStep[]): JobStep[] {
   if (!steps.length) return steps;
   if (steps.at(-1)?.tool === "ask_user") return steps;
+  if (!planHasAlwaysGatedTool(steps)) return steps;
   return [
     ...steps,
     makeStep(
@@ -1001,7 +954,7 @@ export function ensureAskUser(steps: JobStep[]): JobStep[] {
       "Pause for your approval",
       {
         prompt:
-          "Approve the drafts before they leave the desk. CINEM Pro will not send or publish.",
+          "Approve this send, post, or irreversible write. CINEM Pro will not run it until you say yes.",
         kind: "approve",
       },
       "approve",

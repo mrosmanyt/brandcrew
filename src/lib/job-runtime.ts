@@ -98,7 +98,10 @@ import { PAGE_CONTENT_SYSTEM_RULE, annotateUntrustedPageText } from "@/lib/page-
 import { appendResearchMeta } from "@/lib/sources";
 import {
   isWriteExternalTool,
+  parseAutoApproveSafe,
   priorAskUserCompleted,
+  shouldPauseAskUser,
+  toolNeedsApproval,
   writeGatePrompt,
 } from "@/lib/write-gate";
 import {
@@ -477,6 +480,9 @@ export async function tickJob(jobId: string): Promise<boolean> {
         step: next,
         kit,
         context,
+        autoApproveSafe: parseAutoApproveSafe(
+          "autoApproveSafe" in workspace ? workspace.autoApproveSafe : false,
+        ),
       }),
     );
 
@@ -656,6 +662,7 @@ async function executeTool(input: {
   kit: BrandKit;
   context: JobContext;
   allowedTools?: string[];
+  autoApproveSafe?: boolean;
 }): Promise<{
   summary: string;
   context: JobContext;
@@ -687,8 +694,9 @@ async function executeTool(input: {
   context.allowedDomains = allowedDomains;
   const planSteps = parsePlan(jobRow?.plan || "[]");
 
+  const autoApproveSafe = parseAutoApproveSafe(input.autoApproveSafe);
   if (
-    isWriteExternalTool(step.tool) &&
+    toolNeedsApproval(step.tool, autoApproveSafe) &&
     !context.interactApproved &&
     !priorAskUserCompleted(planSteps, step.id)
   ) {
@@ -1340,7 +1348,7 @@ async function executeTool(input: {
   if (step.tool === "slack_post_message") {
     const job = await prisma.job.findUnique({ where: { id: input.jobId } });
     const plan = parsePlan(job?.plan || []);
-    if (!slackPostAllowed(plan, step.id)) {
+    if (!slackPostAllowed(plan, step.id) && !context.interactApproved) {
       throw new Error(
         "Refused: slack_post_message requires a completed ask_user approval step first.",
       );
@@ -1425,8 +1433,17 @@ async function executeTool(input: {
   if (step.tool === "ask_user") {
     const prompt =
       String(step.args.prompt || "") ||
-      "Approve the drafts before they leave the desk.";
+      "Approve this send, post, or irreversible write.";
     const kind = parseAskKind(step.args);
+    if (!shouldPauseAskUser(step, planSteps, autoApproveSafe)) {
+      return {
+        summary:
+          kind === "approve"
+            ? "No approval needed for this in-desk step. Sends, Slack posts, and file writes still wait."
+            : prompt,
+        context,
+      };
+    }
     return {
       summary: prompt,
       context,

@@ -10,12 +10,14 @@ import { getLlmStatus } from "@/lib/llm";
 import { billingIsMock, billingProvider } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { workspaceOnboarding } from "@/lib/onboarding";
+import { parseAutoApproveSafe } from "@/lib/write-gate";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   onboardingDismissed: z.boolean().optional(),
   setupWizardDone: z.boolean().optional(),
   modelRouting: z.string().max(40).optional(),
+  autoApproveSafe: z.boolean().optional(),
 });
 
 export async function GET(
@@ -75,13 +77,16 @@ export async function PATCH(
         },
       });
     }
-    if (body.name?.trim() || body.modelRouting) {
+    if (body.name?.trim() || body.modelRouting || body.autoApproveSafe !== undefined) {
       const workspace = await prisma.workspace.update({
         where: { id: workspaceId },
         data: {
           ...(body.name?.trim() ? { name: body.name.trim() } : {}),
           ...(body.modelRouting
             ? { modelRouting: normalizeModelRouting(body.modelRouting) }
+            : {}),
+          ...(body.autoApproveSafe !== undefined
+            ? { autoApproveSafe: parseAutoApproveSafe(body.autoApproveSafe) }
             : {}),
         },
       });

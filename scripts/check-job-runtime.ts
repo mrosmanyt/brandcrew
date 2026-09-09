@@ -62,8 +62,9 @@ assert.equal(
   5,
 );
 assert.equal(week.steps[0].tool, "read_brand_kit");
-assert.equal(week.steps.at(-1)?.tool, "ask_user");
-console.log("ok: LinkedIn week playbook is kit → 5 posts → ask_user");
+assert.equal(week.steps.at(-1)?.tool, "write_artifact");
+assert.equal(week.steps.some((step) => step.tool === "ask_user"), false);
+console.log("ok: LinkedIn week playbook is kit → 5 posts (in-desk, no trailing approve)");
 
 const research = researchPackPlaybook("https://example.com");
 assert.equal(research.agentRole, "researcher");
@@ -127,25 +128,28 @@ console.log("ok: playbook inference");
 const website = websiteBuilderPlaybook();
 assert.equal(website.agentRole, "builder");
 assert.equal(website.steps.some((step) => step.args.kind === "website"), true);
-assert.equal(website.steps.at(-1)?.tool, "ask_user");
+assert.equal(website.steps.at(-1)?.tool, "write_artifact");
+assert.equal(website.steps.some((step) => step.tool === "ask_user"), false);
 const appJob = appBuilderPlaybook();
 assert.equal(appJob.steps.some((step) => step.args.kind === "app"), true);
 const deck = deckBuilderPlaybook();
 assert.equal(deck.agentRole, "builder");
 assert.equal(deck.steps.some((step) => step.args.kind === "deck"), true);
-assert.equal(deck.steps.at(-1)?.tool, "ask_user");
+assert.equal(deck.steps.at(-1)?.tool, "write_artifact");
 const kitDraft = brandKitDraftPlaybook();
 assert.equal(kitDraft.agentRole, "strategist");
 assert.equal(kitDraft.steps.some((step) => step.args.kind === "brand_kit_draft"), true);
-assert.equal(kitDraft.steps.at(-1)?.tool, "ask_user");
+assert.equal(kitDraft.steps.at(-1)?.tool, "write_artifact");
 console.log("ok: website/app/deck/brand-kit builder playbooks");
 
 const gmailInbox = gmailInboxPlaybook();
 assert.equal(gmailInbox.steps.some((step) => step.tool === "gmail_list_recent"), true);
-assert.equal(gmailInbox.steps.at(-1)?.tool, "ask_user");
+assert.equal(gmailInbox.steps.at(-1)?.tool, "write_artifact");
+assert.equal(gmailInbox.steps.some((step) => step.tool === "ask_user"), false);
 const gmailDraft = gmailDraftPlaybook();
 assert.equal(gmailDraft.steps.some((step) => step.tool === "gmail_create_draft"), true);
 assert.equal(gmailDraft.steps.some((step) => step.tool === "gmail_list_recent"), false);
+assert.equal(gmailDraft.steps.some((step) => step.tool === "ask_user"), false);
 const slackPost = slackPostPlaybook();
 assert.equal(slackPost.steps.some((step) => step.tool === "slack_draft_message"), true);
 assert.equal(slackPost.steps.some((step) => step.tool === "ask_user"), true);
@@ -159,11 +163,11 @@ assert.equal(slackPostAllowed(approvedPlan, postStep.id), true);
 const inbox = inboxRepliesPlaybook(true);
 assert.equal(inbox.steps.some((step) => step.tool === "gmail_list_recent"), true);
 assert.equal(inboxRepliesPlaybook(false).steps.some((step) => step.tool === "gmail_list_recent"), false);
-assert.equal(inbox.steps.at(-1)?.tool, "ask_user");
+assert.equal(inbox.steps.at(-1)?.tool, "write_artifact");
 assert.equal(whatsappDraftsPlaybook().steps.some((step) => step.args.kind === "whatsapp_drafts"), true);
-assert.equal(whatsappDraftsPlaybook().steps.at(-1)?.tool, "ask_user");
+assert.equal(whatsappDraftsPlaybook().steps.at(-1)?.tool, "write_artifact");
 console.log("ok: Gmail/Slack playbooks; post requires completed ask_user");
-console.log("ok: inbox + WhatsApp draft playbooks pause for approval");
+console.log("ok: inbox + WhatsApp drafts stay in-desk (no trailing approve)");
 
 const roundTrip = parsePlan(JSON.stringify(week.steps));
 assert.equal(roundTrip.length, week.steps.length);
@@ -171,7 +175,12 @@ assert.equal(roundTrip[1].tool, "write_artifact");
 const withAsk = ensureAskUser([
   { id: "x", tool: "read_brand_kit", label: "kit", status: "pending", args: {} },
 ]);
-assert.equal(withAsk.at(-1)?.tool, "ask_user");
+assert.equal(withAsk.at(-1)?.tool, "read_brand_kit");
+const withPost = ensureAskUser([
+  { id: "x", tool: "read_brand_kit", label: "kit", status: "pending", args: {} },
+  { id: "p", tool: "slack_post_message", label: "post", status: "pending", args: {} },
+]);
+assert.equal(withPost.at(-1)?.tool, "ask_user");
 console.log("ok: plan JSON round-trip + ensureAskUser");
 
 const text = htmlToText(
@@ -219,8 +228,8 @@ console.log(`ok: playwrightEnabled=${playwrightEnabled()} (informational)`);
 const outreachDraft = linkedinOutreachDraftPlaybook("https://example.com");
 assert.equal(outreachDraft.steps.some((step) => step.tool === "browser_extract"), true);
 assert.equal(outreachDraft.steps.some((step) => step.args.kind === "clarify"), true);
-assert.equal(outreachDraft.steps.at(-1)?.tool, "ask_user");
-assert.equal(outreachDraft.steps.at(-1)?.args.kind, "approve");
+assert.equal(outreachDraft.steps.at(-1)?.tool, "write_artifact");
+assert.equal(outreachDraft.steps.some((step) => step.tool === "ask_user" && step.args.kind === "clarify"), true);
 assert.equal(inferPlaybookKey("sales", "draft outreach from this public page"), "linkedin_outreach_draft");
 const recruiter = recruiterSheetPlaybook("https://example.com/careers");
 assert.equal(recruiter.steps.some((step) => step.args.kind === "recruiter_sheet"), true);
@@ -308,10 +317,11 @@ console.log("ok: chips bind to role hints; no named Mission Control cast");
 assert.ok(JOB_TOOLS.includes("native_file_read"));
 assert.ok(JOB_TOOLS.includes("native_file_write"));
 assert.equal(isWriteExternalTool("browser_click"), true);
+assert.equal(isWriteExternalTool("gmail_create_draft"), false);
 assert.equal(hostAllowed("https://evil.test/x", ["example.com"]).ok, false);
 assert.match(wrapUntrustedPageText("hi", "https://example.com"), new RegExp(PAGE_CONTENT_START));
 const prospect = prospectingScanPlaybook("https://example.com");
-assert.equal(prospect.steps.at(-1)?.tool, "ask_user");
+assert.equal(prospect.steps.at(-1)?.tool, "write_artifact");
 assert.equal(outreachDraftPackPlaybook().steps.some((step) => step.args.kind === "outreach_pack"), true);
 assert.equal(weeklyClientBriefPlaybook().steps.some((step) => step.args.kind === "weekly_client_brief"), true);
 console.log("ok: native tools, write-gate, allowlist, page delimiters, agency playbooks");
