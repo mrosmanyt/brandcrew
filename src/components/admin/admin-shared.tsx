@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { AdminSignupRow, AdminWorkspaceRow } from "@/lib/admin";
+import { planModeName } from "@/lib/agent-modes";
 import { PLANS, type PlanId } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
@@ -180,7 +181,7 @@ export function WorkspaceTable({
               </td>
               <td className="px-3 py-3 text-muted-foreground">{row.ownerEmail || "—"}</td>
               <td className="px-3 py-3">
-                <span className={cn("capitalize", row.paid && "text-chart-2")}>{row.plan}</span>
+                <span className={cn(row.paid && "text-chart-2")}>{planModeName(row.plan)}</span>
               </td>
               <td className="px-3 py-3 text-muted-foreground">
                 {row.tokenUsed.toLocaleString()} / {row.tokenBudget.toLocaleString()}
@@ -234,7 +235,7 @@ export function UserActionList({
               {row.name}
               {row.workspaces.length
                 ? ` · ${row.workspaces
-                    .map((ws) => `${ws.name} (${ws.plan}${ws.suspended ? ", suspended" : ""})`)
+                    .map((ws) => `${ws.name} (${planModeName(ws.plan)}${ws.suspended ? ", suspended" : ""})`)
                     .join(", ")}`
                 : " · no workspace"}
             </p>

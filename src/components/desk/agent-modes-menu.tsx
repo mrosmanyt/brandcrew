@@ -103,7 +103,7 @@ export function AgentModesMenu({
         return;
       }
       if (result.url) {
-        window.location.href = result.url;
+        window.location.assign(result.url);
         return;
       }
       onPlanApplied?.({

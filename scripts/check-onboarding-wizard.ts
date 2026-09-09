@@ -122,6 +122,12 @@ assert.doesNotMatch(home, /Signup starts on Demo/);
 const setupBanner = readFileSync("src/components/desk/setup-banner.tsx", "utf8");
 assert.match(setupBanner, /Offline templates/);
 assert.doesNotMatch(setupBanner, /Offline demo/);
+const chrome = readFileSync("src/components/desk/desk-chrome.tsx", "utf8");
+assert.match(chrome, /planModeName\(plan\)/);
+assert.doesNotMatch(chrome, /jobs\/hr cap · \{plan\}/);
+const missionUi = readFileSync("src/components/desk/mission-control.tsx", "utf8");
+assert.match(missionUi, /planModeName\(usage\.plan\)/);
+assert.doesNotMatch(missionUi, /jobs\/hr left · \$\{usage\.plan\}/);
 console.log("ok: user-facing plan language is Free; stored id stays demo");
 
 console.log("Onboarding wizard checks passed.");

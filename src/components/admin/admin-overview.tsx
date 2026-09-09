@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import type { AdminDashboard } from "@/lib/admin";
+import { planModeName } from "@/lib/agent-modes";
 import { PLANS } from "@/lib/constants";
 import {
   AdminConfirm,
@@ -97,7 +98,7 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
                     <td className="px-3 py-3">{row.name}</td>
                     <td className="px-3 py-3 text-muted-foreground">
                       {row.workspaces.length
-                        ? row.workspaces.map((ws) => `${ws.name} (${ws.plan})`).join(", ")
+                        ? row.workspaces.map((ws) => `${ws.name} (${planModeName(ws.plan)})`).join(", ")
                         : "—"}
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">
