@@ -1,7 +1,7 @@
 /**
  * Decide what gets persisted as an artifact.
- * Live (any provider key): model text, else tool-captured page text — never canned demo copy.
- * Offline demo (zero keys): labeled templates only.
+ * Live (any provider key): model text, else tool-captured page text — never canned template copy.
+ * Offline (zero keys): labeled templates only.
  */
 export type FetchedPage = { url: string; ok: boolean; text: string };
 

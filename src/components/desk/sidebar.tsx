@@ -137,7 +137,7 @@ function NavBody({
         return;
       }
       setName("");
-      router.push(`/desk/${data.workspace.id}`);
+      router.push(`/onboarding?workspace=${encodeURIComponent(data.workspace.id)}`);
       router.refresh();
     } catch {
       toast.error("Could not create workspace.");

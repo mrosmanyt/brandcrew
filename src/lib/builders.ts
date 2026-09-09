@@ -28,7 +28,7 @@ function fallback(kind: BuilderKind, kit: BrandKit): Omit<BuilderArtifact, "toke
     return {
       type: "app",
       title: `${brandLabel(kit)} mini app`,
-      summary: "Offline demo app HTML. Preview runs in the desk — no Replit login.",
+      summary: "Offline template app HTML. Preview runs in the desk — no Replit login.",
       content: demoAppHtml(kit),
     };
   }
@@ -36,14 +36,14 @@ function fallback(kind: BuilderKind, kit: BrandKit): Omit<BuilderArtifact, "toke
     return {
       type: "deck",
       title: `${brandLabel(kit)} deck`,
-      summary: "Offline demo pitch deck HTML. Preview runs in the desk.",
+      summary: "Offline template pitch deck HTML. Preview runs in the desk.",
       content: demoDeckHtml(kit),
     };
   }
   return {
     type: "website",
     title: `${brandLabel(kit)} site`,
-    summary: "Offline demo landing page HTML. Preview runs in the desk.",
+    summary: "Offline template landing page HTML. Preview runs in the desk.",
     content: demoWebsiteHtml(kit),
   };
 }

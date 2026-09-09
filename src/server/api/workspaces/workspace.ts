@@ -14,18 +14,8 @@ import { workspaceOnboarding } from "@/lib/onboarding";
 const patchSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   onboardingDismissed: z.boolean().optional(),
-  modelRouting: z
-    .enum([
-      "auto",
-      "opus-4.8",
-      "fable-5.1",
-      "gpt-astra",
-      "gemini-3.8-flash",
-      "gemini",
-      "anthropic",
-      "openai",
-    ])
-    .optional(),
+  setupWizardDone: z.boolean().optional(),
+  modelRouting: z.string().max(40).optional(),
 });
 
 export async function GET(
@@ -72,10 +62,17 @@ export async function PATCH(
     const { workspaceId } = await context.params;
     const { user } = await requireWorkspaceMember(workspaceId);
     const body = patchSchema.parse(await request.json());
-    if (body.onboardingDismissed !== undefined) {
+    if (body.onboardingDismissed !== undefined || body.setupWizardDone !== undefined) {
       await prisma.workspaceMember.update({
         where: { workspaceId_userId: { workspaceId, userId: user.id } },
-        data: { onboardingDismissed: body.onboardingDismissed },
+        data: {
+          ...(body.onboardingDismissed !== undefined
+            ? { onboardingDismissed: body.onboardingDismissed }
+            : {}),
+          ...(body.setupWizardDone !== undefined
+            ? { setupWizardDone: body.setupWizardDone }
+            : {}),
+        },
       });
     }
     if (body.name?.trim() || body.modelRouting) {

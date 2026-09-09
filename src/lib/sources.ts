@@ -57,7 +57,7 @@ export function uncertaintyFromEvidence(input: {
   if (!input.live) {
     return {
       level: "high",
-      note: "Offline demo — labeled template from the Brand Kit, not a live page read. Do not treat as verified research.",
+      note: "Offline template — labeled copy from the Brand Kit, not a live page read. Do not treat as verified research.",
     };
   }
   if (!okPages.length && !input.searchOk) {

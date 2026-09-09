@@ -775,6 +775,20 @@
   }
 }
 
+.wizard-pane {
+  animation: wizard-pane-in 0.42s ease both;
+}
+@keyframes wizard-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marketing-canvas .mkt-hero-kicker,
   .marketing-canvas .mkt-hero-title,
@@ -811,6 +825,9 @@
   .agent-avatar.is-working .agent-avatar-svg,
   .agent-avatar.is-working .agent-avatar-eyes,
   .agent-avatar.is-idle .agent-eye {
+    animation: none;
+  }
+  .wizard-pane {
     animation: none;
   }
   .desk-starting-shine {

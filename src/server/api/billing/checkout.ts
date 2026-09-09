@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error:
-              "Live subscriptions cannot switch to Demo from the desk. Open Plans.",
+              "Live subscriptions cannot switch to Free from the desk. Open Plans.",
           },
           { status: 400 },
         );

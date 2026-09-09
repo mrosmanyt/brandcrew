@@ -101,7 +101,7 @@ export function serializeLimits(limits: WorkspaceLimits) {
     creditsBudget: limits.tokenBudget,
     creditsLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
     creditsHint:
-      "Credits wrap this plan’s token budget 1:1. Demo/Starter/Pro/Ultra caps are unchanged.",
+      "Credits wrap this plan’s token budget 1:1. Free/Starter/Pro/Ultra caps are unchanged.",
   };
 }
 

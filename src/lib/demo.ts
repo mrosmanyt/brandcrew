@@ -240,7 +240,7 @@ Suggested tasks:
       return {
         type: "website",
         title: `${brandLabel(kit)} site`,
-        summary: "Offline demo landing page. Preview in the desk.",
+        summary: "Template landing page. Preview in the desk.",
         content: demoWebsiteHtml(kit),
       };
   }
@@ -280,7 +280,7 @@ export function demoResearchMarkdown(
   const source = fetched?.url || kit.website || "(no URL)";
   const excerpt = fetched?.text
     ? fetched.text.slice(0, 600)
-    : "No live page text. This pack is inferred from the Brand Kit so the agent still has a source of truth (offline demo).";
+    : "No live page text. This pack is inferred from the Brand Kit so the agent still has a source of truth (offline template).";
   return `# Research pack
 
 ## Source
@@ -606,7 +606,7 @@ export function demoWebsiteHtml(kit: BrandKit) {
 </head>
 <body>
   <header>
-    <p class="kicker">Offline demo · not published</p>
+    <p class="kicker">Preview · not published</p>
     <h1>${name}</h1>
     <p>${offer}</p>
     <a class="cta" href="#offer">See the offer</a>
@@ -689,7 +689,7 @@ export function demoDeckHtml(kit: BrandKit) {
 <body>
   <div class="deck">
     <section>
-      <p class="kicker">Offline demo · not published</p>
+      <p class="kicker">Preview · not published</p>
       <h1>${name}</h1>
       <p>${offer}</p>
     </section>
@@ -754,7 +754,7 @@ export function demoAppHtml(kit: BrandKit) {
     <label for="note" style="margin-top:0.7rem">What they need</label>
     <textarea id="note" name="note" placeholder="One sentence"></textarea>
     <button type="submit">Save locally</button>
-    <p class="note">Offline demo app. No Replit login. No network.</p>
+    <p class="note">Preview app. No Replit login. No network.</p>
   </form>
 </body>
 </html>`;

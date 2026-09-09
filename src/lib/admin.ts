@@ -570,7 +570,7 @@ export async function adminAssignPlan(input: {
 }): Promise<{ workspaces: AdminWorkspaceRow[] }> {
   const plan = asPlanId(input.plan);
   if (!(plan in PLANS)) {
-    throw new ClientError("Choose demo, starter, pro, or ultra.");
+    throw new ClientError("Choose free, starter, pro, or ultra.");
   }
   const { ids, userTarget } = await resolveWorkspaceIds(input);
 
@@ -656,7 +656,7 @@ export async function adminSuspendWorkspace(input: {
         previousSuspended: before.suspended,
         workspaceName: before.name,
         userEmail: userTarget,
-        note: "Soft suspend: Demo plan, jobs blocked.",
+        note: "Soft suspend: Free plan, jobs blocked.",
       },
     });
   }

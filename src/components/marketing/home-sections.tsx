@@ -87,7 +87,7 @@ const FEATURES = [
   },
   {
     title: "Token budget",
-    body: "Demo, Starter ($20), Pro ($79), and Ultra ($200) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
+    body: "Free, Starter ($20), Pro ($79), and Ultra ($200) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
   },
   {
     title: "Electron desktop",
@@ -341,7 +341,7 @@ export function PricingSection() {
       bordered
       kicker="Pricing"
       title="Starter, Pro, and Ultra"
-      lead="Signup starts on Demo. Get Starter, Pro, or Ultra to sign in and checkout — Whop when configured — so the workspace unlocks from the payment webhook."
+      lead="Signup starts on Free. Get Starter, Pro, or Ultra to sign in and checkout — Whop when configured — so the workspace unlocks from the payment webhook."
     >
       <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
@@ -368,7 +368,7 @@ export function PricingSection() {
         ))}
       </div>
       <p className="mt-6 text-sm leading-6 text-muted-foreground">
-        Demo is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
+        Free is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
         to create New Agent and run a first job. Checkout uses Whop when
         configured, then Stripe; otherwise the desk can apply a plan in mock
         billing. Get Starter, Pro, or Ultra signs you in first, then opens desk
@@ -377,7 +377,7 @@ export function PricingSection() {
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <PricingDemoCta />
         <p className="text-sm text-muted-foreground">
-          Demo: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
+          Free: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
         </p>
       </div>
     </Section>
@@ -468,7 +468,7 @@ const FAQS = [
   },
   {
     q: "How does pricing work?",
-    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Demo. Get Starter / Get Pro / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
+    a: "Starter is $20/month (2 seats, 50k tokens). Pro is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Starter / Get Pro / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
   },
   {
     q: "Can I call this from my own app?",
