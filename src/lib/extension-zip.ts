@@ -1,10 +1,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix, relative } from "node:path";
 import { deflateRawSync } from "node:zlib";
+import {
+  EXTENSION_ROOT_REL,
+  EXTENSION_ZIP_NAME,
+  EXTENSION_ZIP_PUBLIC_PATH,
+} from "@/lib/extension-download";
 
-export const EXTENSION_ZIP_NAME = "cinem-pro-chrome.zip";
-export const EXTENSION_ZIP_PUBLIC_PATH = `/downloads/${EXTENSION_ZIP_NAME}`;
-export const EXTENSION_ROOT_REL = "extension";
+export { EXTENSION_ZIP_NAME, EXTENSION_ZIP_PUBLIC_PATH, EXTENSION_ROOT_REL };
 
 function crc32(buf: Buffer) {
   let crc = ~0;

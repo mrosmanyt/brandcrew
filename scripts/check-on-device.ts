@@ -50,7 +50,11 @@ assert.match(
 );
 assert.match(
   readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
-  /EXTENSION_ZIP_PUBLIC_PATH/,
+  /extension-download/,
+);
+assert.doesNotMatch(
+  readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
+  /lib\/extension-zip/,
 );
 assert.doesNotMatch(
   readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),

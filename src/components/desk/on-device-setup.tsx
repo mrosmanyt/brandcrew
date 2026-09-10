@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { EXTENSION_ZIP_PUBLIC_PATH } from "@/lib/extension-zip";
+import { EXTENSION_ZIP_PUBLIC_PATH } from "@/lib/extension-download";
 
 type DeviceRow = {
   id: string;
