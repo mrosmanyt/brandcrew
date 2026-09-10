@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       });
     }
     if (plan !== "starter" && plan !== "pro" && plan !== "ultra") {
-      return NextResponse.json({ error: "Choose Starter, Pro, or Ultra." }, { status: 400 });
+      return NextResponse.json({ error: "Choose Pro, Pro Plus, or Ultra." }, { status: 400 });
     }
 
     if (billingIsMock()) {
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     return jsonOk({ url: session.url, mock: false, provider: "stripe" });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Choose Starter, Pro, or Ultra." }, { status: 400 });
+      return NextResponse.json({ error: "Choose Pro, Pro Plus, or Ultra." }, { status: 400 });
     }
     return jsonError(error);
   }

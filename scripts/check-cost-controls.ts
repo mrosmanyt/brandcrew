@@ -159,7 +159,7 @@ const hourlyStop = evaluateBudgetCaps(
     concurrentJobs: 0,
     maxConcurrentJobs: 1,
     paid: true,
-    planLabel: "Starter",
+    planLabel: "Pro",
   },
   "job",
 );
@@ -175,7 +175,7 @@ assert.equal(
       concurrentJobs: 0,
       maxConcurrentJobs: 1,
       paid: true,
-      planLabel: "Starter",
+      planLabel: "Pro",
     },
     "llm",
   ).ok,
@@ -190,7 +190,7 @@ const concurrentStop = evaluateBudgetCaps(
     concurrentJobs: 1,
     maxConcurrentJobs: 1,
     paid: true,
-    planLabel: "Starter",
+    planLabel: "Pro",
   },
   "job",
 );
@@ -215,20 +215,26 @@ assert.match(readFileSync("src/server/api/workspaces/jobs.ts", "utf8"), /answerD
 assert.match(readFileSync("src/server/api/workspaces/chat.ts", "utf8"), /answerDeskQuestion/);
 console.log("ok: desk Q&A classifier keeps playbooks on the job path");
 assert.match(readFileSync(".env.example", "utf8"), /Founder tip: put Gemini first/);
-assert.match(readFileSync(".env.example", "utf8"), /Two Starter desks/);
+assert.match(readFileSync(".env.example", "utf8"), /Two Pro desks/);
 assert.match(readFileSync(".env.example", "utf8"), /Do not add OpenRouter/);
 assert.doesNotMatch(readFileSync(".env.example", "utf8"), /OPENROUTER_API_KEY/);
 console.log("ok: .env.example founder tip — Gemini first, no OpenRouter");
 
 assert.equal(planDisplayName("demo"), "Free");
+assert.equal(planDisplayName("starter"), "Pro");
+assert.equal(planDisplayName("pro"), "Pro Plus");
+assert.equal(planDisplayName("ultra"), "Ultra");
 assert.equal(PLANS.demo.name, "Free");
+assert.equal(PLANS.starter.name, "Pro");
+assert.equal(PLANS.pro.name, "Pro Plus");
+assert.equal(PLANS.ultra.name, "Ultra");
 assert.deepEqual([...PLAN_IDS_CAPPED], ["demo", "starter", "pro", "ultra"]);
 assert.equal("unlimited" in PLANS, false);
 assert.deepEqual([...CHECKOUT_PLANS], ["starter", "pro", "ultra"]);
 const credits = creditsFromTokens(100, PLANS.demo.tokenBudget);
 assert.equal(credits.creditsBudget, 15_000);
 assert.match(CREDITS_HINT, /no unlimited plan/);
-assert.match(CREDITS_HINT, /Free\/Starter\/Pro\/Ultra/);
+assert.match(CREDITS_HINT, /Free\/Pro\/Pro Plus\/Ultra/);
 assert.match(readFileSync("src/lib/limits.ts", "utf8"), /no unlimited plan/);
 console.log("ok: Free plan (not Demo) is capped; no unlimited plan");
 

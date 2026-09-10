@@ -94,7 +94,7 @@ assert.match(pricing, /Ultra/);
 assert.match(pricing, /PLANS\.ultra/);
 assert.match(pricing, /\/#integrations/);
 assert.match(pricing, /PricingPlanCta/);
-assert.match(pricing, /Get Starter \/ Get Pro \/ Get Ultra/);
+assert.match(pricing, /Get Pro \/ Get Pro Plus \/ Get Ultra/);
 assert.match(pricing, /Checkout uses Whop/);
 console.log("ok: pricing still includes Ultra and footer links Connectors");
 

@@ -4,7 +4,7 @@
  * Desk picker shows `displayName` only. Extra named rows (GPT-4o mini, GPT Sol,
  * Claude Opus, Gemini Flash, …) are intentional so the menu is not only
  * flagship labels. Job runtime still calls the cheap `providerModelId` so
- * Starter ($20) budgets last. Never call Opus.
+ * Pro ($20, internal starter id) budgets last. Never call Opus.
  *
  * | UI (displayName)   | Catalog id         | Backend class | Real provider id          |
  * |--------------------|--------------------|---------------|---------------------------|
@@ -21,7 +21,7 @@
  *
  * GPT Terra (cheap OpenAI) defaults to `gpt-4o-mini`.
  * Gemini Flash defaults to `gemini-2.5-flash` (maps the “3.1 Flash” class).
- * Free + Starter Auto routing never calls Sonnet — see `planForcesCheapBackends`.
+ * Free + Pro (internal starter id) Auto routing never calls Sonnet — see `planForcesCheapBackends`.
  */
 
 export const MODEL_CAPABILITIES = ["Fast & cheap", "Smart", "Smartest"] as const;

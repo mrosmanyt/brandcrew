@@ -56,8 +56,8 @@ export function BillingPlans({
     }
     toast.success(
       provider === "mock"
-        ? `Mock billing: workspace is now on ${plan}.`
-        : `Plan updated to ${plan}.`,
+        ? `Mock billing: workspace is now on ${PLANS[plan].name}.`
+        : `Plan updated to ${PLANS[plan].name}.`,
     );
     router.refresh();
   }

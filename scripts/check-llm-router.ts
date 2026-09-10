@@ -162,7 +162,7 @@ try {
     "claude-sonnet-5",
   );
   assert.doesNotMatch(pickRoute("draft", "boost")?.model || "", /opus/i);
-  console.log("ok: all three → Flash auto (Free/Starter never Sonnet); Pro code uses Sonnet; Ultra uses Sonnet max");
+  console.log("ok: all three → Flash auto (Free/Pro never Sonnet); Pro Plus code uses Sonnet; Ultra uses Sonnet max");
 
   setKeys({
     openai: "sk-openai-fake",
@@ -191,7 +191,7 @@ try {
       "",
   );
   assert.match(base, /x\.ai/);
-  console.log("ok: posts stay Gemini Flash even if xAI is keyed; Free/Starter apps stay Flash, Pro apps stay Sonnet");
+  console.log("ok: posts stay Gemini Flash even if xAI is keyed; Free/Pro apps stay Flash, Pro Plus apps stay Sonnet");
 
   console.log("LLM router checks passed (no paid API calls).");
 } finally {

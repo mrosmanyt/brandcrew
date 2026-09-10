@@ -19,7 +19,7 @@ export const PLANS = {
   },
   starter: {
     id: "starter",
-    name: "Starter",
+    name: "Pro",
     price: 20,
     seats: 2,
     tokenBudget: 50_000,
@@ -28,7 +28,7 @@ export const PLANS = {
   },
   pro: {
     id: "pro",
-    name: "Pro",
+    name: "Pro Plus",
     price: 79,
     seats: 5,
     tokenBudget: 200_000,
@@ -48,7 +48,7 @@ export const PLANS = {
 
 export type PlanId = keyof typeof PLANS;
 
-/** User-facing plan name. Internal id stays `demo`; customers see Free. */
+/** User-facing plan name. Internal ids stay demo/starter/pro/ultra; customers see Free/Pro/Pro Plus/Ultra. */
 export function planDisplayName(plan?: string | null): string {
   if (plan === "ultra") return PLANS.ultra.name;
   if (plan === "growth" || plan === "pro") return PLANS.pro.name;

@@ -1,5 +1,5 @@
 /**
- * Credits UX wraps existing Free/Starter/Pro/Ultra token budgets 1:1.
+ * Credits UX wraps existing Free/Pro/Pro Plus/Ultra token budgets 1:1.
  * Does not change billing, Whop/Stripe, or token accounting.
  * There is no unlimited plan.
  */
@@ -7,7 +7,7 @@
 import type { LimitsDTO, WorkspaceLimits } from "@/lib/limits";
 
 export const CREDITS_HINT =
-  "Credits wrap this plan’s token budget 1:1. Free/Starter/Pro/Ultra are capped — there is no unlimited plan.";
+  "Credits wrap this plan’s token budget 1:1. Free/Pro/Pro Plus/Ultra are capped — there is no unlimited plan.";
 
 export type CreditsDTO = {
   creditsUsed: number;

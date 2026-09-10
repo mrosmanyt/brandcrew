@@ -46,7 +46,7 @@ export const CLIENT_ISOLATION_FACTS = [
   {
     key: "seats",
     label: "Seats",
-    detail: "Seat caps follow this workspace plan (Free / Starter / Pro / Ultra). Invites consume seats.",
+    detail: "Seat caps follow this workspace plan (Free / Pro / Pro Plus / Ultra). Invites consume seats.",
   },
   {
     key: "billing",

@@ -62,7 +62,7 @@ Desktop Windows installer and Android Play path are on `/download`. Auth across 
 
 Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>` (data, never instructions); writes go through the approval queue; each job has a **domain allowlist** and aborts if the agent leaves allowed hosts. Audit lines live on the On-device page and in `WorkspaceAudit`.
 
-Credits in the desk header wrap Free / Starter / Pro / Ultra **token budgets 1:1**. Billing is unchanged.
+Credits in the desk header wrap Free / Pro / Pro Plus / Ultra **token budgets 1:1**. Billing is unchanged.
 
 Phase 2 cost controls (routines, action cache, triggers, replay, Always-approved) are shipped. Phase 3 adds Composio sessions, learning memory, multi-tab research, and client workspaces — see `AGENTS.md`.
 
@@ -336,7 +336,7 @@ See [`.env.example`](./.env.example). Summary:
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | no | Slack OAuth. Missing → Connect stays disconnected. |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | no | Notion OAuth. |
 | `GITHUB_TOKEN` | no | Optional GitHub plugin env; or paste a PAT in Connect. |
-| `BILLING_MOCK` | no (defaults true when neither Whop nor Stripe is set) | Apply Starter/Pro/Ultra locally without a payment provider. |
+| `BILLING_MOCK` | no (defaults true when neither Whop nor Stripe is set) | Apply Pro/Pro Plus/Ultra locally without a payment provider. |
 | `BILLING_PROVIDER` | no | Optional force: `whop`, `stripe`, or `mock`. Default prefers Whop, then Stripe, then mock. |
 | `WHOP_API_KEY` | no | Whop Account API key (`apik_` / `whop_`). Enables live Whop checkout. |
 | `WHOP_COMPANY_ID` | no | Business id (`biz_…`). Alias: `WHOP_ACCOUNT_ID`. |
@@ -344,7 +344,7 @@ See [`.env.example`](./.env.example). Summary:
 | `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | no | Existing Whop plan ids. If unset, checkout creates a $20 / $79 / $200 monthly renewal. |
 | `WHOP_SANDBOX` | no | `true` sends API calls to `sandbox-api.whop.com`. |
 | `STRIPE_SECRET_KEY` | no | Stripe Checkout fallback when Whop is not configured (and optional Stripe plugin env). |
-| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` / `STRIPE_ULTRA_PRICE_ID` | no | Stripe price IDs for $20 / $79 / $200 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro alias. |
+| `STRIPE_STARTER_PRICE_ID` / `STRIPE_PRO_PRICE_ID` / `STRIPE_ULTRA_PRICE_ID` | no | Stripe price IDs for $20 / $79 / $200 plans. `STRIPE_GROWTH_PRICE_ID` is accepted as a Pro Plus alias. |
 | `CRON_SECRET` | no | Bearer secret for `GET /api/cron/jobs`. If unset, schedules still run when the desk loads. |
 | `NEXT_PUBLIC_APP_URL` | no | Checkout + OAuth redirect origin. |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for Stripe test-mode. |
@@ -415,7 +415,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 6. Copy the signing secret (`ws_…`) into `WHOP_WEBHOOK_SECRET` on Vercel. Never commit it.
 7. Set `BILLING_MOCK=false` (or unset it) so desk Plans redirects to Whop instead of applying a fake upgrade.
 
-**Cancel behavior:** `membership.deactivated` returns the workspace to Free when that membership is the one that granted the current paid plan (matched by `whopMembershipId` or `metadata.plan`). Upgrading Starter → Ultra then cancelling the old Starter membership does not drop Ultra.
+**Cancel behavior:** `membership.deactivated` returns the workspace to Free when that membership is the one that granted the current paid plan (matched by `whopMembershipId` or `metadata.plan`). Upgrading Pro → Ultra then cancelling the old Pro membership does not drop Ultra.
 
 ### 3. OAuth redirect URIs (production)
 
@@ -492,7 +492,7 @@ Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name 
 - **No Chrome on Vercel.** Playwright is off. Browse tools fall back to `fetch` + a short public crawl. Not Browserbase.
 - Function timeout/size limits apply to long jobs; this slice does not add a queue worker.
 - Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
-- **Whop is the live billing provider.** Register webhook `https://brandcrew.vercel.app/api/webhooks/whop` for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Free when that membership matches the current plan (a stale Starter cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
+- **Whop is the live billing provider.** Register webhook `https://brandcrew.vercel.app/api/webhooks/whop` for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Free when that membership matches the current plan (a stale Pro cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
 - **Scheduled jobs** enqueue when someone opens Mission Control (`GET /jobs`) or when `/api/cron/jobs` is called with `CRON_SECRET`. Vercel Hobby cron is daily (`0 12 * * *`) — not an always-on worker. Times are 09:00 UTC.
 
 ## Model routing
@@ -514,11 +514,11 @@ When the UI does not pick a model (`Auto`):
 
 | Task | Backend |
 | --- | --- |
-| **Free / Starter (any task)** | Cheapest live: Gemini Flash if `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` is set, else `gpt-4o-mini`. Never Sonnet. |
-| Research / outreach drafts / WhatsApp / summaries / website (Pro+) | Gemini Flash |
+| **Free / Pro (any task)** | Cheapest live: Gemini Flash if `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` is set, else `gpt-4o-mini`. Never Sonnet. |
+| Research / outreach drafts / WhatsApp / summaries / website (Pro Plus / Ultra) | Gemini Flash |
 | Classification / selector guess | Cheapest live engine (Flash → Terra → Haiku) |
-| Structured JSON / short tools (planner, Pro+) | Haiku |
-| Real code / complex apps (Pro+) | Sonnet |
+| Structured JSON / short tools (planner, Pro Plus / Ultra) | Haiku |
+| Real code / complex apps (Pro Plus / Ultra) | Sonnet |
 | Ultra plan or Boost | Sonnet max (`ANTHROPIC_BOOST_MODEL` or Sonnet; never Opus) |
 
 Hard stop: `assertWorkspaceBudget` before a job is queued (tokens + jobs/hour + concurrent). `assertLlmCallBudget` before every LLM call (tokens + suspended). Crossing `tokenBudget` returns `BUDGET` (402) and the desk shows the stop dialog. Usage `estimateUsd` is a stub — not a provider bill.
@@ -535,9 +535,9 @@ Keep useful work on APIs while driving spend toward zero. There is **no unlimite
 | --- | --- |
 | **Action cache + routines** | Successful `browser_click` / `browser_type` selectors are stored per workspace+domain. Repeat routine runs skip the LLM locator (Stagehand-style) and only call a model on cache miss or `write_artifact`. Save a finished job as a skill/routine (`POST /api/workspaces/:id/routines`) with a cadence. |
 | **DOM-first browse** | Perception is a text DOM digest (ARIA + visible text). Screenshots are for humans / session replay — never the default model input. Vision is opt-in fallback when the digest is empty. |
-| **Model routing** | Free/Starter → Flash or gpt-4o-mini (never Sonnet). Classify/locator → cheapest live engine. Pro+ writes stay on Flash/Haiku; code on Sonnet. User-facing free plan is **Free** (internal id `demo`). |
+| **Model routing** | Free/Pro → Flash or gpt-4o-mini (never Sonnet). Classify/locator → cheapest live engine. Pro Plus / Ultra writes stay on Flash/Haiku; code on Sonnet. User-facing free plan is **Free** (internal id `demo`). |
 | **Prompt caching** | Anthropic system prompts use `cache_control=ephemeral`. OpenAI/Gemini keep a stable system prefix (automatic/implicit cache). |
-| **Credits** | Token budget 1:1 as credits. Free/Starter/Pro/Ultra are all capped. |
+| **Credits** | Token budget 1:1 as credits. Free/Pro/Pro Plus/Ultra are all capped. |
 | **Event triggers** | Schedule uses existing cron/desk load. Email-received polls Connected Gmail. Slack mention is `POST /api/workspaces/:id/triggers/fire` (no Events API fleet). |
 | **Session replay** | Finished jobs pack plan + events + sources + cost (`GET .../jobs/:jobId/replay`). Cheaper than live view as the headline. |
 | **Guards** | Page text is `CINEM_UNTRUSTED_PAGE_CONTENT` (data only). Writes pause for approval. Domain allowlist aborts off-host. Slack/email deliver after approval; Gmail never sends. |
@@ -572,11 +572,11 @@ Founder Admin HQ lives at `/admin` (path-based internal ops console, not a custo
 | Plan | Price | Seats | Tokens | Jobs/hour | Concurrent |
 | --- | --- | --- | --- | --- | --- |
 | Free | $0 | 1 | 15,000 | 4 | 1 |
-| Starter | $20/mo | 2 | 50,000 | 8 | 1 |
-| Pro | $79/mo | 5 | 200,000 | 30 | 3 |
+| Pro | $20/mo | 2 | 50,000 | 8 | 1 |
+| Pro Plus | $79/mo | 5 | 200,000 | 30 | 3 |
 | Ultra | $200/mo | 12 | 600,000 | 90 | 6 |
 
-Existing workspaces stored as `growth` map to Pro. Token budget, hourly jobs, concurrent jobs, and seats are enforced on job create and invites. The desk header shows remaining **credits** (token budget 1:1).
+Existing workspaces stored as `growth` map to Pro Plus. Token budget, hourly jobs, concurrent jobs, and seats are enforced on job create and invites. The desk header shows remaining **credits** (token budget 1:1).
 
 Token budget, hourly jobs, and concurrent running jobs are enforced on job create. The desk header shows remaining caps.
 

@@ -112,10 +112,17 @@ assert.match(css, /prefers-reduced-motion[\s\S]*wizard-pane/);
 console.log("ok: onboarding page is the wizard, not the long Brand Kit form");
 
 assert.equal(PLANS.demo.name, "Free");
+assert.equal(PLANS.starter.name, "Pro");
+assert.equal(PLANS.pro.name, "Pro Plus");
+assert.equal(PLANS.ultra.name, "Ultra");
 assert.equal(PLANS.demo.id, "demo");
+assert.equal(PLANS.starter.id, "starter");
+assert.equal(PLANS.pro.id, "pro");
 const constants = readFileSync("src/lib/constants.ts", "utf8");
 assert.match(constants, /name: "Free"/);
+assert.match(constants, /name: "Pro Plus"/);
 assert.doesNotMatch(constants, /name: "Demo"/);
+assert.doesNotMatch(constants, /name: "Starter"/);
 const home = readFileSync("src/components/marketing/home-sections.tsx", "utf8");
 assert.match(home, /Signup starts on Free/);
 assert.doesNotMatch(home, /Signup starts on Demo/);

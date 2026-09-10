@@ -30,7 +30,7 @@ export function isPaidPlan(plan?: string | null): boolean {
 }
 
 /**
- * Free + Starter always stay on Flash / gpt-4o-mini (never Sonnet).
+ * Free + Pro (internal starter id) always stay on Flash / gpt-4o-mini (never Sonnet).
  * Missing plan id is treated as Free so Auto cannot accidentally bill Sonnet.
  */
 export function planForcesCheapBackends(plan?: string | null): boolean {
@@ -111,7 +111,7 @@ export function serializeLimits(limits: WorkspaceLimits) {
     creditsBudget: limits.tokenBudget,
     creditsLeft: Math.max(0, limits.tokenBudget - limits.tokenUsed),
     creditsHint:
-      "Credits wrap this plan’s token budget 1:1. Free/Starter/Pro/Ultra are capped — there is no unlimited plan.",
+      "Credits wrap this plan’s token budget 1:1. Free/Pro/Pro Plus/Ultra are capped — there is no unlimited plan.",
   };
 }
 
