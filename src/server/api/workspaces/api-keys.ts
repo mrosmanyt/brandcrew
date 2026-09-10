@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createWorkspaceApiKey, serializeApiKey } from "@/lib/api-keys";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability, requireWorkspaceMember } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonFail, jsonOk } from "@/lib/http";
 
@@ -31,7 +31,7 @@ export async function POST(
 ) {
   try {
     const { workspaceId } = await context.params;
-    await requireWorkspaceMember(workspaceId);
+    await requireWorkspaceCapability(workspaceId, "api_keys");
     const parsed = createSchema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {
       return jsonFail("Could not create that key.", 400);

@@ -61,7 +61,7 @@ export default async function WorkspaceLayout({
         }
       >
         <DeskSidebar
-          workspace={serializeWorkspace(member.workspace)}
+          workspace={serializeWorkspace({ ...member.workspace, memberRole: member.role })}
           workspaces={workspaces}
           agents={member.workspace.agents.map(serializeAgent)}
           agentStatus={agentStatus}

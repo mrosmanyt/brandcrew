@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   COOKIE_CONSENT_EVENT,
@@ -49,7 +50,14 @@ export function CookieBanner() {
         <p className="text-sm leading-6 text-foreground">
           CINEM Pro uses an essential session cookie to keep you signed in.
           Optional analytics load only if you accept and an analytics id is
-          configured.
+          configured.{" "}
+          <Link href="/privacy" className="underline underline-offset-4">
+            Privacy
+          </Link>
+          {" · "}
+          <Link href="/dpa" className="underline underline-offset-4">
+            DPA
+          </Link>
         </p>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button

@@ -8,6 +8,7 @@ import { MarkdownBody } from "@/components/desk/markdown";
 import { providerLabel } from "@/components/desk/provider-badges";
 import { extractPreviewHtml, isPreviewableArtifact } from "@/lib/html-preview";
 import { publicModelLabel } from "@/lib/model-catalog";
+import { APPROVER_REQUIRED_HINT } from "@/lib/rbac";
 import type { ArtifactDTO } from "@/lib/types";
 
 export function ArtifactPanel({
@@ -16,12 +17,14 @@ export function ArtifactPanel({
   onReject,
   onRegenerate,
   busy,
+  canApprove = true,
 }: {
   artifact: ArtifactDTO;
   onApprove: () => void;
   onReject?: () => void;
   onRegenerate: () => void;
   busy?: boolean;
+  canApprove?: boolean;
 }) {
   const previewHtml = isPreviewableArtifact(artifact.type, artifact.content)
     ? extractPreviewHtml(artifact.content)
@@ -51,6 +54,7 @@ export function ArtifactPanel({
             Rejected. This workspace remembers to avoid that approach.
           </p>
         ) : (
+          canApprove ? (
           <>
             <Button size="sm" onClick={onApprove} disabled={busy}>
               <Check className="size-3.5" />
@@ -62,6 +66,9 @@ export function ArtifactPanel({
               </Button>
             ) : null}
           </>
+          ) : (
+            <p className="self-center text-xs text-muted-foreground">{APPROVER_REQUIRED_HINT}</p>
+          )
         )}
         <Button size="sm" variant="outline" onClick={onRegenerate} disabled={busy}>
           <RefreshCw className="size-3.5" />

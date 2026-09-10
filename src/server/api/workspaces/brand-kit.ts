@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability } from "@/lib/auth";
 import { brandKitSchema, stringifyBrandKit } from "@/lib/brand-kit";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
@@ -10,7 +10,7 @@ export async function PUT(
 ) {
   try {
     const { workspaceId } = await context.params;
-    await requireWorkspaceMember(workspaceId);
+    await requireWorkspaceCapability(workspaceId, "workspace_settings");
     const body = brandKitSchema.parse(await request.json());
     const workspace = await prisma.workspace.update({
       where: { id: workspaceId },

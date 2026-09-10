@@ -15,7 +15,9 @@ import {
   PanelLeftOpen,
   Plus,
   Settings,
+  Shield,
   Sparkles,
+  Users,
   Store,
   Terminal,
 } from "lucide-react";
@@ -224,7 +226,10 @@ function NavBody({
           >
             {workspaces.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.kind === "client" ? `${w.name}${w.clientName ? ` · ${w.clientName}` : ""}` : w.name}
+                {w.kind === "client"
+                  ? `${w.name}${w.clientName ? ` · ${w.clientName}` : ""}`
+                  : w.name}
+                {w.id === workspace.id && workspace.memberRole ? ` · ${workspace.memberRole}` : ""}
               </option>
             ))}
           </select>
@@ -373,6 +378,22 @@ function NavBody({
               icon={<Store className="size-3.5" />}
             >
               Marketplace
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/clients`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Users className="size-3.5" />}
+            >
+              Client desks
+            </SideLink>
+            <SideLink
+              href={`/desk/${workspace.id}/trust`}
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Shield className="size-3.5" />}
+            >
+              Trust & audit
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/brand-kit`}

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 
@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   try {
     const { workspaceId, inviteId } = await context.params;
-    await requireWorkspaceMember(workspaceId);
+    await requireWorkspaceCapability(workspaceId, "invite");
     const invite = await prisma.workspaceInvite.findFirst({
       where: { id: inviteId, workspaceId },
     });

@@ -15,7 +15,8 @@ const ACTION_FILTERS = [
   "suspend",
   "unsuspend",
   "toggle_flag",
-  "create_flag",
+  "admin_access",
+  "admin_audit_export",
 ];
 
 export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
@@ -45,7 +46,7 @@ export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Audit"
-      hint="AdminAuditLog rows only. Filters search action, actor email, target id, and meta JSON."
+      hint="AdminAuditLog rows only. Filters search action, actor email, target id, and meta JSON. Export is a hash-chained pack — not a SOC 2 report."
     >
       <form onSubmit={onFilter} className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
@@ -79,6 +80,41 @@ export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
         </div>
         <Button type="submit" variant="secondary" disabled={busy}>
           Filter
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const params = new URLSearchParams({ section: "audit", export: "1" });
+              if (action) params.set("action", action);
+              if (actor.trim()) params.set("actor", actor.trim());
+              if (q.trim()) params.set("q", q.trim());
+              const pack = await fetchAdminJson<{ count: number; packHash: string; meta?: { certified?: boolean } }>(
+                `/api/admin?${params}`,
+              );
+              const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "cinem-admin-audit.json";
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success(
+                pack.meta?.certified === false
+                  ? `Exported ${pack.count} rows. Not a certification.`
+                  : `Exported ${pack.count} rows.`,
+              );
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Export failed.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Export JSON
         </Button>
       </form>
 

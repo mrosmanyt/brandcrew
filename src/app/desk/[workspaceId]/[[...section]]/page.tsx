@@ -9,6 +9,8 @@ import { KanbanBoard } from "@/components/desk/kanban-board";
 import { MarketplaceDesk } from "@/components/desk/marketplace";
 import { MissionControl } from "@/components/desk/mission-control";
 import { SettingsHub } from "@/components/desk/settings-hub";
+import { ClientDesksPanel } from "@/components/desk/client-desks";
+import { TrustCenter } from "@/components/desk/trust-center";
 import { UsageDashboard } from "@/components/desk/usage-dashboard";
 import { OnDevicePage } from "@/components/desk/on-device-page";
 import { getCurrentUser } from "@/lib/auth";
@@ -22,6 +24,7 @@ import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serializ
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { getLlmStatus } from "@/lib/llm";
 import { normalizeModelRouting } from "@/lib/llm-routing";
+import { parseWorkspaceRole, roleCan } from "@/lib/rbac";
 import { parseAutoApproveSafe } from "@/lib/write-gate";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
@@ -134,10 +137,17 @@ async function BillingPage({
   workspaceId: string;
   query: { status?: string; plan?: string; checkout?: string };
 }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
   });
   if (!workspace) redirect("/desk");
+  const member = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: user.id } },
+    select: { role: true },
+  });
+  const canCheckout = roleCan(parseWorkspaceRole(member?.role), "billing");
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -162,6 +172,7 @@ async function BillingPage({
           provider={billingProvider()}
           requestedPlan={query.plan || query.checkout}
           checkoutStatus={query.status}
+          canCheckout={canCheckout}
         />
       </div>
     </div>
@@ -365,6 +376,12 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "on-device") {
     return <OnDevicePage workspaceId={workspaceId} />;
+  }
+  if (head === "clients") {
+    return <ClientDesksPanel workspaceId={workspaceId} />;
+  }
+  if (head === "trust") {
+    return <TrustCenter workspaceId={workspaceId} />;
   }
   redirect(`/desk/${workspaceId}?agentId=${encodeURIComponent(head)}`);
 }

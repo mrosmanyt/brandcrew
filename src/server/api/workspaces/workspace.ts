@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability, requireWorkspaceMember } from "@/lib/auth";
+import { recordApprovalAudit } from "@/lib/audit";
+import { serializeMembership } from "@/lib/rbac";
 import { jsonError, jsonOk } from "@/lib/http";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
@@ -29,6 +31,7 @@ export async function GET(
   try {
     const { workspaceId } = await context.params;
     const { workspace, member } = await requireWorkspaceMember(workspaceId);
+    const membership = serializeMembership(member.role);
     const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
     const [agentCount, jobCount, approvedCount] = await Promise.all([
       prisma.agent.count({ where: { workspaceId, status: { not: "archived" } } }),
@@ -43,10 +46,11 @@ export async function GET(
     });
     return jsonOk({
       workspace: {
-        ...serializeWorkspace(workspace),
+        ...serializeWorkspace({ ...workspace, memberRole: member.role }),
         brandKit: parseBrandKit(workspace.brandKit),
         limits,
       },
+      membership,
       llm: getLlmStatus(),
       billingMock: billingIsMock(),
       billingProvider: billingProvider(),
@@ -66,6 +70,12 @@ export async function PATCH(
     const { workspaceId } = await context.params;
     const { user } = await requireWorkspaceMember(workspaceId);
     const body = patchSchema.parse(await request.json());
+    if (body.autoApproveSafe !== undefined) {
+      await requireWorkspaceCapability(workspaceId, "always_approved");
+    }
+    if (body.name?.trim() || body.kind || body.clientName !== undefined || body.modelRouting) {
+      await requireWorkspaceCapability(workspaceId, "workspace_settings");
+    }
     if (body.onboardingDismissed !== undefined || body.setupWizardDone !== undefined) {
       await prisma.workspaceMember.update({
         where: { workspaceId_userId: { workspaceId, userId: user.id } },
@@ -100,6 +110,19 @@ export async function PATCH(
           ...(body.clientName !== undefined ? { clientName: body.clientName.trim() } : {}),
         },
       });
+      if (body.autoApproveSafe !== undefined) {
+        const membership = serializeMembership(
+          (await requireWorkspaceMember(workspaceId)).member.role,
+        );
+        await recordApprovalAudit({
+          workspaceId,
+          actorEmail: user.email,
+          actorRole: membership.role,
+          action: "always_approved",
+          detail: `${user.email} set Always approved to ${Boolean(body.autoApproveSafe)}.`,
+          data: { autoApproveSafe: Boolean(body.autoApproveSafe) },
+        });
+      }
       return jsonOk({ workspace: serializeWorkspace(workspace) });
     }
     const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });

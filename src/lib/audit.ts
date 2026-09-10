@@ -22,6 +22,29 @@ export async function recordWorkspaceAudit(input: {
   });
 }
 
+export async function recordApprovalAudit(input: {
+  workspaceId: string;
+  jobId?: string | null;
+  actorEmail: string;
+  actorRole: string;
+  action: "approval" | "artifact_approved" | "artifact_rejected" | "role_change" | "invite" | "always_approved";
+  detail: string;
+  data?: Record<string, unknown>;
+}) {
+  await recordWorkspaceAudit({
+    workspaceId: input.workspaceId,
+    jobId: input.jobId,
+    actor: input.actorEmail,
+    action: input.action,
+    detail: input.detail,
+    data: {
+      ...input.data,
+      actorEmail: input.actorEmail,
+      actorRole: input.actorRole,
+    },
+  });
+}
+
 export function serializeAudit(row: {
   id: string;
   workspaceId: string;

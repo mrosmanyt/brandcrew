@@ -19,6 +19,7 @@ export function BillingPlans({
   provider = mock ? "mock" : "stripe",
   requestedPlan,
   checkoutStatus,
+  canCheckout = true,
 }: {
   workspaceId: string;
   currentPlan: string;
@@ -26,12 +27,17 @@ export function BillingPlans({
   provider?: BillingProvider;
   requestedPlan?: string;
   checkoutStatus?: string;
+  canCheckout?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const autoStarted = useRef<string | null>(null);
 
   async function checkout(plan: CheckoutPlanId) {
+    if (!canCheckout) {
+      toast.error("Only an owner or admin can change the plan.");
+      return;
+    }
     setBusy(plan);
     const res = await fetch("/api/billing/checkout", {
       method: "POST",
@@ -122,7 +128,7 @@ export function BillingPlans({
               </ul>
               <Button
                 className="mt-5"
-                disabled={current || busy !== null}
+                disabled={current || busy !== null || !canCheckout}
                 onClick={() => checkout(id)}
               >
                 {current
@@ -141,6 +147,9 @@ export function BillingPlans({
           : provider === "stripe"
             ? "Paid plans open Stripe Checkout. Access updates after the webhook."
             : "Mock billing applies the plan immediately without a payment provider."}{" "}
+        {!canCheckout
+          ? "Checkout is limited to owners and admins. You can still see plan caps. "
+          : null}
         See remaining tokens and jobs on{" "}
         <Link href={`/desk/${workspaceId}/usage`} className="underline">
           Usage

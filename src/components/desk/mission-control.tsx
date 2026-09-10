@@ -41,6 +41,7 @@ import {
   type LlmStatus,
 } from "@/lib/llm-routing";
 import { normalizePlanId } from "@/lib/limits";
+import { roleCan, type MembershipDTO } from "@/lib/rbac";
 import { parseAutoApproveSafe } from "@/lib/write-gate";
 import {
   DEFAULT_AGENT_NAME,
@@ -123,6 +124,9 @@ export function MissionControl({
   const [autoApproveSafe, setAutoApproveSafe] = useState(
     parseAutoApproveSafe(initialAutoApproveSafe),
   );
+  const [membership, setMembership] = useState<MembershipDTO | null>(null);
+  const canApprove = !membership || roleCan(membership.role, "approve_artifacts");
+  const canAlwaysApproved = !membership || roleCan(membership.role, "always_approved");
   const [billingIsMock] = useState(billingMock);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetMessage, setBudgetMessage] = useState(
@@ -291,6 +295,9 @@ export function MissionControl({
       }
       if (typeof data.workspace?.autoApproveSafe === "boolean") {
         setAutoApproveSafe(parseAutoApproveSafe(data.workspace.autoApproveSafe));
+      }
+      if (data.membership?.role) {
+        setMembership(data.membership as MembershipDTO);
       }
       if (data.workspace?.plan || data.limits?.plan) {
         const nextPlan = normalizePlanId(data.limits?.plan || data.workspace.plan);
@@ -475,7 +482,8 @@ export function MissionControl({
       body: JSON.stringify({ status: "approved" }),
     });
     if (!res.ok) {
-      toast.error("Could not approve.");
+      const data = await res.json().catch(() => ({}));
+      toast.error(typeof data.error === "string" ? data.error : "Could not approve.");
       return;
     }
     toast.success("Approved.");
@@ -491,7 +499,8 @@ export function MissionControl({
       body: JSON.stringify({ status: "rejected" }),
     });
     if (!res.ok) {
-      toast.error("Could not reject.");
+      const data = await res.json().catch(() => ({}));
+      toast.error(typeof data.error === "string" ? data.error : "Could not reject.");
       return;
     }
     toast.success("Rejected — remembered for this client workspace.");
@@ -744,6 +753,7 @@ export function MissionControl({
                 <ThreadDraftCard
                   artifact={latestDraft}
                   busy={busy}
+                  canApprove={canApprove}
                   onApprove={() => approve(latestDraft.id)}
                   onReject={() => reject(latestDraft.id)}
                   onRegenerate={() => startJob("regenerate")}
@@ -797,6 +807,7 @@ export function MissionControl({
             llm={llm}
             modelRouting={modelRouting}
             autoApproveSafe={autoApproveSafe}
+            canAlwaysApproved={canAlwaysApproved}
             workingStatus={workingStatus}
             onPlanApplied={(next) => {
               const caps = PLANS[next.plan];
@@ -841,6 +852,7 @@ export function MissionControl({
           collapsed={rightCollapsed}
           onExpand={() => setRightCollapsed(false)}
           onCollapse={() => setRightCollapsed(true)}
+          canApprove={canApprove}
         />
       </div>
 

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { DEMO_BRAND_KIT, EMPTY_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
 import { normalizeModelRouting } from "@/lib/llm-routing";
+import { parseWorkspaceRole, type WorkspaceRole } from "@/lib/rbac";
 import { parseAutoApproveSafe } from "@/lib/write-gate";
 
 function slugify(name: string) {
@@ -71,7 +72,7 @@ export async function listUserWorkspaces(userId: string) {
     include: { workspace: true },
     orderBy: { workspace: { createdAt: "asc" } },
   });
-  return memberships.map((m) => m.workspace);
+  return memberships.map((m) => withMemberRole(m.workspace, m.role));
 }
 
 export function serializeWorkspace(workspace: {
@@ -87,7 +88,11 @@ export function serializeWorkspace(workspace: {
   autoApproveSafe?: boolean | null;
   kind?: string | null;
   clientName?: string | null;
+  memberRole?: string | null;
 }) {
+  const memberRole = workspace.memberRole
+    ? parseWorkspaceRole(workspace.memberRole)
+    : undefined;
   return {
     id: workspace.id,
     name: workspace.name,
@@ -99,6 +104,14 @@ export function serializeWorkspace(workspace: {
     autoApproveSafe: parseAutoApproveSafe(workspace.autoApproveSafe),
     kind: workspace.kind === "client" ? "client" : "agency",
     clientName: String(workspace.clientName || ""),
+    memberRole,
     createdAt: workspace.createdAt.toISOString(),
   };
+}
+
+export function withMemberRole<T extends { id: string }>(
+  workspace: T,
+  role: string | null | undefined,
+): T & { memberRole: WorkspaceRole } {
+  return { ...workspace, memberRole: parseWorkspaceRole(role) };
 }

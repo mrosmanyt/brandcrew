@@ -593,6 +593,7 @@ npm run test:on-device     # MV3 extension, native host, allowlist, write-gate, 
 npm run test:write-gate    # approval class, Always approved preference, Gmail OAuth testing errors
 npm run test:cost          # action cache, DOM-first, cheap routing, credits/Free, triggers, replay
 npm run test:phase3        # Composio disconnect honesty, memory, multi-tab, agency playbooks, client desks
+npm run test:phase4        # RBAC, DPA/security docs, SOC 2 readiness (not certified), audit export hashes
 # npm run composio:first-call  # live SDK proof when COMPOSIO_API_KEY is set (never commit the key)
 ```
 

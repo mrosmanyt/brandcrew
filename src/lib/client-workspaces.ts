@@ -22,6 +22,44 @@ export function workspaceKindLabel(kind: WorkspaceKind) {
   return kind === "client" ? "Client workspace" : "Agency workspace";
 }
 
+export const CLIENT_ISOLATION_FACTS = [
+  {
+    key: "brand_kit",
+    label: "Brand Kit",
+    detail: "Voice, offer, and facts stay on this desk. Client desks start empty; the house desk keeps the sample kit.",
+  },
+  {
+    key: "memory",
+    label: "Learning memory",
+    detail: "Approve/reject facts stay on this workspace. Memory is data, not instructions to send.",
+  },
+  {
+    key: "plugins",
+    label: "Plugins",
+    detail: "Gmail, Slack, and Composio connections are per desk (user_id cinem-ws-<workspaceId>).",
+  },
+  {
+    key: "always_approved",
+    label: "Always approved",
+    detail: "Safe click/type preference is per desk. It never skips sends, posts, or client-named email.",
+  },
+  {
+    key: "seats",
+    label: "Seats",
+    detail: "Seat caps follow this workspace plan (Free / Starter / Pro / Ultra). Invites consume seats.",
+  },
+  {
+    key: "billing",
+    label: "Billing visibility",
+    detail: "Owners and admins see checkout. Members and approvers see plan/credit caps only.",
+  },
+  {
+    key: "approvals",
+    label: "Client-named email",
+    detail: "Drafts that name the client always wait for an owner, admin, or approver.",
+  },
+] as const;
+
 export function isClientNamedEmail(input: {
   workspaceKind?: string | null;
   clientName?: string | null;

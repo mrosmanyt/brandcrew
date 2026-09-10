@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability, requireWorkspaceMember } from "@/lib/auth";
+import { recordApprovalAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import {
@@ -10,9 +11,11 @@ import {
   newInviteToken,
   serializeInvite,
 } from "@/lib/invites";
+import { parseInviteRole, serializeMembership, WORKSPACE_ROLES } from "@/lib/rbac";
 
 const schema = z.object({
   email: z.string().email(),
+  role: z.enum(WORKSPACE_ROLES).optional(),
 });
 
 export async function GET(
@@ -21,7 +24,7 @@ export async function GET(
 ) {
   try {
     const { workspaceId } = await context.params;
-    const { workspace } = await requireWorkspaceMember(workspaceId);
+    const { workspace, member } = await requireWorkspaceMember(workspaceId);
     const [invites, members] = await Promise.all([
       prisma.workspaceInvite.findMany({
         where: { workspaceId },
@@ -41,6 +44,7 @@ export async function GET(
         user: row.user,
       })),
       plan: workspace.plan,
+      membership: serializeMembership(member.role),
     });
   } catch (error) {
     return jsonError(error);
@@ -53,9 +57,10 @@ export async function POST(
 ) {
   try {
     const { workspaceId } = await context.params;
-    const { user } = await requireWorkspaceMember(workspaceId);
+    const { user, role } = await requireWorkspaceCapability(workspaceId, "invite");
     const body = schema.parse(await request.json());
     const email = normalizeInviteEmail(body.email);
+    const inviteRole = parseInviteRole(body.role);
     await assertSeatAvailable(workspaceId);
 
     const existingMember = await prisma.workspaceMember.findFirst({
@@ -83,8 +88,17 @@ export async function POST(
         email,
         token: newInviteToken(),
         invitedById: user.id,
+        role: inviteRole,
         expiresAt: inviteExpiresAt(),
       },
+    });
+    await recordApprovalAudit({
+      workspaceId,
+      actorEmail: user.email,
+      actorRole: role,
+      action: "invite",
+      detail: `${user.email} invited ${email} as ${inviteRole}.`,
+      data: { email, role: inviteRole },
     });
     return jsonOk({
       invite: serializeInvite(invite),

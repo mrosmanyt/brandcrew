@@ -1,5 +1,5 @@
 import { serializeApiKey } from "@/lib/api-keys";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonFail, jsonOk } from "@/lib/http";
 
@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   try {
     const { workspaceId, keyId } = await context.params;
-    await requireWorkspaceMember(workspaceId);
+    await requireWorkspaceCapability(workspaceId, "api_keys");
     const existing = await prisma.apiKey.findFirst({
       where: { id: keyId, workspaceId },
     });

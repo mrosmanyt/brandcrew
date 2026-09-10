@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { displayAgentName } from "@/lib/constants";
 import type { LiveProgressLine } from "@/lib/live-progress";
+import { APPROVER_REQUIRED_HINT } from "@/lib/rbac";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -123,12 +124,14 @@ export function ThreadDraftCard({
   onApprove,
   onReject,
   onRegenerate,
+  canApprove = true,
 }: {
   artifact: ArtifactDTO;
   busy?: boolean;
   onApprove: () => void;
   onReject?: () => void;
   onRegenerate: () => void;
+  canApprove?: boolean;
 }) {
   const excerpt = artifact.content.replace(/\s+/g, " ").trim().slice(0, 160);
   return (
@@ -151,6 +154,7 @@ export function ThreadDraftCard({
           ) : artifact.status === "rejected" ? (
             <p className="self-center text-[11px] text-muted-foreground">Rejected — remembered.</p>
           ) : (
+            canApprove ? (
             <>
               <Button size="xs" onClick={onApprove} disabled={busy}>
                 Approve
@@ -161,6 +165,9 @@ export function ThreadDraftCard({
                 </Button>
               ) : null}
             </>
+            ) : (
+              <p className="self-center text-[11px] text-muted-foreground">{APPROVER_REQUIRED_HINT}</p>
+            )
           )}
           <Button size="xs" variant="outline" onClick={onRegenerate} disabled={busy}>
             Regenerate

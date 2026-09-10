@@ -490,6 +490,57 @@ async function writeAudit(input: {
   });
 }
 
+export async function recordAdminAccess(input: {
+  actorEmail: string;
+  path: string;
+}) {
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "admin_access",
+    targetId: input.path,
+    meta: { path: input.path, kind: "page_view" },
+  });
+}
+
+export async function exportAdminAudit(input: {
+  actorEmail: string;
+  action?: string | null;
+  actor?: string | null;
+  q?: string | null;
+}) {
+  const { packAdminAuditExport } = await import("@/lib/audit-export");
+  const action = input.action?.trim() || "";
+  const actor = input.actor?.trim() || "";
+  const q = input.q?.trim() || "";
+  const rows = await prisma.adminAuditLog.findMany({
+    where: {
+      ...(action ? { action } : {}),
+      ...(actor ? { actorEmail: { contains: actor, mode: "insensitive" } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { targetId: { contains: q, mode: "insensitive" } },
+              { meta: { contains: q, mode: "insensitive" } },
+              { action: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { createdAt: "asc" },
+    take: 500,
+  });
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "admin_audit_export",
+    targetId: "admin_audit",
+    meta: { count: rows.length, action, actor, q },
+  });
+  return packAdminAuditExport({
+    exportedBy: input.actorEmail,
+    rows,
+  });
+}
+
 async function setWorkspacePlan(input: {
   workspaceId: string;
   plan: PlanId;

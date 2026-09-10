@@ -59,6 +59,8 @@ assert.match(host, /43181/);
 assert.match(readFileSync("native-host/install.mjs", "utf8"), new RegExp(NATIVE_HOST_NAME.replaceAll(".", "\\.")));
 assert.match(readFileSync("electron/main.cjs", "utf8"), /native-host/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /host\.mjs/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /installAppMenu/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /\/privacy/);
 console.log("ok: MV3 extension + native host + Electron local agent");
 
 assert.ok(JOB_TOOLS.includes("native_file_read"));

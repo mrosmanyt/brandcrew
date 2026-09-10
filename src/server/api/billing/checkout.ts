@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceCapability } from "@/lib/auth";
 import {
   billingIsMock,
   billingProvider,
@@ -21,7 +21,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     const body = schema.parse(await request.json());
-    const { workspace } = await requireWorkspaceMember(body.workspaceId);
+    const { workspace } = await requireWorkspaceCapability(body.workspaceId, "billing");
     const plan = normalizePlanId(body.plan);
     const provider = billingProvider();
     if (plan === "demo") {

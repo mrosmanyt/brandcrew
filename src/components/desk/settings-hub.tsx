@@ -14,6 +14,7 @@ import {
   Store,
 } from "lucide-react";
 import { InviteTeam } from "@/components/desk/invite-team";
+import { CLIENT_ISOLATION_FACTS } from "@/lib/client-workspaces";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -280,11 +281,13 @@ export function SettingsHub({
             </Field>
           ) : null}
         </form>
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          Agencies keep one house desk plus a client workspace per account. Brand Kit, learning
-          memory, plugin connections, and Always-approved stay separate. Client-named emails always
-          wait for approval.
-        </p>
+        <ul className="mt-4 space-y-1.5 text-xs leading-5 text-muted-foreground">
+          {CLIENT_ISOLATION_FACTS.map((row) => (
+            <li key={row.key}>
+              <span className="font-medium text-foreground">{row.label}.</span> {row.detail}
+            </li>
+          ))}
+        </ul>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
           Use server API keys — set{" "}
           <code className="rounded bg-muted px-1 py-0.5">OPENAI_API_KEY</code>,{" "}

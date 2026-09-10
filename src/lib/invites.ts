@@ -3,6 +3,7 @@ import { planDisplayName } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { ClientError } from "@/lib/http";
 import { getWorkspaceLimits, limitsForPlan } from "@/lib/limits";
+import { parseInviteRole } from "@/lib/rbac";
 
 export const INVITE_TTL_DAYS = 14;
 
@@ -73,7 +74,7 @@ export function serializeInvite(invite: {
   return {
     id: invite.id,
     email: invite.email,
-    role: invite.role,
+    role: parseInviteRole(invite.role),
     expiresAt: invite.expiresAt.toISOString(),
     acceptedAt: invite.acceptedAt?.toISOString() ?? null,
     createdAt: invite.createdAt.toISOString(),
