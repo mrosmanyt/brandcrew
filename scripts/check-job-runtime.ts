@@ -316,6 +316,8 @@ console.log("ok: chips bind to role hints; no named Mission Control cast");
 
 assert.ok(JOB_TOOLS.includes("native_file_read"));
 assert.ok(JOB_TOOLS.includes("native_file_write"));
+assert.ok(JOB_TOOLS.includes("browser_tabs"));
+assert.ok(JOB_TOOLS.includes("composio_execute"));
 assert.equal(isWriteExternalTool("browser_click"), true);
 assert.equal(isWriteExternalTool("gmail_create_draft"), false);
 assert.equal(hostAllowed("https://evil.test/x", ["example.com"]).ok, false);

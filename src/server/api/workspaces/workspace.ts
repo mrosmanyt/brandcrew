@@ -18,6 +18,8 @@ const patchSchema = z.object({
   setupWizardDone: z.boolean().optional(),
   modelRouting: z.string().max(40).optional(),
   autoApproveSafe: z.boolean().optional(),
+  kind: z.enum(["agency", "client"]).optional(),
+  clientName: z.string().max(80).optional(),
 });
 
 export async function GET(
@@ -77,7 +79,13 @@ export async function PATCH(
         },
       });
     }
-    if (body.name?.trim() || body.modelRouting || body.autoApproveSafe !== undefined) {
+    if (
+      body.name?.trim() ||
+      body.modelRouting ||
+      body.autoApproveSafe !== undefined ||
+      body.kind ||
+      body.clientName !== undefined
+    ) {
       const workspace = await prisma.workspace.update({
         where: { id: workspaceId },
         data: {
@@ -88,6 +96,8 @@ export async function PATCH(
           ...(body.autoApproveSafe !== undefined
             ? { autoApproveSafe: parseAutoApproveSafe(body.autoApproveSafe) }
             : {}),
+          ...(body.kind ? { kind: body.kind } : {}),
+          ...(body.clientName !== undefined ? { clientName: body.clientName.trim() } : {}),
         },
       });
       return jsonOk({ workspace: serializeWorkspace(workspace) });

@@ -20,6 +20,8 @@ export const JOB_TOOLS = [
   "slack_post_message",
   "native_file_read",
   "native_file_write",
+  "composio_execute",
+  "browser_tabs",
   "write_artifact",
   "ask_user",
 ] as const;
@@ -116,6 +118,11 @@ export type JobContext = {
   deviceId?: string;
   sources?: { url: string; title?: string; excerpt: string; ok?: boolean }[];
   uncertainty?: "low" | "medium" | "high";
+  memoryBrief?: string;
+  workspaceKind?: string;
+  clientName?: string;
+  composio?: { toolkit: string; tool: string; ok: boolean; text: string };
+  maxPages?: number;
 };
 
 export type JobEventDTO = {

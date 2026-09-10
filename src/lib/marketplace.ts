@@ -1,4 +1,5 @@
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+import { COMPOSIO_AGENCY_TOOLKITS } from "@/lib/composio-catalog";
 import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
 
 export const MARKETPLACE_BOT_CATEGORIES = [
@@ -130,12 +131,15 @@ export const PLUGIN_CATEGORIES = [
   "Canvas",
   "Customer Support",
   "Data & Analytics",
+  "CRM",
+  "Outreach",
+  "SEO",
   "Productivity",
   "Billing",
   "Engineering",
 ] as const;
 
-export type PluginAuth = "api_key" | "oauth";
+export type PluginAuth = "api_key" | "oauth" | "composio";
 
 export type PluginDef = {
   id: string;
@@ -144,7 +148,7 @@ export type PluginDef = {
   category: string;
   featured: boolean;
   auth: PluginAuth;
-  oauthProvider?: "google" | "slack" | "notion";
+  oauthProvider?: "google" | "slack" | "notion" | "composio";
   scopes?: string[];
   secretLabel?: string;
   envKeys: string[];
@@ -152,6 +156,8 @@ export type PluginDef = {
   tools: string[];
   letter: string;
   color: string;
+  composioSlug?: string;
+  probeTool?: string;
 };
 
 export const GMAIL_OAUTH_SCOPES = [
@@ -293,6 +299,25 @@ export const MARKETPLACE_PLUGINS: PluginDef[] = [
     letter: "GH",
     color: "#24292f",
   },
+  ...COMPOSIO_AGENCY_TOOLKITS.map(
+    (row): PluginDef => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      category: row.category,
+      featured: row.featured,
+      auth: "composio",
+      oauthProvider: "composio",
+      secretLabel: row.auth === "api_key" ? `${row.name} API key` : undefined,
+      envKeys: ["COMPOSIO_API_KEY"],
+      docsUrl: row.docsUrl,
+      tools: ["composio_execute"],
+      letter: row.letter,
+      color: row.color,
+      composioSlug: row.slug,
+      probeTool: row.probeTool,
+    }),
+  ),
 ];
 
 export function getMarketplacePlugin(id: string) {
@@ -326,7 +351,13 @@ export function resolveApiKeyConnect(
   input: ApiKeyConnectInput,
 ): ApiKeyConnectResult {
   if (plugin.auth !== "api_key") {
-    return { ok: false, error: "This plugin uses OAuth, not an API key form." };
+    return {
+      ok: false,
+      error:
+        plugin.auth === "composio"
+          ? "This connector uses Composio. Empty Connect stays disconnected."
+          : "This plugin uses OAuth, not an API key form.",
+    };
   }
   const pasted = input.apiKey?.trim() || "";
   if (pasted) {

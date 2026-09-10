@@ -44,6 +44,8 @@
     "test:on-device": "tsx scripts/check-on-device.ts",
     "test:write-gate": "tsx scripts/check-write-gate.ts",
     "test:cost": "tsx scripts/check-cost-controls.ts",
+    "test:phase3": "tsx scripts/check-phase3.ts",
+    "composio:first-call": "tsx scripts/composio-first-call.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:build": "node scripts/desktop-build.mjs",
     "desktop:build:win": "node scripts/desktop-build.mjs --win",
@@ -52,6 +54,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
     "@base-ui/react": "^1.8.0",
+    "@composio/core": "^0.17.0",
     "@google/genai": "^2.21.0",
     "@prisma/client": "^6.16.3",
     "@whop/sdk": "^1.1.2",

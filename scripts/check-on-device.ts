@@ -63,7 +63,10 @@ console.log("ok: MV3 extension + native host + Electron local agent");
 
 assert.ok(JOB_TOOLS.includes("native_file_read"));
 assert.ok(JOB_TOOLS.includes("native_file_write"));
+assert.ok(JOB_TOOLS.includes("browser_tabs"));
+assert.ok(JOB_TOOLS.includes("composio_execute"));
 assert.ok(DEVICE_TOOLS.includes("browser_navigate"));
+assert.ok(DEVICE_TOOLS.includes("browser_tabs"));
 assert.ok(DEVICE_TOOLS.includes("native_file_write"));
 assert.equal(pairingCode().length, 6);
 assert.equal(isDeviceOnline(new Date()), true);
@@ -132,11 +135,22 @@ assert.equal(brief.steps.some((step) => step.args.kind === "weekly_client_brief"
 assert.equal(inferPlaybookKey("sales", "", "prospecting_scan"), "prospecting_scan");
 assert.equal(inferPlaybookKey("sales", "outreach draft pack"), "outreach_draft_pack");
 assert.equal(inferPlaybookKey("researcher", "weekly client brief"), "weekly_client_brief");
-const agencyIds = ["tpl-prospecting-scan", "tpl-outreach-draft-pack", "tpl-weekly-client-brief"];
+const agencyIds = [
+  "tpl-prospecting-scan",
+  "tpl-outreach-draft-pack",
+  "tpl-weekly-client-brief",
+  "tpl-daily-client-brief",
+  "tpl-seo-brief",
+  "tpl-multi-tab-research",
+  "tpl-client-named-email",
+  "tpl-follow-up-sequence",
+  "tpl-competitor-watch",
+  "tpl-talent-sourcing",
+];
 for (const id of agencyIds) {
   assert.ok(FEATURED_JOB_TEMPLATES.some((row) => row.id === id), `missing template ${id}`);
 }
-console.log("ok: three agency playbooks are real jobs, not invented results");
+console.log("ok: ten agency playbooks are real jobs, not invented results");
 
 assert.equal(PHASE2_STATUS.saveAsSkill.status, "shipped");
 assert.equal(PHASE2_STATUS.eventTriggers.status, "shipped");

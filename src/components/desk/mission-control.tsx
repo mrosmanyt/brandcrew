@@ -484,6 +484,21 @@ export function MissionControl({
     if (selected) void refreshChat(selected.id);
   }
 
+  async function reject(artifactId: string) {
+    const res = await fetch(`/api/workspaces/${workspaceId}/artifacts/${artifactId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected" }),
+    });
+    if (!res.ok) {
+      toast.error("Could not reject.");
+      return;
+    }
+    toast.success("Rejected — remembered for this client workspace.");
+    void refreshJobs();
+    if (selected) void refreshChat(selected.id);
+  }
+
   async function answerClarification(jobId: string, answer: string) {
     setBusy(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs/${jobId}/reply`, {
@@ -730,6 +745,7 @@ export function MissionControl({
                   artifact={latestDraft}
                   busy={busy}
                   onApprove={() => approve(latestDraft.id)}
+                  onReject={() => reject(latestDraft.id)}
                   onRegenerate={() => startJob("regenerate")}
                 />
               ) : null}
@@ -815,6 +831,7 @@ export function MissionControl({
           artifacts={artifacts}
           busy={busy}
           onApprove={approve}
+          onReject={reject}
           onReply={
             selectedJob
               ? (answer) => void answerClarification(selectedJob.id, answer)

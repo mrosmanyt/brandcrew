@@ -9,6 +9,7 @@ import {
   MARKETPLACE_PLUGINS,
 } from "@/lib/marketplace";
 import { listPluginConnections } from "@/lib/plugins";
+import { composioConfigured, composioMissingHint } from "@/lib/composio";
 
 export async function GET(
   _request: Request,
@@ -47,6 +48,12 @@ export async function GET(
         ...row,
         added: addedTemplateIds.includes(row.id),
       })),
+      composio: {
+        configured: composioConfigured(),
+        hint: composioConfigured()
+          ? "COMPOSIO_API_KEY is set. Connect opens Composio — Connected only after an ACTIVE account."
+          : composioMissingHint(),
+      },
     });
   } catch (error) {
     return jsonError(error);

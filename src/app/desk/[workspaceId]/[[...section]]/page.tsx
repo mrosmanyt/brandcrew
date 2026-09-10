@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ApiConsole } from "@/components/desk/api-console";
 import { BillingPlans } from "@/components/desk/billing-plans";
 import { BrandKitForm } from "@/components/desk/brand-kit-form";
+import { LearningMemoryPanel } from "@/components/desk/learning-memory";
 import { CalendarView } from "@/components/desk/calendar-view";
 import { KanbanBoard } from "@/components/desk/kanban-board";
 import { MarketplaceDesk } from "@/components/desk/marketplace";
@@ -201,6 +202,8 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
     <SettingsHub
       workspaceId={workspace.id}
       workspaceName={workspace.name}
+      workspaceKind={workspace.kind === "client" ? "client" : "agency"}
+      clientName={workspace.clientName || ""}
       user={{
         ...user,
         hasPassword: Boolean(account?.passwordHash),
@@ -267,8 +270,9 @@ async function BrandKitPage({ workspaceId }: { workspaceId: string }) {
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Brand Kit</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Stored as JSON on this workspace. Save, then generate — Writer, Sales,
-        and the rest will use this kit immediately. There is no per-agent memory
-        in v1.
+        and the rest will use this kit immediately. Learning memory (approved vs
+        rejected drafts, project facts) lives on this same client workspace and
+        never auto-sends.
       </p>
       <div className="mt-8 rounded-2xl border border-border bg-card p-6">
         <BrandKitForm
@@ -276,6 +280,12 @@ async function BrandKitPage({ workspaceId }: { workspaceId: string }) {
           workspaceName={workspace.name}
           initial={parseBrandKit(workspace.brandKit)}
         />
+      </div>
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-sm font-medium">Learning memory</h2>
+        <div className="mt-4">
+          <LearningMemoryPanel workspaceId={workspace.id} />
+        </div>
       </div>
     </div>
   );

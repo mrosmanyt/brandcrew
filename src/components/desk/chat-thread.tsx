@@ -121,11 +121,13 @@ export function ThreadDraftCard({
   artifact,
   busy,
   onApprove,
+  onReject,
   onRegenerate,
 }: {
   artifact: ArtifactDTO;
   busy?: boolean;
   onApprove: () => void;
+  onReject?: () => void;
   onRegenerate: () => void;
 }) {
   const excerpt = artifact.content.replace(/\s+/g, " ").trim().slice(0, 160);
@@ -144,12 +146,21 @@ export function ThreadDraftCard({
           </p>
         ) : null}
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {artifact.status !== "approved" ? (
-            <Button size="xs" onClick={onApprove} disabled={busy}>
-              Approve
-            </Button>
-          ) : (
+          {artifact.status === "approved" ? (
             <p className="self-center text-[11px] text-muted-foreground">Approved.</p>
+          ) : artifact.status === "rejected" ? (
+            <p className="self-center text-[11px] text-muted-foreground">Rejected — remembered.</p>
+          ) : (
+            <>
+              <Button size="xs" onClick={onApprove} disabled={busy}>
+                Approve
+              </Button>
+              {onReject ? (
+                <Button size="xs" variant="outline" onClick={onReject} disabled={busy}>
+                  Reject
+                </Button>
+              ) : null}
+            </>
           )}
           <Button size="xs" variant="outline" onClick={onRegenerate} disabled={busy}>
             Regenerate

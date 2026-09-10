@@ -56,6 +56,17 @@ export function pluginOAuthErrorMessage(
   if (!error) {
     return "OAuth did not finish. Not marked Connected.";
   }
+  if (error === "composio_not_configured") {
+    return "Set COMPOSIO_API_KEY on the server. Connect stays disconnected — CINEM Pro does not fake Connected.";
+  }
+  if (
+    error === "composio_no_redirect" ||
+    error === "composio_failed" ||
+    error === "composio_not_active" ||
+    error === "composio_missing_account"
+  ) {
+    return "Composio did not finish Connect. Not marked Connected.";
+  }
   if (error === "oauth_not_configured") {
     return pluginId
       ? `${pluginId}: OAuth client id/secret missing. Connect stays disconnected.`

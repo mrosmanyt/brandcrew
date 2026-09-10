@@ -13,6 +13,9 @@ export type WorkspaceDTO = {
   tokenUsed: number;
   tokenBudget: number;
   modelRouting?: string;
+  autoApproveSafe?: boolean;
+  kind?: "agency" | "client" | string;
+  clientName?: string;
   createdAt: string;
   brandKit?: BrandKit;
   limits?: LimitsDTO;

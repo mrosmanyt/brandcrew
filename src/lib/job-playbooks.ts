@@ -6,6 +6,7 @@ import {
 } from "@/lib/constants";
 import { extractUrls } from "@/lib/fetch-url";
 import { JOB_TOOLS, type JobPlaybook, type JobStep, type JobTool } from "@/lib/job-types";
+import { researchUrlsFromMessage } from "@/lib/multi-tab";
 import { planHasAlwaysGatedTool } from "@/lib/write-gate";
 
 function stepId(tool: string, hint: string) {
@@ -674,6 +675,166 @@ export function weeklyClientBriefPlaybook(url?: string): JobPlaybook {
   };
 }
 
+export function dailyClientBriefPlaybook(urls: string[] = []): JobPlaybook {
+  const list = urls.slice(0, 10);
+  return {
+    key: "daily_client_brief",
+    title: "Daily client brief",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit and client memory", {}, "kit"),
+      makeStep(
+        "browser_tabs",
+        list.length
+          ? `Open ${list.length} public tab${list.length === 1 ? "" : "s"} in parallel`
+          : "Open the Brand Kit / pasted URLs in parallel tabs",
+        { urls: list, intent: 5 },
+        "tabs",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write a sourced daily client brief",
+        { kind: "daily_client_brief" },
+        "brief",
+      ),
+    ],
+  };
+}
+
+export function seoBriefPlaybook(urls: string[] = []): JobPlaybook {
+  const list = urls.slice(0, 10);
+  return {
+    key: "seo_brief",
+    title: "SEO brief",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_tabs",
+        list.length ? `Open ${list.length} public SEO pages` : "Open the client site in parallel tabs",
+        { urls: list, intent: 5 },
+        "tabs",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write a sourced SEO brief",
+        { kind: "seo_brief" },
+        "brief",
+      ),
+    ],
+  };
+}
+
+export function multiTabResearchPlaybook(urls: string[] = []): JobPlaybook {
+  const list = urls.slice(0, 10);
+  return {
+    key: "multi_tab_research",
+    title: "Multi-tab research",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_tabs",
+        list.length
+          ? `Research ${list.length} public URL${list.length === 1 ? "" : "s"} in parallel tabs`
+          : "Open pasted public URLs in parallel tabs (paste 5–10)",
+        { urls: list, intent: 5 },
+        "tabs",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write sourced multi-tab notes",
+        { kind: "multi_tab_research" },
+        "notes",
+      ),
+    ],
+  };
+}
+
+export function clientNamedEmailPlaybook(): JobPlaybook {
+  return {
+    key: "client_named_email",
+    title: "Client-named email draft",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit and client memory", {}, "kit"),
+      makeStep(
+        "read_artifact",
+        "Read the latest research or brief",
+        { types: ["research_pack", "prospecting_scan", "weekly_client_brief", "daily_client_brief", "seo_brief"] },
+        "research",
+      ),
+      makeStep(
+        "write_artifact",
+        "Draft the client-named email (do not send)",
+        { kind: "client_named_email" },
+        "draft",
+      ),
+      approveStep(
+        "Approve this client-named email. CINEM Pro will create a Gmail draft only after you say yes. It will not send.",
+      ),
+      makeStep(
+        "gmail_create_draft",
+        "Create a Gmail draft (do not send)",
+        { kind: "gmail_draft", clientNamed: true },
+        "gmail-draft",
+      ),
+    ],
+  };
+}
+
+export function followUpSequencePlaybook(): JobPlaybook {
+  return {
+    key: "follow_up_sequence",
+    title: "Follow-up sequence",
+    agentRole: "sales",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "read_artifact",
+        "Read the latest research or outreach pack",
+        { types: ["research_pack", "prospecting_scan", "outreach_pack", "weekly_client_brief"] },
+        "research",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write a 5-touch follow-up sequence (do not send)",
+        { kind: "follow_up_sequence" },
+        "sequence",
+      ),
+    ],
+  };
+}
+
+export function competitorWatchPlaybook(urls: string[] = []): JobPlaybook {
+  const list = urls.slice(0, 10);
+  return {
+    key: "competitor_watch",
+    title: "Competitor watch",
+    agentRole: "researcher",
+    steps: [
+      makeStep("read_brand_kit", "Read the Brand Kit", {}, "kit"),
+      makeStep(
+        "browser_tabs",
+        list.length ? `Watch ${list.length} public competitor page${list.length === 1 ? "" : "s"}` : "Open competitor URLs in parallel tabs",
+        { urls: list, intent: 5 },
+        "tabs",
+      ),
+      makeStep(
+        "write_artifact",
+        "Write a sourced competitor watch note",
+        { kind: "competitor_watch" },
+        "watch",
+      ),
+    ],
+  };
+}
+
+export function talentSourcingPlaybook(url?: string): JobPlaybook {
+  const sheet = recruiterSheetPlaybook(url);
+  return { ...sheet, key: "talent_sourcing", title: "Talent sourcing" };
+}
+
 /** Public URLs from the user message, then Brand Kit website. Never invents example.com competitors. */
 export function defaultCompetitorUrls(message: string, website?: string): string[] {
   const fromMessage = extractUrls(message).slice(0, 3);
@@ -726,6 +887,19 @@ export function playbookFromKey(
   if (key === "prospecting_scan") return prospectingScanPlaybook(url);
   if (key === "outreach_draft_pack") return outreachDraftPackPlaybook(extractUrls(message)[0] || url || "");
   if (key === "weekly_client_brief") return weeklyClientBriefPlaybook(url);
+  if (key === "daily_client_brief") {
+    return dailyClientBriefPlaybook(researchUrlsFromMessage(message, website));
+  }
+  if (key === "seo_brief") return seoBriefPlaybook(researchUrlsFromMessage(message, website));
+  if (key === "multi_tab_research") {
+    return multiTabResearchPlaybook(researchUrlsFromMessage(message, website));
+  }
+  if (key === "client_named_email") return clientNamedEmailPlaybook();
+  if (key === "follow_up_sequence") return followUpSequencePlaybook();
+  if (key === "competitor_watch") {
+    return competitorWatchPlaybook(researchUrlsFromMessage(message, website));
+  }
+  if (key === "talent_sourcing") return talentSourcingPlaybook(url);
   return genericPlaybook(role, undefined, url);
 }
 
@@ -744,6 +918,13 @@ export function inferPlaybookKey(
   if (action === "prospecting_scan") return "prospecting_scan";
   if (action === "outreach_draft_pack") return "outreach_draft_pack";
   if (action === "weekly_client_brief") return "weekly_client_brief";
+  if (action === "daily_client_brief") return "daily_client_brief";
+  if (action === "seo_brief") return "seo_brief";
+  if (action === "client_named_email") return "client_named_email";
+  if (action === "multi_tab_research") return "multi_tab_research";
+  if (action === "follow_up_sequence") return "follow_up_sequence";
+  if (action === "competitor_watch") return "competitor_watch";
+  if (action === "talent_sourcing") return "talent_sourcing";
   if (action === "ad_angles_from_url") return "ad_angles_from_url";
   if (action === "build_website") return "website_builder";
   if (action === "build_app") return "app_builder";
@@ -806,8 +987,29 @@ export function inferPlaybookKey(
   if (/outreach draft pack|draft pack|5 outreach drafts/.test(text)) {
     return "outreach_draft_pack";
   }
-  if (/weekly client brief|client brief|weekly brief/.test(text)) {
+  if (/daily client brief|daily brief/.test(text)) {
+    return "daily_client_brief";
+  }
+  if (/weekly client brief|weekly brief/.test(text) || (/\bclient brief\b/.test(text) && !/daily/.test(text))) {
     return "weekly_client_brief";
+  }
+  if (/seo brief|seo notes|keyword brief/.test(text)) {
+    return "seo_brief";
+  }
+  if (/multi-tab|parallel (tabs|research)|research (5|five|10|ten) (urls|pages|tabs)/.test(text)) {
+    return "multi_tab_research";
+  }
+  if (/client-named email|client named email|email (the )?client/.test(text)) {
+    return "client_named_email";
+  }
+  if (/follow-up sequence|follow up sequence|5-touch|five.touch/.test(text)) {
+    return "follow_up_sequence";
+  }
+  if (/competitor watch|watch (these )?competitors/.test(text)) {
+    return "competitor_watch";
+  }
+  if (/talent sourc|candidate sourc/.test(text)) {
+    return "talent_sourcing";
   }
   if (
     /research pack|research (the )?(site|company|page)|browse (the )?(site|company)/.test(

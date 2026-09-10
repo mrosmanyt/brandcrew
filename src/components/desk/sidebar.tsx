@@ -126,7 +126,7 @@ function NavBody({
       const res = await fetch("/api/workspaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name: trimmed, kind: "client", clientName: trimmed }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         workspace?: { id?: string };
@@ -224,7 +224,7 @@ function NavBody({
           >
             {workspaces.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name}
+                {w.kind === "client" ? `${w.name}${w.clientName ? ` · ${w.clientName}` : ""}` : w.name}
               </option>
             ))}
           </select>
@@ -243,7 +243,7 @@ function NavBody({
                 e.preventDefault();
                 void createWorkspace();
               }}
-              placeholder="New workspace"
+              placeholder="New client workspace"
               className="h-7 border-0 bg-sidebar-accent text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40"
             />
             <Button

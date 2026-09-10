@@ -24,6 +24,7 @@ export function LiveResults({
   artifacts,
   busy,
   onApprove,
+  onReject,
   onReply,
   width,
   collapsed,
@@ -34,6 +35,7 @@ export function LiveResults({
   artifacts: ArtifactDTO[];
   busy?: boolean;
   onApprove: (artifactId: string) => void;
+  onReject?: (artifactId: string) => void;
   onReply?: (answer: string) => void;
   width: number;
   collapsed: boolean;
@@ -178,6 +180,7 @@ export function LiveResults({
                 artifact={artifact}
                 busy={busy}
                 onApprove={() => onApprove(artifact.id)}
+                onReject={onReject ? () => onReject(artifact.id) : undefined}
               />
             ))
           )}
@@ -244,10 +247,12 @@ function ArtifactResultCard({
   artifact,
   busy,
   onApprove,
+  onReject,
 }: {
   artifact: ArtifactDTO;
   busy?: boolean;
   onApprove: () => void;
+  onReject?: () => void;
 }) {
   const html = extractPreviewHtml(artifact.content);
   const excerpt = artifact.content.replace(/\s+/g, " ").trim().slice(0, 140);
@@ -278,13 +283,22 @@ function ArtifactResultCard({
         </p>
       ) : null}
       <div className="mt-2 flex flex-col gap-2">
-        {artifact.status !== "approved" ? (
-          <Button size="xs" onClick={onApprove} disabled={busy}>
-            <Check className="size-3" />
-            Approve
-          </Button>
-        ) : (
+        {artifact.status === "approved" ? (
           <p className="text-[11px] text-muted-foreground">Approved — Ops has the card.</p>
+        ) : artifact.status === "rejected" ? (
+          <p className="text-[11px] text-muted-foreground">Rejected — remembered for this client.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            <Button size="xs" onClick={onApprove} disabled={busy}>
+              <Check className="size-3" />
+              Approve
+            </Button>
+            {onReject ? (
+              <Button size="xs" variant="outline" onClick={onReject} disabled={busy}>
+                Reject
+              </Button>
+            ) : null}
+          </div>
         )}
         <ArtifactExportButtons artifact={artifact} size="xs" />
       </div>
