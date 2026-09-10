@@ -18,12 +18,12 @@ export function settingsDeskLinks(workspaceId: string) {
     {
       href: `/desk/${workspaceId}/on-device`,
       label: "On-device Chrome",
-      hint: "Load the MV3 extension, pair this desk, run jobs on your Chrome via CDP.",
+      hint: "Download the MV3 zip, load it in Chrome, pair this desk with a code.",
     },
     {
       href: `/desk/${workspaceId}/usage`,
       label: "Usage",
-      hint: "Tokens remaining, jobs this hour, seat count, scheduled jobs.",
+      hint: "Credits used over time, remaining caps, seats, scheduled jobs.",
     },
     {
       href: `/desk/${workspaceId}/billing`,
@@ -43,12 +43,13 @@ export function settingsDeskLinks(workspaceId: string) {
     {
       href: `/desk/${workspaceId}/brand-kit`,
       label: "Brand Kit",
-      hint: "Voice, offer, and facts this desk uses.",
+      hint: "Voice, offer, and facts this desk uses. Nested under Settings.",
     },
     {
-      href: `/desk/${workspaceId}/developers`,
+      href: `/console?workspace=${workspaceId}`,
       label: "API Console",
-      hint: "Workspace keys for /api/v1.",
+      hint: "Opens the developer console (console.cinem.tech, or /console if the domain is not ready).",
+      external: true,
     },
     {
       href: `/desk/${workspaceId}/calendar`,

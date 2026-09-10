@@ -1,4 +1,5 @@
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+import { botCoverSrc } from "@/lib/bot-covers";
 import { COMPOSIO_AGENCY_TOOLKITS } from "@/lib/composio-catalog";
 import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
 
@@ -29,6 +30,7 @@ const FEATURED_BOT_IDS = new Set([
   "bot-main",
   "bot-website",
   "bot-app",
+  "bot-manager",
 ]);
 
 const BOT_COLORS: Record<string, string> = {
@@ -59,6 +61,7 @@ export type MarketplaceBot = {
   category: string;
   featured: boolean;
   color: string;
+  cover: string;
 };
 
 const BUILDER_BOTS: MarketplaceBot[] = [
@@ -75,6 +78,7 @@ const BUILDER_BOTS: MarketplaceBot[] = [
     category: "Engineering",
     featured: true,
     color: "#0ea5e9",
+    cover: botCoverSrc("bot-website"),
   },
   {
     id: "bot-app",
@@ -89,6 +93,7 @@ const BUILDER_BOTS: MarketplaceBot[] = [
     category: "Engineering",
     featured: true,
     color: "#7c3aed",
+    cover: botCoverSrc("bot-app"),
   },
 ];
 
@@ -104,6 +109,7 @@ export const MARKETPLACE_BOTS: MarketplaceBot[] = [
     category: row.category,
     featured: FEATURED_BOT_IDS.has(row.id),
     color: BOT_COLORS[row.id] || "#c45c26",
+    cover: botCoverSrc(row.id),
   })),
   ...BUILDER_BOTS,
 ];

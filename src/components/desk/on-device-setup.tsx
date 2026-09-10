@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { EXTENSION_ZIP_PUBLIC_PATH } from "@/lib/extension-download";
 
 type DeviceRow = {
   id: string;
@@ -48,6 +49,12 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
     }
   }
 
+  async function copyCode() {
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
+    toast.success("Pairing code copied.");
+  }
+
   async function revoke(id: string) {
     const res = await fetch(`/api/workspaces/${workspaceId}/devices/${id}`, { method: "DELETE" });
     if (!res.ok) {
@@ -59,10 +66,30 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          nativeButton={false}
+          render={
+            <a href={EXTENSION_ZIP_PUBLIC_PATH} download="cinem-pro-chrome.zip" />
+          }
+        >
+          Download extension
+        </Button>
+        <Button type="button" variant="outline" nativeButton={false} render={<a href="/api/downloads/extension" />}>
+          Alternate download
+        </Button>
+      </div>
       <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-muted-foreground">
         <li>
-          Chrome → <code className="text-foreground">chrome://extensions</code> → Developer mode →
-          Load unpacked → select the repo <code className="text-foreground">extension/</code> folder.
+          Download the zip, unzip it, then Chrome →{" "}
+          <code className="text-foreground">chrome://extensions</code> → Developer mode →
+          Load unpacked → select the unzipped folder (the one with{" "}
+          <code className="text-foreground">manifest.json</code>).
+        </li>
+        <li>
+          When the extension is on the Chrome Web Store, install from the store instead of
+          Load unpacked. Publishing steps:{" "}
+          <code className="text-foreground">docs/chrome-extension-store.md</code>.
         </li>
         <li>Generate a pairing code here, then paste it in the extension popup (desk origin included).</li>
         <li>
@@ -79,6 +106,11 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
         <Button type="button" onClick={() => void pair()} disabled={busy}>
           Generate pairing code
         </Button>
+        {code ? (
+          <Button type="button" variant="outline" onClick={() => void copyCode()}>
+            Copy code
+          </Button>
+        ) : null}
       </div>
       {code ? (
         <p className="rounded-lg border border-border bg-card px-3 py-2 font-mono text-lg tracking-[0.3em]">

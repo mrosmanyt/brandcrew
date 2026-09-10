@@ -6,6 +6,8 @@ export const PUBLIC_RELEASES_REPO = "https://github.com/mrosmanyt/cinem-pro-rele
 export const COMPANY_SITE = "https://cinem.tech";
 /** Canonical production origin (Vercel). HTTP→HTTPS is handled by the platform. */
 export const SITE_ORIGIN = "https://brandcrew.vercel.app";
+/** Developer console. Vercel project alias + DNS — see docs/console-domain.md. */
+export { CONSOLE_HOST, CONSOLE_ORIGIN, CONSOLE_PATH, consoleAppHref } from "@/lib/console-site";
 
 export function siteOrigin() {
   const fromEnv =

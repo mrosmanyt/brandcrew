@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { InviteTeam } from "@/components/desk/invite-team";
 import { ScheduleJobs } from "@/components/desk/schedule-jobs";
+import { UsageChart } from "@/components/desk/usage-chart";
 import { publicModelLabel } from "@/lib/model-catalog";
 import type { AgentDTO } from "@/lib/job-types";
+import type { UsageDayPoint } from "@/lib/usage-series";
 
 type UsagePayload = {
   limits: {
@@ -31,6 +33,10 @@ type UsagePayload = {
   approved: number;
   estimateUsd: number;
   estimateNote: string;
+  days?: number;
+  series?: UsageDayPoint[];
+  seriesNote?: string;
+  byModel?: { model: string; tokens: number; credits: number; events: number }[];
   events: { id: string; tokens: number; model: string; agentRole: string; createdAt: string }[];
 };
 
@@ -41,15 +47,16 @@ export function UsageDashboard({
   workspaceId: string;
   agents: AgentDTO[];
 }) {
+  const [days, setDays] = useState(30);
   const [data, setData] = useState<UsagePayload | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch(`/api/workspaces/${workspaceId}/usage`);
+      const res = await fetch(`/api/workspaces/${workspaceId}/usage?days=${days}`);
       if (!res.ok) return;
       setData(await res.json());
     })();
-  }, [workspaceId]);
+  }, [workspaceId, days]);
 
   const limits = data?.limits;
 
@@ -62,6 +69,24 @@ export function UsageDashboard({
         (Free / Starter / Pro / Ultra caps — there is no unlimited plan). Owners and
         admins can change the plan; members and approvers see caps only.
       </p>
+
+      <div className="mt-6">
+        {data?.series ? (
+          <UsageChart
+            series={data.series}
+            remaining={limits?.creditsLeft ?? limits?.tokensLeft ?? 0}
+            budget={limits?.creditsBudget ?? limits?.tokenBudget ?? 0}
+            used={limits?.creditsUsed ?? limits?.tokenUsed ?? 0}
+            note={data.seriesNote}
+            days={data.days ?? days}
+            onDaysChange={setDays}
+          />
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+            Loading usage…
+          </div>
+        )}
+      </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <Stat
@@ -120,6 +145,22 @@ export function UsageDashboard({
           Plans
         </Button>
       </div>
+
+      {data?.byModel?.length ? (
+        <section className="mt-8 rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-sm font-medium">By model (this window)</h2>
+          <ul className="mt-3 divide-y divide-border text-sm">
+            {data.byModel.slice(0, 8).map((row) => (
+              <li key={row.model} className="flex justify-between gap-3 py-2">
+                <span>{publicModelLabel(row.model)}</span>
+                <span className="text-muted-foreground">
+                  {row.credits.toLocaleString()} cr · {row.events} calls
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {data?.events?.length ? (
         <section className="mt-8 rounded-2xl border border-border bg-card p-5">

@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
 import { getWorkspaceLimits, limitsForPlan, serializeLimits } from "@/lib/limits";
+import {
+  aggregateUsageByModel,
+  aggregateUsageSeries,
+  usageSeriesMeta,
+} from "@/lib/usage-series";
 
 export class BudgetError extends Error {
   status = 429;
@@ -66,16 +71,23 @@ export function estimateUsdStub(tokens: number) {
   return Math.round((tokens / 100_000) * 0.5 * 100) / 100;
 }
 
-export async function getUsageSnapshot(workspaceId: string) {
+export function clampUsageDays(raw?: string | number | null) {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (n === 7 || n === 14 || n === 30 || n === 90) return n;
+  return 30;
+}
+
+export async function getUsageSnapshot(workspaceId: string, days = 30) {
+  const windowDays = clampUsageDays(days);
   const limits = await getWorkspaceLimits(workspaceId);
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const [jobCount, approvedCount, events] = await Promise.all([
+  const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+  const [jobCount, approvedCount, events, periodJobs] = await Promise.all([
     prisma.job.count({ where: { workspaceId } }),
     prisma.artifact.count({ where: { workspaceId, status: "approved" } }),
     prisma.usageEvent.findMany({
       where: { workspaceId, createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
-      take: 80,
+      take: 2_000,
       select: {
         id: true,
         tokens: true,
@@ -84,7 +96,23 @@ export async function getUsageSnapshot(workspaceId: string) {
         createdAt: true,
       },
     }),
+    prisma.job.findMany({
+      where: { workspaceId, createdAt: { gte: since } },
+      select: { createdAt: true },
+      take: 2_000,
+    }),
   ]);
+  const series = aggregateUsageSeries({
+    days: windowDays,
+    events,
+    jobs: periodJobs,
+  });
+  const byModel = aggregateUsageByModel(events);
+  const meta = usageSeriesMeta({
+    eventCount: events.length,
+    jobCount: periodJobs.length,
+    tokenUsed: limits.tokenUsed,
+  });
   return {
     limits: serializeLimits(limits),
     jobs: jobCount,
@@ -92,7 +120,12 @@ export async function getUsageSnapshot(workspaceId: string) {
     estimateUsd: estimateUsdStub(limits.tokenUsed),
     estimateNote:
       "Rough stub: $0.50 per 100k tokens blended. Not a bill and not provider-accurate.",
-    events: events.map((row) => ({
+    days: windowDays,
+    series,
+    byModel,
+    seriesSource: meta.source,
+    seriesNote: meta.note,
+    events: events.slice(0, 80).map((row) => ({
       id: row.id,
       tokens: row.tokens,
       model: row.model,

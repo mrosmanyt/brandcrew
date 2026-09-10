@@ -3,6 +3,7 @@
  * No paid APIs. Optional: does not mark Connected without a key.
  */
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { decryptSecret, encryptSecret } from "../src/lib/crypto-secret";
 import { DEFAULT_AGENT_NAME } from "../src/lib/constants";
 import { prisma } from "../src/lib/db";
@@ -45,6 +46,23 @@ for (const id of [
   assert.equal(bot.instructions.length > 20, true);
 }
 assert.ok(MARKETPLACE_BOTS.every((bot) => bot.creator === "CINEM Pro"));
+assert.ok(MARKETPLACE_BOTS.every((bot) => bot.cover.startsWith("/bots/")));
+assert.equal(getMarketplaceBot("bot-manager")?.featured, true);
+for (const id of [
+  "bot-main",
+  "bot-research",
+  "bot-sales",
+  "bot-marketing",
+  "bot-whatsapp",
+  "bot-content",
+  "bot-website",
+  "bot-app",
+  "bot-manager",
+]) {
+  const bot = getMarketplaceBot(id);
+  assert.ok(bot?.cover);
+  assert.ok(existsSync(`public${bot!.cover}`), `missing cover ${bot!.cover}`);
+}
 console.log(`ok: ${MARKETPLACE_BOTS.length} bot templates`);
 
 const plugins = ["web-search", "gmail", "whatsapp", "slack", "notion", "google-calendar", "google-drive", "stripe"];

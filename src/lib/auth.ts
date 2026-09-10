@@ -58,6 +58,7 @@ export function sessionCookieSecure() {
 export async function setSessionCookie(userId: string) {
   const token = await createSessionToken(userId);
   const jar = await cookies();
+  const domain = process.env.COOKIE_DOMAIN?.trim() || undefined;
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     // SameSite=Lax is the CSRF control: same-origin POSTs send the cookie;
@@ -66,6 +67,9 @@ export async function setSessionCookie(userId: string) {
     path: "/",
     secure: sessionCookieSecure(),
     maxAge: SESSION_DAYS * 24 * 60 * 60,
+    // Optional: `.cinem.tech` so desk + console.cinem.tech share a session.
+    // Only set when the app is actually served on that parent domain.
+    ...(domain ? { domain } : {}),
   });
 }
 

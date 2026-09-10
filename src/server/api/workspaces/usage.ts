@@ -1,15 +1,16 @@
 import { requireWorkspaceMember } from "@/lib/auth";
 import { jsonError, jsonOk } from "@/lib/http";
-import { getUsageSnapshot } from "@/lib/usage";
+import { clampUsageDays, getUsageSnapshot } from "@/lib/usage";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
-    return jsonOk(await getUsageSnapshot(workspaceId));
+    const days = clampUsageDays(new URL(request.url).searchParams.get("days"));
+    return jsonOk(await getUsageSnapshot(workspaceId, days));
   } catch (error) {
     return jsonError(error);
   }

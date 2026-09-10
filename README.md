@@ -17,7 +17,7 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
 6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_type` / `browser_extract` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Clarify pauses show **Yes/No** on the desk and persist `Job.askKind` + `Job.userAnswer` in Postgres. Browse events show the **tool name + URL**.
 7. Approve artifacts. Save a job as a **Skill**, then **Run skill**.
-8. Open **API Console** (`/desk/[workspaceId]/developers`): mint a workspace key, call `/api/v1` from the in-app console or curl.
+8. Open **API Console** — sidebar opens **https://console.cinem.tech** in a new tab (same-origin `/console` until that domain is attached). Mint a workspace key, call `/api/v1` from the try panel or curl. Brand Kit is under **Settings**, not the main sidebar.
 9. Invite a teammate from Settings/Usage (copy the magic link — this slice does not send email). Seats follow the plan.
 10. Export artifacts as Markdown or a simple PDF. Usage shows tokens remaining, jobs, and a cost stub. Schedule “every Monday LinkedIn week” — it fires on desk load or daily cron.
 
@@ -48,9 +48,9 @@ The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer
 
 **Install path**
 
-1. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → select the repo `extension/` folder.
-2. Mission Control → **On-device Chrome** (`/desk/[workspaceId]/on-device`) → **Generate pairing code**.
-3. Paste the desk origin (`http://127.0.0.1:43180` locally, or `https://app.cinem.tech` / `https://brandcrew.vercel.app`) and the code in the extension popup.
+1. Mission Control → **On-device Chrome** → **Download extension** (`public/downloads/cinem-pro-chrome.zip`, also `/api/downloads/extension`). Unzip it.
+2. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → select the unzipped folder (`manifest.json` at the root). When published, install from the Chrome Web Store instead — see `docs/chrome-extension-store.md`.
+3. **Generate pairing code**, then paste the desk origin and code in the extension popup.
 4. Optional local agent (files, long jobs, Electron keepalive):
    ```bash
    node native-host/install.mjs --extension-id=<id from chrome://extensions>
@@ -171,7 +171,7 @@ Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon 
 
 ## Developer API
 
-Workspace-scoped REST at `/api/v1`. Mint keys in **API Console** (`/desk/[workspaceId]/developers`). Secrets are shown **once**; only SHA-256 hashes are stored. Keys never include model provider secrets.
+Workspace-scoped REST at `/api/v1`. Mint keys in **API Console** (`https://console.cinem.tech` or `/console`). Secrets are shown **once**; only SHA-256 hashes are stored. Keys never include model provider secrets.
 
 Auth: `Authorization: Bearer cinem_live_…` (session cookies are ignored). Errors are JSON `{ "error": "…", "code": "unauthorized" }`. Rate limit: 60 requests / minute / key.
 
@@ -638,7 +638,7 @@ Electron also starts `native-host/host.mjs --http` on `127.0.0.1:43181` for file
 
 1. `npm install`. Playwright **core** uses the Chrome already on your machine.
 2. Leave `PLAYWRIGHT_ENABLED=true` in `.env`. Custom binary: `PLAYWRIGHT_CHROME_PATH`.
-3. `npm run dev` (or `npm run desktop:dev`). Load unpacked `extension/`, pair from **On-device Chrome**, then Marketplace → Companions → add **Prospect Peter** (or New Agent with browser tools).
+3. `npm run dev` (or `npm run desktop:dev`). Download the extension zip from **On-device Chrome**, Load unpacked, pair, then Marketplace → Companions → add **Prospect Peter** (or New Agent with browser tools).
 4. Job: “Prospecting scan https://example.com” (or “Browse https://example.com, extract the heading, ask me Yes/No before drafting outreach. Do not send.”)
 5. Desk shows narration, then **needs you** before a write. Yes resumes. No stops remaining steps.
 6. `npm run test:browse` — Playwright against example.com when Chrome is present.

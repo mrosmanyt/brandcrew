@@ -729,11 +729,13 @@ function ToggleChip({
 function FeaturedBotCard({ bot }: { bot: BotRow }) {
   return (
     <article className="rounded-lg border border-border bg-card p-2.5">
-      <div
-        className="flex aspect-[4/3] items-end overflow-hidden rounded-md p-2.5"
-        style={{ background: `${bot.color}22` }}
-      >
-        <AgentAvatar id={bot.id} name={bot.name} role={bot.role} size="md" />
+      <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-[#0b1016]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={bot.cover}
+          alt=""
+          className="h-full w-full object-cover"
+        />
       </div>
       <p className="mt-2 truncate text-xs">
         <span className="text-muted-foreground">{bot.creator}&apos;s </span>
