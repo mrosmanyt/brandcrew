@@ -82,9 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
-        {/* Raw head script so Whop's HTML detector sees the snippet.
-            next/script beforeInteractive queues via __next_s and does not
-            emit an executable <script> in the first HTML. */}
+        {/* Native head script: Whop's detector reads the HTML snippet. */}
         <script
           id="whop-pixel"
           dangerouslySetInnerHTML={{ __html: WHOP_PIXEL_SNIPPET }}

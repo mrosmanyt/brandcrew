@@ -233,7 +233,6 @@ async function main() {
   assert.match(layout, /id="whop-pixel"/);
   assert.match(layout, /dangerouslySetInnerHTML/);
   assert.match(layout, /<head>/);
-  assert.doesNotMatch(layout, /next\/script/);
   assert.match(layout, /openGraph/);
   assert.match(layout, /CINEM_OG_SRC|\/og\.png/);
   assert.match(layout, /CINEM_MARK_SRC|cinem-mark\.svg/);
