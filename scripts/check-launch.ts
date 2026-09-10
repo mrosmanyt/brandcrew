@@ -178,6 +178,7 @@ async function main() {
   assert.ok(urls.some((url) => url === siteOrigin() || url === SITE_ORIGIN));
   assert.ok(urls.some((url) => url.includes("/privacy")));
   assert.ok(urls.some((url) => url.includes("/terms")));
+  assert.ok(urls.some((url) => url.includes("/download")));
   const bots = robots();
   const disallow = Array.isArray(bots.rules)
     ? bots.rules.flatMap((row) => row.disallow ?? [])
@@ -185,6 +186,7 @@ async function main() {
   assert.ok(disallow.includes("/desk"));
   assert.ok(disallow.includes("/admin"));
   assert.ok(disallow.includes("/api"));
+  assert.ok(disallow.includes("/connect"));
   assert.match(String(bots.sitemap), /sitemap\.xml/);
   console.log("ok: sitemap + robots cover marketing pages and hide desk/admin/api");
 

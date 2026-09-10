@@ -34,7 +34,10 @@ export default function PrivacyPage() {
 
       <h2>What we collect</h2>
       <ul>
-        <li>Account name and email when you sign up (email/password or Google).</li>
+        <li>
+          Account name and email when you sign up (email/password or Google). Desktop,
+          Android, and the Chrome extension use the same account.
+        </li>
         <li>
           Workspace data you create: Brand Kit, agents, jobs, artifacts, and
           marketplace connections.
@@ -56,6 +59,16 @@ export default function PrivacyPage() {
         <em>and</em> you accept them in the cookie banner. Your banner choice
         (and desk pane width) may be stored in localStorage on this device — that
         is not a login token.
+      </p>
+
+      <h2>Chrome extension, desktop, and Android</h2>
+      <p>
+        The Chrome extension stores only the desk origin and a device token in{" "}
+        <code>chrome.storage.local</code> after you Sign in with CINEM (or paste a
+        pairing code). It does not sell browsing data. Desktop and Android store a
+        refresh token in the OS secure store (or Electron userData) so the same
+        account opens Mission Control. Access JWTs are the same shape as the web
+        session cookie; they are not written to web localStorage.
       </p>
 
       <h2>What stays on the device vs the server</h2>

@@ -1,8 +1,10 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/constants";
+import { REFRESH_TOKEN_PREFIX } from "@/lib/auth-bridge";
+import { DEVICE_TOKEN_PREFIX } from "@/lib/device-protocol";
 import {
   parseWorkspaceRole,
   roleCan,
@@ -50,9 +52,34 @@ export async function readSessionUserId(token: string | undefined) {
   }
 }
 
-/** Session JWT lives only in this HttpOnly cookie — never localStorage. */
+/** Session JWT lives in the HttpOnly cookie (web) or Authorization Bearer (native). */
 export function sessionCookieSecure() {
   return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+
+function isUserAccessToken(token: string) {
+  if (!token) return false;
+  if (token.startsWith(DEVICE_TOKEN_PREFIX)) return false;
+  if (token.startsWith(REFRESH_TOKEN_PREFIX)) return false;
+  return true;
+}
+
+/** Cookie first (web). Bearer access JWT for desktop / mobile / tests. */
+export async function readRequestSessionToken() {
+  const jar = await cookies();
+  const cookieToken = jar.get(SESSION_COOKIE)?.value;
+  if (cookieToken && isUserAccessToken(cookieToken)) return cookieToken;
+  try {
+    const headerList = await headers();
+    const auth = headerList.get("authorization") || "";
+    if (auth.toLowerCase().startsWith("bearer ")) {
+      const token = auth.slice(7).trim();
+      if (isUserAccessToken(token)) return token;
+    }
+  } catch {
+    // headers() is request-scoped; ignore when unavailable.
+  }
+  return undefined;
 }
 
 export async function setSessionCookie(userId: string) {
@@ -79,8 +106,7 @@ export async function clearSessionCookie() {
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const token = await readRequestSessionToken();
   const userId = await readSessionUserId(token);
   if (!userId) return null;
   const user = await prisma.user.findUnique({

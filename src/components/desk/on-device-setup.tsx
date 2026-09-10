@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CHROME_WEB_STORE_URL } from "@/lib/auth-bridge";
 import { EXTENSION_ZIP_PUBLIC_PATH } from "@/lib/extension-download";
 
 type DeviceRow = {
@@ -19,6 +20,7 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
   const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [code, setCode] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [loginUrl, setLoginUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function load() {
@@ -49,10 +51,41 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
     }
   }
 
+  async function createLoginLink() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          surface: "extension",
+          workspaceId,
+          origin: window.location.origin,
+          deviceName: "Chrome",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not create a login link.");
+      setLoginUrl(data.approveUrl);
+      await navigator.clipboard.writeText(data.approveUrl).catch(() => undefined);
+      toast.success("Login link ready — paste it in the extension or open Sign in with CINEM.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create a login link.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copyCode() {
     if (!code) return;
     await navigator.clipboard.writeText(code);
     toast.success("Pairing code copied.");
+  }
+
+  async function copyLogin() {
+    if (!loginUrl) return;
+    await navigator.clipboard.writeText(loginUrl);
+    toast.success("Login link copied.");
   }
 
   async function revoke(id: string) {
@@ -75,35 +108,34 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
         >
           Download extension
         </Button>
-        <Button type="button" variant="outline" nativeButton={false} render={<a href="/api/downloads/extension" />}>
-          Alternate download
+        {CHROME_WEB_STORE_URL ? (
+          <Button type="button" variant="outline" nativeButton={false} render={<a href={CHROME_WEB_STORE_URL} />}>
+            Chrome Web Store
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" nativeButton={false} render={<a href="/api/downloads/extension" />}>
+            Alternate download
+          </Button>
+        )}
+        <Button type="button" variant="outline" nativeButton={false} render={<a href="/download" />}>
+          All downloads
         </Button>
       </div>
-      <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-muted-foreground">
-        <li>
-          Download the zip, unzip it, then Chrome →{" "}
-          <code className="text-foreground">chrome://extensions</code> → Developer mode →
-          Load unpacked → select the unzipped folder (the one with{" "}
-          <code className="text-foreground">manifest.json</code>).
-        </li>
-        <li>
-          When the extension is on the Chrome Web Store, install from the store instead of
-          Load unpacked. Publishing steps:{" "}
-          <code className="text-foreground">docs/chrome-extension-store.md</code>.
-        </li>
-        <li>Generate a pairing code here, then paste it in the extension popup (desk origin included).</li>
-        <li>
-          Optional local agent:{" "}
-          <code className="text-foreground">node native-host/install.mjs --extension-id=…</code> then{" "}
-          <code className="text-foreground">node native-host/host.mjs --http</code>.
-        </li>
-        <li>
-          Open a public page, run <strong className="text-foreground">Prospecting scan</strong> from
-          a Sales agent. Watch Live results (narration). Approve before any write.
-        </li>
-      </ol>
+      <p className="text-sm leading-6 text-muted-foreground">
+        Download the zip, unzip it, and add it to Chrome. Then in the extension popup tap{" "}
+        <strong className="text-foreground">Sign in with CINEM</strong> — same account as this
+        desk. Pairing codes remain as a fallback.
+      </p>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => void pair()} disabled={busy}>
+        <Button type="button" onClick={() => void createLoginLink()} disabled={busy}>
+          Create login link
+        </Button>
+        {loginUrl ? (
+          <Button type="button" variant="outline" onClick={() => void copyLogin()}>
+            Copy login link
+          </Button>
+        ) : null}
+        <Button type="button" variant="outline" onClick={() => void pair()} disabled={busy}>
           Generate pairing code
         </Button>
         {code ? (
@@ -112,6 +144,14 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
           </Button>
         ) : null}
       </div>
+      {loginUrl ? (
+        <p className="break-all rounded-lg border border-border bg-card px-3 py-2 text-sm">
+          {loginUrl}
+          <span className="mt-1 block text-xs text-muted-foreground">
+            Paste this in the extension, or open it while the popup is waiting.
+          </span>
+        </p>
+      ) : null}
       {code ? (
         <p className="rounded-lg border border-border bg-card px-3 py-2 font-mono text-lg tracking-[0.3em]">
           {code}
@@ -122,6 +162,25 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
           ) : null}
         </p>
       ) : null}
+      <details className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
+        <summary className="cursor-pointer font-medium text-foreground">Developer: Load unpacked</summary>
+        <ol className="mt-2 list-decimal space-y-2 pl-5 leading-6">
+          <li>
+            Chrome → <code className="text-foreground">chrome://extensions</code> → Developer mode →
+            Load unpacked → select the unzipped folder (the one with{" "}
+            <code className="text-foreground">manifest.json</code>).
+          </li>
+          <li>
+            Store publish: <code className="text-foreground">docs/chrome-extension-store.md</code>. When
+            listed, install from the store instead of Load unpacked.
+          </li>
+          <li>
+            Optional local agent:{" "}
+            <code className="text-foreground">node native-host/install.mjs --extension-id=…</code> then{" "}
+            <code className="text-foreground">node native-host/host.mjs --http</code>.
+          </li>
+        </ol>
+      </details>
       {devices.length ? (
         <ul className="divide-y divide-border rounded-xl border border-border">
           {devices.map((device) => (

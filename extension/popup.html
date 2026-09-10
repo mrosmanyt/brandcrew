@@ -19,17 +19,28 @@
       <button type="button" id="poll">Poll now</button>
       <button type="button" id="unpair" class="ghost">Unpair</button>
     </section>
+    <section id="waiting" hidden>
+      <p id="waiting-line">Waiting for Sign in with CINEM…</p>
+      <p class="hint">Approve this Chrome in the tab that just opened. Same account as the website.</p>
+      <button type="button" id="cancel-wait" class="ghost">Cancel</button>
+    </section>
     <form id="pair-form">
       <label>
         Desk origin
-        <input id="origin" type="url" required placeholder="http://127.0.0.1:43180" />
+        <input id="origin" type="url" required placeholder="https://brandcrew.vercel.app" />
       </label>
+      <button type="button" id="signin">Sign in with CINEM</button>
+      <p class="hint">Opens your CINEM Pro account and attaches this Chrome to a workspace. Jobs then run as you.</p>
       <label>
-        Pairing code
-        <input id="code" type="text" required maxlength="8" placeholder="ABC123" autocomplete="off" />
+        Or paste login link
+        <input id="login-link" type="text" placeholder="https://…/connect/extension?nonce=…" autocomplete="off" />
       </label>
-      <button type="submit">Pair this Chrome</button>
-      <p class="hint">Desk → On-device Chrome → generate a code. Writes always pause for you.</p>
+      <button type="button" id="paste-link" class="ghost">Use login link</button>
+      <label>
+        Or pairing code
+        <input id="code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" />
+      </label>
+      <button type="submit" class="ghost">Pair with code</button>
     </form>
     <p id="error" class="error" hidden></p>
     <script src="popup.js"></script>

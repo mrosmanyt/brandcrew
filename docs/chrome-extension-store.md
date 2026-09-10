@@ -4,9 +4,9 @@ The MV3 source is `extension/` (manifest, service worker, popup, icons). CI / `n
 
 `public/downloads/cinem-pro-chrome.zip`
 
-The zip has **`manifest.json` at the archive root** (not nested in an extra `extension/` folder). Alternate download: `GET /api/downloads/extension`.
+The zip has **`manifest.json` at the archive root** (not nested in an extra `extension/` folder). Alternate download: `GET /api/downloads/extension`. Site hub: `/download`.
 
-Desk **On-device Chrome** has a **Download extension** button that serves that zip. Pairing codes are unchanged.
+Desk **On-device Chrome** is **download-first** (zip / store). **Sign in with CINEM** attaches the workspace to this Chrome so jobs run as that user. Pairing codes remain as a fallback. Load unpacked is under a developer disclosure — not the primary path.
 
 ## One-time developer account
 
@@ -20,35 +20,40 @@ Desk **On-device Chrome** has a **Download extension** button that serves that z
 npm run pack:extension
 ```
 
-Upload **`public/downloads/cinem-pro-chrome.zip`**. Do not zip a parent folder around it. `extension/icons/cinem-logo.png` is the store icon source (add 128×128 if Google rejects the current size).
+Upload **`public/downloads/cinem-pro-chrome.zip`**. Do not zip a parent folder around it. `extension/icons/cinem-logo.png` is the store icon source. If Google rejects the size, export a **128×128 PNG** as `extension/icons/icon-128.png` and point `manifest.json` `icons.128` at it.
+
+Current manifest version: **0.2.0**. Bump this string on every store upload.
 
 ## Store listing (required fields)
 
 - **Name:** CINEM Pro — on-device agent
-- **Summary / description:** Supervised Chrome automation for the CINEM Pro desk. Writes wait for approval. Does not send email or post to Slack by itself.
+- **Summary / description:** Supervised Chrome automation for the CINEM Pro desk. Sign in with your CINEM account (or paste a login link / pairing code). Writes wait for approval. Does not send email or post to Slack by itself.
 - **Category:** Productivity (or Developer Tools).
 - **Language:** English.
-- **Privacy:** single-purpose — pair with a CINEM Pro workspace and run approved CDP commands. Hosts: the user’s desk origin (`https://*.cinem.tech/*`, `https://brandcrew.vercel.app/*`, localhost). No selling of browsing data.
-- **Permissions justification:** `debugger` (CDP for the job), `tabs` / `scripting` (page text for the desk), `storage` (pairing token), `nativeMessaging` (optional local host), `alarms` (command poll). Be explicit that debugger is for the user’s own tabs after they pair.
-- **Remote code:** none. All logic is in the zip.
-- **Screenshots:** at least one 1280×800 (or current store minimum) of the popup pairing screen and one of the desk On-device page. Dark theme.
+- **Privacy:** single-purpose — pair with a CINEM Pro workspace and run approved CDP commands. Hosts: the user’s desk origin (`https://*.cinem.tech/*`, `https://brandcrew.vercel.app/*`, localhost). No selling of browsing data. Local storage: desk origin + device token only.
+- **Permissions justification:** `debugger` (CDP for the job), `tabs` / `scripting` (page text for the desk; opening the Sign in with CINEM tab), `storage` (device token + in-flight connect nonce), `nativeMessaging` (optional local host), `alarms` (command poll). Be explicit that debugger is for the user’s own tabs after they sign in.
+- **Remote code:** none. All logic is in the zip. The extension calls the user’s chosen desk origin APIs (`/api/auth/connect*`, `/api/device/*`).
+- **Screenshots checklist (minimum):**
+  1. **1280×800** (or current store minimum) of the popup: **Sign in with CINEM** visible, dark/paper theme.
+  2. **1280×800** of the desk On-device page with **Download extension** as the first button (not a Load unpacked essay).
+  3. Optional: Mission Control job with Live results / approval pause.
 - **Store icon:** 128×128 PNG.
 
 ## Privacy policy URL
 
-Use `https://cinem.tech/privacy` or the production `/privacy` URL. The policy already covers the session cookie and workspace data; add a sentence that the extension stores only the desk origin + device token locally.
+Use `https://cinem.tech/privacy` or production `/privacy` (`https://brandcrew.vercel.app/privacy`). The policy states the extension stores only the desk origin + device token locally, and that Sign in with CINEM uses the same account as the website.
 
 ## Unlisted vs public
 
-- **Unlisted:** anyone with the link can install; not searchable. Best for founder + agency seats while you collect screenshots and a privacy review.
+- **Unlisted:** anyone with the link can install; not searchable. Best for founder + agency seats while you collect screenshots and a privacy review. Ship unlisted first.
 - **Public:** searchable. Turn on after the listing, screenshots, and privacy questionnaire are complete.
 
-Google review can take a few days. Debugger permission often gets extra scrutiny — the justification must match the product (supervised desk jobs, approval gate).
+Google review can take a few days. Debugger permission often gets extra scrutiny — the justification must match the product (supervised desk jobs, approval gate, user-owned tabs).
 
 ## After publish
 
-1. Paste the store URL on the On-device page (replace “when published” copy) and in this file.
+1. Paste the store URL into `src/lib/auth-bridge.ts` (`CHROME_WEB_STORE_URL`) and `docs/chrome-extension-store.md`. The On-device page and `/download` will prefer the store button.
 2. Bump `extension/manifest.json` `version` for every upload.
 3. Re-run `npm run pack:extension` and upload a new zip.
 
-Do not ship a `.crx` signed outside the Web Store for public users — Chrome blocks sideloaded CRX except enterprise policy. The zip + Load unpacked path stays for development.
+Do not ship a `.crx` signed outside the Web Store for public users — Chrome blocks sideloaded CRX except enterprise policy. The zip + Load unpacked path stays for development only.

@@ -20,6 +20,12 @@ const PATTERNS: string[][] = [
   ["api", "auth", "signup"],
   ["api", "auth", "me"],
   ["api", "auth", "logout"],
+  ["api", "auth", "token"],
+  ["api", "auth", "refresh"],
+  ["api", "auth", "revoke"],
+  ["api", "auth", "connect", "approve"],
+  ["api", "auth", "connect", "claim"],
+  ["api", "auth", "connect"],
   ["api", "auth", "google", "callback"],
   ["api", "auth", "google"],
   ["api", "oauth", "callback"],
@@ -111,6 +117,12 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/auth/signup", ["api", "auth", "signup"], {}],
   ["/api/auth/me", ["api", "auth", "me"], {}],
   ["/api/auth/logout", ["api", "auth", "logout"], {}],
+  ["/api/auth/token", ["api", "auth", "token"], {}],
+  ["/api/auth/refresh", ["api", "auth", "refresh"], {}],
+  ["/api/auth/revoke", ["api", "auth", "revoke"], {}],
+  ["/api/auth/connect", ["api", "auth", "connect"], {}],
+  ["/api/auth/connect/approve", ["api", "auth", "connect", "approve"], {}],
+  ["/api/auth/connect/claim", ["api", "auth", "connect", "claim"], {}],
   ["/api/auth/google", ["api", "auth", "google"], {}],
   ["/api/auth/google/callback", ["api", "auth", "google", "callback"], {}],
   ["/api/oauth/callback", ["api", "oauth", "callback"], {}],
@@ -327,8 +339,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 72);
-console.log("ok: 72 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 78);
+console.log("ok: 78 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

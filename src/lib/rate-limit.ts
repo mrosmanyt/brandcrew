@@ -80,6 +80,15 @@ export function sensitiveRateLimit(
   if (path === "api/auth/login" && verb === "POST") {
     return { key: "auth-login", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
   }
+  if (path === "api/auth/token" && verb === "POST") {
+    return { key: "auth-token", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
+  }
+  if (path === "api/auth/refresh" && verb === "POST") {
+    return { key: "auth-refresh", limit: 20, windowMs: AUTH_WINDOW_MS };
+  }
+  if (path === "api/auth/connect" || path.startsWith("api/auth/connect/")) {
+    return { key: "auth-connect", limit: 30, windowMs: AUTH_WINDOW_MS };
+  }
   if (path === "api/auth/signup" && verb === "POST") {
     return { key: "auth-signup", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
   }
@@ -126,7 +135,9 @@ async function enforceAuthEmailRateLimit(
 ) {
   const path = segments.join("/");
   if (
-    (path !== "api/auth/login" && path !== "api/auth/signup") ||
+    (path !== "api/auth/login" &&
+      path !== "api/auth/signup" &&
+      path !== "api/auth/token") ||
     method.toUpperCase() !== "POST"
   ) {
     return;

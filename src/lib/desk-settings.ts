@@ -18,7 +18,7 @@ export function settingsDeskLinks(workspaceId: string) {
     {
       href: `/desk/${workspaceId}/on-device`,
       label: "On-device Chrome",
-      hint: "Download the MV3 zip, load it in Chrome, pair this desk with a code.",
+      hint: "Download the MV3 zip first, then Sign in with CINEM so jobs run as your account.",
     },
     {
       href: `/desk/${workspaceId}/usage`,

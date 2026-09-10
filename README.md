@@ -48,15 +48,17 @@ The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer
 
 **Install path**
 
-1. Mission Control → **On-device Chrome** → **Download extension** (`public/downloads/cinem-pro-chrome.zip`, also `/api/downloads/extension`). Unzip it.
-2. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → select the unzipped folder (`manifest.json` at the root). When published, install from the Chrome Web Store instead — see `docs/chrome-extension-store.md`.
-3. **Generate pairing code**, then paste the desk origin and code in the extension popup.
+1. Open **[/download](/download)** or Mission Control → **On-device Chrome** → **Download extension** (`public/downloads/cinem-pro-chrome.zip`, also `/api/downloads/extension`).
+2. Unzip. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → folder with `manifest.json` (until the Chrome Web Store listing is live — `docs/chrome-extension-store.md`).
+3. In the popup tap **Sign in with CINEM** (same account as the website) or paste a login link from the desk. Pairing codes still work as a fallback.
 4. Optional local agent (files, long jobs, Electron keepalive):
    ```bash
    node native-host/install.mjs --extension-id=<id from chrome://extensions>
    node native-host/host.mjs --http   # 127.0.0.1:43181 — also spawned by Electron
    ```
 5. **Try it:** open a public page → run **Prospecting scan** from a Sales agent → watch Live results (narration + sources) → approve before any write.
+
+Desktop Windows installer and Android Play path are on `/download`. Auth across web / desktop / extension / Android: `docs/auth-bridge.md`. Play Store: `docs/play-store-launch.md`.
 
 Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>` (data, never instructions); writes go through the approval queue; each job has a **domain allowlist** and aborts if the agent leaves allowed hosts. Audit lines live on the On-device page and in `WorkspaceAudit`.
 

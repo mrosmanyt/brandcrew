@@ -19,7 +19,7 @@ export const DATA_PROCESSING_ROWS: ProcessingRow[] = [
     location: "server",
     leavesDevice: true,
     purpose: "Sign-in and workspace membership",
-    examples: "Name, email, password hash or Google sub. Session JWT in an HttpOnly cookie only.",
+    examples: "Name, email, password hash or Google sub. Web session JWT in an HttpOnly cookie. Desktop/Android store a hashed refresh token on device; the Chrome extension stores a device token after Sign in with CINEM.",
   },
   {
     category: "Workspace content",
