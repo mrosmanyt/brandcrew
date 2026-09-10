@@ -41,6 +41,9 @@
   ],
   "exclude": [
     "node_modules",
-    "mobile"
+    "mobile",
+    "electron",
+    "extension",
+    "scripts"
   ]
 }
