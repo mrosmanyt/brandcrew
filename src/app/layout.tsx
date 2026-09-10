@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -83,9 +82,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
-        <Script id="whop-pixel" strategy="beforeInteractive">
-          {WHOP_PIXEL_SNIPPET}
-        </Script>
+        {/* Raw head script so Whop's HTML detector sees the snippet.
+            next/script beforeInteractive queues via __next_s and does not
+            emit an executable <script> in the first HTML. */}
+        <script
+          id="whop-pixel"
+          dangerouslySetInnerHTML={{ __html: WHOP_PIXEL_SNIPPET }}
+        />
       </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider

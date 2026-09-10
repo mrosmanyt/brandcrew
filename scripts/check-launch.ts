@@ -230,10 +230,10 @@ async function main() {
   assert.match(layout, /CookieBanner/);
   assert.match(layout, /Analytics/);
   assert.match(layout, /WHOP_PIXEL_SNIPPET/);
-  assert.match(layout, /next\/script/);
   assert.match(layout, /id="whop-pixel"/);
-  assert.match(layout, /beforeInteractive/);
+  assert.match(layout, /dangerouslySetInnerHTML/);
   assert.match(layout, /<head>/);
+  assert.doesNotMatch(layout, /next\/script/);
   assert.match(layout, /openGraph/);
   assert.match(layout, /CINEM_OG_SRC|\/og\.png/);
   assert.match(layout, /CINEM_MARK_SRC|cinem-mark\.svg/);
