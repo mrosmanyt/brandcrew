@@ -87,7 +87,7 @@ assert.match(popup, /Sign in with CINEM/);
 assert.match(popup, /paste login link/i);
 assert.match(readFileSync("extension/background.js", "utf8"), /auth\/connect\/claim/);
 assert.match(readFileSync("extension/background.js", "utf8"), /startSignIn/);
-assert.match(readFileSync("extension/manifest.json", "utf8"), /"version": "0\.2\.0"/);
+assert.match(readFileSync("extension/manifest.json", "utf8"), /"version": "0\.2\.1"/);
 const onDevice = readFileSync("src/components/desk/on-device-setup.tsx", "utf8");
 assert.match(onDevice, /Download extension/);
 assert.match(onDevice, /Sign in with CINEM/);
