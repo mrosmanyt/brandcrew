@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bot, Check, FileText, Loader2, Plug, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { ConnectorLogo } from "@/components/desk/connector-logo";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -393,13 +394,13 @@ export function MarketplaceDesk({
                 .filter((plugin) => plugin.connected)
                 .slice(0, 8)
                 .map((plugin) => (
-                  <span
+                  <ConnectorLogo
                     key={plugin.id}
-                    className="grid size-6 place-items-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background"
-                    style={{ background: plugin.color }}
-                  >
-                    {plugin.letter}
-                  </span>
+                    pluginId={plugin.id}
+                    name={plugin.name}
+                    size="sm"
+                    className="ring-2 ring-background"
+                  />
                 ))}
             </span>
             {installedPluginCount} installed
@@ -789,12 +790,7 @@ function PluginCard({
 }) {
   return (
     <article className="flex items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-2">
-      <span
-        className="grid size-8 shrink-0 place-items-center rounded-md text-[11px] font-semibold text-white"
-        style={{ background: plugin.color }}
-      >
-        {plugin.letter}
-      </span>
+      <ConnectorLogo pluginId={plugin.id} name={plugin.name} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{plugin.name}</p>
         <p className="line-clamp-2 text-xs text-muted-foreground">{plugin.description}</p>

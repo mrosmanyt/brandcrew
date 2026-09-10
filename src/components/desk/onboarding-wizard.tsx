@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { ConnectorLogo } from "@/components/desk/connector-logo";
 import { BrandMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -341,10 +342,9 @@ export function OnboardingWizard({
               slot.kind === "linkedin" ? (
                 <IntegrationCard
                   key="linkedin"
+                  pluginId="linkedin"
                   name={LINKEDIN_ONBOARDING_CONNECTOR.name}
                   description={LINKEDIN_ONBOARDING_CONNECTOR.description}
-                  letter="in"
-                  color="#0a66c2"
                   connected={false}
                   actionLabel="Content jobs only"
                   disabled
@@ -352,10 +352,9 @@ export function OnboardingWizard({
               ) : (
                 <IntegrationCard
                   key={slot.plugin.id}
+                  pluginId={slot.plugin.id}
                   name={slot.plugin.name}
                   description={slot.plugin.description}
-                  letter={slot.plugin.letter}
-                  color={slot.plugin.color}
                   connected={slot.plugin.connected}
                   actionLabel={slot.plugin.connected ? "Connected" : "Connect"}
                   hint={slot.plugin.connection?.setupHint}
@@ -586,10 +585,9 @@ function Field({
 }
 
 function IntegrationCard({
+  pluginId,
   name,
   description,
-  letter,
-  color,
   connected,
   actionLabel,
   hint,
@@ -597,10 +595,9 @@ function IntegrationCard({
   busy,
   onClick,
 }: {
+  pluginId: string;
   name: string;
   description: string;
-  letter: string;
-  color: string;
   connected: boolean;
   actionLabel: string;
   hint?: string;
@@ -610,12 +607,7 @@ function IntegrationCard({
 }) {
   return (
     <article className="flex items-start gap-3 rounded-xl border border-border px-3 py-3">
-      <span
-        className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white"
-        style={{ background: color }}
-      >
-        {letter}
-      </span>
+      <ConnectorLogo pluginId={pluginId} name={name} className="mt-0.5" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium">{name}</p>

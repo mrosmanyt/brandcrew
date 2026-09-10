@@ -38,6 +38,7 @@ import {
   AgentModesMenu,
   applyWorkspacePlan,
 } from "@/components/desk/agent-modes-menu";
+import { ConnectorLogo } from "@/components/desk/connector-logo";
 import { JobStartingStatus } from "@/components/desk/job-starting-status";
 import {
   clipComposerText,
@@ -453,6 +454,7 @@ export function ChatComposer({
                         key={plugin.id}
                         onClick={() => router.push(pluginsHref)}
                       >
+                        <ConnectorLogo pluginId={plugin.id} name={plugin.name} size="sm" />
                         <span className="min-w-0 flex-1 truncate">{plugin.name}</span>
                         <span
                           className={cn(
