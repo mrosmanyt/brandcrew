@@ -37,6 +37,9 @@ import * as workspaceCompanions from "./workspaces/companions";
 import * as workspacesCollection from "./workspaces/collection";
 import * as workspaceInvite from "./workspaces/invite";
 import * as workspaceInvites from "./workspaces/invites";
+import * as workspaceMember from "./workspaces/member";
+import * as workspaceAuditExport from "./workspaces/audit-export";
+import * as workspaceClients from "./workspaces/clients";
 import * as workspaceJob from "./workspaces/job";
 import * as workspaceJobReply from "./workspaces/job-reply";
 import * as workspaceJobs from "./workspaces/jobs";
@@ -143,6 +146,18 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "invites"],
     handlers: asHandlers(workspaceInvites),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "members", ":memberId"],
+    handlers: asHandlers(workspaceMember),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "audit", "export"],
+    handlers: asHandlers(workspaceAuditExport),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "clients"],
+    handlers: asHandlers(workspaceClients),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "usage"],

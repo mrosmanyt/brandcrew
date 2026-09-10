@@ -14,6 +14,7 @@ import {
   getAdminFlags,
   getAdminModels,
   getAdminTrust,
+  exportAdminAudit,
   parseAdminSection,
   requireAdmin,
 } from "@/lib/admin";
@@ -21,7 +22,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const url = new URL(request.url);
     const section = parseAdminSection(url.searchParams.get("section"));
     const q = url.searchParams.get("q");
@@ -43,6 +44,16 @@ export async function GET(request: Request) {
       return jsonOk(getAdminAccess());
     }
     if (section === "audit") {
+      if (url.searchParams.get("export") === "1") {
+        return jsonOk(
+          await exportAdminAudit({
+            actorEmail: admin.email,
+            action: url.searchParams.get("action"),
+            actor: url.searchParams.get("actor"),
+            q,
+          }),
+        );
+      }
       return jsonOk(
         await getAdminAudit({
           action: url.searchParams.get("action"),

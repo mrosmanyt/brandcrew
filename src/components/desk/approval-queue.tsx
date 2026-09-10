@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { jobDeskHref } from "@/lib/desk-settings";
 import { APPROVAL_QUEUE_EMPTY } from "@/lib/write-gate";
+import { APPROVER_REQUIRED_HINT } from "@/lib/rbac";
 
 type ApprovalRow = {
   prompt: string;
@@ -42,6 +43,8 @@ export function ApprovalQueue({ workspaceId }: { workspaceId: string }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {row.askKind || "approve"}
             {row.pendingArtifacts ? ` · ${row.pendingArtifacts} draft${row.pendingArtifacts === 1 ? "" : "s"}` : ""}
+            {" · "}
+            {APPROVER_REQUIRED_HINT}
           </p>
           <Button
             className="mt-3"

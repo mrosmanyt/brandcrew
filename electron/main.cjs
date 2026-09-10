@@ -4,7 +4,7 @@
  * Packaged: fork Next standalone server.js with ELECTRON_RUN_AS_NODE,
  * Postgres + .env in the OS userData directory (same DATABASE_URL as web).
  */
-const { app, BrowserWindow, shell, dialog } = require("electron");
+const { app, BrowserWindow, Menu, shell, dialog } = require("electron");
 const { spawn, fork } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -276,11 +276,58 @@ if (!gotLock) {
     }
   });
 
+function installAppMenu() {
+  const template = [
+    ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
+    {
+      label: "CINEM Pro",
+      submenu: [
+        {
+          label: "Settings",
+          accelerator: "CmdOrCtrl+,",
+          click: () => {
+            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/desk`);
+          },
+        },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    {
+      label: "Trust",
+      submenu: [
+        {
+          label: "Privacy",
+          click: () => {
+            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/privacy`);
+          },
+        },
+        {
+          label: "DPA template",
+          click: () => {
+            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/dpa`);
+          },
+        },
+        {
+          label: "Security (not SOC 2 certified)",
+          click: () => {
+            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/security`);
+          },
+        },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
   app.whenReady().then(() => {
     app.setName("CINEM Pro");
     if (process.platform === "win32") {
       app.setAppUserModelId("com.brandcrew.desktop");
     }
+    installAppMenu();
     return boot().catch((error) => {
       console.error(error);
       dialog.showErrorBox("CINEM Pro", error instanceof Error ? error.message : String(error));

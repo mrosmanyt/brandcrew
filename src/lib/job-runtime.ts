@@ -2645,7 +2645,10 @@ Return JSON: { "title": string, "content": string }.`,
   };
 }
 
-export async function completeJobIfApproved(jobId: string) {
+export async function completeJobIfApproved(
+  jobId: string,
+  actor?: { email: string; role: string },
+) {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
     include: { artifacts: true },
@@ -2677,9 +2680,14 @@ export async function completeJobIfApproved(jobId: string) {
   await recordWorkspaceAudit({
     workspaceId: job.workspaceId,
     jobId,
-    actor: "user",
+    actor: actor?.email || "user",
     action: "approval",
-    detail: "Human approved the paused step / artifacts.",
+    detail: actor
+      ? `${actor.email} (${actor.role}) approved the paused step / artifacts.`
+      : "Human approved the paused step / artifacts.",
+    data: actor
+      ? { actorEmail: actor.email, actorRole: actor.role }
+      : {},
   });
   const remaining = steps.filter((step) => step.status === "pending");
   if (remaining.length) {

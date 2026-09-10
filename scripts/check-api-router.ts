@@ -34,6 +34,9 @@ const PATTERNS: string[][] = [
   ["api", "workspaces"],
   ["api", "workspaces", ":workspaceId", "invites", ":inviteId"],
   ["api", "workspaces", ":workspaceId", "invites"],
+  ["api", "workspaces", ":workspaceId", "members", ":memberId"],
+  ["api", "workspaces", ":workspaceId", "audit", "export"],
+  ["api", "workspaces", ":workspaceId", "clients"],
   ["api", "workspaces", ":workspaceId", "usage"],
   ["api", "workspaces", ":workspaceId", "devices", ":deviceId"],
   ["api", "workspaces", ":workspaceId", "devices"],
@@ -136,6 +139,21 @@ const cases: Array<[string, string[], Record<string, string>]> = [
     "/api/workspaces/ws_1/invites/inv_1",
     ["api", "workspaces", ":workspaceId", "invites", ":inviteId"],
     { workspaceId: "ws_1", inviteId: "inv_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/members/mem_1",
+    ["api", "workspaces", ":workspaceId", "members", ":memberId"],
+    { workspaceId: "ws_1", memberId: "mem_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/audit/export",
+    ["api", "workspaces", ":workspaceId", "audit", "export"],
+    { workspaceId: "ws_1" },
+  ],
+  [
+    "/api/workspaces/ws_1/clients",
+    ["api", "workspaces", ":workspaceId", "clients"],
+    { workspaceId: "ws_1" },
   ],
   [
     "/api/workspaces/ws_1/usage",
@@ -307,8 +325,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 68);
-console.log("ok: 68 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 71);
+console.log("ok: 71 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

@@ -108,6 +108,7 @@ export function ChatComposer({
   onRoutingApplied,
   autoApproveSafe,
   onAutoApproveSafeApplied,
+  canAlwaysApproved = true,
 }: {
   workspaceId: string;
   value: string;
@@ -132,6 +133,7 @@ export function ChatComposer({
   onRoutingApplied?: (next: LlmRoutingPreference) => void;
   autoApproveSafe?: boolean;
   onAutoApproveSafeApplied?: (next: boolean) => void;
+  canAlwaysApproved?: boolean;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,6 +176,7 @@ export function ChatComposer({
   }, [workspaceId]);
 
   async function toggleAlwaysApproved() {
+    if (!canAlwaysApproved) return;
     const next = !parseAutoApproveSafe(autoApproveSafe);
     const res = await fetch(`/api/workspaces/${workspaceId}`, {
       method: "PATCH",
@@ -482,10 +485,16 @@ export function ChatComposer({
                 role="switch"
                 aria-checked={Boolean(autoApproveSafe)}
                 aria-label={ALWAYS_APPROVED_LABEL}
-                title={ALWAYS_APPROVED_HINT}
+                title={
+                  canAlwaysApproved
+                    ? ALWAYS_APPROVED_HINT
+                    : "Only an owner or admin can change Always approved."
+                }
+                disabled={!canAlwaysApproved}
                 onClick={() => void toggleAlwaysApproved()}
                 className={cn(
                   "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                  !canAlwaysApproved && "cursor-not-allowed opacity-60",
                   autoApproveSafe
                     ? "bg-composer-send text-composer-send-foreground"
                     : "bg-composer-control text-composer-muted hover:text-composer-foreground",

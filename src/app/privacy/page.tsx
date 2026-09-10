@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/marketing/legal-page";
+import { DATA_PROCESSING_ROWS } from "@/lib/gdpr";
 import { COMPANY_SITE, SITE_ORIGIN } from "@/lib/site";
+import { SOC2_STATUS_LABEL } from "@/lib/soc2";
 
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Privacy policy",
   description:
-    "How CINEM collects and uses data in CINEM Pro — accounts, sessions, workspace content, and optional analytics.",
+    "How CINEM collects and uses data in CINEM Pro — accounts, on-device browse, processors, and optional analytics.",
 };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="8 September 2026">
+    <LegalPage title="Privacy policy" updated="10 September 2026">
       <p>
         This policy describes how <strong>CINEM</strong> (“we”) handles information when you
         use <strong>CINEM Pro</strong> at{" "}
@@ -23,6 +25,11 @@ export default function PrivacyPage() {
           cinem.tech
         </a>
         .
+      </p>
+
+      <p>
+        Agency buyers: see the <Link href="/dpa">DPA template</Link> and{" "}
+        <Link href="/security">Security</Link>. <strong>{SOC2_STATUS_LABEL}.</strong>
       </p>
 
       <h2>What we collect</h2>
@@ -50,6 +57,16 @@ export default function PrivacyPage() {
         (and desk pane width) may be stored in localStorage on this device — that
         is not a login token.
       </p>
+
+      <h2>What stays on the device vs the server</h2>
+      <ul>
+        {DATA_PROCESSING_ROWS.map((row) => (
+          <li key={row.category}>
+            <strong>{row.category}</strong> — {row.location}
+            {row.leavesDevice ? " (leaves device)" : " (on device)"}: {row.examples}
+          </li>
+        ))}
+      </ul>
 
       <h2>Processors</h2>
       <p>

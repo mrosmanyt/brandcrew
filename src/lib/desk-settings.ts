@@ -31,6 +31,16 @@ export function settingsDeskLinks(workspaceId: string) {
       hint: "Starter $20, Pro $79, and Ultra $200. Caps are enforced. Model keys stay on the server.",
     },
     {
+      href: `/desk/${workspaceId}/clients`,
+      label: "Client desks",
+      hint: "Agency view of isolated client workspaces — Brand Kit, memory, seats, billing visibility.",
+    },
+    {
+      href: `/desk/${workspaceId}/trust`,
+      label: "Trust & audit",
+      hint: "Who approved what, hash-chained export, DPA and security docs. Not a SOC 2 badge.",
+    },
+    {
       href: `/desk/${workspaceId}/brand-kit`,
       label: "Brand Kit",
       hint: "Voice, offer, and facts this desk uses.",

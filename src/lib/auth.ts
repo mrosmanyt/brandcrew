@@ -3,6 +3,12 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/constants";
+import {
+  parseWorkspaceRole,
+  roleCan,
+  roleLabel,
+  type WorkspaceCapability,
+} from "@/lib/rbac";
 
 const SESSION_DAYS = 30;
 
@@ -116,4 +122,22 @@ export async function requireWorkspaceMember(workspaceId: string) {
     throw new ForbiddenError("You do not have access to this workspace.");
   }
   return { user, member, workspace: member.workspace };
+}
+
+export async function requireWorkspaceCapability(
+  workspaceId: string,
+  capability: WorkspaceCapability,
+) {
+  const ctx = await requireWorkspaceMember(workspaceId);
+  const role = parseWorkspaceRole(ctx.member.role);
+  if (!roleCan(role, capability)) {
+    throw new ForbiddenError(
+      `${roleLabel(role)} cannot do that. ${
+        capability === "approve_sends" || capability === "approve_artifacts"
+          ? "Ask an owner, admin, or approver."
+          : "Ask an owner or admin."
+      }`,
+    );
+  }
+  return { ...ctx, role };
 }

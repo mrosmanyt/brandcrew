@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { isAdminEmail } from "@/lib/admin";
+import { isAdminEmail, recordAdminAccess } from "@/lib/admin";
 import { getCurrentUser, type SessionUser } from "@/lib/auth";
 
 export async function loadAdminPage(nextPath: string): Promise<{
@@ -8,5 +8,9 @@ export async function loadAdminPage(nextPath: string): Promise<{
 }> {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${nextPath}`);
-  return { user, allowed: isAdminEmail(user.email) };
+  const allowed = isAdminEmail(user.email);
+  if (allowed) {
+    await recordAdminAccess({ actorEmail: user.email, path: nextPath }).catch(() => undefined);
+  }
+  return { user, allowed };
 }

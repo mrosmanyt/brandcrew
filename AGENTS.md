@@ -33,3 +33,11 @@ Prefer these when adding job/browser/LLM behavior:
 - **Learning memory:** Brand Kit page. Approve/reject drafts persist style/preference facts. Memory is data, not instructions to send.
 - **Multi-tab:** Research playbooks use `browser_tabs` (5–10 pasted public URLs, DOM-first, allowlist). Writes still gated.
 
+# Phase 4 — Upmarket (agency / team)
+
+- **RBAC:** workspace roles `owner` / `admin` / `approver` / `member` (`src/lib/rbac.ts`). Approvers can approve sends and artifacts. Members can run jobs and drafts. Invites, Always-approved, billing, and audit export are owner/admin. Client-named email still always gated. Always-approved still never skips sends/posts/payments.
+- **Client desks:** `/desk/:id/clients` lists isolated client workspaces (Brand Kit, memory, seats, billing visibility). Isolation facts live in `src/lib/client-workspaces.ts`.
+- **GDPR / DPA:** `/privacy` (device vs server), `/dpa` (template, not signed), `/security` (subprocessors + readiness). Cookie banner links Privacy + DPA. Not legal advice.
+- **SOC 2 Type I readiness:** CINEM Pro is **not certified**. Checklist in `src/lib/soc2.ts`, `docs/security/soc2-readiness.md`, `docs/security/controls-inventory.md`. Evidence hooks: named approver on `WorkspaceAudit`, hash-chained `GET /api/workspaces/:id/audit/export`, Admin HQ `admin_access` + `?section=audit&export=1`.
+- **Desktop:** Electron Trust menu opens Privacy / DPA / Security; Settings opens `/desk`. Do not rebuild the browser.
+

@@ -16,6 +16,7 @@ export type WorkspaceDTO = {
   autoApproveSafe?: boolean;
   kind?: "agency" | "client" | string;
   clientName?: string;
+  memberRole?: "owner" | "admin" | "approver" | "member";
   createdAt: string;
   brandKit?: BrandKit;
   limits?: LimitsDTO;

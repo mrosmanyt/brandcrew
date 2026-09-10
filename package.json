@@ -45,6 +45,7 @@
     "test:write-gate": "tsx scripts/check-write-gate.ts",
     "test:cost": "tsx scripts/check-cost-controls.ts",
     "test:phase3": "tsx scripts/check-phase3.ts",
+    "test:phase4": "tsx scripts/check-phase4.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:build": "node scripts/desktop-build.mjs",

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { checkoutPlanFromQuery, workspaceBillingHref } from "@/lib/billing-ui";
 import { prisma } from "@/lib/db";
-import { createDemoWorkspace, listUserWorkspaces } from "@/lib/workspace";
+import { createDemoWorkspace, listUserWorkspaces, withMemberRole } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function DeskIndexPage({
   let workspaces = await listUserWorkspaces(user.id);
   if (!workspaces.length) {
     const created = await createDemoWorkspace(user.id, `${user.name}'s desk`);
-    workspaces = [created];
+    workspaces = [withMemberRole(created, "owner")];
     redirect(`/onboarding?workspace=${encodeURIComponent(created.id)}`);
   }
   const query = await searchParams;

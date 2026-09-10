@@ -50,7 +50,7 @@ console.log("ok: composer attachments format without inventing uploads");
 
 const links = settingsDeskLinks("ws_1");
 const labels = links.map((link) => link.label);
-const required = ["Plugins", "Bots", "Marketplace", "Plans", "On-device Chrome"] as const;
+const required = ["Plugins", "Bots", "Marketplace", "Plans", "On-device Chrome", "Client desks", "Trust & audit"] as const;
 for (const label of required) {
   assert.equal(labels.includes(label), true, `missing ${label}`);
 }

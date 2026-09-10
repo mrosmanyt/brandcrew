@@ -115,6 +115,7 @@ model WorkspaceMember {
   id                   String    @id @default(cuid())
   workspaceId          String
   userId               String
+  /// owner | admin | approver | member — see src/lib/rbac.ts. Not founder Admin HQ.
   role                 String    @default("owner")
   onboardingDismissed  Boolean   @default(false)
   /// First-run setup wizard. Default true so existing desks are not forced through it.

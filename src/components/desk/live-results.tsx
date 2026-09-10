@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { extractPreviewHtml } from "@/lib/html-preview";
 import type { JobDTO, JobEventDTO } from "@/lib/job-types";
 import { currentLiveHeadline, eventTypeLabel, jobStatusLabel } from "@/lib/live-progress";
+import { APPROVER_REQUIRED_HINT } from "@/lib/rbac";
 import type { ArtifactDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export function LiveResults({
   collapsed,
   onExpand,
   onCollapse,
+  canApprove = true,
 }: {
   job: JobDTO | null;
   artifacts: ArtifactDTO[];
@@ -41,6 +43,7 @@ export function LiveResults({
   collapsed: boolean;
   onExpand: () => void;
   onCollapse: () => void;
+  canApprove?: boolean;
 }) {
   const now = currentLiveHeadline(job);
   const pending = artifacts.filter((artifact) => artifact.status !== "approved");
@@ -153,6 +156,7 @@ export function LiveResults({
         ) : null}
 
         {job?.status === "needs_you" && pending.length > 0 && job.askKind !== "clarify" ? (
+          canApprove ? (
           <Button
             className="mt-3 w-full"
             size="sm"
@@ -163,6 +167,9 @@ export function LiveResults({
           >
             Approve remaining
           </Button>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">{APPROVER_REQUIRED_HINT}</p>
+          )
         ) : null}
 
         <div className="mt-4 space-y-2.5">
@@ -179,6 +186,7 @@ export function LiveResults({
                 key={artifact.id}
                 artifact={artifact}
                 busy={busy}
+                canApprove={canApprove}
                 onApprove={() => onApprove(artifact.id)}
                 onReject={onReject ? () => onReject(artifact.id) : undefined}
               />
@@ -248,11 +256,13 @@ function ArtifactResultCard({
   busy,
   onApprove,
   onReject,
+  canApprove = true,
 }: {
   artifact: ArtifactDTO;
   busy?: boolean;
   onApprove: () => void;
   onReject?: () => void;
+  canApprove?: boolean;
 }) {
   const html = extractPreviewHtml(artifact.content);
   const excerpt = artifact.content.replace(/\s+/g, " ").trim().slice(0, 140);
@@ -287,7 +297,7 @@ function ArtifactResultCard({
           <p className="text-[11px] text-muted-foreground">Approved — Ops has the card.</p>
         ) : artifact.status === "rejected" ? (
           <p className="text-[11px] text-muted-foreground">Rejected — remembered for this client.</p>
-        ) : (
+        ) : canApprove ? (
           <div className="flex flex-wrap gap-1.5">
             <Button size="xs" onClick={onApprove} disabled={busy}>
               <Check className="size-3" />
@@ -299,6 +309,8 @@ function ArtifactResultCard({
               </Button>
             ) : null}
           </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">{APPROVER_REQUIRED_HINT}</p>
         )}
         <ArtifactExportButtons artifact={artifact} size="xs" />
       </div>
