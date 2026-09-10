@@ -22,7 +22,11 @@ npm run pack:extension
 
 Upload **`public/downloads/cinem-pro-chrome.zip`**. Do not zip a parent folder around it. `extension/icons/cinem-logo.png` is the store icon source. If Google rejects the size, export a **128×128 PNG** as `extension/icons/icon-128.png` and point `manifest.json` `icons.128` at it.
 
-Current manifest version: **0.2.0**. Bump this string on every store upload.
+Current manifest version: **0.2.1**. Bump this string on every store upload.
+
+Chrome Web Store rejects `http://127.0.0.1:*/*` and `http://localhost:*/*` in `host_permissions`. Keep those out of `extension/manifest.json` (the same file is packed for the store). Test against the production desk URL (`https://brandcrew.vercel.app` or `https://*.cinem.tech`) — including Load unpacked.
+
+`https://*/*` stays: after **Sign in with CINEM**, jobs drive arbitrary https tabs via CDP (`browser_navigate`, `browser_tabs`, click/type). Desk API calls use `https://*.cinem.tech/*` and `https://brandcrew.vercel.app/*`. Justify both on the store listing (desk origin vs user-owned https pages).
 
 ## Store listing (required fields)
 
@@ -30,8 +34,8 @@ Current manifest version: **0.2.0**. Bump this string on every store upload.
 - **Summary / description:** Supervised Chrome automation for the CINEM Pro desk. Sign in with your CINEM account (or paste a login link / pairing code). Writes wait for approval. Does not send email or post to Slack by itself.
 - **Category:** Productivity (or Developer Tools).
 - **Language:** English.
-- **Privacy:** single-purpose — pair with a CINEM Pro workspace and run approved CDP commands. Hosts: the user’s desk origin (`https://*.cinem.tech/*`, `https://brandcrew.vercel.app/*`, localhost). No selling of browsing data. Local storage: desk origin + device token only.
-- **Permissions justification:** `debugger` (CDP for the job), `tabs` / `scripting` (page text for the desk; opening the Sign in with CINEM tab), `storage` (device token + in-flight connect nonce), `nativeMessaging` (optional local host), `alarms` (command poll). Be explicit that debugger is for the user’s own tabs after they sign in.
+- **Privacy:** single-purpose — pair with a CINEM Pro workspace and run approved CDP commands. Hosts: the user’s desk origin (`https://*.cinem.tech/*`, `https://brandcrew.vercel.app/*`) plus `https://*/*` so CDP can attach to the user’s https tabs after they sign in. No localhost. No selling of browsing data. Local storage: desk origin + device token only.
+- **Permissions justification:** `debugger` (CDP for the job), `tabs` / `scripting` (page text for the desk; opening the Sign in with CINEM tab), `storage` (device token + in-flight connect nonce), `nativeMessaging` (optional local host), `alarms` (command poll). Be explicit that debugger is for the user’s own tabs after they sign in. Host permissions: desk origins for `/api/auth/connect*` and `/api/device/*`; `https://*/*` for supervised automation of https pages the user navigates to.
 - **Remote code:** none. All logic is in the zip. The extension calls the user’s chosen desk origin APIs (`/api/auth/connect*`, `/api/device/*`).
 - **Screenshots checklist (minimum):**
   1. **1280×800** (or current store minimum) of the popup: **Sign in with CINEM** visible, dark/paper theme.

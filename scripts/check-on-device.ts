@@ -74,12 +74,22 @@ assert.ok(existsSync("native-host/install.mjs"));
 const manifest = JSON.parse(readFileSync("extension/manifest.json", "utf8")) as {
   manifest_version: number;
   permissions: string[];
+  host_permissions?: string[];
   background?: { service_worker?: string };
 };
 assert.equal(manifest.manifest_version, 3);
 assert.ok(manifest.permissions.includes("debugger"));
 assert.ok(manifest.permissions.includes("nativeMessaging"));
 assert.equal(manifest.background?.service_worker, "background.js");
+const hosts = manifest.host_permissions ?? [];
+assert.ok(hosts.includes("https://*.cinem.tech/*"));
+assert.ok(hosts.includes("https://brandcrew.vercel.app/*"));
+assert.ok(hosts.includes("https://*/*"));
+assert.equal(
+  hosts.some((h) => /localhost|127\.0\.0\.1/i.test(h)),
+  false,
+  "Chrome Web Store rejects localhost / 127.0.0.1 host_permissions",
+);
 const bg = readFileSync("extension/background.js", "utf8");
 assert.match(bg, /chrome\.debugger/);
 assert.match(bg, /CINEM_UNTRUSTED_PAGE_CONTENT/);
