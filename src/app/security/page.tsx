@@ -26,7 +26,7 @@ export default function SecurityPage() {
       <p>
         <strong>{SOC2_STATUS_LABEL}.</strong> {summary.timelineNote} This page is
         product documentation and an evidence map — not a SOC 2 report and not a
-        badge.
+        badge. CINEM Pro is not SOC 2 certified.
       </p>
       <p>
         Related: <Link href="/privacy">Privacy</Link>, <Link href="/dpa">DPA template</Link>,{" "}

@@ -163,7 +163,7 @@ for (const file of [
 ]) {
   assert.ok(existsSync(file), `missing ${file}`);
 }
-assert.match(readFileSync("src/app/security/page.tsx", "utf8"), /Not certified/);
+assert.match(readFileSync("src/app/security/page.tsx", "utf8"), /not SOC 2 certified/i);
 assert.match(readFileSync("src/app/dpa/page.tsx", "utf8"), /not a signed agreement/i);
 assert.match(readFileSync("AGENTS.md", "utf8"), /Phase 4/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /not SOC 2 certified/);
