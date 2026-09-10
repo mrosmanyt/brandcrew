@@ -3,7 +3,8 @@
  * No paid APIs. Optional: does not mark Connected without a key.
  */
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { decryptSecret, encryptSecret } from "../src/lib/crypto-secret";
 import { DEFAULT_AGENT_NAME } from "../src/lib/constants";
 import { prisma } from "../src/lib/db";
@@ -21,8 +22,6 @@ import {
   connectorLogoFile,
   connectorLogoSrc,
 } from "../src/lib/connector-logos";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 assert.ok(MARKETPLACE_BOTS.length >= 10);
 for (const id of [

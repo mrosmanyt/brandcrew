@@ -4,7 +4,9 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { GENERATE_ACTIONS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
+import { isLightweightDeskQuestion, answerDeskQuestion } from "@/lib/desk-qa";
 import { createJobFromChat } from "@/lib/job-runtime";
+import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { isTeamLaunchIntent } from "@/lib/team-launch";
 import { BudgetError } from "@/lib/usage";
 
@@ -56,6 +58,34 @@ export async function POST(
       return jsonOk({ teamLaunch: true });
     }
 
+    if (
+      isLightweightDeskQuestion({
+        message,
+        action,
+        playbookKey: undefined,
+        skillId: undefined,
+      })
+    ) {
+      const qa = await answerDeskQuestion({
+        workspaceId,
+        agentId: body.agentId,
+        message,
+      });
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      });
+      const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
+      return jsonOk({
+        ...qa,
+        usage: {
+          ...limits,
+          tokenUsed: workspace?.tokenUsed ?? limits.tokenUsed,
+          tokenBudget: workspace?.tokenBudget ?? limits.tokenBudget,
+        },
+        limits,
+      });
+    }
+
     const result = await createJobFromChat({
       workspaceId,
       agentId: body.agentId,
@@ -80,7 +110,7 @@ export async function POST(
   } catch (error) {
     if (error instanceof BudgetError) {
       return NextResponse.json(
-        { error: error.message, code: "BUDGET" },
+        { error: error.message, code: error.code },
         { status: error.status },
       );
     }

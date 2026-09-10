@@ -4,6 +4,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { GENERATE_ACTIONS, JOB_ACTION_MESSAGES } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
+import { isLightweightDeskQuestion, answerDeskQuestion } from "@/lib/desk-qa";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
 import { runDueSchedules } from "@/lib/schedules";
 import { runDueEventTriggers } from "@/lib/event-triggers";
@@ -85,6 +86,33 @@ export async function POST(
     }
     if (!message && !body.skillId) {
       return NextResponse.json({ error: "Write a short job for this agent." }, { status: 400 });
+    }
+
+    if (
+      !body.skillId &&
+      isLightweightDeskQuestion({
+        message,
+        action: body.action ?? "default",
+        playbookKey: body.playbookKey,
+        skillId: body.skillId,
+      })
+    ) {
+      const qa = await answerDeskQuestion({
+        workspaceId,
+        agentId: body.agentId,
+        message,
+      });
+      const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
+      const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
+      return jsonOk({
+        ...qa,
+        usage: {
+          ...limits,
+          tokenUsed: workspace?.tokenUsed ?? limits.tokenUsed,
+          tokenBudget: workspace?.tokenBudget ?? limits.tokenBudget,
+        },
+        limits,
+      });
     }
 
     const result = await createJobFromChat({

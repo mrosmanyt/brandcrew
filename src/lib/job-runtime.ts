@@ -99,7 +99,7 @@ import {
   slackPostAllowed,
   slackPostMessage,
 } from "@/lib/slack";
-import { assertWorkspaceBudget, recordUsage } from "@/lib/usage";
+import { assertWorkspaceBudget, assertLlmCallBudget, recordUsage, BudgetError, rethrowIfBudget } from "@/lib/usage";
 import { tavilySearch } from "@/lib/web-search";
 import { ClientError } from "@/lib/http";
 import { recordWorkspaceAudit } from "@/lib/audit";
@@ -400,6 +400,15 @@ export async function tickJob(jobId: string): Promise<boolean> {
       await failJob(jobId, "Workspace missing.");
       return false;
     }
+    try {
+      await assertLlmCallBudget(job.workspaceId);
+    } catch (error) {
+      if (error instanceof BudgetError) {
+        await failJob(jobId, error.message, "budget");
+        return false;
+      }
+      throw error;
+    }
 
     const routingPrefer =
       "modelRouting" in workspace
@@ -413,7 +422,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
         ? await prisma.agent.findUnique({ where: { id: job.agentId } })
         : null;
       steps = await runWithLlmRouting(
-        { prefer: routingPrefer, plan: routingPlan },
+        { prefer: routingPrefer, plan: routingPlan, workspaceId: job.workspaceId },
         () =>
           planSteps({
             workspaceId: job.workspaceId,
@@ -495,7 +504,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
       ? await prisma.agent.findUnique({ where: { id: job.agentId } })
       : null;
     const result = await runWithLlmRouting(
-      { prefer: routingPrefer, plan: routingPlan },
+      { prefer: routingPrefer, plan: routingPlan, workspaceId: job.workspaceId },
       () =>
         executeTool({
         workspaceId: job.workspaceId,
@@ -590,6 +599,10 @@ export async function tickJob(jobId: string): Promise<boolean> {
       await failJob(jobId, error.message, "domain_abort");
       return false;
     }
+    if (error instanceof BudgetError) {
+      await failJob(jobId, error.message, "budget");
+      return false;
+    }
     const message = error instanceof Error ? error.message : "Job failed.";
     await failJob(jobId, message);
     return false;
@@ -673,7 +686,8 @@ async function planSteps(input: {
     if (steps.length >= 2 && steps[0].tool === "read_brand_kit") {
       return ensureAskUser(steps).slice(0, 12);
     }
-  } catch {
+  } catch (error) {
+    rethrowIfBudget(error);
     // fall through
   }
   return fallback;
@@ -2244,7 +2258,8 @@ Return JSON: { "title": string, "content": string } Markdown with Source, What t
     tokens = result.tokens;
     model = result.model;
     provider = result.provider;
-  } catch {
+  } catch (error) {
+    rethrowIfBudget(error);
     // Live path may still persist browsed page text — never canned demo copy.
   }
   const resolved = resolveRunOutput({
@@ -2321,7 +2336,8 @@ Return JSON: { "title": string, "content": string } Markdown with one section pe
     tokens = result.tokens;
     model = result.model;
     provider = result.provider;
-  } catch {
+  } catch (error) {
+    rethrowIfBudget(error);
     // Live path may still persist browsed page text — never canned demo copy.
   }
   const resolved = resolveRunOutput({
@@ -2394,7 +2410,8 @@ Return JSON: { "title": string, "content": string } Markdown with ## LinkedIn DM
     tokens = result.tokens;
     model = result.model;
     provider = result.provider;
-  } catch {
+  } catch (error) {
+    rethrowIfBudget(error);
     // Live path: never persist demo outreach when keys exist.
   }
   const resolved = resolveRunOutput({
@@ -2468,7 +2485,8 @@ Return JSON: { "title": string, "content": string }.`,
     tokens = result.tokens;
     model = result.model;
     provider = result.provider;
-  } catch {
+  } catch (error) {
+    rethrowIfBudget(error);
     // Live path may still persist browsed page text — never canned demo copy.
   }
   const resolved = resolveRunOutput({

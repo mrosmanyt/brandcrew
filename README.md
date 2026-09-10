@@ -512,11 +512,16 @@ When the UI does not pick a model (`Auto`):
 
 | Task | Backend |
 | --- | --- |
-| Research / outreach drafts / WhatsApp / summaries / website | Gemini Flash |
+| **Free / Starter (any task)** | Cheapest live: Gemini Flash if `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` is set, else `gpt-4o-mini`. Never Sonnet. |
+| Research / outreach drafts / WhatsApp / summaries / website (Pro+) | Gemini Flash |
 | Classification / selector guess | Cheapest live engine (Flash → Terra → Haiku) |
-| Structured JSON / short tools (planner) | Haiku |
-| Real code / complex apps | Sonnet |
+| Structured JSON / short tools (planner, Pro+) | Haiku |
+| Real code / complex apps (Pro+) | Sonnet |
 | Ultra plan or Boost | Sonnet max (`ANTHROPIC_BOOST_MODEL` or Sonnet; never Opus) |
+
+Hard stop: `assertWorkspaceBudget` before a job is queued (tokens + jobs/hour + concurrent). `assertLlmCallBudget` before every LLM call (tokens + suspended). Crossing `tokenBudget` returns `BUDGET` (402) and the desk shows the stop dialog. Usage `estimateUsd` is a stub — not a provider bill.
+
+Desk chat: a normal question (“what is our ICP?”) gets one cheap reply in the thread (Brand Kit context, counted against the workspace token budget). Explicit generate chips / playbooks still call `createJobFromChat`.
 
 Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline templates**.
 
@@ -528,7 +533,7 @@ Keep useful work on APIs while driving spend toward zero. There is **no unlimite
 | --- | --- |
 | **Action cache + routines** | Successful `browser_click` / `browser_type` selectors are stored per workspace+domain. Repeat routine runs skip the LLM locator (Stagehand-style) and only call a model on cache miss or `write_artifact`. Save a finished job as a skill/routine (`POST /api/workspaces/:id/routines`) with a cadence. |
 | **DOM-first browse** | Perception is a text DOM digest (ARIA + visible text). Screenshots are for humans / session replay — never the default model input. Vision is opt-in fallback when the digest is empty. |
-| **Model routing** | Classify/locator → cheapest live engine. Writes stay on Flash/Haiku; code on Sonnet. User-facing free plan is **Free** (internal id `demo`). |
+| **Model routing** | Free/Starter → Flash or gpt-4o-mini (never Sonnet). Classify/locator → cheapest live engine. Pro+ writes stay on Flash/Haiku; code on Sonnet. User-facing free plan is **Free** (internal id `demo`). |
 | **Prompt caching** | Anthropic system prompts use `cache_control=ephemeral`. OpenAI/Gemini keep a stable system prefix (automatic/implicit cache). |
 | **Credits** | Token budget 1:1 as credits. Free/Starter/Pro/Ultra are all capped. |
 | **Event triggers** | Schedule uses existing cron/desk load. Email-received polls Connected Gmail. Slack mention is `POST /api/workspaces/:id/triggers/fire` (no Events API fleet). |

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AuthError, ForbiddenError } from "@/lib/auth";
+import { BudgetError } from "@/lib/usage";
 
 export class ClientError extends Error {
   status = 400;
@@ -82,7 +83,8 @@ export function jsonError(error: unknown) {
     error instanceof ForbiddenError ||
     error instanceof ClientError ||
     error instanceof ApiAuthError ||
-    error instanceof ApiRateLimitError
+    error instanceof ApiRateLimitError ||
+    error instanceof BudgetError
   ) {
     const headers: Record<string, string> = {};
     if (error instanceof ApiAuthError) {

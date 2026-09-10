@@ -119,7 +119,10 @@ export function UsageDashboard({
         <Stat
           label="Cost estimate (stub)"
           value={data ? `$${data.estimateUsd.toFixed(2)}` : "…"}
-          hint={data?.estimateNote || ""}
+          hint={
+            data?.estimateNote ||
+            "Rough stub — not a provider bill. Token budget is the hard stop."
+          }
         />
         <Stat
           label="Seats"

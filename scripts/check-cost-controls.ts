@@ -28,6 +28,11 @@ import { routineDeliveryNote } from "../src/lib/routines-pure";
 import { defaultPlaybookForKind, noteForKind } from "../src/lib/event-triggers-pure";
 import { pickRoute } from "../src/lib/llm";
 import { CHECKOUT_PLANS } from "../src/lib/constants";
+import {
+  evaluateBudgetCaps,
+  tokenBudgetExceeded,
+} from "../src/lib/budget-caps";
+import { decideDeskQa } from "../src/lib/desk-qa-pure";
 
 const brief = weeklyClientBriefPlaybook("https://example.com");
 const firstPass = scoreCachedReplay(brief.steps, []);
@@ -108,8 +113,22 @@ process.env.ANTHROPIC_API_KEY = "sk-ant-fake-cost-check";
 process.env.OPENAI_API_KEY = "sk-openai-fake-cost-check";
 assert.equal(pickRoute("draft", "classify")?.provider, "gemini");
 assert.equal(pickRoute("draft", "classify")?.model, "gemini-2.5-flash");
-assert.equal(pickRoute("draft", "json")?.provider, "anthropic");
+assert.equal(pickRoute("draft", "json")?.provider, "gemini");
 assert.notEqual(pickRoute("draft", "classify")?.model, "claude-sonnet-5");
+assert.equal(pickRoute("draft", "coding")?.provider, "gemini");
+assert.notEqual(pickRoute("draft", "coding")?.model, "claude-sonnet-5");
+assert.equal(
+  pickRoute("draft", "coding", "auto", { plan: "starter" })?.provider,
+  "gemini",
+);
+assert.equal(
+  pickRoute("draft", "coding", "fable-5.1", { plan: "starter" })?.provider,
+  "gemini",
+);
+assert.equal(
+  pickRoute("draft", "coding", "auto", { plan: "pro" })?.model,
+  "claude-sonnet-5",
+);
 for (const key of KEYS) {
   if (saved[key]) process.env[key] = saved[key];
   else delete process.env[key];
@@ -123,7 +142,83 @@ assert.equal(promptCacheForProvider("anthropic").enabled, true);
 assert.equal(promptCacheForProvider("openai").enabled, true);
 assert.equal(promptCacheForProvider("gemini").enabled, true);
 assert.match(readFileSync("src/lib/llm.ts", "utf8"), /anthropicCachedSystem/);
-console.log("ok: Anthropic prompt cache_control wired; OpenAI/Gemini prefixes stay cacheable");
+assert.match(readFileSync("src/lib/llm.ts", "utf8"), /assertLlmCallBudget/);
+assert.match(readFileSync("src/lib/job-runtime.ts", "utf8"), /assertLlmCallBudget/);
+assert.equal(tokenBudgetExceeded(50_000, 50_000), true);
+assert.equal(tokenBudgetExceeded(49_999, 50_000), false);
+const over = evaluateBudgetCaps({ tokenUsed: 50_000, tokenBudget: 50_000 }, "llm");
+assert.equal(over.ok, false);
+if (!over.ok) assert.equal(over.code, "BUDGET");
+assert.equal(evaluateBudgetCaps({ tokenUsed: 10, tokenBudget: 50_000 }, "llm").ok, true);
+const hourlyStop = evaluateBudgetCaps(
+  {
+    tokenUsed: 10,
+    tokenBudget: 50_000,
+    jobsThisHour: 8,
+    jobsPerHour: 8,
+    concurrentJobs: 0,
+    maxConcurrentJobs: 1,
+    paid: true,
+    planLabel: "Starter",
+  },
+  "job",
+);
+assert.equal(hourlyStop.ok, false);
+if (!hourlyStop.ok) assert.equal(hourlyStop.code, "RATE_LIMIT");
+assert.equal(
+  evaluateBudgetCaps(
+    {
+      tokenUsed: 10,
+      tokenBudget: 50_000,
+      jobsThisHour: 8,
+      jobsPerHour: 8,
+      concurrentJobs: 0,
+      maxConcurrentJobs: 1,
+      paid: true,
+      planLabel: "Starter",
+    },
+    "llm",
+  ).ok,
+  true,
+);
+const concurrentStop = evaluateBudgetCaps(
+  {
+    tokenUsed: 10,
+    tokenBudget: 50_000,
+    jobsThisHour: 0,
+    jobsPerHour: 8,
+    concurrentJobs: 1,
+    maxConcurrentJobs: 1,
+    paid: true,
+    planLabel: "Starter",
+  },
+  "job",
+);
+assert.equal(concurrentStop.ok, false);
+if (!concurrentStop.ok) assert.equal(concurrentStop.code, "RATE_LIMIT");
+const suspended = evaluateBudgetCaps({ tokenUsed: 0, tokenBudget: 50_000, suspended: true });
+assert.equal(suspended.ok, false);
+if (!suspended.ok) assert.equal(suspended.code, "SUSPENDED");
+assert.equal(PLANS.starter.tokenBudget, 50_000);
+assert.equal(PLANS.starter.price, 20);
+console.log("ok: budget caps hard-stop tokens; job slots do not apply to mid-LLM checks");
+
+assert.equal(decideDeskQa({ message: "what is our ICP?" }).qa, true);
+assert.equal(decideDeskQa({ message: "What is our ICP?" }).qa, true);
+assert.equal(decideDeskQa({ message: "Write a LinkedIn-week job: five posts in Brand Kit voice, then pause for my approval. Do not publish." }).qa, false);
+assert.equal(decideDeskQa({ message: "what is our ICP?", action: "generate_week" }).qa, false);
+assert.equal(decideDeskQa({ message: "browse the company website and write notes" }).qa, false);
+assert.equal(decideDeskQa({ message: "hi" }).qa, true);
+assert.equal(decideDeskQa({ message: "hamara ICP kya hai?" }).qa, true);
+assert.equal(decideDeskQa({ message: "Build a one-page branded website from the Brand Kit." }).qa, false);
+assert.match(readFileSync("src/server/api/workspaces/jobs.ts", "utf8"), /answerDeskQuestion/);
+assert.match(readFileSync("src/server/api/workspaces/chat.ts", "utf8"), /answerDeskQuestion/);
+console.log("ok: desk Q&A classifier keeps playbooks on the job path");
+assert.match(readFileSync(".env.example", "utf8"), /Founder tip: put Gemini first/);
+assert.match(readFileSync(".env.example", "utf8"), /Two Starter desks/);
+assert.match(readFileSync(".env.example", "utf8"), /Do not add OpenRouter/);
+assert.doesNotMatch(readFileSync(".env.example", "utf8"), /OPENROUTER_API_KEY/);
+console.log("ok: .env.example founder tip — Gemini first, no OpenRouter");
 
 assert.equal(planDisplayName("demo"), "Free");
 assert.equal(PLANS.demo.name, "Free");
