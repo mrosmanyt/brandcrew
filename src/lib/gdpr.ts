@@ -69,7 +69,8 @@ export const DATA_PROCESSING_ROWS: ProcessingRow[] = [
     location: "processor",
     leavesDevice: true,
     purpose: "Checkout and plan entitlements",
-    examples: "Whop (preferred) or Stripe. Workspace plan, seats, and token/credit caps. No unlimited plan.",
+    examples:
+      "Whop (preferred) or Stripe. Workspace plan, seats, and token/credit caps. No unlimited plan. A Whop pixel (t.whop.tw, business biz_VrtL8S4duREQg4) loads in the site head on every page for checkout attribution — not optional product analytics.",
   },
 ];
 

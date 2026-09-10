@@ -97,6 +97,9 @@ const csp = headers.find((row) => row.key === "Content-Security-Policy")?.value 
 assert.match(csp, /default-src 'self'/);
 assert.match(csp, /upgrade-insecure-requests/);
 assert.match(csp, /frame-ancestors 'none'/);
+assert.match(csp, /https:\/\/t\.whop\.tw/);
+assert.match(csp, /script-src[^;]*https:\/\/t\.whop\.tw/);
+assert.match(csp, /connect-src[^;]*https:\/\/t\.whop\.tw/);
 const hsts = headers.find((row) => row.key === "Strict-Transport-Security")?.value || "";
 assert.match(hsts, /max-age=/);
 assert.doesNotMatch(hsts, /preload/);
@@ -198,6 +201,7 @@ async function main() {
     "src/app/signup/signup-screen.tsx",
     "src/components/site/analytics.tsx",
     "src/components/site/cookie-banner.tsx",
+    "src/lib/whop-pixel.ts",
   ];
   const secretPattern =
     /OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|SESSION_SECRET|STRIPE_SECRET_KEY|WHOP_API_KEY|WHOP_WEBHOOK_SECRET/;
@@ -210,16 +214,30 @@ async function main() {
   assert.match(analytics, /NEXT_PUBLIC_GA_ID/);
   assert.match(analytics, /NEXT_PUBLIC_PLAUSIBLE_DOMAIN/);
   assert.match(analytics, /consentAccepted|COOKIE_CONSENT/);
-  console.log("ok: no server secrets in marketing/auth client files; analytics gated on env + consent");
+  const pixelLib = readFileSync("src/lib/whop-pixel.ts", "utf8");
+  assert.match(pixelLib, /biz_VrtL8S4duREQg4/);
+  assert.match(pixelLib, /https:\/\/t\.whop\.tw/);
+  assert.match(pixelLib, /whop\.setScope\("biz_VrtL8S4duREQg4"\)/);
+  assert.match(pixelLib, /whop\.track\("page"\)/);
+  assert.doesNotMatch(pixelLib, /WHOP_API_KEY|WHOP_WEBHOOK_SECRET/);
+  const storeDoc = readFileSync("docs/chrome-extension-store.md", "utf8");
+  assert.match(storeDoc, /app\.cinem\.tech\/downloads\/cinem-pro-chrome\.zip/);
+  assert.match(storeDoc, /brandcrew\.vercel\.app\/downloads\/cinem-pro-chrome\.zip/);
+  console.log("ok: Whop pixel snippet + CSP host; Chrome zip store URLs documented");
 
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   assert.match(layout, /metadataBase/);
   assert.match(layout, /CookieBanner/);
   assert.match(layout, /Analytics/);
+  assert.match(layout, /WHOP_PIXEL_SNIPPET/);
+  assert.match(layout, /next\/script/);
+  assert.match(layout, /id="whop-pixel"/);
+  assert.match(layout, /beforeInteractive/);
+  assert.match(layout, /<head>/);
   assert.match(layout, /openGraph/);
   assert.match(layout, /CINEM_OG_SRC|\/og\.png/);
   assert.match(layout, /CINEM_MARK_SRC|cinem-mark\.svg/);
-  console.log("ok: root layout ships metadata, cookie banner, analytics hook, og/icon paths");
+  console.log("ok: root layout ships metadata, cookie banner, analytics, Whop pixel, og/icon paths");
 
   const proxy = readFileSync("src/proxy.ts", "utf8");
   assert.match(proxy, /applySecurityHeaders/);

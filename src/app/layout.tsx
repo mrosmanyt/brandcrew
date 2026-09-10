@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,7 @@ import {
   CINEM_OG_SRC,
 } from "@/lib/cinem-mark";
 import { COMPANY_SITE, siteOrigin } from "@/lib/site";
+import { WHOP_PIXEL_SNIPPET } from "@/lib/whop-pixel";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -80,6 +82,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <Script id="whop-pixel" strategy="beforeInteractive">
+          {WHOP_PIXEL_SNIPPET}
+        </Script>
+      </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider
           attribute="class"

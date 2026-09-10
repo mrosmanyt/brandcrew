@@ -143,6 +143,11 @@ console.log("ok: SOC 2 readiness does not claim certified");
 assert.ok(DATA_PROCESSING_ROWS.some((row) => row.location === "device" && !row.leavesDevice));
 assert.ok(DATA_PROCESSING_ROWS.some((row) => row.location === "processor"));
 assert.ok(GDPR_SUBPROCESSORS.some((row) => /Composio/.test(row.name)));
+assert.ok(
+  DATA_PROCESSING_ROWS.some(
+    (row) => row.category === "Billing" && /t\.whop\.tw/.test(row.examples),
+  ),
+);
 console.log("ok: GDPR processing table includes on-device vs processor");
 
 const links = settingsDeskLinks("ws_1").map((row) => row.label);
