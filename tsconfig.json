@@ -40,6 +40,10 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "mobile",
+    "electron",
+    "extension",
+    "scripts"
   ]
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
+import { issueNativeSession, readCinemClient, wantsNativeTokens } from "@/lib/auth-native";
 import { honeypotFilled } from "@/lib/form-guard";
 import { jsonError } from "@/lib/http";
 
@@ -9,6 +10,7 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   company_url: z.string().max(200).optional(),
+  tokens: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -40,9 +42,20 @@ export async function POST(request: Request) {
       );
     }
     await setSessionCookie(user.id);
-    return NextResponse.json({
+    const payload: Record<string, unknown> = {
       user: { id: user.id, email: user.email, name: user.name },
-    });
+    };
+    if (wantsNativeTokens(request, body)) {
+      const native = await issueNativeSession({
+        userId: user.id,
+        surface: readCinemClient(request),
+      });
+      payload.tokenType = native.tokenType;
+      payload.accessToken = native.accessToken;
+      payload.refreshToken = native.refreshToken;
+      payload.expiresIn = native.expiresIn;
+    }
+    return NextResponse.json(payload);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Enter email and password." }, { status: 400 });

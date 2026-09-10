@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CINEM Pro — on-device agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drive this Chrome with CINEM Pro. Supervised CDP automation — every write waits for you.",
   "icons": {
     "16": "icons/cinem-logo.png",

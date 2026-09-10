@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/http";
 import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
+import { isNativeCorsPath, nativeCorsPreflight } from "@/lib/auth-native";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
 import * as adminRoot from "./admin/root";
 import * as authGoogle from "./auth/google";
@@ -9,6 +10,12 @@ import * as authLogin from "./auth/login";
 import * as authLogout from "./auth/logout";
 import * as authMe from "./auth/me";
 import * as authSignup from "./auth/signup";
+import * as authToken from "./auth/token";
+import * as authRefresh from "./auth/refresh";
+import * as authRevoke from "./auth/revoke";
+import * as authConnect from "./auth/connect";
+import * as authConnectApprove from "./auth/connect-approve";
+import * as authConnectClaim from "./auth/connect-claim";
 import * as billingCheckout from "./billing/checkout";
 import * as whopWebhook from "./webhooks/whop";
 import * as cronJobs from "./cron/jobs";
@@ -122,6 +129,12 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "auth", "signup"], handlers: asHandlers(authSignup) },
   { pattern: ["api", "auth", "me"], handlers: asHandlers(authMe) },
   { pattern: ["api", "auth", "logout"], handlers: asHandlers(authLogout) },
+  { pattern: ["api", "auth", "token"], handlers: asHandlers(authToken) },
+  { pattern: ["api", "auth", "refresh"], handlers: asHandlers(authRefresh) },
+  { pattern: ["api", "auth", "revoke"], handlers: asHandlers(authRevoke) },
+  { pattern: ["api", "auth", "connect", "approve"], handlers: asHandlers(authConnectApprove) },
+  { pattern: ["api", "auth", "connect", "claim"], handlers: asHandlers(authConnectClaim) },
+  { pattern: ["api", "auth", "connect"], handlers: asHandlers(authConnect) },
   {
     pattern: ["api", "auth", "google", "callback"],
     handlers: asHandlers(authGoogleCallback),
@@ -370,6 +383,13 @@ export async function dispatchApi(
     );
   }
   const method = request.method.toUpperCase();
+  if (method === "OPTIONS") {
+    if (isNativeCorsPath(segments)) return nativeCorsPreflight();
+    return new NextResponse(null, {
+      status: 204,
+      headers: { Allow: allowedMethods(matched.handlers).join(", ") },
+    });
+  }
   try {
     await enforceSensitiveRateLimit(request, segments, method);
   } catch (error) {

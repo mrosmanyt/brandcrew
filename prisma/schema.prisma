@@ -12,16 +12,17 @@ datasource db {
 }
 
 model User {
-  id           String            @id @default(cuid())
-  email        String            @unique
+  id            String             @id @default(cuid())
+  email         String             @unique
   /// Null for Google-only accounts. Email/password users always have a hash.
-  passwordHash String?
+  passwordHash  String?
   /// Google account `sub`. Distinct from Marketplace Gmail plugin tokens.
-  googleId     String?           @unique
-  name         String
-  createdAt    DateTime          @default(now())
-  memberships  WorkspaceMember[]
-  invitesSent  WorkspaceInvite[]
+  googleId      String?            @unique
+  name          String
+  createdAt     DateTime           @default(now())
+  memberships   WorkspaceMember[]
+  invitesSent   WorkspaceInvite[]
+  refreshTokens AuthRefreshToken[]
 }
 
 model Workspace {
@@ -369,6 +370,8 @@ model LocalDevice {
   tokenHash        String          @unique
   pairingCode      String?         @unique
   pairingExpiresAt DateTime?
+  /// User who attached this Chrome via Sign in with CINEM (account-linked).
+  linkedUserId     String?
   status           String          @default("pending")
   lastSeenAt       DateTime?
   capabilities     String          @default("[]")
@@ -379,6 +382,41 @@ model LocalDevice {
   commands         DeviceCommand[]
 
   @@index([workspaceId, status])
+  @@index([linkedUserId])
+}
+
+/// Refresh tokens for desktop / mobile / extension (hashed). Web still uses the session cookie.
+model AuthRefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  surface    String
+  deviceName String    @default("")
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
+/// One-time connect tickets: Sign in with CINEM (extension) and desktop/mobile deep links.
+model AuthConnectTicket {
+  id          String    @id @default(cuid())
+  nonce       String    @unique
+  surface     String
+  status      String    @default("pending")
+  userId      String?
+  workspaceId String?
+  deviceName  String    @default("")
+  /// AES-GCM blob (device token or native session) until claimed, then wiped.
+  payloadEnc  String?
+  expiresAt   DateTime
+  claimedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, expiresAt])
 }
 
 model DeviceCommand {

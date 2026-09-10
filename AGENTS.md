@@ -45,6 +45,6 @@ Prefer these when adding job/browser/LLM behavior:
 
 - **API Console** is not an in-desk page. Sidebar opens `https://console.cinem.tech` (`target=_blank`). Fallback: same-origin `/console`. DNS + Vercel: `docs/console-domain.md`. Old `/desk/:id/developers` redirects to `/console?workspace=:id`.
 - **Brand Kit** is nested under **Settings** only (not the main sidebar). Route `/desk/:id/brand-kit` still exists.
-- **On-device Chrome:** **Download extension** serves `public/downloads/cinem-pro-chrome.zip` (`npm run pack:extension`). Chrome Web Store upload: `docs/chrome-extension-store.md`. Pairing codes unchanged.
+- **On-device Chrome:** **Download extension** serves `public/downloads/cinem-pro-chrome.zip` (`npm run pack:extension`). Popup **Sign in with CINEM** attaches the workspace to that Chrome (pairing codes still work). Chrome Web Store: `docs/chrome-extension-store.md`. Downloads hub: `/download`. Auth: `docs/auth-bridge.md`. Android Play: `docs/play-store-launch.md` (`mobile/`, package `tech.cinem.pro`).
 
 

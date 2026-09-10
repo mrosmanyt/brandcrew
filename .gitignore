@@ -54,5 +54,12 @@ prisma/*.db-journal
 /prisma/dev.db
 /dev.db
 
+# mobile (Expo)
+/mobile/node_modules
+/mobile/.expo
+/mobile/android
+/mobile/ios
+
+
 # OS
 Thumbs.db

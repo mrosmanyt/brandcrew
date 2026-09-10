@@ -25,7 +25,7 @@ export function HomeHeroCtas() {
         variant="outline"
         className="h-11 px-5"
         nativeButton={false}
-        render={<Link href="/#download" />}
+        render={<Link href="/download" />}
       >
         Download desktop
       </Button>
@@ -51,7 +51,7 @@ export function HomeFooterCta() {
         variant="outline"
         className="h-11 px-5"
         nativeButton={false}
-        render={<Link href="/#download" />}
+        render={<Link href="/download" />}
       >
         Get desktop
       </Button>

@@ -19,10 +19,14 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   connectNative();
   void pollOnce();
+  void pollConnectOnce();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "cinem-poll") void pollOnce();
+  if (alarm.name === "cinem-poll") {
+    void pollOnce();
+    void pollConnectOnce();
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -32,12 +36,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse(await pair(message.origin, message.code));
         return;
       }
+      if (message?.type === "signIn") {
+        sendResponse(await startSignIn(message.origin));
+        return;
+      }
+      if (message?.type === "pasteLink") {
+        sendResponse(await claimFromLink(message.origin, message.link));
+        return;
+      }
+      if (message?.type === "cancelConnect") {
+        await chrome.storage.local.remove(["connectingNonce", "connectingOrigin"]);
+        sendResponse({ ok: true });
+        return;
+      }
       if (message?.type === "status") {
         sendResponse(await getStatus());
         return;
       }
       if (message?.type === "poll") {
         await pollOnce();
+        await pollConnectOnce();
         sendResponse(await getStatus());
         return;
       }
@@ -71,7 +89,15 @@ function connectNative() {
 }
 
 async function getState() {
-  return chrome.storage.local.get(["origin", "token", "workspaceId", "deviceId", "name"]);
+  return chrome.storage.local.get([
+    "origin",
+    "token",
+    "workspaceId",
+    "deviceId",
+    "name",
+    "connectingNonce",
+    "connectingOrigin",
+  ]);
 }
 
 async function getStatus() {
@@ -79,11 +105,125 @@ async function getStatus() {
   return {
     ok: true,
     paired: Boolean(state.token),
-    origin: state.origin || "",
+    connecting: Boolean(state.connectingNonce) && !state.token,
+    origin: state.origin || state.connectingOrigin || "",
     workspaceId: state.workspaceId || "",
     nativeHost: Boolean(nativePort),
     attachedTabId,
   };
+}
+
+function randomNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function nonceFromLink(raw) {
+  const trimmed = String(raw || "").trim();
+  if (/^[a-fA-F0-9]{16,64}$/.test(trimmed)) return trimmed.toLowerCase();
+  try {
+    const url = new URL(trimmed);
+    const nonce = url.searchParams.get("nonce") || "";
+    if (/^[a-fA-F0-9]{16,64}$/.test(nonce)) return nonce.toLowerCase();
+  } catch {
+    const match = /[?&]nonce=([a-fA-F0-9]{16,64})/.exec(trimmed);
+    if (match) return match[1].toLowerCase();
+  }
+  return "";
+}
+
+async function storeDevice(base, data) {
+  await chrome.storage.local.set({
+    origin: base,
+    token: data.token,
+    workspaceId: data.workspaceId,
+    deviceId: data.deviceId || data.device?.id,
+    name: data.name || data.device?.name,
+  });
+  await chrome.storage.local.remove(["connectingNonce", "connectingOrigin"]);
+  startFastPoll();
+}
+
+async function startSignIn(origin) {
+  const base = String(origin || "").replace(/\/$/, "") || "https://brandcrew.vercel.app";
+  const nonce = randomNonce();
+  const res = await fetch(`${base}/api/auth/connect`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      nonce,
+      surface: "extension",
+      origin: base,
+      name: "Chrome",
+      deviceName: "Chrome",
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not start Sign in with CINEM.");
+  await chrome.storage.local.set({ connectingNonce: data.nonce || nonce, connectingOrigin: base });
+  const url = data.approveUrl || `${base}/connect/extension?nonce=${data.nonce || nonce}`;
+  await chrome.tabs.create({ url });
+  startConnectPoll();
+  return { ok: true, connecting: true };
+}
+
+async function claimFromLink(origin, link) {
+  const nonce = nonceFromLink(link);
+  if (!nonce) throw new Error("Paste the full login link from the desk (it includes nonce=).");
+  let base = String(origin || "").replace(/\/$/, "");
+  try {
+    const url = new URL(link);
+    if (url.origin.startsWith("http")) base = url.origin;
+  } catch {
+    // keep origin field
+  }
+  if (!base) base = "https://brandcrew.vercel.app";
+  await chrome.storage.local.set({ connectingNonce: nonce, connectingOrigin: base });
+  const claimed = await claimNonce(base, nonce);
+  if (claimed) return { ok: true };
+  startConnectPoll();
+  try {
+    await chrome.tabs.create({ url: `${base}/connect/extension?nonce=${nonce}` });
+  } catch {
+    // popup may still poll
+  }
+  return { ok: true, connecting: true };
+}
+
+async function claimNonce(base, nonce) {
+  const res = await fetch(`${base}/api/auth/connect/claim`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ nonce }),
+  });
+  const data = await res.json();
+  if (data.status === "approved" && data.token) {
+    await storeDevice(base, data);
+    return true;
+  }
+  if (res.status === 410 || data.status === "expired" || data.status === "claimed") {
+    await chrome.storage.local.remove(["connectingNonce", "connectingOrigin"]);
+    throw new Error(data.error || "That sign-in link expired. Start again.");
+  }
+  return false;
+}
+
+let connectTimer = null;
+function startConnectPoll() {
+  if (connectTimer) clearInterval(connectTimer);
+  connectTimer = setInterval(() => void pollConnectOnce(), 2000);
+  void pollConnectOnce();
+}
+
+async function pollConnectOnce() {
+  const state = await getState();
+  if (!state.connectingNonce || state.token) return;
+  try {
+    await claimNonce(state.connectingOrigin || state.origin, state.connectingNonce);
+  } catch {
+    // still pending
+  }
 }
 
 async function pair(origin, code) {

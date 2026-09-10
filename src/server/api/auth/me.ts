@@ -13,28 +13,31 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { isAdminEmail } from "@/lib/admin";
 import { assertPasswordAllowed } from "@/lib/password";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
+import { withNativeCors } from "@/lib/auth-native";
 
 export async function GET() {
   const user = await getCurrentUser();
   const googleLogin = googleLoginPublicStatus();
   if (!user) {
-    return jsonOk({ user: null, workspaces: [], googleLogin });
+    return withNativeCors(jsonOk({ user: null, workspaces: [], googleLogin }));
   }
   const row = await prisma.user.findUnique({
     where: { id: user.id },
     select: { passwordHash: true, googleId: true },
   });
   const workspaces = await listUserWorkspaces(user.id);
-  return jsonOk({
-    user: {
-      ...user,
-      hasPassword: Boolean(row?.passwordHash),
-      googleLinked: Boolean(row?.googleId),
-      isAdmin: isAdminEmail(user.email),
-    },
-    workspaces: workspaces.map(serializeWorkspace),
-    googleLogin,
-  });
+  return withNativeCors(
+    jsonOk({
+      user: {
+        ...user,
+        hasPassword: Boolean(row?.passwordHash),
+        googleLinked: Boolean(row?.googleId),
+        isAdmin: isAdminEmail(user.email),
+      },
+      workspaces: workspaces.map(serializeWorkspace),
+      googleLogin,
+    }),
+  );
 }
 
 export async function PATCH(request: Request) {

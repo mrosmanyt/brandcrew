@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "CINEM Pro",
+    "slug": "cinem-pro",
+    "scheme": "cinem-pro",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#09090b"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "tech.cinem.pro",
+      "infoPlist": {
+        "CFBundleDisplayName": "CINEM Pro"
+      }
+    },
+    "android": {
+      "package": "tech.cinem.pro",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#09090b"
+      },
+      "permissions": ["INTERNET"]
+    },
+    "plugins": ["expo-secure-store", "expo-web-browser"],
+    "extra": {
+      "eas": {
+        "projectId": "replace-after-eas-init"
+      }
+    }
+  }
+}

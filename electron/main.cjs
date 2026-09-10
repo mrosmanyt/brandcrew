@@ -4,7 +4,7 @@
  * Packaged: fork Next standalone server.js with ELECTRON_RUN_AS_NODE,
  * Postgres + .env in the OS userData directory (same DATABASE_URL as web).
  */
-const { app, BrowserWindow, Menu, shell, dialog } = require("electron");
+const { app, BrowserWindow, Menu, shell, dialog, session } = require("electron");
 const { spawn, fork } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -14,6 +14,44 @@ const crypto = require("node:crypto");
 const PORT = Number(process.env.BRANDCREW_PORT || 43180);
 const HOST = "127.0.0.1";
 const ORIGIN = `http://${HOST}:${PORT}`;
+const PROTOCOL = "cinem-pro";
+const SESSION_COOKIE = "brandcrew_session";
+
+function cloudOrigin() {
+  const raw =
+    process.env.CINEM_CLOUD_URL ||
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://brandcrew.vercel.app";
+  return String(raw).replace(/\/$/, "");
+}
+
+function useCloudDesk() {
+  if (process.env.CINEM_DESK_MODE === "local") return false;
+  if (process.env.CINEM_DESK_MODE === "cloud") return true;
+  return packaged();
+}
+
+function deskOrigin() {
+  return useCloudDesk() ? cloudOrigin() : ORIGIN;
+}
+
+function isAllowedNavigation(url) {
+  try {
+    const parsed = new URL(url);
+    const desk = deskOrigin();
+    if (url.startsWith(desk) || url.startsWith(ORIGIN)) return true;
+    const host = parsed.hostname;
+    return (
+      host === "accounts.google.com" ||
+      host.endsWith(".google.com") ||
+      host.endsWith(".cinem.tech") ||
+      host === "brandcrew.vercel.app"
+    );
+  } catch {
+    return false;
+  }
+}
 
 if (process.env.ELECTRON_DISABLE_SANDBOX === "1") {
   app.commandLine.appendSwitch("no-sandbox");
@@ -227,33 +265,131 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(ORIGIN)) return { action: "allow" };
+    if (isAllowedNavigation(url)) return { action: "allow" };
     void shell.openExternal(url);
     return { action: "deny" };
+  });
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (isAllowedNavigation(url)) return;
+    event.preventDefault();
+    void shell.openExternal(url);
   });
 
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 
-  return mainWindow.loadURL(ORIGIN);
+  return mainWindow.loadURL(`${deskOrigin()}/desk`);
+}
+
+function refreshTokenPath() {
+  return path.join(app.getPath("userData"), "refresh-token");
+}
+
+function readStoredRefresh() {
+  try {
+    const file = refreshTokenPath();
+    if (!fs.existsSync(file)) return "";
+    return fs.readFileSync(file, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+function writeStoredRefresh(token) {
+  const file = refreshTokenPath();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, token, { mode: 0o600 });
+}
+
+async function setSessionCookieOnOrigin(origin, accessToken) {
+  const parsed = new URL(origin);
+  await session.defaultSession.cookies.set({
+    url: origin,
+    name: SESSION_COOKIE,
+    value: accessToken,
+    path: "/",
+    httpOnly: true,
+    secure: parsed.protocol === "https:",
+    sameSite: "lax",
+  });
+}
+
+async function restoreCloudSession() {
+  const origin = deskOrigin();
+  const refresh = readStoredRefresh();
+  if (!refresh) return;
+  try {
+    const res = await fetch(`${origin}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-cinem-client": "desktop" },
+      body: JSON.stringify({ refreshToken: refresh, surface: "desktop" }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.accessToken) return;
+    if (data.refreshToken) writeStoredRefresh(data.refreshToken);
+    await setSessionCookieOnOrigin(origin, data.accessToken);
+  } catch (error) {
+    console.error("CINEM desktop session restore failed", error);
+  }
+}
+
+async function finishConnect(origin, nonce) {
+  if (!nonce) return;
+  const base = String(origin || deskOrigin()).replace(/\/$/, "");
+  const res = await fetch(`${base}/api/auth/connect/claim`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-cinem-client": "desktop" },
+    body: JSON.stringify({ nonce }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.accessToken) {
+    console.error("CINEM desktop connect claim failed", data.error || res.status);
+    return;
+  }
+  if (data.refreshToken) writeStoredRefresh(data.refreshToken);
+  await setSessionCookieOnOrigin(base, data.accessToken);
+  const pathName = data.workspaceId ? `/desk/${data.workspaceId}` : "/desk";
+  if (mainWindow) void mainWindow.loadURL(`${base}${pathName}`);
+}
+
+function handleProtocolUrl(raw) {
+  try {
+    const url = new URL(raw);
+    const host = url.hostname || url.host;
+    const action = host || url.pathname.replace(/^\//, "").split("/")[0];
+    if (action === "connect") {
+      void finishConnect(url.searchParams.get("origin") || deskOrigin(), url.searchParams.get("nonce"));
+      return;
+    }
+    if (action === "open") {
+      const next = url.searchParams.get("path") || "/desk";
+      const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/desk";
+      if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}${safe}`);
+    }
+  } catch (error) {
+    console.error("CINEM desktop deep link failed", error);
+  }
 }
 
 async function boot() {
-  if (packaged()) {
+  if (packaged() && !useCloudDesk()) {
     applyUserEnv();
-  } else {
+  } else if (!packaged()) {
     process.env.PORT = String(PORT);
     process.env.HOSTNAME = HOST;
     if (!process.env.OAUTH_REDIRECT_BASE) process.env.OAUTH_REDIRECT_BASE = ORIGIN;
   }
 
-  const already = await ping();
-  if (!already) {
-    spawnedServer = true;
-    if (packaged()) startPackagedServer();
-    else startDevServer();
-    await waitForServer();
+  if (!useCloudDesk()) {
+    const already = await ping();
+    if (!already) {
+      spawnedServer = true;
+      if (packaged()) startPackagedServer();
+      else startDevServer();
+      await waitForServer();
+    }
   }
 
   try {
@@ -262,6 +398,7 @@ async function boot() {
     console.error("CINEM local agent did not start", error);
   }
 
+  await restoreCloudSession();
   await createWindow();
 }
 
@@ -269,7 +406,9 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  app.on("second-instance", (_event, argv) => {
+    const proto = argv.find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}:`));
+    if (proto) handleProtocolUrl(proto);
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -286,7 +425,13 @@ function installAppMenu() {
           label: "Settings",
           accelerator: "CmdOrCtrl+,",
           click: () => {
-            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/desk`);
+            if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/desk`);
+          },
+        },
+        {
+          label: "Sign in with CINEM",
+          click: () => {
+            if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/connect/desktop`);
           },
         },
         { type: "separator" },
@@ -301,19 +446,19 @@ function installAppMenu() {
         {
           label: "Privacy",
           click: () => {
-            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/privacy`);
+            if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/privacy`);
           },
         },
         {
           label: "DPA template",
           click: () => {
-            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/dpa`);
+            if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/dpa`);
           },
         },
         {
           label: "Security (not SOC 2 certified)",
           click: () => {
-            if (mainWindow) void mainWindow.loadURL(`${ORIGIN}/security`);
+            if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/security`);
           },
         },
       ],
@@ -327,7 +472,18 @@ function installAppMenu() {
     if (process.platform === "win32") {
       app.setAppUserModelId("com.brandcrew.desktop");
     }
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+      }
+    } else {
+      app.setAsDefaultProtocolClient(PROTOCOL);
+    }
     installAppMenu();
+    const protoArg = process.argv.find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}:`));
+    if (protoArg) {
+      app.once("browser-window-created", () => handleProtocolUrl(protoArg));
+    }
     return boot().catch((error) => {
       console.error(error);
       dialog.showErrorBox("CINEM Pro", error instanceof Error ? error.message : String(error));
@@ -344,6 +500,11 @@ function installAppMenu() {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
 });
 
 app.on("before-quit", () => {

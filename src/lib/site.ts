@@ -32,3 +32,12 @@ export const WIN_PORTABLE_FILENAME = "CINEM-Pro-Portable.exe";
  */
 export const DESKTOP_WIN_DOWNLOAD = `${PUBLIC_RELEASES_REPO}/releases/latest/download/${WIN_SETUP_FILENAME}`;
 export const DESKTOP_WIN_PORTABLE = `${PUBLIC_RELEASES_REPO}/releases/latest/download/${WIN_PORTABLE_FILENAME}`;
+
+/** Chrome MV3 zip served from this app. Store listing is filled in after unlisted publish. */
+export const CHROME_EXTENSION_ZIP = "/downloads/cinem-pro-chrome.zip";
+export const CHROME_EXTENSION_API = "/api/downloads/extension";
+
+/** Play package id. Store URL is empty until the listing is public. */
+export const ANDROID_PACKAGE_ID = "tech.cinem.pro";
+export const ANDROID_PLAY_URL = "";
+

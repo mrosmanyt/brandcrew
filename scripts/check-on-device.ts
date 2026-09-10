@@ -50,6 +50,15 @@ assert.match(
 );
 assert.match(
   readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
+  /Sign in with CINEM/,
+);
+assert.match(
+  readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
+  /Developer: Load unpacked/,
+);
+assert.match(readFileSync("extension/popup.html", "utf8"), /Sign in with CINEM/);
+assert.match(
+  readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
   /extension-download/,
 );
 assert.doesNotMatch(
@@ -84,6 +93,8 @@ assert.match(readFileSync("electron/main.cjs", "utf8"), /native-host/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /host\.mjs/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /installAppMenu/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /\/privacy/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /cinem-pro/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /CINEM_DESK_MODE/);
 console.log("ok: MV3 extension + native host + Electron local agent");
 
 assert.ok(JOB_TOOLS.includes("native_file_read"));

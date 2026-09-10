@@ -5,6 +5,8 @@ import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
 import { PLANS } from "@/lib/constants";
 import {
+  ANDROID_PACKAGE_ID,
+  CHROME_EXTENSION_ZIP,
   COMPANY_SITE,
   DESKTOP_WIN_DOWNLOAD,
   DESKTOP_WIN_PORTABLE,
@@ -248,10 +250,15 @@ export function DownloadSection() {
     <Section
       id="download"
       kicker="Download"
-      title="Get the desktop, or start in the browser"
-      lead="Windows is a direct file download — the NSIS installer, not a README. Mac .dmg is not hosted from Linux builds; use the web desk or build on macOS."
+      title="Get desktop, Android, or Chrome"
+      lead="Same CINEM Pro account on every surface. Windows is a direct installer download. Android and the Chrome extension use the same login API as this website."
     >
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="mb-6">
+        <Button size="lg" className="h-11 px-5" nativeButton={false} render={<Link href="/download" />}>
+          All downloads
+        </Button>
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
         <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Windows</p>
           <h3 className="mt-2 text-lg font-medium tracking-tight">CINEM Pro Setup</h3>
@@ -311,6 +318,34 @@ export function DownloadSection() {
               render={<Link href="/signup" />}
             >
               Open in browser
+            </Button>
+          </div>
+        </article>
+        <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
+          <p className="text-sm text-muted-foreground">Chrome + Android</p>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">Extension & Play app</h3>
+          <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
+            Chrome: download the MV3 zip, then Sign in with CINEM. Android package{" "}
+            <code className="font-mono text-xs">{ANDROID_PACKAGE_ID}</code> — Play listing
+            after the AAB upload.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button
+              size="lg"
+              className="h-11 px-5"
+              nativeButton={false}
+              render={<a href={CHROME_EXTENSION_ZIP} download="cinem-pro-chrome.zip" />}
+            >
+              Get Chrome extension
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-11 px-5"
+              nativeButton={false}
+              render={<Link href="/download" />}
+            >
+              Get Android
             </Button>
           </div>
         </article>
@@ -501,7 +536,7 @@ const FOOTER_LINKS = [
   { href: "/#integrations", label: "Connectors" },
   { href: "/#agents", label: "Agents" },
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/#download", label: "Download" },
+  { href: "/download", label: "Download" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/#developers", label: "Developer API" },
   { href: "/#faq", label: "FAQ" },
