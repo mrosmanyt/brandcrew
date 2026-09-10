@@ -67,6 +67,10 @@ export function MarketplaceDesk({
   const [connectPlugin, setConnectPlugin] = useState<PluginRow | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [viewAll, setViewAll] = useState<string | null>(null);
+  const [composioHint, setComposioHint] = useState("");
+  const [composioReady, setComposioReady] = useState(false);
+  const [probeBusy, setProbeBusy] = useState(false);
+  const [probeNote, setProbeNote] = useState("");
 
   async function refresh() {
     const res = await fetch(`/api/workspaces/${workspaceId}/marketplace`);
@@ -78,6 +82,10 @@ export function MarketplaceDesk({
     setInstalledPluginCount(data.installedPluginCount ?? 0);
     if (Array.isArray(data.templates)) setTemplates(data.templates);
     if (Array.isArray(data.agents)) setAgents(data.agents);
+    if (data.composio) {
+      setComposioReady(Boolean(data.composio.configured));
+      setComposioHint(String(data.composio.hint || ""));
+    }
     setLoading(false);
   }
 
@@ -153,6 +161,28 @@ export function MarketplaceDesk({
     router.refresh();
   }
 
+  async function installTemplate(template: JobTemplate) {
+    setBusyId(`install-${template.id}`);
+    const res = await fetch(`/api/workspaces/${workspaceId}/marketplace/playbooks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ templateId: template.id }),
+    });
+    const data = await res.json();
+    setBusyId(null);
+    if (!res.ok) {
+      toast.error(data.error || "Could not install that playbook.");
+      return;
+    }
+    toast.success(
+      data.alreadyInstalled
+        ? `${template.title} already installed as a skill.`
+        : `Installed ${template.title} — New Agent + skill. No invented results.`,
+    );
+    await refresh();
+    router.refresh();
+  }
+
   async function runTemplate(template: JobTemplate) {
     setBusyId(template.id);
     let agent =
@@ -217,6 +247,38 @@ export function MarketplaceDesk({
     await refresh();
   }
 
+  async function proveComposio() {
+    setProbeBusy(true);
+    setProbeNote("");
+    const res = await fetch(`/api/workspaces/${workspaceId}/composio/probe`, { method: "POST" });
+    const data = await res.json();
+    setProbeBusy(false);
+    if (!data.configured) {
+      toast.error(data.error || "Set COMPOSIO_API_KEY. Connect stays disconnected.");
+      setProbeNote(data.error || "COMPOSIO_API_KEY missing — not Connected.");
+      return;
+    }
+    if (!data.ok) {
+      toast.error(data.error || "First Composio tool call failed.");
+      setProbeNote(data.error || "Tool call failed.");
+      return;
+    }
+    toast.success(
+      data.gmailConnected
+        ? `Gmail read via ${data.tool}.`
+        : `First tool call: ${data.tool} (Hacker News read). Gmail still needs Connect.`,
+    );
+    setProbeNote(
+      [
+        `${data.tool} on ${data.toolkit}`,
+        data.logId ? `log ${data.logId}` : "",
+        data.connectHint || "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  }
+
   async function disconnect(plugin: PluginRow) {
     setBusyId(plugin.id);
     const res = await fetch(
@@ -234,7 +296,13 @@ export function MarketplaceDesk({
   }
 
   function startConnect(plugin: PluginRow, reconnect = false) {
-    if (plugin.auth === "oauth") {
+    if (plugin.auth === "composio" && plugin.secretLabel) {
+      setApiKey("");
+      setConnectPlugin(plugin);
+      void reconnect;
+      return;
+    }
+    if (plugin.auth === "oauth" || plugin.auth === "composio") {
       if (!plugin.connection?.oauthReady) {
         toast.error(plugin.connection?.setupHint || "OAuth is not configured. Connect stays disconnected.");
         return;
@@ -308,8 +376,9 @@ export function MarketplaceDesk({
 
       {tab === "playbooks" ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          Featured jobs: LinkedIn week, Competitor scan, Website one-click, Outreach
-          draft, LinkedIn-style outreach, Inbox invoices. They create a real job on a matching agent (or New Agent).
+          Agency playbooks (prospecting, outreach, weekly/daily brief, SEO, multi-tab research,
+          client-named email, follow-up, competitor watch, talent sourcing). Install creates a real
+          Agent + skill. Run queues a real job. No invented business results.
         </p>
       ) : tab === "companions" ? (
         <p className="mt-3 text-sm text-muted-foreground">
@@ -317,23 +386,48 @@ export function MarketplaceDesk({
           allowed tools. Connect Gmail/Slack separately — this never fakes Connected.
         </p>
       ) : tab === "plugins" ? (
-        <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="flex -space-x-1">
-            {plugins
-              .filter((plugin) => plugin.connected)
-              .slice(0, 8)
-              .map((plugin) => (
-                <span
-                  key={plugin.id}
-                  className="grid size-6 place-items-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background"
-                  style={{ background: plugin.color }}
-                >
-                  {plugin.letter}
-                </span>
-              ))}
-          </span>
-          {installedPluginCount} installed
-        </p>
+        <div className="mt-3 space-y-2">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="flex -space-x-1">
+              {plugins
+                .filter((plugin) => plugin.connected)
+                .slice(0, 8)
+                .map((plugin) => (
+                  <span
+                    key={plugin.id}
+                    className="grid size-6 place-items-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background"
+                    style={{ background: plugin.color }}
+                  >
+                    {plugin.letter}
+                  </span>
+                ))}
+            </span>
+            {installedPluginCount} installed
+          </p>
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <p>
+              {composioReady
+                ? composioHint ||
+                  "COMPOSIO_API_KEY is set. Gmail and agency connectors Connect through Composio — never marked Connected without an ACTIVE account."
+                : composioHint ||
+                  "Set COMPOSIO_API_KEY to connect Gmail, HubSpot, Pipedrive, Apollo, Ahrefs, and more. Without the key they stay disconnected — CINEM Pro does not fake Connected."}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={probeBusy || !composioReady}
+                onClick={() => void proveComposio()}
+              >
+                {probeBusy ? "Calling…" : "Run first tool call"}
+              </Button>
+              {!composioReady ? (
+                <span>Button stays disabled until the server has COMPOSIO_API_KEY.</span>
+              ) : null}
+            </div>
+            {probeNote ? <p className="mt-2">{probeNote}</p> : null}
+          </div>
+        </div>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
           Add installs a real agent named “New Agent”. Role and instructions come
@@ -393,14 +487,23 @@ export function MarketplaceDesk({
               <p className="text-xs text-muted-foreground">Featured · {template.roleHint}</p>
               <h3 className="mt-1 text-sm font-medium">{template.title}</h3>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">{template.blurb}</p>
-              <Button
-                className="mt-3"
-                size="sm"
-                disabled={busyId === template.id}
-                onClick={() => runTemplate(template)}
-              >
-                {busyId === template.id ? "Starting…" : "Run playbook"}
-              </Button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busyId === `install-${template.id}` || busyId === template.id}
+                  onClick={() => installTemplate(template)}
+                >
+                  {busyId === `install-${template.id}` ? "Installing…" : "Install"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={busyId === template.id || busyId === `install-${template.id}`}
+                  onClick={() => runTemplate(template)}
+                >
+                  {busyId === template.id ? "Starting…" : "Run playbook"}
+                </Button>
+              </div>
             </article>
           ))}
         </div>
@@ -697,6 +800,10 @@ function PluginCard({
         <p className="line-clamp-2 text-xs text-muted-foreground">{plugin.description}</p>
         {plugin.connected ? (
           <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-primary">Connected</p>
+        ) : plugin.auth === "composio" && !plugin.connection?.oauthReady ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {plugin.connection?.setupHint || "COMPOSIO_API_KEY missing — Connect stays disconnected."}
+          </p>
         ) : plugin.auth === "oauth" && !plugin.connection?.oauthReady ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
             {plugin.connection?.setupHint || "OAuth client id missing — Connect stays disconnected."}

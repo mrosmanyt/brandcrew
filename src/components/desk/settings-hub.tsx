@@ -37,12 +37,16 @@ type AccountUser = {
 export function SettingsHub({
   workspaceId,
   workspaceName,
+  workspaceKind = "agency",
+  clientName = "",
   user,
   initialJobs,
   agents,
 }: {
   workspaceId: string;
   workspaceName: string;
+  workspaceKind?: "agency" | "client";
+  clientName?: string;
   user: AccountUser;
   initialJobs: JobDTO[];
   agents: AgentDTO[];
@@ -53,6 +57,8 @@ export function SettingsHub({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [workspaceTitle, setWorkspaceTitle] = useState(workspaceName);
+  const [clientLabel, setClientLabel] = useState(clientName);
+  const [deskKind, setDeskKind] = useState<"agency" | "client">(workspaceKind);
   const [busy, setBusy] = useState<string | null>(null);
   const links = settingsDeskLinks(workspaceId);
 
@@ -129,7 +135,11 @@ export function SettingsHub({
     const res = await fetch(`/api/workspaces/${workspaceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: workspaceTitle }),
+      body: JSON.stringify({
+        name: workspaceTitle,
+        kind: deskKind,
+        clientName: deskKind === "client" ? clientLabel : "",
+      }),
     });
     const data = await res.json();
     setBusy(null);
@@ -237,18 +247,44 @@ export function SettingsHub({
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-medium">Workspace</h2>
-        <form onSubmit={saveWorkspace} className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-          <Field label="Workspace name">
-            <Input
-              value={workspaceTitle}
-              onChange={(e) => setWorkspaceTitle(e.target.value)}
-              required
-            />
+        <form onSubmit={saveWorkspace} className="mt-3 grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <Field label="Workspace name">
+              <Input
+                value={workspaceTitle}
+                onChange={(e) => setWorkspaceTitle(e.target.value)}
+                required
+              />
+            </Field>
+            <Button type="submit" variant="secondary" disabled={busy === "workspace"}>
+              Save workspace
+            </Button>
+          </div>
+          <Field label="Desk type">
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={deskKind}
+              onChange={(e) => setDeskKind(e.target.value === "client" ? "client" : "agency")}
+            >
+              <option value="agency">Agency house desk</option>
+              <option value="client">Client workspace</option>
+            </select>
           </Field>
-          <Button type="submit" variant="secondary" disabled={busy === "workspace"}>
-            Rename
-          </Button>
+          {deskKind === "client" ? (
+            <Field label="Client name">
+              <Input
+                value={clientLabel}
+                onChange={(e) => setClientLabel(e.target.value)}
+                placeholder="Acme Corp"
+              />
+            </Field>
+          ) : null}
         </form>
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+          Agencies keep one house desk plus a client workspace per account. Brand Kit, learning
+          memory, plugin connections, and Always-approved stay separate. Client-named emails always
+          wait for approval.
+        </p>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
           Use server API keys — set{" "}
           <code className="rounded bg-muted px-1 py-0.5">OPENAI_API_KEY</code>,{" "}

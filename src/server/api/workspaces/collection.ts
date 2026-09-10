@@ -6,6 +6,8 @@ import { createDemoWorkspace, listUserWorkspaces, serializeWorkspace } from "@/l
 
 const schema = z.object({
   name: z.string().trim().min(1).max(80),
+  kind: z.enum(["agency", "client"]).optional(),
+  clientName: z.string().trim().max(80).optional(),
 });
 
 export async function GET() {
@@ -22,7 +24,10 @@ export async function POST(request: Request) {
   try {
     const user = await requireUser();
     const body = schema.parse(await request.json().catch(() => ({})));
-    const workspace = await createDemoWorkspace(user.id, body.name);
+    const workspace = await createDemoWorkspace(user.id, body.name, {
+      kind: body.kind,
+      clientName: body.clientName,
+    });
     return jsonOk({ workspace: serializeWorkspace(workspace) }, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {

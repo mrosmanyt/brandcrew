@@ -17,6 +17,7 @@ export const DEVICE_TOOLS = [
   "browser_type",
   "browser_extract",
   "browser_screenshot",
+  "browser_tabs",
   "native_file_read",
   "native_file_write",
   "native_long_job",
@@ -40,6 +41,7 @@ export type DevicePageResult = {
 export type DeviceCommandResult = {
   ok: boolean;
   page?: DevicePageResult;
+  pages?: DevicePageResult[];
   excerpt?: string;
   extracted?: string;
   screenshot?: string;

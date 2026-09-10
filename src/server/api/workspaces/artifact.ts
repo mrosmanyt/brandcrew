@@ -5,9 +5,10 @@ import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { applyArtifactApproval } from "@/lib/approvals";
 import { completeJobIfApproved } from "@/lib/job-runtime";
+import { learnFromArtifactDecision } from "@/lib/learning-memory";
 
 const schema = z.object({
-  status: z.enum(["draft", "approved", "scheduled", "done"]),
+  status: z.enum(["draft", "approved", "scheduled", "done", "rejected"]),
 });
 
 export async function PATCH(
@@ -26,9 +27,21 @@ export async function PATCH(
     let followup = { taskCreated: false, calendarAdded: 0 };
     if (body.status === "approved") {
       followup = await applyArtifactApproval({ workspaceId, artifact });
+      await learnFromArtifactDecision({
+        workspaceId,
+        status: "approved",
+        artifact,
+      });
       if (artifact.jobId) {
         await completeJobIfApproved(artifact.jobId);
       }
+    }
+    if (body.status === "rejected") {
+      await learnFromArtifactDecision({
+        workspaceId,
+        status: "rejected",
+        artifact,
+      });
     }
 
     return jsonOk({ artifact, ...followup });

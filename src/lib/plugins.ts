@@ -10,6 +10,7 @@ import {
   resolveApiKeyConnect,
   type PluginDef,
 } from "@/lib/marketplace";
+import { composioConfigured, composioMissingHint, isComposioPluginId } from "@/lib/composio";
 
 export type PluginConnectionDTO = {
   pluginId: string;
@@ -84,11 +85,18 @@ export function oauthMissingEnv(plugin: PluginDef) {
 }
 
 export function oauthReady(plugin: PluginDef) {
+  if (plugin.auth === "composio") return composioConfigured();
   const client = oauthClient(plugin);
   return Boolean(client.id.trim() && client.secret.trim());
 }
 
 export function setupHint(plugin: PluginDef) {
+  if (plugin.auth === "composio") {
+    if (composioConfigured()) {
+      return "COMPOSIO_API_KEY is set. Connect opens Composio — Connected only after an ACTIVE connected account.";
+    }
+    return composioMissingHint();
+  }
   if (plugin.auth === "api_key") {
     if (envValuePresent(plugin.envKeys)) {
       return `${plugin.envKeys[0]} is set on the server. You can Connect with that, or paste a workspace key.`;
@@ -128,9 +136,14 @@ export function serializePluginConnection(
     metadata: row ? publicPluginMetadata(row.metadata) : {},
     tools: plugin.tools,
     auth: plugin.auth,
-    oauthReady: plugin.auth === "oauth" ? oauthReady(plugin) : false,
+    oauthReady: plugin.auth === "oauth" || plugin.auth === "composio" ? oauthReady(plugin) : false,
     envReady: envValuePresent(plugin.envKeys),
-    missingEnv: plugin.auth === "oauth" ? oauthMissingEnv(plugin) : [],
+    missingEnv:
+      plugin.auth === "oauth"
+        ? oauthMissingEnv(plugin)
+        : plugin.auth === "composio" && !composioConfigured()
+          ? ["COMPOSIO_API_KEY"]
+          : [],
     setupHint: setupHint(plugin),
   };
 }
@@ -239,6 +252,7 @@ export async function connectedToolNames(workspaceId: string) {
   for (const row of rows) {
     const plugin = getMarketplacePlugin(row.pluginId);
     for (const tool of plugin?.tools ?? []) tools.add(tool);
+    if (isComposioPluginId(row.pluginId)) tools.add("composio_execute");
   }
   return [...tools];
 }
@@ -480,6 +494,59 @@ export async function exchangeOAuthCode(plugin: PluginDef, code: string) {
     };
   }
   throw new Error("Unknown OAuth provider.");
+}
+
+export async function persistComposioConnection(input: {
+  workspaceId: string;
+  plugin: PluginDef;
+  accountId: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const accountId = input.accountId.trim();
+  if (!accountId) {
+    throw new ClientError("Composio did not return a connected account id. Not marked Connected.");
+  }
+  const metadata = {
+    source: "composio",
+    provider: "composio",
+    toolkit: input.plugin.composioSlug || input.plugin.id,
+    connectedAt: new Date().toISOString(),
+    ...(input.metadata || {}),
+  };
+  const row = await prisma.pluginConnection.upsert({
+    where: {
+      workspaceId_pluginId: {
+        workspaceId: input.workspaceId,
+        pluginId: input.plugin.id,
+      },
+    },
+    create: {
+      workspaceId: input.workspaceId,
+      pluginId: input.plugin.id,
+      status: "connected",
+      metadata: JSON.stringify(metadata),
+      secretEnc: encryptSecret(JSON.stringify({ connectedAccountId: accountId })),
+    },
+    update: {
+      status: "connected",
+      metadata: JSON.stringify(metadata),
+      secretEnc: encryptSecret(JSON.stringify({ connectedAccountId: accountId })),
+    },
+  });
+  return serializePluginConnection(input.plugin, row);
+}
+
+export async function getComposioAccountId(workspaceId: string, pluginId: string) {
+  const row = await prisma.pluginConnection.findUnique({
+    where: { workspaceId_pluginId: { workspaceId, pluginId } },
+  });
+  if (!row || row.status !== "connected" || !row.secretEnc) return "";
+  try {
+    const parsed = JSON.parse(decryptSecret(row.secretEnc)) as { connectedAccountId?: string };
+    return String(parsed.connectedAccountId || "").trim();
+  } catch {
+    return "";
+  }
 }
 
 export async function persistOAuthConnection(input: {

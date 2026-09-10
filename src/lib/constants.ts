@@ -96,6 +96,13 @@ export const GENERATE_ACTIONS = [
   "prospecting_scan",
   "outreach_draft_pack",
   "weekly_client_brief",
+  "daily_client_brief",
+  "seo_brief",
+  "client_named_email",
+  "multi_tab_research",
+  "follow_up_sequence",
+  "competitor_watch",
+  "talent_sourcing",
   "regenerate",
 ] as const;
 
@@ -136,6 +143,20 @@ export const JOB_ACTION_MESSAGES: Record<GenerateAction, string> = {
     "Outreach draft pack: from the latest research or this public page, write 5 outreach drafts. Pause for approval. Do not send.",
   weekly_client_brief:
     "Weekly client brief: browse the public URL (or Brand Kit site) and write a sourced weekly brief. Cite sources. Do not invent results. Pause for approval.",
+  daily_client_brief:
+    "Daily client brief: open the public URLs in this message (or the Brand Kit site) in parallel tabs and write a sourced daily brief. Cite sources. Do not invent results. Do not email the client.",
+  seo_brief:
+    "SEO brief: open the public URLs in this message (or the Brand Kit site) in parallel tabs and write a sourced SEO brief (title ideas, gaps, questions). Cite sources. Do not invent rankings.",
+  client_named_email:
+    "Draft a client-named email from the Brand Kit and latest research. Pause for approval before creating a Gmail draft. Do not send.",
+  multi_tab_research:
+    "Multi-tab research: open the public URLs in this message (paste 5–10) in parallel tabs, snapshot each, write sourced notes. Do not invent sources. Do not send.",
+  follow_up_sequence:
+    "Write a 5-touch follow-up sequence from the latest research or Brand Kit. Pause for approval. Do not send.",
+  competitor_watch:
+    "Competitor watch: open the public competitor URLs in this message in parallel tabs and write a sourced watch note. Do not invent metrics.",
+  talent_sourcing:
+    "Talent sourcing: browse the public careers/about URL, extract visible roles, fill a markdown sheet. Do not email anyone.",
   regenerate: "Regenerate the last artifact with the same brief.",
 };
 
@@ -165,12 +186,17 @@ export function jobChipsForHint(hint: AgentRole): JobChip[] {
         { action: "competitor_scan", label: "Competitor scan" },
         { action: "prospecting_scan", label: "Prospecting scan" },
         { action: "weekly_client_brief", label: "Weekly client brief" },
+        { action: "daily_client_brief", label: "Daily client brief" },
+        { action: "seo_brief", label: "SEO brief" },
+        { action: "multi_tab_research", label: "Multi-tab research" },
       ];
     case "sales":
       return [
         { action: "prospecting_scan", label: "Prospecting scan" },
         { action: "outreach_draft_pack", label: "Outreach draft pack" },
         { action: "weekly_client_brief", label: "Weekly client brief" },
+        { action: "client_named_email", label: "Client-named email" },
+        { action: "follow_up_sequence", label: "Follow-up sequence" },
         { action: "sales_pack", label: "Sales pack" },
         { action: "outreach_from_research", label: "Outreach from research" },
         { action: "linkedin_outreach_draft", label: "Outreach from page" },

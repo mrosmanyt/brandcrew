@@ -10,6 +10,8 @@
 
 import { parseAskKind } from "@/lib/job-clarify";
 import type { JobStep, JobTool } from "@/lib/job-types";
+import { composioToolLooksLikeWrite } from "@/lib/composio";
+import { isClientNamedEmail } from "@/lib/client-workspaces";
 
 export type ApprovalClass = "always" | "safe" | "none";
 
@@ -18,6 +20,7 @@ export const ALWAYS_GATED_TOOLS: readonly string[] = [
   "slack_post_message",
   "gmail_send",
   "native_file_write",
+  "composio_write",
 ] as const;
 
 /**
@@ -42,34 +45,64 @@ export function parseAutoApproveSafe(value: unknown): boolean {
   return value === true;
 }
 
-export function approvalClass(tool: string): ApprovalClass {
+export type ApprovalExtras = {
+  clientNamedEmail?: boolean;
+  composioTool?: string;
+};
+
+function extrasFromStep(step: { tool?: string; args?: Record<string, unknown> }): ApprovalExtras {
+  const args = step.args || {};
+  return {
+    clientNamedEmail:
+      Boolean(args.clientNamed) ||
+      isClientNamedEmail({
+        flagged: Boolean(args.clientNamed),
+        workspaceKind: String(args.workspaceKind || ""),
+        clientName: String(args.clientName || ""),
+        to: String(args.to || ""),
+        subject: String(args.subject || ""),
+        body: String(args.body || args.text || ""),
+      }),
+    composioTool: String(args.tool || args.slug || ""),
+  };
+}
+
+export function approvalClass(tool: string, extras?: ApprovalExtras): ApprovalClass {
+  if (tool === "gmail_create_draft" && extras?.clientNamedEmail) return "always";
+  if (tool === "composio_execute" && extras?.composioTool && composioToolLooksLikeWrite(extras.composioTool)) {
+    return "always";
+  }
   if (ALWAYS_SET.has(tool)) return "always";
   if (SAFE_SET.has(tool)) return "safe";
   return "none";
 }
 
 export function isWriteExternalTool(tool: string): boolean {
-  return WRITE_SET.has(tool);
+  return WRITE_SET.has(tool) || tool === "composio_execute";
 }
 
 export function isAlwaysGatedTool(tool: string): boolean {
   return ALWAYS_SET.has(tool);
 }
 
-export function planHasAlwaysGatedTool(steps: { tool: string }[]): boolean {
-  return steps.some((step) => approvalClass(step.tool) === "always");
+export function planHasAlwaysGatedTool(steps: { tool: string; args?: Record<string, unknown> }[]): boolean {
+  return steps.some((step) => approvalClass(step.tool, extrasFromStep(step)) === "always");
 }
 
-export function planHasSafeWriteTool(steps: { tool: string }[]): boolean {
-  return steps.some((step) => approvalClass(step.tool) === "safe");
+export function planHasSafeWriteTool(steps: { tool: string; args?: Record<string, unknown> }[]): boolean {
+  return steps.some((step) => approvalClass(step.tool, extrasFromStep(step)) === "safe");
 }
 
 /**
  * Whether this tool must pause before running.
  * Always-gated tools ignore autoApproveSafe.
  */
-export function toolNeedsApproval(tool: string, autoApproveSafe: boolean): boolean {
-  const cls = approvalClass(tool);
+export function toolNeedsApproval(
+  tool: string,
+  autoApproveSafe: boolean,
+  extras?: ApprovalExtras,
+): boolean {
+  const cls = approvalClass(tool, extras);
   if (cls === "always") return true;
   if (cls === "safe") return !autoApproveSafe;
   return false;
@@ -106,10 +139,12 @@ export function writeGatePrompt(tool: JobTool | string, label: string): string {
       return `Approve this click on your Chrome tab (${label})? CINEM Pro is supervised — it will not click until you say yes. Turn on Always approved to auto-run safe clicks.`;
     case "browser_type":
       return `Approve typing on your Chrome tab (${label})? CINEM Pro will not type until you say yes. Turn on Always approved to auto-run safe typing.`;
-    case "gmail_create_draft":
-      return `Gmail drafts run without a prompt. This will not send.`;
     case "gmail_send":
       return `Approve sending this email (${label})? CINEM Pro will not send until you say yes. Always approved does not skip sends.`;
+    case "gmail_create_draft":
+      return `Approve this client-named email draft (${label})? CINEM Pro will not create the Gmail draft until you say yes. It still will not send. Generic Gmail drafts (not client-named) do not pause.`;
+    case "composio_execute":
+      return `Approve this Composio write (${label})? CINEM Pro will not call a write tool until you say yes. Always approved does not skip writes.`;
     case "slack_post_message":
       return `Approve posting to Slack (${label})? Nothing posts until you say yes. Always approved does not skip Slack posts.`;
     case "native_file_write":

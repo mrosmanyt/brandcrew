@@ -126,6 +126,89 @@ export const FEATURED_JOB_TEMPLATES: JobTemplate[] = [
     roleHint: "Research",
     featured: true,
   },
+  {
+    id: "tpl-daily-client-brief",
+    title: "Daily client brief",
+    blurb:
+      "Parallel tabs on public URLs, then a sourced daily brief. Cite sources. Does not email the client.",
+    playbookKey: "daily_client_brief",
+    action: "daily_client_brief",
+    message:
+      "Daily client brief: open the public URLs in this message (or the Brand Kit site) in parallel tabs and write a sourced daily brief. Cite sources. Do not invent results. Do not email the client.",
+    roleHint: "Research",
+    featured: true,
+  },
+  {
+    id: "tpl-seo-brief",
+    title: "SEO brief",
+    blurb:
+      "Parallel tabs on the client site, then a sourced SEO brief. Does not invent rankings.",
+    playbookKey: "seo_brief",
+    action: "seo_brief",
+    message:
+      "SEO brief: open the public URLs in this message (or the Brand Kit site) in parallel tabs and write a sourced SEO brief. Cite sources. Do not invent rankings.",
+    roleHint: "Research",
+    featured: true,
+  },
+  {
+    id: "tpl-multi-tab-research",
+    title: "Multi-tab research",
+    blurb:
+      "Paste 5–10 public URLs. Opens them in parallel on-device tabs (DOM-first, allowlist). Does not invent sources.",
+    playbookKey: "multi_tab_research",
+    action: "multi_tab_research",
+    message:
+      "Multi-tab research: open the public URLs in this message (paste 5–10) in parallel tabs, snapshot each, write sourced notes. Do not invent sources. Do not send.",
+    roleHint: "Research",
+    featured: true,
+  },
+  {
+    id: "tpl-client-named-email",
+    title: "Client-named email",
+    blurb:
+      "Draft a client-named email, then pause. Gmail draft only after approval. Never sends.",
+    playbookKey: "client_named_email",
+    action: "client_named_email",
+    message:
+      "Draft a client-named email from the Brand Kit and latest research. Pause for approval before creating a Gmail draft. Do not send.",
+    roleHint: "Sales",
+    featured: true,
+  },
+  {
+    id: "tpl-follow-up-sequence",
+    title: "Follow-up sequence",
+    blurb: "Five follow-up drafts from research. You approve. CINEM Pro does not send.",
+    playbookKey: "follow_up_sequence",
+    action: "follow_up_sequence",
+    message:
+      "Write a 5-touch follow-up sequence from the latest research or Brand Kit. Pause for approval. Do not send.",
+    roleHint: "Sales",
+    featured: true,
+  },
+  {
+    id: "tpl-competitor-watch",
+    title: "Competitor watch",
+    blurb:
+      "Parallel tabs on competitor URLs, sourced watch note. Does not invent metrics.",
+    playbookKey: "competitor_watch",
+    action: "competitor_watch",
+    message:
+      "Competitor watch: open the public competitor URLs in this message in parallel tabs and write a sourced watch note. Do not invent metrics.",
+    roleHint: "Research",
+    featured: true,
+  },
+  {
+    id: "tpl-talent-sourcing",
+    title: "Talent sourcing",
+    blurb:
+      "Optional for talent agencies: extract public roles into a markdown sheet. Does not email anyone.",
+    playbookKey: "talent_sourcing",
+    action: "talent_sourcing",
+    message:
+      "Talent sourcing: browse the public careers or about URL, extract visible roles, fill a markdown sheet. Do not email anyone.",
+    roleHint: "Sales",
+    featured: true,
+  },
 ];
 
 export function getJobTemplate(id: string) {

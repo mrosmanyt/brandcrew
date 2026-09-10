@@ -12,7 +12,7 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 
 1. Sign up with **Continue with Google** or email/password. Landing **Account** goes to `/login` when signed out and to desk settings when signed in. Onboarding creates a free workspace with the Northline Studio Brand Kit (sample company facts, not fake job output). The first-run flow is a one-step-at-a-time wizard (agent → website → integrations → Brand Kit → model), with Skip to Mission Control.
 2. Open **Mission Control** (`/desk/[workspaceId]`). A 3-step first-run card (New Agent → first job → Approve) can be dismissed; completion is stored per workspace member.
-3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, **Companions**, and **Playbooks** (LinkedIn week, Competitor scan, Website one-click, Outreach draft, LinkedIn-style outreach, Inbox invoices, **Prospecting scan**, **Outreach draft pack**, **Weekly client brief**).
+3. Open **Marketplace** (`/desk/[workspaceId]/marketplace`): **Plugins**, **Bots**, **Companions**, and **Playbooks** (agency set: prospecting, outreach pack, weekly/daily brief, SEO brief, multi-tab research, client-named email, follow-up, competitor watch, talent sourcing — plus LinkedIn week / competitor scan / website). **Composio** connectors (Gmail, HubSpot, Apollo, Ahrefs, …) need `COMPOSIO_API_KEY`. Missing key stays disconnected. **Run first tool call** proves the SDK (Gmail profile if Connected, else a Hacker News read).
 4. **Add** a bot → real `Agent` (name still “New Agent”, role/instructions from the template). **Added** if that template id is already installed. **Add companion** (Prospect Peter, Recruiter Ryan, Invoice Ivy, Content Casey, Research Riley) → real `Agent` with that name, instructions, and allowed tools. Custom companion: name + instructions + tool groups.
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
 6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_type` / `browser_extract` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Clarify pauses show **Yes/No** on the desk and persist `Job.askKind` + `Job.userAnswer` in Postgres. Browse events show the **tool name + URL**.
@@ -62,7 +62,7 @@ Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>`
 
 Credits in the desk header wrap Free / Starter / Pro / Ultra **token budgets 1:1**. Billing is unchanged.
 
-Phase 2 (scheduled Slack/email deliver, event triggers, session replay blobs) is **scaffolding only** — see `GET /api/workspaces/:id/phase2`.
+Phase 2 cost controls (routines, action cache, triggers, replay, Always-approved) are shipped. Phase 3 adds Composio sessions, learning memory, multi-tab research, and client workspaces — see `AGENTS.md`.
 
 ### Production logo URLs
 
@@ -592,6 +592,8 @@ npm run test:launch        # logo, privacy/terms, headers, rate limit, honeypot,
 npm run test:on-device     # MV3 extension, native host, allowlist, write-gate, agency playbooks
 npm run test:write-gate    # approval class, Always approved preference, Gmail OAuth testing errors
 npm run test:cost          # action cache, DOM-first, cheap routing, credits/Free, triggers, replay
+npm run test:phase3        # Composio disconnect honesty, memory, multi-tab, agency playbooks, client desks
+# npm run composio:first-call  # live SDK proof when COMPOSIO_API_KEY is set (never commit the key)
 ```
 
 ## Job runtime
@@ -609,6 +611,8 @@ v1 tools:
 - `gmail_list_recent` / `gmail_create_draft` (Connected Gmail; draft only, never send). Drafts do not pause. Send is always gated if added later.
 - `slack_list_channels` / `slack_draft_message` / `slack_post_message` (Connected Slack; post only after `ask_user`; Always approved does not skip posts)
 - `native_file_read` / `native_file_write` (native messaging host; writes always pause for approval)
+- `browser_tabs` (5–10 public URLs in parallel; DOM-first; allowlist; research playbooks)
+- `composio_execute` (Connected Composio toolkit; writes pause; missing `COMPOSIO_API_KEY` stays disconnected)
 - `read_artifact` (outreach pack reads the latest research/competitor artifact)
 - `write_artifact` (markdown artifact on the workspace; research kinds append Sources + Uncertainty)
 - `ask_user` — `kind: "approve"` waits for high-risk writes; `kind: "clarify"` waits for Yes/No (or a short answer) stored on `Job.userAnswer`, then resumes the same job. In-desk drafts and Gmail list do not add a trailing approve.

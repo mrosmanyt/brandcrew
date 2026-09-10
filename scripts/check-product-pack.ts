@@ -30,18 +30,25 @@ assert.equal(limitsForPlan("starter").seats, 2);
 assert.equal(limitsForPlan("ultra").paid, true);
 console.log("ok: Starter $20 / Pro $79 / Ultra $200 caps");
 
-assert.equal(FEATURED_JOB_TEMPLATES.length, 10);
+assert.equal(FEATURED_JOB_TEMPLATES.length, 17);
 assert.deepEqual(
   FEATURED_JOB_TEMPLATES.map((row) => row.playbookKey).sort(),
   [
+    "client_named_email",
     "competitor_scan",
+    "competitor_watch",
+    "daily_client_brief",
     "deck_builder",
+    "follow_up_sequence",
     "inbox_invoices",
     "linkedin_outreach_draft",
     "linkedin_week",
+    "multi_tab_research",
     "outreach_draft_pack",
     "outreach_from_research",
     "prospecting_scan",
+    "seo_brief",
+    "talent_sourcing",
     "website_builder",
     "weekly_client_brief",
   ].sort(),

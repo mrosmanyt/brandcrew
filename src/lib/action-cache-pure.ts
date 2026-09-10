@@ -40,6 +40,8 @@ export const DETERMINISTIC_TOOLS: readonly string[] = [
   "slack_draft_message",
   "slack_post_message",
   "gmail_create_draft",
+  "composio_execute",
+  "browser_tabs",
   "native_file_read",
   "native_file_write",
   "ask_user",

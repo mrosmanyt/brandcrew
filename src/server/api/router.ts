@@ -14,6 +14,7 @@ import * as whopWebhook from "./webhooks/whop";
 import * as cronJobs from "./cron/jobs";
 import * as inviteToken from "./invites/token";
 import * as oauthCallback from "./oauth/callback";
+import * as composioCallback from "./composio/callback";
 import * as v1Agent from "./v1/agent";
 import * as v1Agents from "./v1/agents";
 import * as v1Artifact from "./v1/artifact";
@@ -44,9 +45,13 @@ import * as workspaceSchedules from "./workspaces/schedules";
 import * as workspaceUsage from "./workspaces/usage";
 import * as workspaceMarketplace from "./workspaces/marketplace";
 import * as workspaceMarketplaceBots from "./workspaces/marketplace-bots";
+import * as workspaceMarketplacePlaybooks from "./workspaces/marketplace-playbooks";
+import * as workspaceComposioProbe from "./workspaces/composio-probe";
 import * as workspacePluginConnect from "./workspaces/plugin-connect";
 import * as workspacePluginOauthStart from "./workspaces/plugin-oauth-start";
 import * as workspacePlugins from "./workspaces/plugins";
+import * as workspaceMemory from "./workspaces/memory";
+import * as workspaceMemoryItem from "./workspaces/memory-item";
 import * as workspaceSkillRun from "./workspaces/skill-run";
 import * as workspaceSkills from "./workspaces/skills";
 import * as workspaceTask from "./workspaces/task";
@@ -118,6 +123,7 @@ export const API_ROUTES: RouteSpec[] = [
   },
   { pattern: ["api", "auth", "google"], handlers: asHandlers(authGoogle) },
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
+  { pattern: ["api", "composio", "callback"], handlers: asHandlers(composioCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
@@ -277,6 +283,22 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "brand-kit"],
     handlers: asHandlers(workspaceBrandKit),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "memory", ":memoryId"],
+    handlers: asHandlers(workspaceMemoryItem),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "memory"],
+    handlers: asHandlers(workspaceMemory),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "marketplace", "playbooks"],
+    handlers: asHandlers(workspaceMarketplacePlaybooks),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "composio", "probe"],
+    handlers: asHandlers(workspaceComposioProbe),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "marketplace", "bots"],

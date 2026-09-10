@@ -14,6 +14,7 @@ import { generateAgentArtifact } from "@/lib/agents";
 import { generateBuilderArtifact } from "@/lib/builders";
 import {
   browseNavigate,
+  browseMany,
   browserInteractGuard,
   crawlLinks,
   excerptFromText,
@@ -76,7 +77,22 @@ import type {
   JobStep,
 } from "@/lib/job-types";
 import { llm, runWithLlmRouting } from "@/lib/llm";
-import { connectedToolNames, getConnectedPlugin } from "@/lib/plugins";
+import { connectedToolNames, getConnectedPlugin, getComposioAccountId } from "@/lib/plugins";
+import {
+  composioToolLooksLikeWrite,
+  executeComposioTool,
+  formatComposioResult,
+  getComposioToolkit,
+} from "@/lib/composio";
+import { memoryBriefForWorkspace } from "@/lib/learning-memory";
+import {
+  MAX_RESEARCH_TABS,
+  MULTI_TAB_PLAYBOOKS,
+  parseUrlList,
+  researchUrlsFromMessage,
+  tabCapForPlaybook,
+} from "@/lib/multi-tab";
+import { isClientNamedEmail, parseWorkspaceKind } from "@/lib/client-workspaces";
 import {
   formatSlackChannels,
   slackListChannels,
@@ -255,19 +271,32 @@ export async function createJobFromChat(input: {
 
   const context: JobContext = {
     userUrl: extractUrls(input.message)[0] || kit.website || "",
-    competitorUrls: defaultCompetitorUrls(input.message, kit.website),
+    competitorUrls: MULTI_TAB_PLAYBOOKS.has(playbook.key)
+      ? researchUrlsFromMessage(input.message, kit.website)
+      : defaultCompetitorUrls(input.message, kit.website),
     pages: [],
     pageCount: 0,
     allowedDomains: allowlistFromUrls([
       extractUrls(input.message)[0],
       kit.website,
-      ...defaultCompetitorUrls(input.message, kit.website),
+      ...(MULTI_TAB_PLAYBOOKS.has(playbook.key)
+        ? researchUrlsFromMessage(input.message, kit.website)
+        : defaultCompetitorUrls(input.message, kit.website)),
     ]),
     cost: {
       ...emptyCostStats(),
       cacheHits: cached.cacheHits,
     },
     perception: "dom",
+    workspaceKind: parseWorkspaceKind(
+      "kind" in workspace ? String((workspace as { kind?: string }).kind) : "agency",
+    ),
+    clientName:
+      "clientName" in workspace
+        ? String((workspace as { clientName?: string }).clientName || "")
+        : "",
+    memoryBrief: await memoryBriefForWorkspace(input.workspaceId),
+    maxPages: tabCapForPlaybook(playbook.key),
   };
 
   const job = await prisma.job.create({
@@ -695,8 +724,17 @@ async function executeTool(input: {
   const planSteps = parsePlan(jobRow?.plan || "[]");
 
   const autoApproveSafe = parseAutoApproveSafe(input.autoApproveSafe);
+  const clientNamedEmail = isClientNamedEmail({
+    workspaceKind: context.workspaceKind,
+    clientName: context.clientName,
+    flagged: Boolean(step.args.clientNamed),
+    to: String(step.args.to || ""),
+    subject: String(step.args.subject || ""),
+    body: String(step.args.body || step.args.text || ""),
+  });
+  const composioTool = String(step.args.tool || step.args.slug || "");
   if (
-    toolNeedsApproval(step.tool, autoApproveSafe) &&
+    toolNeedsApproval(step.tool, autoApproveSafe, { clientNamedEmail, composioTool }) &&
     !context.interactApproved &&
     !priorAskUserCompleted(planSteps, step.id)
   ) {
@@ -721,12 +759,23 @@ async function executeTool(input: {
   }
 
   if (step.tool === "read_brand_kit") {
-    context.brandBrief = brandKitBrief(kit);
+    context.brandBrief = [
+      brandKitBrief(kit),
+      context.clientName ? `Client workspace: ${context.clientName}` : "",
+      context.memoryBrief || "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     context.website = kit.website || context.userUrl;
     return {
-      summary: kit.website
-        ? `Read Brand Kit (voice, audience, offer, ${kit.website}).`
-        : "Read Brand Kit (voice, audience, offer).",
+      summary: [
+        kit.website
+          ? `Read Brand Kit (voice, audience, offer, ${kit.website})`
+          : "Read Brand Kit (voice, audience, offer)",
+        context.memoryBrief ? "plus client memory" : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
       context,
     };
   }
@@ -795,9 +844,10 @@ async function executeTool(input: {
       });
     }
     assertHostAllowed(url, allowedDomains);
-    if ((context.pageCount ?? 0) >= MAX_PAGES_PER_JOB) {
+    const pageCap = context.maxPages || MAX_PAGES_PER_JOB;
+    if ((context.pageCount ?? 0) >= pageCap) {
       return {
-        summary: `Browse cap reached (${MAX_PAGES_PER_JOB} pages). Skipping ${url}.`,
+        summary: `Browse cap reached (${pageCap} pages). Skipping ${url}.`,
         context,
         url,
       };
@@ -935,12 +985,87 @@ async function executeTool(input: {
     };
   }
 
+  if (step.tool === "browser_tabs") {
+    const urls = parseUrlList(step.args.urls).length
+      ? parseUrlList(step.args.urls)
+      : (context.competitorUrls || []).concat(context.userUrl || kit.website || "").filter(Boolean);
+    const unique = [...new Set(urls.map((row) => row.trim()).filter(Boolean))].slice(0, MAX_RESEARCH_TABS);
+    if (!unique.length) {
+      return {
+        summary: "No public URLs to open in parallel. Paste 5–10 URLs for multi-tab research.",
+        context,
+      };
+    }
+    for (const url of unique) {
+      allowedDomains = lockAllowlist(url, allowedDomains);
+      assertHostAllowed(url, allowedDomains);
+    }
+    context.allowedDomains = allowedDomains;
+    context.maxPages = Math.max(context.maxPages || 0, MAX_RESEARCH_TABS);
+    await prisma.job.update({
+      where: { id: input.jobId },
+      data: { allowedDomains: JSON.stringify(allowedDomains) },
+    });
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `browser_tabs ${unique.length} URLs`,
+      stepId: step.id,
+      data: { tool: "browser_tabs", urls: unique },
+    });
+    try {
+      const device = await tryDeviceBrowser({
+        workspaceId: input.workspaceId,
+        jobId: input.jobId,
+        stepId: step.id,
+        tool: "browser_tabs",
+        args: { urls: unique },
+        allowedDomains,
+      });
+      const devicePages = device?.pages?.length
+        ? device.pages
+        : device?.page
+          ? [device.page]
+          : [];
+      if (device?.ok && devicePages.length) {
+        for (const raw of devicePages) {
+          const page = devicePageToBrowsed(raw);
+          if (page.url) assertHostAllowed(page.url, allowedDomains);
+          rememberPage(context, page);
+        }
+        context.browserMode = "extension";
+        return {
+          summary: `browser_tabs opened ${devicePages.length} Chrome tab${devicePages.length === 1 ? "" : "s"} (CDP, DOM-first)`,
+          context,
+          url: devicePages[0]?.url,
+          excerpt: devicePages[0]?.excerpt,
+        };
+      }
+      const pages = await browseMany(unique, MAX_RESEARCH_TABS);
+      for (const raw of pages) {
+        const page = toBrowsedPage(raw);
+        assertHostAllowed(page.url, allowedDomains);
+        rememberPage(context, page);
+      }
+      return {
+        summary: `browser_tabs fetched ${pages.length} public page${pages.length === 1 ? "" : "s"} in parallel (DOM-first)`,
+        context,
+        url: pages[0]?.url,
+        excerpt: pages[0] ? excerptFromText(pages[0].text) : undefined,
+      };
+    } catch (error) {
+      if (error instanceof DomainAllowlistAbort) throw error;
+      const message = error instanceof Error ? error.message : "Multi-tab research failed";
+      return { summary: `browser_tabs failed — ${message}`, context };
+    }
+  }
+
   if (step.tool === "crawl_links") {
     const start = context.currentPage || context.pages?.at(-1);
     if (!start) {
       return { summary: "No page to crawl from.", context };
     }
-    const remaining = Math.max(0, MAX_PAGES_PER_JOB - (context.pageCount ?? 0));
+    const remaining = Math.max(0, (context.maxPages || MAX_PAGES_PER_JOB) - (context.pageCount ?? 0));
     const want = Math.min(Number(step.args.maxPages || 2), remaining);
     if (want <= 0) {
       return {
@@ -1294,6 +1419,55 @@ async function executeTool(input: {
     return {
       summary: `gmail_create_draft ${draft.id} to ${draft.to} (not sent)`,
       context,
+    };
+  }
+
+  if (step.tool === "composio_execute") {
+    const toolkit =
+      getComposioToolkit(String(step.args.toolkit || step.args.pluginId || "composio-hubspot")) ||
+      getComposioToolkit("hubspot");
+    const toolSlug = String(step.args.tool || step.args.slug || toolkit?.probeTool || "HUBSPOT_LIST_CONTACTS");
+    if (composioToolLooksLikeWrite(toolSlug) && !priorAskUserCompleted(planSteps, step.id)) {
+      return {
+        summary: writeGatePrompt("composio_execute", toolSlug),
+        context,
+        pause: true,
+        askPrompt: writeGatePrompt("composio_execute", toolSlug),
+        askKind: "approve",
+      };
+    }
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `composio_execute ${toolkit?.slug || "app"} ${toolSlug}`,
+      stepId: step.id,
+      data: { tool: "composio_execute", toolkit: toolkit?.slug, slug: toolSlug },
+    });
+    const accountId = toolkit
+      ? await getComposioAccountId(input.workspaceId, toolkit.id)
+      : "";
+    const executed = await executeComposioTool({
+      workspaceId: input.workspaceId,
+      toolkitSlug: toolkit?.slug || "hubspot",
+      toolSlug,
+      arguments: (step.args.arguments as Record<string, unknown> | undefined) || {},
+      connectedAccountId: accountId || undefined,
+    });
+    const text = executed.ok
+      ? formatComposioResult(executed.data)
+      : executed.error || "Composio execute failed.";
+    context.composio = {
+      toolkit: toolkit?.slug || "",
+      tool: toolSlug,
+      ok: executed.ok,
+      text,
+    };
+    return {
+      summary: executed.ok
+        ? `composio_execute ${toolSlug} (read via Composio)`
+        : `composio_execute ${toolSlug} — ${executed.error}`,
+      context,
+      excerpt: text.slice(0, 280),
     };
   }
 
@@ -1720,7 +1894,7 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
   } else if (kind === "weekly_client_brief") {
     const pack = await generateResearchPack({
       kit: input.kit,
-      prompt: `${input.prompt}\n\nWrite a weekly client brief from captured pages only. Sections: What we saw, What it means, Open questions. Do not invent results, revenue, or meetings. Include Sources and Uncertainty.`,
+      prompt: `${input.prompt}\n\nWrite a weekly client brief from captured pages only. Sections: What we saw, What it means, Open questions. Do not invent results, revenue, or meetings. Include Sources and Uncertainty.${context.memoryBrief ? `\n\n${context.memoryBrief}` : ""}`,
       context,
       agentName: input.agentName,
       agentInstructions: input.agentInstructions,
@@ -1728,6 +1902,90 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
     title = pack.title || "Weekly client brief";
     content = pack.content;
     type = "weekly_client_brief";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "daily_client_brief") {
+    const pack = await generateResearchPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite a daily client brief from the parallel tabs only. Sections: Today, Watch, Open questions. Do not invent results or email the client.${context.memoryBrief ? `\n\n${context.memoryBrief}` : ""}`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Daily client brief";
+    content = pack.content;
+    type = "daily_client_brief";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "seo_brief") {
+    const pack = await generateResearchPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite an SEO brief from captured pages only: title ideas, on-page gaps, questions. Do not invent rankings, traffic, or backlinks that were not on the page.`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "SEO brief";
+    content = pack.content;
+    type = "seo_brief";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "multi_tab_research") {
+    const pack = await generateResearchPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite sourced notes from the parallel tabs. One section per URL. Do not invent sources.`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Multi-tab research";
+    content = pack.content;
+    type = "multi_tab_research";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "competitor_watch") {
+    const pack = await generateResearchPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite a competitor watch note from captured pages only. Do not invent metrics.`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Competitor watch";
+    content = pack.content;
+    type = "competitor_watch";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "follow_up_sequence") {
+    const pack = await generateOutreachPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nWrite a 5-touch follow-up sequence. Do not send. Number the touches.${context.memoryBrief ? `\n\n${context.memoryBrief}` : ""}`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Follow-up sequence";
+    content = pack.content;
+    type = "follow_up_sequence";
+    model = pack.model;
+    provider = pack.provider;
+    tokens = pack.tokens;
+  } else if (kind === "client_named_email") {
+    const pack = await generateOutreachPack({
+      kit: input.kit,
+      prompt: `${input.prompt}\n\nDraft one client-named email. Name the client from the Brand Kit / workspace. Do not send. This will wait for approval before a Gmail draft.${context.memoryBrief ? `\n\n${context.memoryBrief}` : ""}${context.clientName ? `\n\nClient: ${context.clientName}` : ""}`,
+      context,
+      agentName: input.agentName,
+      agentInstructions: input.agentInstructions,
+    });
+    title = pack.title || "Client-named email";
+    content = pack.content;
+    type = "client_named_email";
     model = pack.model;
     provider = pack.provider;
     tokens = pack.tokens;
@@ -1763,7 +2021,11 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
     type === "research_pack" ||
     type === "competitor_scan" ||
     type === "prospecting_scan" ||
-    type === "weekly_client_brief"
+    type === "weekly_client_brief" ||
+    type === "daily_client_brief" ||
+    type === "seo_brief" ||
+    type === "multi_tab_research" ||
+    type === "competitor_watch"
   ) {
     const attributed = appendResearchMeta(content, {
       live,

@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { appOrigin } from "@/lib/crypto-secret";
 import { jsonError } from "@/lib/http";
+import { composioConfigured, startComposioLink } from "@/lib/composio";
 import { getMarketplacePlugin } from "@/lib/marketplace";
 import {
   oauthAuthorizeUrl,
   oauthReady,
+  persistComposioConnection,
   signOAuthState,
 } from "@/lib/plugins";
 import { pluginOAuthReturnPath } from "@/lib/setup-wizard";
@@ -28,8 +30,33 @@ export async function GET(
           plugin: plugin?.id || pluginId,
         })}`,
       );
-    if (!plugin || plugin.auth !== "oauth") {
+    if (!plugin || (plugin.auth !== "oauth" && plugin.auth !== "composio")) {
       return fail("unknown_plugin");
+    }
+    if (plugin.auth === "composio") {
+      if (!composioConfigured()) return fail("composio_not_configured");
+      const started = await startComposioLink({
+        workspaceId,
+        pluginId: plugin.id,
+        userId: user.id,
+      });
+      if (started.connectionId && !started.redirectUrl) {
+        await persistComposioConnection({
+          workspaceId,
+          plugin,
+          accountId: started.connectionId,
+        });
+        return NextResponse.redirect(
+          `${appOrigin()}${pluginOAuthReturnPath({
+            workspaceId,
+            next,
+            connected: plugin.id,
+            plugin: plugin.id,
+          })}`,
+        );
+      }
+      if (!started.redirectUrl) return fail("composio_no_redirect");
+      return NextResponse.redirect(started.redirectUrl);
     }
     if (!oauthReady(plugin)) {
       return fail("oauth_not_configured");

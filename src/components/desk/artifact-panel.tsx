@@ -13,11 +13,13 @@ import type { ArtifactDTO } from "@/lib/types";
 export function ArtifactPanel({
   artifact,
   onApprove,
+  onReject,
   onRegenerate,
   busy,
 }: {
   artifact: ArtifactDTO;
   onApprove: () => void;
+  onReject?: () => void;
   onRegenerate: () => void;
   busy?: boolean;
 }) {
@@ -40,15 +42,26 @@ export function ArtifactPanel({
           : ""}
       </p>
       <div className="flex flex-wrap gap-2">
-        {artifact.status !== "approved" ? (
-          <Button size="sm" onClick={onApprove} disabled={busy}>
-            <Check className="size-3.5" />
-            Approve
-          </Button>
-        ) : (
+        {artifact.status === "approved" ? (
           <p className="self-center text-xs text-muted-foreground">
             Approved. Ops has a Schedule/publish card; posts land on the calendar.
           </p>
+        ) : artifact.status === "rejected" ? (
+          <p className="self-center text-xs text-muted-foreground">
+            Rejected. This workspace remembers to avoid that approach.
+          </p>
+        ) : (
+          <>
+            <Button size="sm" onClick={onApprove} disabled={busy}>
+              <Check className="size-3.5" />
+              Approve
+            </Button>
+            {onReject ? (
+              <Button size="sm" variant="outline" onClick={onReject} disabled={busy}>
+                Reject
+              </Button>
+            ) : null}
+          </>
         )}
         <Button size="sm" variant="outline" onClick={onRegenerate} disabled={busy}>
           <RefreshCw className="size-3.5" />

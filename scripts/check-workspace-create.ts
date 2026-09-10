@@ -23,6 +23,8 @@ const collection = readFileSync(join(root, "src/server/api/workspaces/collection
 assert.match(collection, /export async function POST/);
 assert.match(collection, /createDemoWorkspace/);
 assert.match(collection, /z\.string\(\)\.trim\(\)\.min\(1\)\.max\(80\)/);
+assert.match(collection, /kind: z\.enum\(\["agency", "client"\]\)/);
+assert.match(collection, /clientName/);
 
 const sidebar = readFileSync(join(root, "src/components/desk/sidebar.tsx"), "utf8");
 assert.match(sidebar, /fetch\("\/api\/workspaces"/);
@@ -30,6 +32,8 @@ assert.match(sidebar, /method: "POST"/);
 assert.match(sidebar, /onClick=\{\(\) => void createWorkspace\(\)\}/);
 assert.match(sidebar, /if \(e\.key !== "Enter"\) return/);
 assert.match(sidebar, /Enter a workspace name/);
+assert.match(sidebar, /kind: "client"/);
+assert.match(sidebar, /New client workspace/);
 assert.match(sidebar, /Could not create workspace/);
 assert.match(sidebar, /router\.push\(`\/onboarding\?workspace=\$\{encodeURIComponent\(data\.workspace\.id\)\}`\)/);
 console.log("ok: + click and Enter POST /api/workspaces then switch desk");

@@ -219,6 +219,28 @@ async function executeTool(tool, args) {
     }
     return { ok: page.ok, page, excerpt: page.excerpt, engine: "cdp" };
   }
+  if (tool === "browser_tabs") {
+    const urls = Array.isArray(args.urls) ? args.urls.map(String) : [];
+    const pages = [];
+    for (const url of urls.slice(0, 10)) {
+      const check = hostAllowed(url, allowlist);
+      if (!check.ok) {
+        return { ok: false, error: check.reason, abortedDomain: check.abortedDomain || check.host, engine: "cdp", pages };
+      }
+      const tab = await chrome.tabs.create({ url, active: false });
+      if (!tab.id) continue;
+      await attach(tab.id);
+      await send("Page.enable", {});
+      await waitLoad();
+      const page = await snapshot(tab.id);
+      const left = hostAllowed(page.url, allowlist);
+      if (!left.ok) {
+        return { ok: false, error: left.reason, abortedDomain: left.host, page, pages, engine: "cdp" };
+      }
+      pages.push(page);
+    }
+    return { ok: pages.length > 0, pages, page: pages[0], excerpt: pages[0]?.excerpt, engine: "cdp" };
+  }
   const tab = await activeAttachedTab();
   if (!tab) return { ok: false, error: "No attached Chrome tab. Navigate first.", engine: "cdp" };
   if (tab.url) {

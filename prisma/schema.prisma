@@ -35,6 +35,10 @@ model Workspace {
   modelRouting       String            @default("auto")
   /// Auto-run safe click/type. High-risk sends, Slack posts, payments, and file writes still wait.
   autoApproveSafe    Boolean           @default(false)
+  /// agency = the house desk. client = a client-wise workspace (own Brand Kit, memory, approvals).
+  kind               String            @default("agency")
+  /// Display name of the client this desk is for. Empty on the agency house desk.
+  clientName         String            @default("")
   /// Last Whop membership that granted the current paid plan. Used to match deactivates.
   whopMembershipId   String?
   /// Soft suspend from Admin HQ: workspace is forced to Free and new jobs are blocked.
@@ -60,6 +64,7 @@ model Workspace {
   eventTriggers      EventTrigger[]
   routines           Routine[]
   sessionReplays     SessionReplay[]
+  memories           WorkspaceMemory[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -476,6 +481,28 @@ model Routine {
   jobs           Job[]
 
   @@index([workspaceId, enabled])
+}
+
+/// Learned facts + draft style per workspace (client-wise). Never auto-sends.
+model WorkspaceMemory {
+  id          String    @id @default(cuid())
+  workspaceId String
+  /// fact | style | preference | project
+  kind        String
+  /// approved_draft | rejected_draft | manual | job
+  source      String
+  title       String    @default("")
+  value       String
+  /// Learned rows are stored only after a human approve/reject or a manual add.
+  approved    Boolean   @default(true)
+  artifactId  String?
+  jobId       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind])
+  @@index([workspaceId, createdAt])
 }
 
 /// Packed job timeline for later review (cheaper than live view as the headline).

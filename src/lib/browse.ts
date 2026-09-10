@@ -142,6 +142,22 @@ export async function browseNavigate(rawUrl: string): Promise<BrowsePage> {
   return fetchBrowse(url);
 }
 
+/** Parallel public-page research. DOM-first (navigate uses digest, not screenshots). */
+export async function browseMany(urls: string[], cap = MAX_PAGES_PER_JOB): Promise<BrowsePage[]> {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of urls) {
+    const trimmed = String(raw || "").trim();
+    if (!trimmed) continue;
+    const key = trimmed.replace(/\/$/, "").toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(trimmed);
+    if (unique.length >= cap) break;
+  }
+  return Promise.all(unique.map((url) => browseNavigate(url)));
+}
+
 export async function crawlLinks(
   start: BrowsePage,
   input: { depth?: number; maxPages: number; alreadyVisited: Set<string> },

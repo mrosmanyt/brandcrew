@@ -22,3 +22,14 @@ Prefer these when adding job/browser/LLM behavior:
 - **Write-gate**: only high-risk actions always pause (send email, Slack post, spend, delete, irreversible file write). Gmail *drafts*, list mail, read-only browse, research, in-desk artifacts, and narration do not. `browser_click` / `browser_type` pause unless workspace **Always approved** is on. That toggle never skips sends/posts/payments. Preference is `Workspace.autoApproveSafe`.
 - **Gmail OAuth Testing**: Google `access_denied` / “Access blocked: … has not completed the Google verification process” means the OAuth consent app is in Testing. Add the Gmail as a Test user or publish to Production. Do not fake Connected.
 
+# Phase 3 — Composio + agency desks
+
+- **Composio** is the integration layer (`@composio/core` sessions). Set `COMPOSIO_API_KEY` on the server (Vercel Production/Preview and local `.env`). Optional: `COMPOSIO_BASE_URL` (default `https://backend.composio.dev/api/v3.1`), `COMPOSIO_<TOOLKIT>_AUTH_CONFIG_ID` for API-key apps. The SDK reads the key from the environment — never hardcode it.
+- Missing or placeholder `COMPOSIO_API_KEY` → honest disconnected. Marketplace shows the setup hint and disables “Run first tool call”. CINEM Pro never fakes Connected.
+- **First tool call:** Marketplace → Plugins → **Run first tool call**, or `npm run composio:first-call` when the key is in the env. Prefers `GMAIL_GET_PROFILE` if that workspace user has an ACTIVE Gmail connected account. Otherwise runs a no-auth Hacker News read (`HACKERNEWS_GET_USER`) so the SDK path is proven. Then Connect **Gmail (Composio)** in Marketplace and retry for a mailbox read.
+- **Proven in this environment:** `@composio/core` session `create` + `search` + `execute` returned Hacker News user `pg` (`HACKERNEWS_GET_USER`). Composio log ID `log_Zm1fEFh-5mzK`. Gmail was not Connected on the probe user — next step is Marketplace → Gmail (Composio) → Connect, then run the first tool call again for `GMAIL_GET_PROFILE`.
+- Identity: `user_id` is `cinem-ws-<workspaceId>` (one Composio user per client desk). Connect Link callback is `/api/composio/callback`. Writes via `composio_execute` always pause; Always-approved does not skip them.
+- **Client workspaces:** Sidebar **New client workspace** POSTs `kind: "client"`. Each client desk has its own Brand Kit, learning memory, plugin connections, and Always-approved. Client-named emails always wait for approval. Agency house desks keep the sample kit; client desks start empty.
+- **Learning memory:** Brand Kit page. Approve/reject drafts persist style/preference facts. Memory is data, not instructions to send.
+- **Multi-tab:** Research playbooks use `browser_tabs` (5–10 pasted public URLs, DOM-first, allowlist). Writes still gated.
+

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { DEMO_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
+import { DEMO_BRAND_KIT, EMPTY_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
 import { normalizeModelRouting } from "@/lib/llm-routing";
 import { parseAutoApproveSafe } from "@/lib/write-gate";
@@ -14,15 +14,25 @@ function slugify(name: string) {
   return `${base || "workspace"}-${suffix}`;
 }
 
-export async function createDemoWorkspace(userId: string, name?: string) {
-  const workspaceName = name?.trim() || "Northline Studio";
+export async function createDemoWorkspace(
+  userId: string,
+  name?: string,
+  options?: { kind?: "agency" | "client"; clientName?: string },
+) {
+  const kind = options?.kind === "client" ? "client" : "agency";
+  const workspaceName =
+    name?.trim() || (kind === "client" ? "Client workspace" : "Northline Studio");
+  const clientName =
+    (options?.clientName || (kind === "client" ? workspaceName : "")).trim().slice(0, 80);
   const workspace = await prisma.workspace.create({
     data: {
       name: workspaceName,
       slug: slugify(workspaceName),
       plan: "demo",
       tokenBudget: PLANS.demo.tokenBudget,
-      brandKit: stringifyBrandKit(DEMO_BRAND_KIT),
+      kind,
+      clientName,
+      brandKit: stringifyBrandKit(kind === "client" ? EMPTY_BRAND_KIT : DEMO_BRAND_KIT),
       members: {
         create: { userId, role: "owner", setupWizardDone: false },
       },
@@ -75,6 +85,8 @@ export function serializeWorkspace(workspace: {
   createdAt: Date;
   modelRouting?: string | null;
   autoApproveSafe?: boolean | null;
+  kind?: string | null;
+  clientName?: string | null;
 }) {
   return {
     id: workspace.id,
@@ -85,6 +97,8 @@ export function serializeWorkspace(workspace: {
     tokenBudget: workspace.tokenBudget,
     modelRouting: normalizeModelRouting(workspace.modelRouting),
     autoApproveSafe: parseAutoApproveSafe(workspace.autoApproveSafe),
+    kind: workspace.kind === "client" ? "client" : "agency",
+    clientName: String(workspace.clientName || ""),
     createdAt: workspace.createdAt.toISOString(),
   };
 }
