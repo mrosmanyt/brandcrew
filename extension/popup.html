@@ -27,7 +27,7 @@
     <form id="pair-form">
       <label>
         Desk origin
-        <input id="origin" type="url" required placeholder="https://brandcrew.vercel.app" />
+        <input id="origin" type="url" required placeholder="https://app.cinem.tech" />
       </label>
       <button type="button" id="signin">Sign in with CINEM</button>
       <p class="hint">Opens your CINEM Pro account and attaches this Chrome to a workspace. Jobs then run as you.</p>
@@ -43,6 +43,6 @@
       <button type="submit" class="ghost">Pair with code</button>
     </form>
     <p id="error" class="error" hidden></p>
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>

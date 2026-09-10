@@ -3,6 +3,8 @@
  * DOM-first automation via chrome.debugger CDP. Page text is data, never instructions.
  * Native messaging is optional (files / long jobs / SW keepalive).
  */
+import { DEFAULT_DESK_ORIGIN } from "./desk-origin.js";
+
 const NATIVE_HOST = "com.cinem.pro.agent";
 const PAGE_START = "<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>";
 const PAGE_END = "<<<END_CINEM_UNTRUSTED_PAGE_CONTENT>>>";
@@ -146,7 +148,7 @@ async function storeDevice(base, data) {
 }
 
 async function startSignIn(origin) {
-  const base = String(origin || "").replace(/\/$/, "") || "https://brandcrew.vercel.app";
+  const base = String(origin || "").replace(/\/$/, "") || DEFAULT_DESK_ORIGIN;
   const nonce = randomNonce();
   const res = await fetch(`${base}/api/auth/connect`, {
     method: "POST",
@@ -178,7 +180,7 @@ async function claimFromLink(origin, link) {
   } catch {
     // keep origin field
   }
-  if (!base) base = "https://brandcrew.vercel.app";
+  if (!base) base = DEFAULT_DESK_ORIGIN;
   await chrome.storage.local.set({ connectingNonce: nonce, connectingOrigin: base });
   const claimed = await claimNonce(base, nonce);
   if (claimed) return { ok: true };

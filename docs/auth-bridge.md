@@ -35,7 +35,7 @@ These auth routes send `Access-Control-Allow-Origin: *` (no cookie credential) s
 
 ## Chrome — Sign in with CINEM
 
-1. Popup **Sign in with CINEM** (desk origin, default `https://brandcrew.vercel.app`).
+1. Popup **Sign in with CINEM** (desk origin, default `https://app.cinem.tech`; `https://brandcrew.vercel.app` remains an allowed alternate).
 2. Extension `POST /api/auth/connect` `{ surface: "extension", nonce }` and opens `/connect/extension?nonce=`.
 3. You sign in on the website if needed, pick a workspace, **Attach this Chrome**.
 4. Server creates a `LocalDevice` with `linkedUserId` (account-linked, not only a 10-minute pairing code).

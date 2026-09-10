@@ -25,7 +25,7 @@ export const DESKTOP_PROTOCOL = "cinem-pro";
 export const ANDROID_PACKAGE_ID = "tech.cinem.pro";
 export const ANDROID_APP_NAME = "CINEM Pro";
 
-/** Production desk the store clients should hit (same account as the website). */
+/** Production desk packaged Electron should hit (same account as the website). Next fallback; Chrome store default is extension/desk-origin.js. */
 export const CLOUD_DESK_ORIGIN = SITE_ORIGIN;
 
 export const CHROME_WEB_STORE_URL = "";

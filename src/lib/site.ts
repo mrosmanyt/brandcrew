@@ -4,7 +4,12 @@ export const GITHUB_RELEASES = `${GITHUB_REPO}/releases`;
 /** Public installer host — anonymous visitors can download without GitHub login. */
 export const PUBLIC_RELEASES_REPO = "https://github.com/mrosmanyt/cinem-pro-releases";
 export const COMPANY_SITE = "https://cinem.tech";
-/** Canonical production origin (Vercel). HTTP→HTTPS is handled by the platform. */
+/**
+ * Fallback public origin when NEXT_PUBLIC_APP_URL / APP_URL are unset (Vercel project URL).
+ * Production desk is https://app.cinem.tech via env. The Chrome Web Store extension
+ * defaults independently — see extension/desk-origin.js — so store installs hit the
+ * custom domain even if this Next fallback stays on Vercel.
+ */
 export const SITE_ORIGIN = "https://brandcrew.vercel.app";
 /** Developer console. Vercel project alias + DNS — see docs/console-domain.md. */
 export { CONSOLE_HOST, CONSOLE_ORIGIN, CONSOLE_PATH, consoleAppHref } from "@/lib/console-site";
