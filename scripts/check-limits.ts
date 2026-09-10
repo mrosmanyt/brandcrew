@@ -112,6 +112,6 @@ for (const key of Object.keys(saved)) {
   if (saved[key] === undefined) delete process.env[key];
   else process.env[key] = saved[key];
 }
-console.log("ok: website→Gemini Flash; Free/Starter coding stays Flash; Pro coding→Sonnet; posts stay Flash (not xAI)");
+console.log("ok: website→Gemini Flash; Free/Pro coding stays Flash; Pro Plus coding→Sonnet; posts stay Flash (not xAI)");
 
 console.log("Limits / builders / avatars checks passed.");

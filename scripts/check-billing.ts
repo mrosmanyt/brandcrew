@@ -95,8 +95,8 @@ assert.equal(whopPlanIdFor("ultra"), "plan_ultra");
 console.log("ok: provider prefers Whop, then Stripe, then mock");
 
 assert.equal(billingCheckoutLabel("Pro", "mock"), "Apply Pro (mock)");
-assert.equal(billingCheckoutLabel("Pro", "whop"), "Checkout Pro with Whop");
-assert.equal(billingCheckoutLabel("Pro", "stripe"), "Checkout Pro");
+assert.equal(billingCheckoutLabel("Pro Plus", "whop"), "Checkout Pro Plus with Whop");
+assert.equal(billingCheckoutLabel("Ultra", "stripe"), "Checkout Ultra");
 assert.match(billingSuccessBanner("whop"), /Whop checkout/);
 assert.doesNotMatch(billingSuccessBanner("whop"), /Connected/);
 console.log("ok: desk copy names Whop checkout when live");

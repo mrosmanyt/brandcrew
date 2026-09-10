@@ -307,10 +307,10 @@ function isExpensiveRoute(route: LlmRoute | null): boolean {
 
 /**
  * Auto (no UI model pick):
- * - Free / Starter → cheapest live (Gemini Flash, else gpt-4o-mini). Never Sonnet.
+ * - Free / Pro (internal starter id) → cheapest live (Gemini Flash, else gpt-4o-mini). Never Sonnet.
  * - research / outreach / WhatsApp / summaries / website → Gemini Flash
- * - structured JSON / short tools → Haiku (Pro+)
- * - code / complex apps → Sonnet (Pro+ only)
+ * - structured JSON / short tools → Haiku (Pro Plus / Ultra)
+ * - code / complex apps → Sonnet (Pro Plus / Ultra only)
  * - Ultra or Boost → Sonnet max (never Opus)
  */
 function pickRouteDefault(
@@ -353,7 +353,7 @@ function catalogRoute(prefer: LlmRoutingPreference): LlmRoute | null {
 /**
  * Display-model catalog first; otherwise task-based cheap routing.
  * Picked UI names resolve to Haiku / Sonnet / GPT Terra / Gemini Flash.
- * Free + Starter never take Sonnet / Pro finals even if the picker says Fable.
+ * Free + Pro (internal starter id) never take Sonnet / Gemini Pro finals even if the picker says Fable.
  */
 export function pickRoute(
   mode: TaskMode,

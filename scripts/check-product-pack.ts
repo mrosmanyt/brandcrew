@@ -28,7 +28,7 @@ assert.equal(normalizePlanId("growth"), "pro");
 assert.equal(normalizePlanId("ultra"), "ultra");
 assert.equal(limitsForPlan("starter").seats, 2);
 assert.equal(limitsForPlan("ultra").paid, true);
-console.log("ok: Starter $20 / Pro $79 / Ultra $200 caps");
+console.log("ok: Pro $20 / Pro Plus $79 / Ultra $200 caps");
 
 assert.equal(FEATURED_JOB_TEMPLATES.length, 17);
 assert.deepEqual(

@@ -24,7 +24,7 @@ import { pickRoute, runWithRoutingPreference } from "../src/lib/llm";
 
 assert.deepEqual(AGENT_MODE_PLANS, ["demo", "starter", "pro", "ultra"]);
 assert.equal(planModeName("demo"), "Free");
-assert.equal(planModeName("growth"), "Pro");
+assert.equal(planModeName("growth"), "Pro Plus");
 assert.equal(planPowerLabel("pro"), "Power");
 assert.equal(planPowerLabel("ultra"), "Max");
 assert.equal(planPowerLabel("demo"), null);
@@ -38,7 +38,7 @@ assert.equal(planApplyAction("demo", "demo", true), "noop");
 assert.equal(planApplyAction("pro", "demo", true), "mock-apply");
 assert.equal(planApplyAction("demo", "pro", false), "open-plans");
 assert.equal(planApplyAction("ultra", "demo", false), "checkout");
-console.log("ok: plan rows map Free/Starter/Pro/Ultra with honest apply actions");
+console.log("ok: plan rows map Free/Pro/Pro Plus/Ultra with honest apply actions");
 
 assert.equal(modelRoutingLabel("auto"), "Auto");
 assert.equal(modelRoutingLocked("auto", { openai: false, anthropic: false, gemini: false }), false);

@@ -28,7 +28,7 @@ export function settingsDeskLinks(workspaceId: string) {
     {
       href: `/desk/${workspaceId}/billing`,
       label: "Plans",
-      hint: "Starter $20, Pro $79, and Ultra $200. Caps are enforced. Model keys stay on the server.",
+      hint: "Pro $20, Pro Plus $79, and Ultra $200. Caps are enforced. Model keys stay on the server.",
     },
     {
       href: `/desk/${workspaceId}/clients`,

@@ -41,7 +41,7 @@ export default function TermsPage() {
         no mailer or password-reset email in this product yet. Two-factor
         authentication is a follow-up, not a fake UI. You are responsible for
         activity under your session. Do not share your password. Plans (Free,
-        Starter, Pro, Ultra) cap seats, tokens, and jobs per hour. When a cap
+        Pro, Pro Plus, Ultra) cap seats, tokens, and jobs per hour. When a cap
         is hit, the desk stops — it does not keep spending silently.
       </p>
 
