@@ -22,7 +22,7 @@ function cloudOrigin() {
     process.env.CINEM_CLOUD_URL ||
     process.env.APP_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://brandcrew.vercel.app";
+    "https://app.cinem.tech";
   return String(raw).replace(/\/$/, "");
 }
 

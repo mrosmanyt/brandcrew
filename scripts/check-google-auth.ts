@@ -49,6 +49,7 @@ assert.equal(googleLoginReady(), false);
 assert.deepEqual(googleLoginMissingEnv(), ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
 assert.match(googleLoginSetupHint(), /GOOGLE_CLIENT_ID/);
 assert.match(googleLoginSetupHint(), /127\.0\.0\.1:43180\/api\/auth\/google\/callback/);
+assert.match(googleLoginSetupHint(), /app\.cinem\.tech\/api\/auth\/google\/callback/);
 assert.match(googleLoginSetupHint(), /brandcrew\.vercel\.app\/api\/auth\/google\/callback/);
 assert.equal(googleLoginPublicStatus().ready, false);
 assert.equal(googleLoginPublicStatus().purpose, "user_login");

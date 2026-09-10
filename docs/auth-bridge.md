@@ -46,7 +46,7 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 ## Desktop (Electron)
 
 - **Dev** (`npm run desktop:dev`): still boots local Next on `http://127.0.0.1:43180` and opens `/desk`.
-- **Packaged** (`npm run desktop:build` / `desktop:build:win`): default **cloud desk** (`CINEM_CLOUD_URL` or `https://brandcrew.vercel.app/desk`). Same account as the website. Google OAuth stays in-window (`accounts.google.com` is not sent to the system browser).
+- **Packaged** (`npm run desktop:build` / `desktop:build:win`): default **cloud desk** (`CINEM_CLOUD_URL` or `https://app.cinem.tech/desk`; `https://brandcrew.vercel.app` remains an allowed alternate). Same account as the website. Google OAuth stays in-window (`accounts.google.com` is not sent to the system browser).
 - `CINEM_DESK_MODE=local` keeps the old bundled Next + Postgres path.
 - Deep link `cinem-pro://connect?nonce=…&origin=…` claims a desktop ticket and writes the session cookie into Electron.
 - Windows installer: `npm run desktop:build:win` → `dist/desktop/CINEM-Pro-Setup.exe`. Hosted copy: public releases repo (see `/download`).

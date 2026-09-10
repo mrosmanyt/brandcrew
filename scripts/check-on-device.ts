@@ -34,6 +34,7 @@ import { PHASE2_STATUS } from "../src/lib/phase2";
 import { PLANS } from "../src/lib/constants";
 import { appendResearchMeta } from "../src/lib/sources";
 import { WRITE_EXTERNAL_TOOLS, isWriteExternalTool, writeGatePrompt } from "../src/lib/write-gate";
+import { SITE_ORIGIN, VERCEL_SITE_ORIGIN } from "../src/lib/site";
 
 assert.ok(existsSync("extension/manifest.json"));
 assert.ok(existsSync("extension/background.js"));
@@ -82,8 +83,9 @@ assert.ok(manifest.permissions.includes("debugger"));
 assert.ok(manifest.permissions.includes("nativeMessaging"));
 assert.equal(manifest.background?.service_worker, "background.js");
 const hosts = manifest.host_permissions ?? [];
+assert.match(readFileSync("extension/desk-origin.js", "utf8"), new RegExp(SITE_ORIGIN.replaceAll(".", "\\.")));
 assert.ok(hosts.includes("https://*.cinem.tech/*"));
-assert.ok(hosts.includes("https://brandcrew.vercel.app/*"));
+assert.ok(hosts.includes(`${VERCEL_SITE_ORIGIN}/*`));
 assert.ok(hosts.includes("https://*/*"));
 assert.equal(
   hosts.some((h) => /localhost|127\.0\.0\.1/i.test(h)),

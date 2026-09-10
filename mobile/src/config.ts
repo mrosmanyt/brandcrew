@@ -1,5 +1,5 @@
-/** Same backend as the website. Override at runtime with EXPO_PUBLIC_CINEM_ORIGIN. */
-export const DEFAULT_ORIGIN = "https://brandcrew.vercel.app";
+/** Same backend as the website. Override at runtime with EXPO_PUBLIC_CINEM_ORIGIN. Vercel alias remains an allowed alternate. */
+export const DEFAULT_ORIGIN = "https://app.cinem.tech";
 export const PACKAGE_ID = "tech.cinem.pro";
 export const PRODUCT_NAME = "CINEM Pro";
 

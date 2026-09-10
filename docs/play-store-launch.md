@@ -13,7 +13,7 @@ Expo gives Play App Signing, EAS AAB output, SecureStore, and `expo-web-browser`
 1. Create a [Google Play Console](https://play.google.com/console) developer account (Google’s current one-time fee, paid by the CINEM legal entity).
 2. Create app → **CINEM Pro** → default language English → app or game: **App** → free or paid.
 3. Package name: `tech.cinem.pro` (must match `mobile/app.json` `android.package`). Do not change it after the first upload.
-4. Complete **Store listing**, **Privacy policy** (`https://brandcrew.vercel.app/privacy` or `https://cinem.tech/privacy`), **App content** (content rating questionnaire), **Target audience**, **News app** = no, **Data safety** (account email, device token / refresh token on device, no selling of data).
+4. Complete **Store listing**, **Privacy policy** (`https://app.cinem.tech/privacy` or `https://cinem.tech/privacy`; Vercel `https://brandcrew.vercel.app/privacy` is the same app), **App content** (content rating questionnaire), **Target audience**, **News app** = no, **Data safety** (account email, device token / refresh token on device, no selling of data).
 5. **App signing**: use Play App Signing (Google holds the upload key after the first AAB). Keep the EAS/local upload keystore in a password manager — not in git.
 
 ## Build an AAB (founder machine)
