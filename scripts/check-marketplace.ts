@@ -14,6 +14,14 @@ import {
   resolveApiKeyConnect,
 } from "../src/lib/marketplace";
 import { oauthReady } from "../src/lib/plugins";
+import {
+  CONNECTOR_LOGO_BY_PLUGIN_ID,
+  CONNECTOR_LOGO_FILES,
+  connectorLogoFile,
+  connectorLogoSrc,
+} from "../src/lib/connector-logos";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 assert.ok(MARKETPLACE_BOTS.length >= 10);
 for (const id of [
@@ -60,6 +68,34 @@ assert.deepEqual(getMarketplacePlugin("whatsapp")?.tools, []);
 assert.equal(getMarketplacePlugin("gmail")?.auth, "oauth");
 assert.equal(getMarketplacePlugin("slack")?.auth, "oauth");
 console.log(`ok: ${MARKETPLACE_PLUGINS.length} plugins`);
+
+for (const plugin of MARKETPLACE_PLUGINS) {
+  assert.ok(
+    CONNECTOR_LOGO_BY_PLUGIN_ID[plugin.id],
+    `missing connector logo mapping for ${plugin.id}`,
+  );
+  assert.notEqual(connectorLogoFile(plugin.id), "generic", plugin.id);
+  const file = join("public", "connectors", `${connectorLogoFile(plugin.id)}.svg`);
+  assert.equal(existsSync(file), true, `missing ${file}`);
+  const svg = readFileSync(file, "utf8");
+  assert.match(svg, /<svg[\s\S]*viewBox="0 0 32 32"/);
+  assert.doesNotMatch(svg, />[A-Z$]{1,3}</);
+}
+assert.equal(connectorLogoSrc("gmail"), "/connectors/gmail.svg");
+assert.equal(connectorLogoSrc("web-search"), "/connectors/tavily.svg");
+assert.equal(connectorLogoSrc("composio-gmail"), "/connectors/gmail.svg");
+assert.equal(connectorLogoSrc("composio-hackernews"), "/connectors/hacker-news.svg");
+assert.equal(connectorLogoFile("unknown-plugin"), "generic");
+for (const stem of CONNECTOR_LOGO_FILES) {
+  assert.equal(existsSync(join("public", "connectors", `${stem}.svg`)), true, stem);
+}
+const marketplaceUi = readFileSync("src/components/desk/marketplace.tsx", "utf8");
+assert.match(marketplaceUi, /ConnectorLogo/);
+assert.doesNotMatch(marketplaceUi, /\{plugin\.letter\}/);
+const wizardUi = readFileSync("src/components/desk/onboarding-wizard.tsx", "utf8");
+assert.match(wizardUi, /ConnectorLogo/);
+assert.doesNotMatch(wizardUi, /letter=\{slot\.plugin\.letter\}/);
+console.log(`ok: ${MARKETPLACE_PLUGINS.length} connectors have brand logos, no letter tiles`);
 
 const empty = resolveApiKeyConnect(web!, { apiKey: "" });
 assert.equal(empty.ok, false);
