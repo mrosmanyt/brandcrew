@@ -1,10 +1,21 @@
 import { prisma } from "@/lib/db";
+import {
+  evaluateBudgetCaps,
+  type BudgetCapMode,
+} from "@/lib/budget-caps";
 import { getWorkspaceLimits, limitsForPlan, serializeLimits } from "@/lib/limits";
+import { planDisplayName } from "@/lib/constants";
 import {
   aggregateUsageByModel,
   aggregateUsageSeries,
   usageSeriesMeta,
 } from "@/lib/usage-series";
+
+export {
+  evaluateBudgetCaps,
+  tokenBudgetExceeded,
+  type BudgetCapMode,
+} from "@/lib/budget-caps";
 
 export class BudgetError extends Error {
   status = 429;
@@ -17,54 +28,61 @@ export class BudgetError extends Error {
   }
 }
 
-export async function assertWorkspaceBudget(workspaceId: string) {
+export function rethrowIfBudget(error: unknown): void {
+  if (error instanceof BudgetError) throw error;
+}
+
+async function assertCaps(workspaceId: string, mode: BudgetCapMode) {
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
   });
   if (!workspace) {
     throw new BudgetError("Workspace not found.");
   }
-  if (workspace.suspended) {
-    throw new BudgetError(
-      "This workspace is suspended. New jobs are blocked until an admin unsuspends it.",
-      403,
-      "SUSPENDED",
-    );
-  }
 
   const caps = limitsForPlan(workspace.plan);
   const tokenBudget = workspace.tokenBudget || caps.tokenBudget;
-  if (workspace.tokenUsed >= tokenBudget) {
-    throw new BudgetError(
-      caps.paid
-        ? "This workspace has reached its generation budget. Wait for the next cycle or upgrade."
-        : "This workspace has reached its free generation budget. Upgrade to Starter ($20), Pro ($79), or Ultra ($200) to continue.",
-      402,
-      "BUDGET",
-    );
-  }
+  const hourly =
+    mode === "job"
+      ? await getWorkspaceLimits(workspaceId)
+      : {
+          jobsThisHour: 0,
+          jobsPerHour: caps.jobsPerHour,
+          concurrentJobs: 0,
+          maxConcurrentJobs: caps.maxConcurrentJobs,
+        };
 
-  const limits = await getWorkspaceLimits(workspaceId);
-  if (limits.jobsThisHour >= limits.jobsPerHour) {
-    throw new BudgetError(
-      `${caps.paid ? caps.plan : "Free"} plan: ${limits.jobsPerHour} jobs/hour used. Wait a bit${
-        caps.paid ? "" : ", or upgrade"
-      } and try again.`,
-      429,
-      "RATE_LIMIT",
-    );
+  const result = evaluateBudgetCaps(
+    {
+      suspended: workspace.suspended,
+      tokenUsed: workspace.tokenUsed,
+      tokenBudget,
+      jobsThisHour: hourly.jobsThisHour,
+      jobsPerHour: hourly.jobsPerHour,
+      concurrentJobs: hourly.concurrentJobs,
+      maxConcurrentJobs: hourly.maxConcurrentJobs,
+      paid: caps.paid,
+      planLabel: caps.paid ? planDisplayName(caps.plan) : "Free",
+    },
+    mode,
+  );
+  if (!result.ok) {
+    throw new BudgetError(result.message, result.status, result.code);
   }
-  if (limits.concurrentJobs >= limits.maxConcurrentJobs) {
-    throw new BudgetError(
-      `${caps.paid ? caps.plan : "Free"} plan: ${limits.maxConcurrentJobs} concurrent job${
-        limits.maxConcurrentJobs === 1 ? "" : "s"
-      } already running. Wait for one to finish.`,
-      429,
-      "RATE_LIMIT",
-    );
-  }
-
   return workspace;
+}
+
+/** Full stop: tokens + hourly + concurrent. Use before enqueueing a job. */
+export async function assertWorkspaceBudget(workspaceId: string) {
+  return assertCaps(workspaceId, "job");
+}
+
+/**
+ * Hard stop before an LLM call. Tokens + suspended only — a running job
+ * already occupies its concurrent slot.
+ */
+export async function assertLlmCallBudget(workspaceId: string) {
+  return assertCaps(workspaceId, "llm");
 }
 
 export function estimateUsdStub(tokens: number) {
@@ -119,7 +137,7 @@ export async function getUsageSnapshot(workspaceId: string, days = 30) {
     approved: approvedCount,
     estimateUsd: estimateUsdStub(limits.tokenUsed),
     estimateNote:
-      "Rough stub: $0.50 per 100k tokens blended. Not a bill and not provider-accurate.",
+      "Rough stub: $0.50 per 100k tokens blended. Not a bill and not provider-accurate. The hard stop is tokenBudget, not this estimate.",
     days: windowDays,
     series,
     byModel,

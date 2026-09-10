@@ -2,6 +2,7 @@ import { buildDomDigest } from "@/lib/dom-first";
 import { llm } from "@/lib/llm";
 import { annotateUntrustedPageText } from "@/lib/page-content";
 import { parseLlmJson } from "@/lib/job-serialize";
+import { rethrowIfBudget } from "@/lib/usage";
 
 /**
  * Cheap locator: ask the cheapest engine for a CSS selector from a DOM digest.
@@ -47,7 +48,8 @@ If you cannot find a control, return { "selector": "" }.`,
     const json = parseLlmJson(result.text);
     const selector = String(json?.selector || "").trim();
     return selector || null;
-  } catch {
+  } catch (error) {
+    rethrowIfBudget(error);
     return null;
   }
 }

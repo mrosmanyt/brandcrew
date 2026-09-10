@@ -107,10 +107,33 @@ try {
   assert.equal(pickRoute("final")?.provider, "gemini");
   assert.equal(pickRoute("final")?.model, "gemini-2.5-flash");
   assert.equal(pickRoute("draft", "website")?.provider, "gemini");
-  assert.equal(pickRoute("draft", "coding")?.provider, "anthropic");
-  assert.equal(pickRoute("draft", "coding")?.model, "claude-sonnet-5");
-  assert.equal(pickRoute("draft", "json")?.provider, "anthropic");
-  assert.equal(pickRoute("draft", "json")?.model, "claude-haiku-4-5");
+  assert.equal(pickRoute("draft", "coding")?.provider, "gemini");
+  assert.equal(pickRoute("draft", "coding")?.model, "gemini-2.5-flash");
+  assert.equal(
+    pickRoute("draft", "coding", "auto", { plan: "starter" })?.model,
+    "gemini-2.5-flash",
+  );
+  assert.equal(
+    pickRoute("draft", "coding", "fable-5.1", { plan: "starter" })?.model,
+    "gemini-2.5-flash",
+  );
+  assert.equal(
+    pickRoute("draft", "coding", "auto", { plan: "pro" })?.provider,
+    "anthropic",
+  );
+  assert.equal(
+    pickRoute("draft", "coding", "auto", { plan: "pro" })?.model,
+    "claude-sonnet-5",
+  );
+  assert.equal(
+    pickRoute("draft", "json", "auto", { plan: "pro" })?.provider,
+    "anthropic",
+  );
+  assert.equal(
+    pickRoute("draft", "json", "auto", { plan: "pro" })?.model,
+    "claude-haiku-4-5",
+  );
+  assert.equal(pickRoute("draft", "json")?.provider, "gemini");
   assert.equal(pickRoute("draft", "classify")?.provider, "gemini");
   assert.equal(pickRoute("draft", "classify")?.model, "gemini-2.5-flash");
   assert.equal(pickRoute("draft", "research")?.provider, "gemini");
@@ -121,7 +144,11 @@ try {
   assert.equal(pickRoute("draft", "general", "openai")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "gpt-astra")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "opus-4.8")?.model, "claude-haiku-4-5");
-  assert.equal(pickRoute("draft", "general", "fable-5.1")?.model, "claude-sonnet-5");
+  assert.equal(
+    pickRoute("draft", "general", "fable-5.1", { plan: "pro" })?.model,
+    "claude-sonnet-5",
+  );
+  assert.equal(pickRoute("draft", "general", "fable-5.1")?.model, "gemini-2.5-flash");
   assert.equal(pickRoute("draft", "general", "gpt-4o-mini")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "gpt-sol")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "claude-opus")?.model, "claude-haiku-4-5");
@@ -135,7 +162,7 @@ try {
     "claude-sonnet-5",
   );
   assert.doesNotMatch(pickRoute("draft", "boost")?.model || "", /opus/i);
-  console.log("ok: all three → Flash auto, Haiku JSON, Sonnet code, Ultra uses Sonnet max");
+  console.log("ok: all three → Flash auto (Free/Starter never Sonnet); Pro code uses Sonnet; Ultra uses Sonnet max");
 
   setKeys({
     openai: "sk-openai-fake",
@@ -146,8 +173,15 @@ try {
   assert.equal(getLlmStatus().xai, true);
   assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
   assert.equal(pickRoute("draft", "website")?.provider, "gemini");
-  assert.equal(pickRoute("draft", "apps")?.provider, "anthropic");
-  assert.equal(pickRoute("draft", "apps")?.model, "claude-sonnet-5");
+  assert.equal(pickRoute("draft", "apps")?.provider, "gemini");
+  assert.equal(
+    pickRoute("draft", "apps", "auto", { plan: "pro" })?.provider,
+    "anthropic",
+  );
+  assert.equal(
+    pickRoute("draft", "apps", "auto", { plan: "pro" })?.model,
+    "claude-sonnet-5",
+  );
   const xaiClient = createXaiClient("xai-fake-boot-check");
   const base = String(
     (xaiClient as unknown as { baseURL?: string; _options?: { baseURL?: string } })
@@ -157,7 +191,7 @@ try {
       "",
   );
   assert.match(base, /x\.ai/);
-  console.log("ok: posts stay Gemini Flash even if xAI is keyed; apps stay Sonnet");
+  console.log("ok: posts stay Gemini Flash even if xAI is keyed; Free/Starter apps stay Flash, Pro apps stay Sonnet");
 
   console.log("LLM router checks passed (no paid API calls).");
 } finally {

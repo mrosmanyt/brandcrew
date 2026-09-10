@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
-import { normalizePlanId } from "@/lib/limits";
+import { normalizePlanId, planForcesCheapBackends } from "@/lib/limits";
 import {
   displayModelById,
   geminiFlashModelId,
@@ -28,6 +28,7 @@ type RoutingStore = {
   prefer: LlmRoutingPreference;
   plan: string;
   boost: boolean;
+  workspaceId?: string;
 };
 
 const routingAls = new AsyncLocalStorage<RoutingStore>();
@@ -44,8 +45,17 @@ export function currentRoutingBoost(): boolean {
   return routingAls.getStore()?.boost ?? false;
 }
 
+export function currentRoutingWorkspaceId(): string {
+  return routingAls.getStore()?.workspaceId ?? "";
+}
+
 export function runWithLlmRouting<T>(
-  input: { prefer?: string | null; plan?: string | null; boost?: boolean },
+  input: {
+    prefer?: string | null;
+    plan?: string | null;
+    boost?: boolean;
+    workspaceId?: string | null;
+  },
   fn: () => T,
 ): T {
   const prev = routingAls.getStore();
@@ -54,6 +64,7 @@ export function runWithLlmRouting<T>(
       prefer: normalizeModelRouting(input.prefer ?? prev?.prefer),
       plan: input.plan ?? prev?.plan ?? "",
       boost: input.boost ?? prev?.boost ?? false,
+      workspaceId: input.workspaceId ?? prev?.workspaceId,
     },
     fn,
   );
@@ -282,11 +293,24 @@ function wantsSonnetMax(kind: LlmJobKind, plan: string, boost: boolean) {
   return boost || kind === "boost" || normalizePlanId(plan) === "ultra";
 }
 
+function isExpensiveRoute(route: LlmRoute | null): boolean {
+  if (!route) return false;
+  if (route.provider === "anthropic" && /sonnet/i.test(route.model)) return true;
+  if (route.provider === "openai" && /gpt-4\.1(?!-mini)|gpt-4o(?!-mini)|o[1-4]\b/i.test(route.model)) {
+    return true;
+  }
+  if (route.provider === "gemini" && /pro/i.test(route.model) && !/flash/i.test(route.model)) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Auto (no UI model pick):
+ * - Free / Starter → cheapest live (Gemini Flash, else gpt-4o-mini). Never Sonnet.
  * - research / outreach / WhatsApp / summaries / website → Gemini Flash
- * - structured JSON / short tools → Haiku
- * - code / complex apps → Sonnet
+ * - structured JSON / short tools → Haiku (Pro+)
+ * - code / complex apps → Sonnet (Pro+ only)
  * - Ultra or Boost → Sonnet max (never Opus)
  */
 function pickRouteDefault(
@@ -295,6 +319,9 @@ function pickRouteDefault(
   plan: string,
   boost: boolean,
 ): LlmRoute | null {
+  if (planForcesCheapBackends(plan)) {
+    return firstCheap();
+  }
   if (wantsSonnetMax(kind, plan, boost)) {
     return firstCheap([anthropicSonnetRoute(true)]);
   }
@@ -325,7 +352,8 @@ function catalogRoute(prefer: LlmRoutingPreference): LlmRoute | null {
 
 /**
  * Display-model catalog first; otherwise task-based cheap routing.
- * Picked UI names always resolve to Haiku / Sonnet / GPT Terra / Gemini Flash.
+ * Picked UI names resolve to Haiku / Sonnet / GPT Terra / Gemini Flash.
+ * Free + Starter never take Sonnet / Pro finals even if the picker says Fable.
  */
 export function pickRoute(
   mode: TaskMode,
@@ -338,8 +366,9 @@ export function pickRoute(
   const json = extras?.json ?? false;
   const plan = extras?.plan ?? currentRoutingPlan();
   const boost = extras?.boost ?? currentRoutingBoost();
+  const cheapPlan = planForcesCheapBackends(plan);
   const chosen = catalogRoute(catalogId);
-  if (chosen) return chosen;
+  if (chosen && !(cheapPlan && isExpensiveRoute(chosen))) return chosen;
   return pickRouteDefault(kind, json, plan, boost);
 }
 
@@ -386,6 +415,11 @@ export class LLMProvider {
     messages: { role: "system" | "user" | "assistant"; content: string }[];
     json?: boolean;
   }): Promise<LlmCompleteResult> {
+    const workspaceId = currentRoutingWorkspaceId();
+    if (workspaceId) {
+      const { assertLlmCallBudget } = await import("@/lib/usage");
+      await assertLlmCallBudget(workspaceId);
+    }
     const route = pickRoute(input.mode, input.kind ?? "general", currentRoutingPreference(), {
       json: input.json,
     });

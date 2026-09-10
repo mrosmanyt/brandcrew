@@ -452,6 +452,24 @@ export function MissionControl({
       await openLaunch();
       return;
     }
+    if (data.qa) {
+      if (data.usage || data.limits) {
+        const next = data.limits || data.usage;
+        setUsage((prev) => ({
+          ...prev,
+          tokenUsed: next.tokenUsed ?? prev.tokenUsed,
+          tokenBudget: next.tokenBudget ?? prev.tokenBudget,
+          jobsThisHour: next.jobsThisHour ?? prev.jobsThisHour,
+          jobsPerHour: next.jobsPerHour ?? prev.jobsPerHour,
+          concurrentJobs: next.concurrentJobs ?? prev.concurrentJobs,
+          maxConcurrentJobs: next.maxConcurrentJobs ?? prev.maxConcurrentJobs,
+          plan: next.plan ?? prev.plan,
+        }));
+      }
+      setInput("");
+      void refreshChat(selected.id);
+      return;
+    }
     const job = data.job as JobDTO;
     setJobs((prev) => [job, ...prev.filter((row) => row.id !== job.id)]);
     setSelectedJobId(job.id);

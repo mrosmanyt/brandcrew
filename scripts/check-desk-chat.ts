@@ -10,6 +10,8 @@ import {
   liveProgressFromEvents,
 } from "../src/lib/live-progress";
 import type { MessageDTO } from "../src/lib/types";
+import { decideDeskQa } from "../src/lib/desk-qa-pure";
+import { JOB_ACTION_MESSAGES } from "../src/lib/constants";
 
 function event(
   partial: Partial<JobEventDTO> & Pick<JobEventDTO, "id" | "type" | "message">,
@@ -183,5 +185,11 @@ assert.equal(readStoredPaneWidth("nope", 240, 176, 400), 176);
 assert.equal(isStoredCollapsed("collapsed"), true);
 assert.equal(isStoredCollapsed("open"), false);
 console.log("ok: pane widths clamp and persist tokens parse");
+
+assert.equal(decideDeskQa({ message: "what is our ICP?" }).qa, true);
+assert.equal(decideDeskQa({ message: JOB_ACTION_MESSAGES.generate_week }).qa, false);
+assert.equal(decideDeskQa({ message: "hi, what's the offer?" }).qa, true);
+assert.equal(decideDeskQa({ message: "generate a linkedin week of posts" }).qa, false);
+console.log("ok: lightweight Q&A vs playbook intent");
 
 console.log("Desk chat checks passed.");

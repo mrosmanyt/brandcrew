@@ -29,6 +29,15 @@ export function isPaidPlan(plan?: string | null): boolean {
   return normalizePlanId(plan) !== "demo";
 }
 
+/**
+ * Free + Starter always stay on Flash / gpt-4o-mini (never Sonnet).
+ * Missing plan id is treated as Free so Auto cannot accidentally bill Sonnet.
+ */
+export function planForcesCheapBackends(plan?: string | null): boolean {
+  const id = normalizePlanId(plan);
+  return id === "demo" || id === "starter";
+}
+
 export function limitsForPlan(plan?: string | null): PlanLimits {
   const id = normalizePlanId(plan);
   const row = PLANS[id];

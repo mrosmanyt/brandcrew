@@ -101,8 +101,10 @@ process.env.GEMINI_API_KEY = "g";
 process.env.ANTHROPIC_API_KEY = "a";
 process.env.OPENAI_API_KEY = "o";
 assert.equal(pickRoute("draft", "website")?.provider, "gemini");
-assert.equal(pickRoute("draft", "coding")?.provider, "anthropic");
-assert.equal(pickRoute("draft", "apps")?.provider, "anthropic");
+assert.equal(pickRoute("draft", "coding")?.provider, "gemini");
+assert.equal(pickRoute("draft", "apps")?.provider, "gemini");
+assert.equal(pickRoute("draft", "coding", "auto", { plan: "pro" })?.provider, "anthropic");
+assert.equal(pickRoute("draft", "apps", "auto", { plan: "pro" })?.provider, "anthropic");
 assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
 process.env.XAI_API_KEY = "x";
 assert.equal(pickRoute("draft", "posts")?.provider, "gemini");
@@ -110,6 +112,6 @@ for (const key of Object.keys(saved)) {
   if (saved[key] === undefined) delete process.env[key];
   else process.env[key] = saved[key];
 }
-console.log("ok: website→Gemini Flash, coding→Sonnet, posts stay Flash (not xAI)");
+console.log("ok: website→Gemini Flash; Free/Starter coding stays Flash; Pro coding→Sonnet; posts stay Flash (not xAI)");
 
 console.log("Limits / builders / avatars checks passed.");
