@@ -5,7 +5,7 @@ const desktop = process.env.DESKTOP === "1";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["@prisma/client", "prisma", "playwright-core"],
+  serverExternalPackages: ["@prisma/client", "prisma", "playwright-core", "@composio/core"],
   // Static metadata PNGs live at /apple-icon.png etc. Alias the
   // extensionless Metadata API paths so crawlers and old bookmarks 200.
   async rewrites() {

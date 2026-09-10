@@ -10,7 +10,7 @@
 
 import { parseAskKind } from "@/lib/job-clarify";
 import type { JobStep, JobTool } from "@/lib/job-types";
-import { composioToolLooksLikeWrite } from "@/lib/composio";
+import { composioToolLooksLikeWrite } from "@/lib/composio-catalog";
 import { isClientNamedEmail } from "@/lib/client-workspaces";
 
 export type ApprovalClass = "always" | "safe" | "none";

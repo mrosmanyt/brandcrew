@@ -987,11 +987,11 @@ export function inferPlaybookKey(
   if (/outreach draft pack|draft pack|5 outreach drafts/.test(text)) {
     return "outreach_draft_pack";
   }
-  if (/weekly client brief|client brief|weekly brief/.test(text)) {
-    return "weekly_client_brief";
-  }
   if (/daily client brief|daily brief/.test(text)) {
     return "daily_client_brief";
+  }
+  if (/weekly client brief|weekly brief/.test(text) || (/\bclient brief\b/.test(text) && !/daily/.test(text))) {
+    return "weekly_client_brief";
   }
   if (/seo brief|seo notes|keyword brief/.test(text)) {
     return "seo_brief";

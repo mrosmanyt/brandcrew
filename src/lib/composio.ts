@@ -355,9 +355,7 @@ export async function fetchComposioAccount(accountId: string) {
   return { ok: true as const, account };
 }
 
-export function composioToolLooksLikeWrite(slug: string) {
-  return /CREATE|UPDATE|DELETE|SEND|POST_|UPSERT|REMOVE|WRITE|PUBLISH/i.test(slug);
-}
+export { composioToolLooksLikeWrite } from "@/lib/composio-catalog";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -424,14 +422,21 @@ export function formatComposioResult(data: Record<string, unknown>) {
   }
 }
 
-function pickDiscoveredSlug(
-  hits: Array<{ slug?: string; tool_slug?: string; name?: string }>,
-  preferred: string,
-) {
+function slugsFromSearch(found: {
+  results?: Array<{ primaryToolSlugs?: string[]; relatedToolSlugs?: string[] }>;
+}) {
+  const slugs: string[] = [];
+  for (const row of found.results || []) {
+    for (const slug of [...(row.primaryToolSlugs || []), ...(row.relatedToolSlugs || [])]) {
+      const trimmed = String(slug || "").trim();
+      if (trimmed && !slugs.includes(trimmed)) slugs.push(trimmed);
+    }
+  }
+  return slugs;
+}
+
+function pickDiscoveredSlug(slugs: string[], preferred: string) {
   const preferredUpper = preferred.toUpperCase();
-  const slugs = hits
-    .map((row) => String(row.slug || row.tool_slug || row.name || "").trim())
-    .filter(Boolean);
   return slugs.find((slug) => slug.toUpperCase() === preferredUpper) || slugs[0] || preferred;
 }
 
@@ -479,10 +484,7 @@ export async function runComposioFirstCall(workspaceId: string): Promise<Composi
 
   if (gmailConnected) {
     const found = await session.search({ query: "get gmail profile", toolkits: ["gmail"] });
-    const hits = Array.isArray((found as { items?: unknown[] }).items)
-      ? ((found as { items: Array<{ slug?: string; tool_slug?: string; name?: string }> }).items)
-      : [];
-    const tool = pickDiscoveredSlug(hits, "GMAIL_GET_PROFILE");
+    const tool = pickDiscoveredSlug(slugsFromSearch(found), "GMAIL_GET_PROFILE");
     const executed = await session.execute(tool, {});
     const data = asRecord(executed);
     return {
@@ -501,10 +503,7 @@ export async function runComposioFirstCall(workspaceId: string): Promise<Composi
     query: "hacker news user profile by username",
     toolkits: ["hackernews"],
   });
-  const hits = Array.isArray((found as { items?: unknown[] }).items)
-    ? ((found as { items: Array<{ slug?: string; tool_slug?: string; name?: string }> }).items)
-    : [];
-  const tool = pickDiscoveredSlug(hits, "HACKERNEWS_GET_USER");
+  const tool = pickDiscoveredSlug(slugsFromSearch(found), "HACKERNEWS_GET_USER");
   const executed = await session.execute(tool, { username: "pg" });
   const data = asRecord(executed);
   const authorize = await session.authorize("gmail", {

@@ -210,3 +210,8 @@ export function isComposioPluginId(pluginId: string) {
 export function composioUserId(workspaceId: string) {
   return `cinem-ws-${workspaceId}`;
 }
+
+/** Write-looking Composio slugs always pause. Safe to import from client write-gate. */
+export function composioToolLooksLikeWrite(slug: string) {
+  return /CREATE|UPDATE|DELETE|SEND|POST_|UPSERT|REMOVE|WRITE|PUBLISH/i.test(slug);
+}

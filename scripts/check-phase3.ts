@@ -7,13 +7,13 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   COMPOSIO_AGENCY_TOOLKITS,
   composioPluginId,
+  composioToolLooksLikeWrite,
   composioUserId,
   getComposioToolkit,
 } from "../src/lib/composio-catalog";
 import {
   composioConfigured,
   composioMissingHint,
-  composioToolLooksLikeWrite,
   resetComposioSdkForTests,
 } from "../src/lib/composio";
 import { memoryFromArtifact, formatMemoryBrief, parseMemoryKind } from "../src/lib/learning-memory";
