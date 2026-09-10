@@ -6,6 +6,12 @@ The MV3 source is `extension/` (manifest, service worker, popup, icons). CI / `n
 
 The zip has **`manifest.json` at the archive root** (not nested in an extra `extension/` folder). Alternate download: `GET /api/downloads/extension`. Site hub: `/download`.
 
+Production URLs for Chrome Web Store upload (same zip `build` / `vercel-build` already packs):
+
+- `https://app.cinem.tech/downloads/cinem-pro-chrome.zip`
+- `https://brandcrew.vercel.app/downloads/cinem-pro-chrome.zip`
+- Alternate: `https://app.cinem.tech/api/downloads/extension`
+
 Desk **On-device Chrome** is **download-first** (zip / store). **Sign in with CINEM** attaches the workspace to this Chrome so jobs run as that user. Pairing codes remain as a fallback. Load unpacked is under a developer disclosure — not the primary path.
 
 ## One-time developer account

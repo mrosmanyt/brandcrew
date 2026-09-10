@@ -101,7 +101,8 @@ export const SOC2_CONTROLS: Soc2Control[] = [
     criterion: "Privacy",
     title: "Privacy policy + DPA template + cookie consent",
     status: "in_product",
-    evidence: "/privacy, /dpa, cookie banner (essential vs analytics). Analytics scripts do not load without accept.",
+    evidence:
+      "/privacy, /dpa, cookie banner (essential vs analytics). Optional GA/Plausible do not load without accept. The Whop checkout pixel loads in the document head for billing attribution.",
     product: "/privacy /dpa",
   },
   {

@@ -13,6 +13,7 @@ import {
   CINEM_OG_SRC,
 } from "@/lib/cinem-mark";
 import { COMPANY_SITE, siteOrigin } from "@/lib/site";
+import { WHOP_PIXEL_SNIPPET } from "@/lib/whop-pixel";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -80,6 +81,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Native head script: Whop's detector reads the HTML snippet. */}
+        <script
+          id="whop-pixel"
+          dangerouslySetInnerHTML={{ __html: WHOP_PIXEL_SNIPPET }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider
           attribute="class"

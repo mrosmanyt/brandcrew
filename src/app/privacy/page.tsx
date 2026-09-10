@@ -54,11 +54,14 @@ export default function PrivacyPage() {
         The <code>brandcrew_session</code> cookie is essential. It is httpOnly,
         SameSite=Lax, and Secure in production (and on Vercel). It keeps you
         signed in. The session JWT is never written to localStorage or
-        sessionStorage. We do not use advertising cookies. Optional analytics
-        scripts load only when an analytics environment variable is set{" "}
-        <em>and</em> you accept them in the cookie banner. Your banner choice
-        (and desk pane width) may be stored in localStorage on this device — that
-        is not a login token.
+        sessionStorage. We do not use advertising cookies. A Whop tracking pixel
+        loads in the document head on every page (t.whop.tw, CINEM Tech business{" "}
+        <code>biz_VrtL8S4duREQg4</code>) so membership checkout can attribute
+        visits — that is billing, not ads, and it is not gated by the cookie
+        banner. Optional analytics scripts load only when an analytics
+        environment variable is set <em>and</em> you accept them in the cookie
+        banner. Your banner choice (and desk pane width) may be stored in
+        localStorage on this device — that is not a login token.
       </p>
 
       <h2>Chrome extension, desktop, and Android</h2>

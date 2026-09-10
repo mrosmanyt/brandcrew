@@ -18,7 +18,7 @@ Living inventory for agency buyers and a future auditor. **Not a certification.*
 | Device | On-device Chrome CDP; credentials stay on the paired machine | In product |
 | Injection | Untrusted page wrap; domain allowlist | In product |
 | Isolation | Client desks: Brand Kit, memory, plugins, Always-approved, seats | In product |
-| Privacy | `/privacy`, `/dpa`, cookie banner (essential vs accept) | In product |
+| Privacy | `/privacy`, `/dpa`, cookie banner (essential vs accept); Whop pixel in head for checkout attribution | In product |
 | Change mgmt | GitHub + Vercel; no in-product ticket system | Process |
 | Backups | Host retention (Neon/Vercel); no invented RPO/RTO | Documented |
 

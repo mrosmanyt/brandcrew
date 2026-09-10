@@ -1,3 +1,5 @@
+import { WHOP_PIXEL_ORIGIN } from "./whop-pixel";
+
 /**
  * Security headers in one place.
  *
@@ -27,6 +29,7 @@ function cspValue() {
     "https://www.googletagmanager.com",
     "https://www.google-analytics.com",
     "https://plausible.io",
+    WHOP_PIXEL_ORIGIN,
   ]
     .filter(Boolean)
     .join(" ");
@@ -37,7 +40,7 @@ function cspValue() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://plausible.io https://*.plausible.io",
+    `connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://plausible.io https://*.plausible.io ${WHOP_PIXEL_ORIGIN} https://*.whop.tw`,
     "frame-src 'self' blob: data:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
