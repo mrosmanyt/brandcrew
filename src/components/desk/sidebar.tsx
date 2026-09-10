@@ -16,7 +16,6 @@ import {
   Plus,
   Settings,
   Shield,
-  Sparkles,
   Users,
   Store,
   Terminal,
@@ -25,6 +24,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { ConsoleNavLink } from "@/components/desk/console-nav-link";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import {
   ResizeHandle,
@@ -396,14 +396,6 @@ function NavBody({
               Trust & audit
             </SideLink>
             <SideLink
-              href={`/desk/${workspace.id}/brand-kit`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<Sparkles className="size-3.5" />}
-            >
-              Brand Kit
-            </SideLink>
-            <SideLink
               href={`/desk/${workspace.id}/calendar`}
               pathname={pathname}
               collapsed={collapsed}
@@ -427,14 +419,19 @@ function NavBody({
             >
               On-device Chrome
             </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/developers`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<Terminal className="size-3.5" />}
-            >
-              API Console
-            </SideLink>
+            <li>
+              <ConsoleNavLink
+                workspaceId={workspace.id}
+                title="API Console"
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  collapsed && "justify-center px-0",
+                )}
+              >
+                <Terminal className="size-3.5" />
+                {!collapsed ? "API Console" : null}
+              </ConsoleNavLink>
+            </li>
             <SideLink
               href={`/desk/${workspace.id}/usage`}
               pathname={pathname}

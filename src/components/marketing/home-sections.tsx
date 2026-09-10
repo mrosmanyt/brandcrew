@@ -407,7 +407,8 @@ export function DeveloperApiSection() {
         List agents, queue jobs, read artifacts. Jobs do not auto-publish. Slack
         still needs an approved <code className="font-mono text-xs">ask_user</code>{" "}
         in the desk. Rate limit: 60 requests / minute / key. Open the Console
-        after signup at <span className="text-foreground">/desk/…/developers</span>.
+        after signup at <span className="text-foreground">console.cinem.tech</span>
+        {" "}(or <span className="text-foreground">/console</span> until that domain is attached).
       </p>
     </Section>
   );

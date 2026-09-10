@@ -50,12 +50,17 @@ console.log("ok: composer attachments format without inventing uploads");
 
 const links = settingsDeskLinks("ws_1");
 const labels = links.map((link) => link.label);
-const required = ["Plugins", "Bots", "Marketplace", "Plans", "On-device Chrome", "Client desks", "Trust & audit"] as const;
+const required = ["Plugins", "Bots", "Marketplace", "Plans", "On-device Chrome", "Client desks", "Trust & audit", "Brand Kit", "API Console"] as const;
 for (const label of required) {
   assert.equal(labels.includes(label), true, `missing ${label}`);
 }
 assert.ok(links.some((link) => link.href.includes("tab=plugins")));
 assert.ok(links.some((link) => link.href.includes("tab=bots")));
+const apiConsole = links.find((link) => link.label === "API Console");
+assert.ok(apiConsole?.href.startsWith("/console"));
+assert.equal("external" in (apiConsole ?? {}) && apiConsole?.external, true);
+const brandKit = links.find((link) => link.label === "Brand Kit");
+assert.ok(brandKit?.href.includes("/brand-kit"));
 assert.equal(jobDeskHref("ws_1", { id: "job_9", agentId: "ag_2" }), "/desk/ws_1?agentId=ag_2&jobId=job_9");
 console.log("ok: Settings hub lists Plugins, Bots, Marketplace, Plans, and Jobs deep-links");
 

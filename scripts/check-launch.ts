@@ -233,6 +233,7 @@ async function main() {
   assert.ok(existsSync("extension/manifest.json"));
   assert.ok(existsSync("native-host/host.mjs"));
   assert.match(readFileSync("extension/manifest.json", "utf8"), /"manifest_version": 3/);
+  assert.ok(existsSync("public/downloads/cinem-pro-chrome.zip"));
   console.log("ok: unpacked MV3 extension + native host files ship with the repo");
 
   const hero = readFileSync("src/components/marketing/hero-demo.tsx", "utf8");

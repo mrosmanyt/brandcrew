@@ -11,6 +11,7 @@ import {
   Mail,
   MonitorSmartphone,
   Plug,
+  Sparkles,
   Store,
 } from "lucide-react";
 import { InviteTeam } from "@/components/desk/invite-team";
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { jobDeskHref, settingsDeskLinks } from "@/lib/desk-settings";
+import { ConsoleNavLink } from "@/components/desk/console-nav-link";
 import { assertStrongPassword } from "@/lib/password-rules";
 import { displayAgentName } from "@/lib/constants";
 import type { AgentDTO, JobDTO } from "@/lib/job-types";
@@ -159,6 +161,7 @@ export function SettingsHub({
   }
 
   const featured = [
+    { href: `/desk/${workspaceId}/brand-kit`, label: "Brand Kit", icon: Sparkles },
     { href: `/desk/${workspaceId}/marketplace?tab=plugins`, label: "Plugins", icon: Plug },
     { href: `/desk/${workspaceId}/marketplace?tab=bots`, label: "Bots", icon: Bot },
     { href: `/desk/${workspaceId}/marketplace`, label: "Marketplace", icon: Store },
@@ -297,6 +300,29 @@ export function SettingsHub({
         </p>
       </section>
 
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <Sparkles className="size-3.5 text-muted-foreground" />
+          Workspace kit
+        </h2>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Brand Kit lives here, nested under Settings — not in the main sidebar.
+          Voice, offer, and learning memory stay on this desk.
+        </p>
+        <Link
+          href={`/desk/${workspaceId}/brand-kit`}
+          className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-sm hover:bg-muted/40"
+        >
+          <span>
+            <span className="block font-medium">Brand Kit</span>
+            <span className="block text-xs text-muted-foreground">
+              Voice, facts, and memory for this workspace
+            </span>
+          </span>
+          <span className="text-xs text-muted-foreground">Open →</span>
+        </Link>
+      </section>
+
       <section className="mt-6">
         <h2 className="text-sm font-medium">Apps and billing</h2>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -373,13 +399,23 @@ export function SettingsHub({
           ) : null}
           {links.map((link) => (
             <li key={link.href}>
-              <Link
-                href={link.href}
-                className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40"
-              >
-                <span className="text-sm">{link.label}</span>
-                <span className="text-xs text-muted-foreground">{link.hint}</span>
-              </Link>
+              {"external" in link && link.external ? (
+                <ConsoleNavLink
+                  workspaceId={workspaceId}
+                  className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40"
+                >
+                  <span className="text-sm">{link.label}</span>
+                  <span className="text-xs text-muted-foreground">{link.hint}</span>
+                </ConsoleNavLink>
+              ) : (
+                <Link
+                  href={link.href}
+                  className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40"
+                >
+                  <span className="text-sm">{link.label}</span>
+                  <span className="text-xs text-muted-foreground">{link.hint}</span>
+                </Link>
+              )}
             </li>
           ))}
         </ul>

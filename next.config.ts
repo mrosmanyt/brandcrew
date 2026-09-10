@@ -35,6 +35,21 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
         ],
       },
+      {
+        source: "/bots/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/downloads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
     ];
   },
   // README and local tooling use 127.0.0.1; Next 16 treats that as a distinct

@@ -69,6 +69,7 @@ import * as workspaceRoutines from "./workspaces/routines";
 import * as workspaceJobReplay from "./workspaces/job-replay";
 import * as workspaceTriggers from "./workspaces/triggers";
 import * as workspaceTriggerFire from "./workspaces/trigger-fire";
+import * as downloadsExtension from "./downloads/extension";
 import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
@@ -102,6 +103,7 @@ function asHandlers(mod: object): HandlerModule {
  */
 export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "admin"], handlers: asHandlers(adminRoot) },
+  { pattern: ["api", "downloads", "extension"], handlers: asHandlers(downloadsExtension) },
   { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
   { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
   {

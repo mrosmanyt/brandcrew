@@ -5,7 +5,9 @@
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { creditsFromTokens } from "../src/lib/credits";
+import { packExtensionDirectory } from "../src/lib/extension-zip";
 import {
   DomainAllowlistAbort,
   assertHostAllowed,
@@ -37,6 +39,23 @@ assert.ok(existsSync("extension/manifest.json"));
 assert.ok(existsSync("extension/background.js"));
 assert.ok(existsSync("extension/popup.html"));
 assert.ok(existsSync("extension/icons/cinem-logo.png"));
+assert.ok(existsSync("docs/chrome-extension-store.md"));
+const zipBuf = packExtensionDirectory(join(process.cwd(), "extension"));
+assert.equal(zipBuf[0], 0x50);
+assert.equal(zipBuf[1], 0x4b);
+assert.ok(zipBuf.includes(Buffer.from("manifest.json")));
+assert.match(
+  readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
+  /Download extension/,
+);
+assert.match(
+  readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
+  /EXTENSION_ZIP_PUBLIC_PATH/,
+);
+assert.doesNotMatch(
+  readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
+  /select the repo/,
+);
 assert.ok(existsSync("native-host/host.mjs"));
 assert.ok(existsSync("native-host/install.mjs"));
 const manifest = JSON.parse(readFileSync("extension/manifest.json", "utf8")) as {
