@@ -45,7 +45,7 @@ export function requireWhopCompanyId() {
  * checkout). `@whop/sdk` 1.1.2 still types `account_id`. Send both so live
  * checkout and older SDK/API aliases resolve the same `biz_…` company.
  */
-function withWhopCompany<T extends object>(companyId: string, rest: T) {
+function withWhopCompany<const T extends object>(companyId: string, rest: T) {
   return { ...rest, company_id: companyId, account_id: companyId };
 }
 
