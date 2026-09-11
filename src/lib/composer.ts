@@ -44,3 +44,34 @@ export function clipComposerText(text: string) {
 export function connectorStatusLabel(connected: boolean) {
   return connected ? "Connected" : "Not connected";
 }
+
+type FocusTarget = {
+  tagName?: string;
+  isContentEditable?: boolean;
+};
+
+/**
+ * Keep the desk composer focused after send / reply, unless the user
+ * moved to another field (clarification input, settings, etc.).
+ */
+export function shouldRefocusComposer(
+  active: FocusTarget | null,
+  composer: object | null,
+): boolean {
+  if (!composer) return false;
+  if (!active || active === composer) return true;
+  const tag = (active.tagName || "").toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return false;
+  if (active.isContentEditable) return false;
+  return true;
+}
+
+export function focusComposer(
+  composer: HTMLTextAreaElement | null,
+  active: Element | null = null,
+): boolean {
+  if (!composer || composer.disabled) return false;
+  if (!shouldRefocusComposer(active, composer)) return false;
+  composer.focus({ preventScroll: true });
+  return true;
+}

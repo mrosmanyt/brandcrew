@@ -12,7 +12,13 @@ import {
 import type { MessageDTO } from "../src/lib/types";
 import { decideDeskQa, deskQaSystemPrompt } from "../src/lib/desk-qa-pure";
 import { JOB_ACTION_MESSAGES } from "../src/lib/constants";
-import { LANGUAGE_AND_SCOPE_RULE, messagesWithLanguagePolicy } from "../src/lib/language-policy";
+import {
+  AGENT_HELPFULNESS_SUFFIX,
+  LANGUAGE_AND_SCOPE_RULE,
+  messagesWithLanguagePolicy,
+  withAgentHelpfulness,
+  withoutLegacyPitch,
+} from "../src/lib/language-policy";
 
 function event(
   partial: Partial<JobEventDTO> & Pick<JobEventDTO, "id" | "type" | "message">,
@@ -201,6 +207,10 @@ assert.match(LANGUAGE_AND_SCOPE_RULE, /Roman/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Never refuse to speak a language/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Never claim you operate in English only/);
 assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /I operate in English only/);
+assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /then offer to help with brand/);
+assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /then offer brand or desk work/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Do not append unsolicited/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Only offer next steps when the user asks for work/);
 const qaPrompt = deskQaSystemPrompt({
   agentName: "Prospect Peter",
   role: "Sales",
@@ -210,16 +220,49 @@ assert.match(qaPrompt, /Urdu/);
 assert.match(qaPrompt, /capital of a country/);
 assert.match(qaPrompt, /Never claim you operate in English only/);
 assert.doesNotMatch(qaPrompt, /I operate in English only/);
+assert.doesNotMatch(qaPrompt, /then offer to help with brand/);
+assert.doesNotMatch(qaPrompt, /then offer brand or desk work/);
+assert.match(qaPrompt, /Do not pitch hospitality/);
+assert.match(qaPrompt, /Only offer next steps when the user asks for work/);
 const injected = messagesWithLanguagePolicy(
   [{ role: "system", content: "You are Prospect Peter." }],
   "general",
 );
 assert.match(injected[0]?.content || "", /Never refuse to speak a language/);
+assert.match(injected[0]?.content || "", /Do not append unsolicited/);
+assert.doesNotMatch(injected[0]?.content || "", /then offer brand or desk work/);
 assert.equal(
   messagesWithLanguagePolicy([{ role: "system", content: "Pick a selector." }], "classify")[0]
     ?.content,
   "Pick a selector.",
 );
-console.log("ok: desk Q&A + global layer mirror Urdu and do not English-lock");
+const rewritten = messagesWithLanguagePolicy(
+  [
+    {
+      role: "system",
+      content:
+        "You are Prospect Peter. Prefer this role's niche, but do not refuse basic helpful answers — answer briefly, then offer brand or desk work.",
+    },
+  ],
+  "general",
+);
+assert.doesNotMatch(rewritten[0]?.content || "", /then offer brand or desk work/);
+assert.match(rewritten[0]?.content || "", /Do not append unsolicited/);
+console.log("ok: desk Q&A + global layer mirror Urdu, do not English-lock, and do not pitch after every answer");
+
+assert.doesNotMatch(AGENT_HELPFULNESS_SUFFIX, /then offer brand/);
+assert.match(AGENT_HELPFULNESS_SUFFIX, /Do not append unsolicited/);
+assert.equal(
+  withoutLegacyPitch("Answer briefly, then offer brand or desk work.").includes(
+    "then offer brand",
+  ),
+  false,
+);
+const storedPeter = withAgentHelpfulness(
+  "You are Prospect Peter. Never claim English-only. Prefer this role's niche, but do not refuse basic helpful answers — answer briefly, then offer brand or desk work.",
+);
+assert.doesNotMatch(storedPeter, /then offer brand or desk work/);
+assert.match(storedPeter, /Do not append unsolicited/);
+console.log("ok: stored helpfulness suffixes lose the pitch-after-every-answer closer");
 
 console.log("Desk chat checks passed.");

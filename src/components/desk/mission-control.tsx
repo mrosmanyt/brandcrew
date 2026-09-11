@@ -802,6 +802,7 @@ export function MissionControl({
               startJob(intent.action, message, intent.playbookKey)
             }
             busy={busy}
+            messageCount={messages.length}
             disabled={!selected}
             showHero={!thread.length && !latestDraft}
             usageLabel={

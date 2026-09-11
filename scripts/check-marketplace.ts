@@ -50,6 +50,8 @@ for (const bot of MARKETPLACE_BOTS) {
   assert.match(bot.instructions, /Never claim English-only/);
   assert.doesNotMatch(bot.instructions, /I operate in English only/i);
   assert.doesNotMatch(bot.instructions, /I can only (use|speak|operate)/i);
+  assert.doesNotMatch(bot.instructions, /then offer brand or desk work/i);
+  assert.match(bot.instructions, /Do not append unsolicited/);
 }
 console.log("ok: marketplace bots mirror language; no English-only lock");
 assert.equal(getMarketplaceBot("bot-manager")?.featured, true);

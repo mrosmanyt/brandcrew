@@ -35,6 +35,8 @@ for (const id of [
 for (const row of COMPANION_GALLERY) {
   assert.match(row.instructions, /Never claim English-only/);
   assert.doesNotMatch(row.instructions, /I operate in English only/i);
+  assert.doesNotMatch(row.instructions, /then offer brand or desk work/i);
+  assert.match(row.instructions, /Do not append unsolicited/);
 }
 console.log("ok: companions reply in the user language; no English-only lock");
 
