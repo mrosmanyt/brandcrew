@@ -11,6 +11,12 @@ import {
   whopIsConfigured,
   whopPlanIdFor,
 } from "../src/lib/billing";
+import { ClientError } from "../src/lib/http";
+import {
+  requireWhopCompanyId,
+  whopAccountId,
+  whopCompanyId,
+} from "../src/lib/whop";
 import {
   extractWhopResource,
   isMembershipDeactivatedEvent,
@@ -48,6 +54,8 @@ const KEYS = [
   "BILLING_PROVIDER",
   "WHOP_API_KEY",
   "STRIPE_SECRET_KEY",
+  "WHOP_COMPANY_ID",
+  "WHOP_ACCOUNT_ID",
   "WHOP_STARTER_PLAN_ID",
   "WHOP_PRO_PLAN_ID",
   "WHOP_ULTRA_PLAN_ID",
@@ -103,6 +111,24 @@ assert.equal(whopPlanIdFor("starter"), "plan_starter");
 assert.equal(whopPlanIdFor("pro"), "plan_pro");
 assert.equal(whopPlanIdFor("ultra"), "plan_ultra");
 console.log("ok: provider prefers Whop, then Stripe, then mock");
+
+resetEnv();
+assert.equal(whopCompanyId(), "");
+assert.equal(whopAccountId(), "");
+assert.throws(
+  () => requireWhopCompanyId(),
+  (err: unknown) =>
+    err instanceof ClientError &&
+    err.status === 400 &&
+    /WHOP_COMPANY_ID/.test(err.message),
+);
+process.env.WHOP_ACCOUNT_ID = "biz_alias";
+assert.equal(whopCompanyId(), "biz_alias");
+assert.equal(requireWhopCompanyId(), "biz_alias");
+process.env.WHOP_COMPANY_ID = "biz_VrtL8S4duREQg4";
+assert.equal(whopCompanyId(), "biz_VrtL8S4duREQg4");
+assert.equal(whopAccountId(), "biz_VrtL8S4duREQg4");
+console.log("ok: live Whop checkout requires company id (WHOP_ACCOUNT_ID alias)");
 
 assert.equal(billingCheckoutLabel("Pro", "mock"), "Apply Pro (mock)");
 assert.equal(billingCheckoutLabel("Pro Plus", "whop"), "Checkout Pro Plus with Whop");
@@ -295,8 +321,14 @@ assert.match(readFileSync(".env.example", "utf8"), /WHOP_WEBHOOK_SECRET=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PRODUCT_ID=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PLAN_ID=/);
 assert.match(router, /api", "billing", "support/);
-assert.match(readFileSync("src/lib/whop.ts", "utf8"), /createWhopSupportCheckout/);
-assert.match(readFileSync("src/lib/whop.ts", "utf8"), /plan_type: "one_time"/);
+const whopSrc = readFileSync("src/lib/whop.ts", "utf8");
+assert.match(whopSrc, /createWhopSupportCheckout/);
+assert.match(whopSrc, /plan_type: "one_time"/);
+assert.match(whopSrc, /company_id: companyId/);
+assert.match(whopSrc, /account_id: companyId/);
+assert.match(whopSrc, /requireWhopCompanyId/);
+assert.match(whopSrc, /withWhopCompany/);
+assert.match(readFileSync("docs/whop-support.md", "utf8"), /plan\.company_id/);
 assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /isSupportCheckout/);
 assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyPaidSupport/);
 assert.doesNotMatch(readFileSync("src/lib/support-fulfill.ts", "utf8"), /plan:/);

@@ -342,7 +342,7 @@ See [`.env.example`](./.env.example). Summary:
 | `BILLING_MOCK` | no (defaults true when neither Whop nor Stripe is set) | Apply Pro/Pro Plus/Ultra locally without a payment provider. |
 | `BILLING_PROVIDER` | no | Optional force: `whop`, `stripe`, or `mock`. Default prefers Whop, then Stripe, then mock. |
 | `WHOP_API_KEY` | no | Whop Account API key (`apik_` / `whop_`). Enables live Whop checkout. |
-| `WHOP_COMPANY_ID` | no | Business id (`biz_…`). Alias: `WHOP_ACCOUNT_ID`. |
+| `WHOP_COMPANY_ID` | no | Business id (`biz_…`). Required for live `checkoutConfigurations.create` (`company_id` / `plan.company_id`). Alias: `WHOP_ACCOUNT_ID`. |
 | `WHOP_WEBHOOK_SECRET` | no | Signing secret (`ws_…`) for `POST /api/webhooks/whop`. |
 | `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | no | Existing Whop plan ids. If unset, checkout creates a $20 / $79 / $200 monthly renewal. |
 | `WHOP_SUPPORT_PRODUCT_ID` / `WHOP_SUPPORT_PLAN_ID` | no | Support (tips) product/plan. Checkout always sends a one-time `initial_price` of $1–$99,999. See `docs/whop-support.md`. |
@@ -414,7 +414,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 
 1. Create a company at [whop.com/dashboard](https://whop.com/dashboard) (or [sandbox.whop.com](https://sandbox.whop.com) for test money).
 2. Developer → Account API keys. Grant `checkout_configuration:create`, `plan:create`, `plan:basic:read`, and webhook receive/read as needed. Store the key as `WHOP_API_KEY`.
-3. Copy the business id (`biz_…`) into `WHOP_COMPANY_ID`.
+3. Copy the business id (`biz_…`) into `WHOP_COMPANY_ID` (CINEM Tech production: `biz_VrtL8S4duREQg4`). Live checkout sends this as `company_id` and `plan.company_id`, plus `account_id` as an alias. Empty company id is a ClientError — CINEM Pro does not call Whop without it.
 4. Optional: create three products/plans at $20 / $79 / $200 monthly and set `WHOP_STARTER_PLAN_ID`, `WHOP_PRO_PLAN_ID`, `WHOP_ULTRA_PLAN_ID`. If those are empty, checkout creates a matching monthly renewal inline.
 5. **Support (tips):** create a product named **Support**. Copy `prod_…` to `WHOP_SUPPORT_PRODUCT_ID`. CINEM Pro does not use a fixed Support price — checkout creates a hidden one-time plan with `initial_price` equal to the amount the buyer typed ($1–$99,999). Whop has no pay-what-you-want field on checkout configuration. Full steps: `docs/whop-support.md`.
 6. Developer → Webhooks → Create webhook:
