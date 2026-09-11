@@ -2,6 +2,7 @@
  * Chat thread + live-progress + pane clamp guards. No database.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { clampPaneWidth, isStoredCollapsed, readStoredPaneWidth } from "../src/lib/desk-layout";
 import type { JobDTO, JobEventDTO } from "../src/lib/job-types";
 import {
@@ -23,6 +24,10 @@ import {
   withoutLegacyPitch,
   withoutProviderDisclosure,
 } from "../src/lib/language-policy";
+import {
+  AVATAR_SHAPES,
+  defaultAgentAvatarKind,
+} from "../src/lib/agent-avatar";
 
 function event(
   partial: Partial<JobEventDTO> & Pick<JobEventDTO, "id" | "type" | "message">,
@@ -327,5 +332,25 @@ const planPrompt = plannerSystemPrompt({
 assert.equal(planPrompt.startsWith("Identity (non-negotiable):"), true);
 assert.match(planPrompt, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
 console.log("ok: identity lock is early; provider-disclosure copy is stripped");
+
+assert.equal(defaultAgentAvatarKind(), "cinem-mark");
+assert.equal(defaultAgentAvatarKind(null), "cinem-mark");
+assert.equal((AVATAR_SHAPES as readonly string[]).includes("cloud"), false);
+const avatarUi = readFileSync("src/components/desk/agent-avatar.tsx", "utf8");
+assert.match(avatarUi, /CinemMark/);
+assert.match(avatarUi, /defaultAgentAvatarKind/);
+assert.doesNotMatch(avatarUi, /case "cloud"/);
+const chatUi = readFileSync("src/components/desk/chat-thread.tsx", "utf8");
+assert.match(chatUi, /AgentAvatar/);
+assert.doesNotMatch(chatUi, /Cloud/);
+for (const file of [
+  "src/components/desk/sidebar.tsx",
+  "src/components/desk/companion-gallery.tsx",
+  "src/components/desk/marketplace.tsx",
+]) {
+  const text = readFileSync(file, "utf8");
+  assert.match(text, /AgentAvatar/);
+}
+console.log("ok: desk chat and default agent avatars use the CINEM mark, not a cloud");
 
 console.log("Desk chat checks passed.");
