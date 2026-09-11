@@ -6,6 +6,7 @@ import {
   BarChart3,
   CalendarDays,
   CreditCard,
+  Heart,
   LayoutGrid,
   ListChecks,
   LogOut,
@@ -44,6 +45,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { DEFAULT_AGENT_NAME, displayAgentName } from "@/lib/constants";
+import { SupporterBadge } from "@/components/support/supporter-badge";
 import type { AgentDTO } from "@/lib/job-types";
 import type { ProposedAgent } from "@/lib/team-launch";
 import type { WorkspaceDTO } from "@/lib/types";
@@ -229,10 +231,18 @@ function NavBody({
                 {w.kind === "client"
                   ? `${w.name}${w.clientName ? ` · ${w.clientName}` : ""}`
                   : w.name}
+                {w.supporter || (w.id === workspace.id && workspace.supporter)
+                  ? " · Supporter"
+                  : ""}
                 {w.id === workspace.id && workspace.memberRole ? ` · ${workspace.memberRole}` : ""}
               </option>
             ))}
           </select>
+          {workspace.supporter ? (
+            <div className="mt-1.5">
+              <SupporterBadge />
+            </div>
+          ) : null}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -447,6 +457,14 @@ function NavBody({
               icon={<CreditCard className="size-3.5" />}
             >
               Plans
+            </SideLink>
+            <SideLink
+              href="/support"
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<Heart className="size-3.5" />}
+            >
+              Support
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/settings`}

@@ -19,10 +19,17 @@ model User {
   /// Google account `sub`. Distinct from Marketplace Gmail plugin tokens.
   googleId      String?            @unique
   name          String
+  /// True after a successful Support (tip) payment webhook — not from the thank-you page alone.
+  supporter          Boolean   @default(false)
+  supporterAt        DateTime?
+  supporterTotalCents Int      @default(0)
   createdAt     DateTime           @default(now())
   memberships   WorkspaceMember[]
   invitesSent   WorkspaceInvite[]
   refreshTokens AuthRefreshToken[]
+  supports      BrandSupport[]
+
+  @@index([supporter])
 }
 
 model Workspace {
@@ -42,6 +49,10 @@ model Workspace {
   clientName         String            @default("")
   /// Last Whop membership that granted the current paid plan. Used to match deactivates.
   whopMembershipId   String?
+  /// True after a successful Support payment. Independent of plan (Pro / Pro Plus / Ultra).
+  supporter          Boolean           @default(false)
+  supporterAt        DateTime?
+  supporterTotalCents Int              @default(0)
   /// Soft suspend from Admin HQ: workspace is forced to Free and new jobs are blocked.
   suspended          Boolean           @default(false)
   createdAt          DateTime          @default(now())
@@ -66,10 +77,12 @@ model Workspace {
   routines           Routine[]
   sessionReplays     SessionReplay[]
   memories           WorkspaceMemory[]
+  supports           BrandSupport[]
 
   @@index([whopMembershipId])
   @@index([plan])
   @@index([suspended])
+  @@index([supporter])
 }
 
 model Agent {
@@ -569,4 +582,25 @@ model ProcessedWebhook {
   createdAt  DateTime @default(now())
 
   @@index([externalId])
+}
+
+/// One-time Support (tip) payments. Does not change Workspace.plan.
+model BrandSupport {
+  id           String     @id @default(cuid())
+  amountCents  Int
+  currency     String     @default("usd")
+  userId       String?
+  workspaceId  String?
+  email        String     @default("")
+  paymentId    String?    @unique
+  status       String     @default("pending")
+  provider     String     @default("whop")
+  createdAt    DateTime   @default(now())
+  paidAt       DateTime?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([status])
 }

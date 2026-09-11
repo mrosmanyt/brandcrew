@@ -17,6 +17,7 @@ export type WorkspaceDTO = {
   kind?: "agency" | "client" | string;
   clientName?: string;
   memberRole?: "owner" | "admin" | "approver" | "member";
+  supporter?: boolean;
   createdAt: string;
   brandKit?: BrandKit;
   limits?: LimitsDTO;

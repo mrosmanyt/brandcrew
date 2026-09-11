@@ -19,6 +19,22 @@ export function billingSuccessBanner(provider: BillingProvider) {
   return "Plan applied in mock billing.";
 }
 
+export function supportSuccessBanner(provider: BillingProvider) {
+  if (provider === "whop") {
+    return "Whop checkout finished. Supporter status unlocks when the payment.succeeded webhook arrives — this page does not mark you paid by itself.";
+  }
+  if (provider === "stripe") {
+    return "Checkout finished. Supporter status waits for the payment webhook.";
+  }
+  return "Thank you — Supporter is marked in mock billing (no live charge).";
+}
+
+export function supportCheckoutLabel(provider: BillingProvider) {
+  if (provider === "mock") return "Apply Support (mock)";
+  if (provider === "whop") return "Checkout Support with Whop";
+  return "Checkout Support";
+}
+
 export function checkoutPlanFromQuery(raw?: string | null): CheckoutPlanId | null {
   const id = String(raw || "").trim().toLowerCase();
   if (id === "growth") return "pro";

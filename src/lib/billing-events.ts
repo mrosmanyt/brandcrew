@@ -1,5 +1,11 @@
 import type { CheckoutPlanId } from "@/lib/constants";
 import { normalizePlanId } from "@/lib/limits";
+import {
+  isSupportPlanId,
+  parseSupportAmountUsd,
+  supportAmountCents,
+  SUPPORT_KIND,
+} from "@/lib/support";
 
 export type WhopWebhookEnvelope = {
   id?: unknown;
@@ -45,21 +51,77 @@ export function nestedId(value: unknown, ...keys: string[]) {
   return null;
 }
 
+function nestedEmail(value: unknown) {
+  const record = asRecord(value);
+  const direct = record.email;
+  if (typeof direct === "string" && direct.trim()) return direct.trim().toLowerCase();
+  const user = asRecord(record.user);
+  if (typeof user.email === "string" && user.email.trim()) {
+    return user.email.trim().toLowerCase();
+  }
+  const member = asRecord(record.member);
+  if (typeof member.email === "string" && member.email.trim()) {
+    return member.email.trim().toLowerCase();
+  }
+  return null;
+}
+
+function readUsdFromRecord(record: Record<string, unknown>) {
+  const metaUsd = parseSupportAmountUsd(
+    readMetaString(record.metadata, "amountUsd", "amount_usd", "amount"),
+  );
+  if (metaUsd !== null) return metaUsd;
+  for (const key of ["usd_total", "usd_amount", "total", "amount", "subtotal", "final_amount"]) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      // Whop payment totals are dollars when < 1e5 and look like prices; cents when large integers.
+      if (Number.isInteger(value) && value >= 100_000) return value / 100;
+      return value;
+    }
+    if (typeof value === "string") {
+      const parsed = parseSupportAmountUsd(value);
+      if (parsed !== null) return parsed;
+    }
+  }
+  return null;
+}
+
 export function extractWhopResource(data: unknown) {
   const record = asRecord(data);
   const id = typeof record.id === "string" ? record.id : null;
   const membershipId =
     (id && id.startsWith("mem_") ? id : null) ||
     nestedId(record, "membership", "membership_id");
+  const amountUsd = readUsdFromRecord(record);
   return {
     id,
     metadata: record.metadata,
     workspaceId: readMetaString(record.metadata, "workspaceId", "workspace_id"),
+    userId: readMetaString(record.metadata, "userId", "user_id"),
+    kind: readMetaString(record.metadata, "kind"),
     planHint: readMetaString(record.metadata, "plan", "planId", "plan_id"),
     planId: nestedId(record, "plan", "plan_id"),
     membershipId,
     paymentId: id && id.startsWith("pay_") ? id : nestedId(record, "payment", "payment_id"),
+    email: nestedEmail(record) || readMetaString(record.metadata, "email"),
+    amountUsd,
+    amountCents: amountUsd !== null ? supportAmountCents(amountUsd) : 0,
   };
+}
+
+export function isSupportCheckout(input: {
+  metadata?: unknown;
+  planId?: string | null;
+  kind?: string | null;
+  planHint?: string | null;
+}) {
+  const kind = input.kind || readMetaString(input.metadata, "kind");
+  if (kind === SUPPORT_KIND || kind === "tip") return true;
+  const planHint =
+    input.planHint ||
+    readMetaString(input.metadata, "plan", "planId", "plan_id");
+  if (planHint === SUPPORT_KIND || planHint === "tip") return true;
+  return isSupportPlanId(input.planId);
 }
 
 export function resolvePaidPlanFromWhop(input: {

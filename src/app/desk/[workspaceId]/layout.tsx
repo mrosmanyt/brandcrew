@@ -90,6 +90,7 @@ export default async function WorkspaceLayout({
           }
           jobsLeft={limitsForPlan(member.workspace.plan).jobsPerHour}
           plan={limitsForPlan(member.workspace.plan).plan}
+          supporter={Boolean(member.workspace.supporter)}
           needsYou={member.workspace.jobs
             .filter((job) => job.status === "needs_you")
             .map((job) => ({

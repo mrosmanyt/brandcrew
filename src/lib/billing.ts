@@ -93,6 +93,10 @@ export function whopProductIdFor(plan: CheckoutPlanId) {
   return process.env.WHOP_PRO_PRODUCT_ID?.trim() || "";
 }
 
+export function originFromRequest(request: Request) {
+  return process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+}
+
 export function planBudget(plan: PlanId | string) {
   return PLANS[normalizePlanId(plan)].tokenBudget;
 }

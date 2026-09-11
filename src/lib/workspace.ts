@@ -89,6 +89,7 @@ export function serializeWorkspace(workspace: {
   kind?: string | null;
   clientName?: string | null;
   memberRole?: string | null;
+  supporter?: boolean | null;
 }) {
   const memberRole = workspace.memberRole
     ? parseWorkspaceRole(workspace.memberRole)
@@ -105,6 +106,7 @@ export function serializeWorkspace(workspace: {
     kind: workspace.kind === "client" ? "client" : "agency",
     clientName: String(workspace.clientName || ""),
     memberRole,
+    supporter: Boolean(workspace.supporter),
     createdAt: workspace.createdAt.toISOString(),
   };
 }
