@@ -151,7 +151,9 @@ export async function requireWorkspaceMember(workspaceId: string) {
   if (!member) {
     throw new ForbiddenError("You do not have access to this workspace.");
   }
-  return { user, member, workspace: member.workspace };
+  const { persistLegacyHospitalityDemoBrandKit } = await import("@/lib/workspace");
+  const workspace = await persistLegacyHospitalityDemoBrandKit(member.workspace);
+  return { user, member: { ...member, workspace }, workspace };
 }
 
 export async function requireWorkspaceCapability(

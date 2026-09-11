@@ -4,12 +4,16 @@
  * tokens + suspended so a running job cannot deadlock on its own slot.
  */
 
-export type BudgetCapMode = "job" | "llm";
+export type BudgetCapMode = "job" | "llm" | "chat";
 
 export type BudgetCapInput = {
   suspended?: boolean;
   tokenUsed: number;
   tokenBudget: number;
+  /** Desk Q&A on Free/Pro (cheap backends). Ignored unless mode is "chat" and separateChatBudget. */
+  chatTokenUsed?: number;
+  chatTokenBudget?: number;
+  separateChatBudget?: boolean;
   jobsThisHour?: number;
   jobsPerHour?: number;
   concurrentJobs?: number;
@@ -46,6 +50,22 @@ export function evaluateBudgetCaps(
     };
   }
 
+  if (mode === "chat" && input.separateChatBudget) {
+    const chatBudget = input.chatTokenBudget ?? 0;
+    const chatUsed = input.chatTokenUsed ?? 0;
+    if (tokenBudgetExceeded(chatUsed, chatBudget)) {
+      return {
+        ok: false,
+        code: "BUDGET",
+        status: 402,
+        message: input.paid
+          ? "This workspace has reached its chat budget for this cycle. Playbook jobs still use the job token cap."
+          : "This workspace has reached its free chat budget for this cycle. Playbook jobs still use the job token cap. Upgrade to Pro ($20), Pro Plus ($79), or Ultra ($200) to continue.",
+      };
+    }
+    return { ok: true };
+  }
+
   if (tokenBudgetExceeded(input.tokenUsed, input.tokenBudget)) {
     return {
       ok: false,
@@ -57,7 +77,7 @@ export function evaluateBudgetCaps(
     };
   }
 
-  if (mode === "llm") return { ok: true };
+  if (mode === "llm" || mode === "chat") return { ok: true };
 
   const jobsThisHour = input.jobsThisHour ?? 0;
   const jobsPerHour = input.jobsPerHour ?? 0;

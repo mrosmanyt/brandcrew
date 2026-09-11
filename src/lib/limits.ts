@@ -5,6 +5,7 @@ export type PlanLimits = {
   plan: PlanId;
   paid: boolean;
   tokenBudget: number;
+  chatTokenBudget: number;
   jobsPerHour: number;
   maxConcurrentJobs: number;
   seats: number;
@@ -12,11 +13,22 @@ export type PlanLimits = {
 
 export type WorkspaceLimits = PlanLimits & {
   tokenUsed: number;
+  chatTokenUsed: number;
   jobsThisHour: number;
   concurrentJobs: number;
   seatUsed: number;
   pendingInvites: number;
 };
+
+/** Free + Pro ($20) keep cheap-model desk Q&A off the job token cap. */
+export function usesSeparateChatBudget(plan?: string | null): boolean {
+  return planForcesCheapBackends(plan);
+}
+
+export function chatTokenBudgetForPlan(plan?: string | null): number {
+  const id = normalizePlanId(plan);
+  return PLANS[id].chatTokenBudget;
+}
 
 export function normalizePlanId(plan?: string | null): PlanId {
   if (plan === "ultra") return "ultra";
@@ -45,6 +57,7 @@ export function limitsForPlan(plan?: string | null): PlanLimits {
     plan: id,
     paid: isPaidPlan(id),
     tokenBudget: row.tokenBudget,
+    chatTokenBudget: row.chatTokenBudget,
     jobsPerHour: row.jobsPerHour,
     maxConcurrentJobs: row.maxConcurrentJobs,
     seats: row.seats,
@@ -57,6 +70,7 @@ export async function getWorkspaceLimits(workspaceId: string): Promise<Workspace
     select: {
       plan: true,
       tokenUsed: true,
+      chatTokenUsed: true,
       tokenBudget: true,
       _count: { select: { members: true } },
     },
@@ -82,6 +96,7 @@ export async function getWorkspaceLimits(workspaceId: string): Promise<Workspace
     ...caps,
     tokenBudget: workspace?.tokenBudget ?? caps.tokenBudget,
     tokenUsed: workspace?.tokenUsed ?? 0,
+    chatTokenUsed: workspace?.chatTokenUsed ?? 0,
     jobsThisHour,
     concurrentJobs,
     seatUsed: workspace?._count.members ?? 0,
@@ -96,6 +111,9 @@ export function serializeLimits(limits: WorkspaceLimits) {
     paid: limits.paid,
     tokenUsed: limits.tokenUsed,
     tokenBudget: limits.tokenBudget,
+    chatTokenUsed: limits.chatTokenUsed,
+    chatTokenBudget: limits.chatTokenBudget,
+    chatTokensLeft: Math.max(0, limits.chatTokenBudget - limits.chatTokenUsed),
     jobsThisHour: limits.jobsThisHour,
     jobsPerHour: limits.jobsPerHour,
     concurrentJobs: limits.concurrentJobs,

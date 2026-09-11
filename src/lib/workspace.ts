@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
-import { DEMO_BRAND_KIT, EMPTY_BRAND_KIT, stringifyBrandKit } from "@/lib/brand-kit";
+import {
+  DEMO_BRAND_KIT,
+  EMPTY_BRAND_KIT,
+  isLegacyHospitalityDemoBrandKitRaw,
+  stringifyBrandKit,
+} from "@/lib/brand-kit";
 import { PLANS } from "@/lib/constants";
 import { normalizeModelRouting } from "@/lib/llm-routing";
 import { parseWorkspaceRole, type WorkspaceRole } from "@/lib/rbac";
@@ -49,7 +54,7 @@ export async function createDemoWorkspace(
           {
             title: "Review the Brand Kit",
             description:
-              "Northline Studio is loaded as sample company facts — not as fake job results.",
+              "Northline Studio is loaded as sample CINEM Pro desk facts — not a hospitality-only studio, and not fake job results.",
             status: "approve",
             sortOrder: 1,
           },
@@ -64,6 +69,20 @@ export async function createDemoWorkspace(
     },
   });
   return workspace;
+}
+
+/** One-time remap of the shipped hospitality demo kit so live desks update after deploy. */
+export async function persistLegacyHospitalityDemoBrandKit<
+  T extends { id: string; brandKit: string },
+>(workspace: T): Promise<T> {
+  if (!isLegacyHospitalityDemoBrandKitRaw(workspace.brandKit)) return workspace;
+  const brandKit = stringifyBrandKit(DEMO_BRAND_KIT);
+  if (brandKit === workspace.brandKit) return workspace;
+  await prisma.workspace.update({
+    where: { id: workspace.id },
+    data: { brandKit },
+  });
+  return { ...workspace, brandKit };
 }
 
 export async function listUserWorkspaces(userId: string) {

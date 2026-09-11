@@ -30,6 +30,7 @@ type RoutingStore = {
   plan: string;
   boost: boolean;
   workspaceId?: string;
+  budgetMode?: "llm" | "chat";
 };
 
 const routingAls = new AsyncLocalStorage<RoutingStore>();
@@ -50,12 +51,17 @@ export function currentRoutingWorkspaceId(): string {
   return routingAls.getStore()?.workspaceId ?? "";
 }
 
+export function currentRoutingBudgetMode(): "llm" | "chat" {
+  return routingAls.getStore()?.budgetMode ?? "llm";
+}
+
 export function runWithLlmRouting<T>(
   input: {
     prefer?: string | null;
     plan?: string | null;
     boost?: boolean;
     workspaceId?: string | null;
+    budgetMode?: "llm" | "chat";
   },
   fn: () => T,
 ): T {
@@ -66,6 +72,7 @@ export function runWithLlmRouting<T>(
       plan: input.plan ?? prev?.plan ?? "",
       boost: input.boost ?? prev?.boost ?? false,
       workspaceId: input.workspaceId ?? prev?.workspaceId,
+      budgetMode: input.budgetMode ?? prev?.budgetMode ?? "llm",
     },
     fn,
   );
@@ -454,7 +461,7 @@ export class LLMProvider {
     const workspaceId = currentRoutingWorkspaceId();
     if (workspaceId) {
       const { assertLlmCallBudget } = await import("@/lib/usage");
-      await assertLlmCallBudget(workspaceId);
+      await assertLlmCallBudget(workspaceId, currentRoutingBudgetMode());
     }
     const kind = input.kind ?? "general";
     const payload = {
