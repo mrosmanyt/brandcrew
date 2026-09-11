@@ -11,9 +11,9 @@ This does **not** change `Workspace.plan`. Cancel/deactivate on a Support member
 3. Pricing: one-time. If the UI asks for a fixed price, use **$1** as a placeholder. CINEM Pro **does not** charge that placeholder; the API sends `plan.initial_price` equal to the custom amount and `plan_type: "one_time"`.
 4. Copy the product id (`prod_…`) into Vercel env `WHOP_SUPPORT_PRODUCT_ID`.
 5. Optional: copy a plan id (`plan_…`) into `WHOP_SUPPORT_PLAN_ID` so `payment.succeeded` payloads that only include that plan id still mark Supporter. Do **not** point this at Pro / Pro Plus / Ultra plan ids.
-6. Same Account API key and webhook as subscriptions:
+6. Same company API key and webhook as subscriptions:
    - `WHOP_API_KEY`
-   - `WHOP_COMPANY_ID` (`biz_…`)
+   - `WHOP_COMPANY_ID` (`biz_…`, CINEM Tech production: `biz_VrtL8S4duREQg4`). Alias: `WHOP_ACCOUNT_ID`. Live checkout refuses to call Whop if this is empty.
    - Webhook URL `{NEXT_PUBLIC_APP_URL}/api/webhooks/whop`
    - Events: `payment.succeeded`, `membership.activated`, `membership.deactivated`
    - `WHOP_WEBHOOK_SECRET`
@@ -22,12 +22,18 @@ This does **not** change `Workspace.plan`. Cancel/deactivate on a Support member
 
 ## What CINEM Pro sends
 
+Whop’s payment + inline-plan OpenAPI requires `plan.company_id` (`biz_…`). `@whop/sdk` 1.1.2 still types `account_id` as an alias. CINEM Pro sends **both** so live checkout matches current docs and older SDK/API aliases. If `WHOP_COMPANY_ID` (or `WHOP_ACCOUNT_ID`) is unset, the API returns a clear ClientError instead of calling Whop with an empty company.
+
 ```
 POST checkoutConfigurations.create
+  company_id = WHOP_COMPANY_ID (biz_…)
+  account_id = same value (SDK / older API alias)
   mode: payment
   metadata.kind = support
   metadata.amountUsd = "<chosen amount>"
   metadata.workspaceId / userId when signed in
+  plan.company_id = same biz_… (required for inline one-time plans)
+  plan.account_id = same value (alias)
   plan.plan_type = one_time
   plan.initial_price = <amount USD>
   plan.product_id = WHOP_SUPPORT_PRODUCT_ID (if set)
