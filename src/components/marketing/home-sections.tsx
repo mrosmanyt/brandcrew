@@ -412,6 +412,13 @@ export function PricingSection() {
           Free: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
         </p>
       </div>
+      <p className="mt-6 text-sm leading-6 text-muted-foreground">
+        Want to back the brand without a subscription?{" "}
+        <Link href="/support" className="underline">
+          Support CINEM
+        </Link>{" "}
+        is a one-time $1–$99,999 checkout. It does not replace Pro / Pro Plus / Ultra.
+      </p>
     </Section>
   );
 }
@@ -504,6 +511,10 @@ const FAQS = [
     a: "Pro is $20/month (2 seats, 50k tokens). Pro Plus is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Pro / Get Pro Plus / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
   },
   {
+    q: "Can I support CINEM without buying a plan?",
+    a: "Yes. Support CINEM is a one-time amount from $1 to $99,999 via Whop checkout. It does not change Pro / Pro Plus / Ultra. After the payment webhook, your account shows a Supporter badge.",
+  },
+  {
     q: "Can I call this from my own app?",
     a: "Yes. API Console mints workspace keys for /api/v1. Jobs use the live runtime and still wait for approval before anything is sent.",
   },
@@ -535,6 +546,7 @@ const FOOTER_LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/download", label: "Download" },
   { href: "/#pricing", label: "Pricing" },
+  { href: "/support", label: "Support" },
   { href: "/#developers", label: "Developer API" },
   { href: "/#faq", label: "FAQ" },
   { href: "/#trust", label: "Trust" },

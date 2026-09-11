@@ -7,6 +7,7 @@ import {
   BarChart3,
   Bot,
   CreditCard,
+  Heart,
   KeyRound,
   Mail,
   MonitorSmartphone,
@@ -22,8 +23,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { jobDeskHref, settingsDeskLinks } from "@/lib/desk-settings";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
+import { SupporterBadge } from "@/components/support/supporter-badge";
 import { assertStrongPassword } from "@/lib/password-rules";
 import { displayAgentName } from "@/lib/constants";
+import { formatSupportCents } from "@/lib/support";
 import type { AgentDTO, JobDTO } from "@/lib/job-types";
 import { jobStatusLabel } from "@/lib/live-progress";
 import { cn } from "@/lib/utils";
@@ -35,6 +38,8 @@ type AccountUser = {
   hasPassword?: boolean;
   googleLinked?: boolean;
   isAdmin?: boolean;
+  supporter?: boolean;
+  supporterTotalCents?: number;
 };
 
 export function SettingsHub({
@@ -167,6 +172,7 @@ export function SettingsHub({
     { href: `/desk/${workspaceId}/marketplace`, label: "Marketplace", icon: Store },
     { href: `/desk/${workspaceId}/on-device`, label: "On-device Chrome", icon: MonitorSmartphone },
     { href: `/desk/${workspaceId}/billing`, label: "Plans", icon: CreditCard },
+    { href: `/support`, label: "Support", icon: Heart },
     { href: `/desk/${workspaceId}/usage`, label: "Usage", icon: BarChart3 },
   ];
 
@@ -183,6 +189,7 @@ export function SettingsHub({
         <h2 className="flex items-center gap-2 text-sm font-medium">
           <Mail className="size-3.5 text-muted-foreground" />
           Account
+          {user.supporter ? <SupporterBadge /> : null}
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
           {user.googleLinked
@@ -191,6 +198,16 @@ export function SettingsHub({
               : "Signed in with Google. You can set a password if you also want email sign-in."
             : "Changes that touch email or password need your current password."}
         </p>
+        {user.supporter ? (
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Supporter perk: priority note when you write in — we see this badge on
+            your account
+            {user.supporterTotalCents
+              ? ` · ${formatSupportCents(user.supporterTotalCents)} total`
+              : ""}
+            . Shukriya.
+          </p>
+        ) : null}
         <form onSubmit={saveName} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <Field label="Name">
             <Input value={name} onChange={(e) => setName(e.target.value)} required />

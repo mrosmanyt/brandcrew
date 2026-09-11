@@ -12,11 +12,13 @@ import { ClientDesksPanel } from "@/components/desk/client-desks";
 import { TrustCenter } from "@/components/desk/trust-center";
 import { UsageDashboard } from "@/components/desk/usage-dashboard";
 import { OnDevicePage } from "@/components/desk/on-device-page";
+import { SupportForm } from "@/components/support/support-form";
+import { SupporterBadge } from "@/components/support/supporter-badge";
 import { getCurrentUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { workspaceOnboarding } from "@/lib/onboarding";
 import { billingIsMock, billingProvider } from "@/lib/billing";
-import { billingSuccessBanner } from "@/lib/billing-ui";
+import { billingSuccessBanner, supportSuccessBanner } from "@/lib/billing-ui";
 import { parseBrandKit } from "@/lib/brand-kit";
 import { prisma } from "@/lib/db";
 import { serializeAgent, serializeJob, serializeSkill } from "@/lib/job-serialize";
@@ -25,6 +27,7 @@ import { getLlmStatus } from "@/lib/llm";
 import { normalizeModelRouting } from "@/lib/llm-routing";
 import { parseWorkspaceRole, roleCan } from "@/lib/rbac";
 import { parseAutoApproveSafe } from "@/lib/write-gate";
+import { supportHeadline } from "@/lib/support";
 import type { ArtifactDTO, MessageDTO } from "@/lib/types";
 
 async function MissionControlPage({
@@ -134,7 +137,7 @@ async function BillingPage({
   query,
 }: {
   workspaceId: string;
-  query: { status?: string; plan?: string; checkout?: string };
+  query: { status?: string; plan?: string; checkout?: string; support?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -147,6 +150,8 @@ async function BillingPage({
     select: { role: true },
   });
   const canCheckout = roleCan(parseWorkspaceRole(member?.role), "billing");
+  const provider = billingProvider();
+  const supportReturn = query.support === "1";
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -160,7 +165,9 @@ async function BillingPage({
       </p>
       {query.status === "success" ? (
         <p className="mt-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">
-          {billingSuccessBanner(billingProvider())}
+          {supportReturn
+            ? supportSuccessBanner(provider)
+            : billingSuccessBanner(provider)}
         </p>
       ) : null}
       <div className="mt-6">
@@ -168,12 +175,25 @@ async function BillingPage({
           workspaceId={workspace.id}
           currentPlan={workspace.plan}
           mock={billingIsMock()}
-          provider={billingProvider()}
+          provider={provider}
           requestedPlan={query.plan || query.checkout}
           checkoutStatus={query.status}
           canCheckout={canCheckout}
         />
       </div>
+      <section className="mt-8 rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-heading text-xl tracking-tight">{supportHeadline()}</h2>
+          {workspace.supporter ? <SupporterBadge /> : null}
+        </div>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          One-time $1–$99,999. Does not change this workspace plan. After a live
+          payment webhook, the desk shows a Supporter badge.
+        </p>
+        <div className="mt-4">
+          <SupportForm workspaceId={workspace.id} provider={provider} compact />
+        </div>
+      </section>
     </div>
   );
 }
@@ -189,7 +209,7 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
 
   const account = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { passwordHash: true, googleId: true },
+    select: { passwordHash: true, googleId: true, supporter: true, supporterTotalCents: true },
   });
 
   const [jobs, agents] = await Promise.all([
@@ -219,6 +239,9 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
         hasPassword: Boolean(account?.passwordHash),
         googleLinked: Boolean(account?.googleId),
         isAdmin: isAdminEmail(user.email),
+        supporter: Boolean(account?.supporter) || Boolean(workspace.supporter),
+        supporterTotalCents:
+          (account?.supporterTotalCents ?? 0) || workspace.supporterTotalCents,
       }}
       initialJobs={jobs.map(serializeJob)}
       agents={agents.map(serializeAgent)}
@@ -288,6 +311,7 @@ export default async function WorkspaceSectionPage({
     status?: string;
     plan?: string;
     checkout?: string;
+    support?: string;
   }>;
 }) {
   const { workspaceId, section } = await params;

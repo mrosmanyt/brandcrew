@@ -17,6 +17,7 @@ import * as authConnect from "./auth/connect";
 import * as authConnectApprove from "./auth/connect-approve";
 import * as authConnectClaim from "./auth/connect-claim";
 import * as billingCheckout from "./billing/checkout";
+import * as billingSupport from "./billing/support";
 import * as whopWebhook from "./webhooks/whop";
 import * as cronJobs from "./cron/jobs";
 import * as inviteToken from "./invites/token";
@@ -143,6 +144,7 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "composio", "callback"], handlers: asHandlers(composioCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
+  { pattern: ["api", "billing", "support"], handlers: asHandlers(billingSupport) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
   { pattern: ["api", "device", "claim"], handlers: asHandlers(deviceClaim) },

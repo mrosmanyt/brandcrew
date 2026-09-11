@@ -101,6 +101,9 @@ export function sensitiveRateLimit(
   if (path === "api/billing/checkout" && verb === "POST") {
     return { key: "checkout", limit: 8, windowMs: 10 * 60 * 1000 };
   }
+  if (path === "api/billing/support" && verb === "POST") {
+    return { key: "support", limit: 8, windowMs: 10 * 60 * 1000 };
+  }
   if (path === "api/device/claim" && verb === "POST") {
     return { key: "device-claim", limit: 12, windowMs: AUTH_WINDOW_MS };
   }

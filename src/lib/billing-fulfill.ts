@@ -3,14 +3,16 @@ import {
   extractWhopResource,
   isMembershipDeactivatedEvent,
   isPaidUnlockEvent,
+  isSupportCheckout,
   parseWhopEnvelope,
   resolvePaidPlanFromWhop,
   shouldDowngradeToDemo,
 } from "@/lib/billing-events";
 import { prisma } from "@/lib/db";
+import { applyPaidSupport } from "@/lib/support-fulfill";
 
 export type BillingFulfillResult = {
-  outcome: "upgraded" | "downgraded" | "ignored" | "duplicate";
+  outcome: "upgraded" | "downgraded" | "ignored" | "duplicate" | "supported";
   workspaceId?: string;
   plan?: string;
 };
@@ -84,6 +86,26 @@ export async function fulfillWhopEvent(input: {
 
   if (await alreadyProcessed(dedupeId, externalId)) {
     return { outcome: "duplicate" };
+  }
+
+  if (isSupportCheckout(resource)) {
+    if (!isPaidUnlockEvent(type)) {
+      await markProcessed({ id: dedupeId, eventType: type || "unknown", externalId });
+      return { outcome: "ignored", workspaceId: resource.workspaceId || undefined };
+    }
+    const paid = await applyPaidSupport({
+      amountCents: resource.amountCents,
+      userId: resource.userId,
+      workspaceId: resource.workspaceId,
+      email: resource.email,
+      paymentId: resource.paymentId || resource.membershipId,
+      provider: "whop",
+    });
+    await markProcessed({ id: dedupeId, eventType: type, externalId });
+    return {
+      outcome: paid.outcome,
+      workspaceId: resource.workspaceId || undefined,
+    };
   }
 
   if (isPaidUnlockEvent(type)) {

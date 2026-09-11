@@ -61,6 +61,8 @@ console.log("ok: favicon SVG + PNG logo + OG + apple-icon files exist; login + n
 
 const footer = readFileSync("src/components/marketing/home-sections.tsx", "utf8");
 assert.match(footer, /href: "\/privacy"/);
+assert.match(footer, /href: "\/support"/);
+assert.match(footer, /label: "Support"/);
 assert.match(footer, /href: "\/terms"/);
 assert.match(footer, /label: "Privacy"/);
 assert.match(footer, /label: "Terms"/);
@@ -83,6 +85,7 @@ assert.match(nav, /Get started|Open desk/);
 console.log("ok: Privacy/Terms in footer; tagline sells the agent desk; top nav unchanged");
 
 assert.ok(existsSync("src/app/privacy/page.tsx"));
+assert.ok(existsSync("src/app/support/page.tsx"));
 assert.ok(existsSync("src/app/terms/page.tsx"));
 assert.ok(existsSync("src/app/not-found.tsx"));
 console.log("ok: /privacy, /terms, and custom 404 pages exist");
@@ -213,6 +216,7 @@ async function main() {
   assert.ok(urls.some((url) => url.includes("/privacy")));
   assert.ok(urls.some((url) => url.includes("/terms")));
   assert.ok(urls.some((url) => url.includes("/download")));
+  assert.ok(urls.some((url) => url.includes("/support")));
   assert.ok(!urls.some((url) => url.includes("/security")));
   const nextConfigSrc = readFileSync("next.config.ts", "utf8");
   assert.match(nextConfigSrc, /source: "\/security"/);

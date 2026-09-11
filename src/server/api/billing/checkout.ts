@@ -5,6 +5,7 @@ import {
   billingIsMock,
   billingProvider,
   getStripe,
+  originFromRequest,
   planBudget,
   priceIdForPlan,
 } from "@/lib/billing";
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const origin = originFromRequest(request);
 
     if (provider === "whop") {
       const checkout = await createWhopCheckout({

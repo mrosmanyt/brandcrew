@@ -31,6 +31,11 @@ export function settingsDeskLinks(workspaceId: string) {
       hint: "Pro $20, Pro Plus $79, and Ultra $200. Caps are enforced. Model keys stay on the server.",
     },
     {
+      href: `/support`,
+      label: "Support",
+      hint: "One-time $1–$99,999 via Whop. Does not change the workspace plan.",
+    },
+    {
       href: `/desk/${workspaceId}/clients`,
       label: "Client desks",
       hint: "Agency view of isolated client workspaces — Brand Kit, memory, seats, billing visibility.",

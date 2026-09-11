@@ -23,7 +23,7 @@ export async function GET() {
   }
   const row = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { passwordHash: true, googleId: true },
+    select: { passwordHash: true, googleId: true, supporter: true },
   });
   const workspaces = await listUserWorkspaces(user.id);
   return withNativeCors(
@@ -33,6 +33,7 @@ export async function GET() {
         hasPassword: Boolean(row?.passwordHash),
         googleLinked: Boolean(row?.googleId),
         isAdmin: isAdminEmail(user.email),
+        supporter: Boolean(row?.supporter),
       },
       workspaces: workspaces.map(serializeWorkspace),
       googleLogin,

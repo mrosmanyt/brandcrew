@@ -15,6 +15,7 @@ import {
   extractWhopResource,
   isMembershipDeactivatedEvent,
   isPaidUnlockEvent,
+  isSupportCheckout,
   normalizeWhopEventType,
   parseWhopEnvelope,
   resolvePaidPlanFromWhop,
@@ -29,9 +30,18 @@ import {
   deskCheckoutNextPath,
   marketingPlanCtaHref,
   signupForCheckoutHref,
+  supportCheckoutLabel,
+  supportSuccessBanner,
   workspaceBillingHref,
 } from "../src/lib/billing-ui";
 import { readFileSync } from "node:fs";
+import {
+  parseSupportAmountUsd,
+  SUPPORT_MAX_USD,
+  SUPPORT_MIN_USD,
+  supportAmountCents,
+  supportHeadline,
+} from "../src/lib/support";
 
 const KEYS = [
   "BILLING_MOCK",
@@ -99,6 +109,9 @@ assert.equal(billingCheckoutLabel("Pro Plus", "whop"), "Checkout Pro Plus with W
 assert.equal(billingCheckoutLabel("Ultra", "stripe"), "Checkout Ultra");
 assert.match(billingSuccessBanner("whop"), /Whop checkout/);
 assert.doesNotMatch(billingSuccessBanner("whop"), /Connected/);
+assert.match(supportSuccessBanner("whop"), /payment.succeeded webhook/);
+assert.doesNotMatch(supportSuccessBanner("whop"), /you are a supporter/i);
+assert.match(supportCheckoutLabel("whop"), /Whop/);
 console.log("ok: desk copy names Whop checkout when live");
 
 assert.equal(checkoutPlanFromQuery("ultra"), "ultra");
@@ -149,6 +162,47 @@ process.env.WHOP_PRO_PLAN_ID = "plan_pro";
 assert.equal(resolvePaidPlanFromWhop({ planId: "plan_pro" }), "pro");
 assert.equal(resolvePaidPlanFromWhop({ metadata: { plan: "growth" } }), "pro");
 assert.equal(resolvePaidPlanFromWhop({ metadata: { plan: "demo" } }), null);
+
+assert.equal(parseSupportAmountUsd("20"), 20);
+assert.equal(parseSupportAmountUsd("$1,000"), 1000);
+assert.equal(parseSupportAmountUsd("0.5"), null);
+assert.equal(parseSupportAmountUsd(SUPPORT_MIN_USD - 0.01), null);
+assert.equal(parseSupportAmountUsd(SUPPORT_MAX_USD), SUPPORT_MAX_USD);
+assert.equal(parseSupportAmountUsd(SUPPORT_MAX_USD + 1), null);
+assert.equal(supportAmountCents(20.5), 2050);
+assert.equal(supportHeadline(), "Support CINEM");
+
+assert.equal(
+  isSupportCheckout({ metadata: { kind: "support", plan: "support", amountUsd: "20" } }),
+  true,
+);
+assert.equal(
+  isSupportCheckout({ metadata: { plan: "ultra" }, planId: "plan_ultra" }),
+  false,
+);
+process.env.WHOP_SUPPORT_PLAN_ID = "plan_support";
+assert.equal(isSupportCheckout({ planId: "plan_support" }), true);
+assert.equal(isSupportCheckout({ planId: "plan_pro" }), false);
+delete process.env.WHOP_SUPPORT_PLAN_ID;
+
+const supportParsed = parseWhopEnvelope({
+  id: "msg_support",
+  type: "payment.succeeded",
+  data: {
+    id: "pay_tip",
+    metadata: { kind: "support", workspaceId: "ws_1", userId: "user_1", amountUsd: "50" },
+  },
+});
+const supportResource = extractWhopResource(supportParsed.data);
+assert.equal(isSupportCheckout(supportResource), true);
+assert.equal(supportResource.amountUsd, 50);
+assert.equal(supportResource.amountCents, 5000);
+assert.equal(supportResource.userId, "user_1");
+assert.equal(
+  resolvePaidPlanFromWhop({ metadata: supportResource.metadata, planId: supportResource.planId }),
+  null,
+);
+console.log("ok: webhook metadata maps plans; deactivate only drops the matching plan; support is not a plan upgrade");
 
 assert.equal(
   shouldDowngradeToDemo({
@@ -238,6 +292,16 @@ assert.match(readFileSync("src/proxy.ts", "utf8"), /safeNextPath/);
 assert.doesNotMatch(readFileSync("src/server/api/router.ts", "utf8"), /api", "billing", "plans"/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_API_KEY=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_WEBHOOK_SECRET=/);
+assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PRODUCT_ID=/);
+assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PLAN_ID=/);
+assert.match(router, /api", "billing", "support/);
+assert.match(readFileSync("src/lib/whop.ts", "utf8"), /createWhopSupportCheckout/);
+assert.match(readFileSync("src/lib/whop.ts", "utf8"), /plan_type: "one_time"/);
+assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /isSupportCheckout/);
+assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyPaidSupport/);
+assert.doesNotMatch(readFileSync("src/lib/support-fulfill.ts", "utf8"), /plan:/);
+assert.match(readFileSync("src/app/support/page.tsx", "utf8"), /SupportPageClient/);
+assert.match(readFileSync("docs/whop-support.md", "utf8"), /WHOP_SUPPORT_PRODUCT_ID/);
 console.log("ok: catch-all registers /api/webhooks/whop; env example lists Whop vars");
 
 restoreEnv();
