@@ -15,6 +15,7 @@ import {
   demoWebsiteHtml,
 } from "@/lib/demo";
 import { generateBuilderArtifact } from "@/lib/builders";
+import { withLanguagePolicy } from "@/lib/language-policy";
 import { llm, type LlmJobKind, type TaskMode } from "@/lib/llm";
 import { resolveRunOutput } from "@/lib/live-output";
 import { parseLlmJson } from "@/lib/job-serialize";
@@ -92,9 +93,10 @@ export function systemPrompt(
   agentName = "New Agent",
   agentInstructions = "",
 ) {
-  return `You are ${displayAgentName(agentName)} on CINEM Pro, an AI employee desk.
+  return withLanguagePolicy(`You are ${displayAgentName(agentName)} on CINEM Pro, an AI employee desk.
 ${agentInstructions || `Role label: ${role}.`}
 You share one Brand Kit. Produce ONE artifact. Never send, publish, or spend.
+Prefer this agent's niche, but do not refuse basic helpful answers. Mirror the user's language.
 
 Brand Kit:
 ${brandKitBrief(kit)}
@@ -108,7 +110,7 @@ Respond as JSON:
   "content": string (Markdown),
   "calendar": optional array,
   "tasks": optional array
-}`;
+}`);
 }
 
 function fallbackArtifact(

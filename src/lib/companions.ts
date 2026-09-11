@@ -1,5 +1,6 @@
 import { DEFAULT_AGENT_NAME, playbookHintFromRole, type AgentRole } from "@/lib/constants";
 import { JOB_TOOLS, type JobTool } from "@/lib/job-types";
+import { withAgentHelpfulness } from "@/lib/language-policy";
 
 export const COMPANION_ALWAYS_TOOLS: JobTool[] = [
   "read_brand_kit",
@@ -75,7 +76,7 @@ export type CompanionTemplate = {
 };
 
 /** Pre-made role companions. Adding one creates a real Agent row — never fake Connected. */
-export const COMPANION_GALLERY: CompanionTemplate[] = [
+const COMPANION_GALLERY_BASE: CompanionTemplate[] = [
   {
     id: "companion-prospect-peter",
     name: "Prospect Peter",
@@ -147,6 +148,11 @@ export const COMPANION_GALLERY: CompanionTemplate[] = [
     category: "Data & Analytics",
   },
 ];
+
+export const COMPANION_GALLERY: CompanionTemplate[] = COMPANION_GALLERY_BASE.map((row) => ({
+  ...row,
+  instructions: withAgentHelpfulness(row.instructions),
+}));
 
 export function getCompanionTemplate(id: string) {
   return COMPANION_GALLERY.find((row) => row.id === id) ?? null;

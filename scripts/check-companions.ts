@@ -32,10 +32,18 @@ for (const id of [
   assert.ok(created.allowedTools.includes("ask_user"));
   assert.ok(created.allowedTools.includes("write_artifact"));
 }
-console.log("ok: 5 named companion templates create real agent payloads");
+for (const row of COMPANION_GALLERY) {
+  assert.match(row.instructions, /Never claim English-only/);
+  assert.doesNotMatch(row.instructions, /I operate in English only/i);
+}
+console.log("ok: companions reply in the user language; no English-only lock");
 
 const peter = getCompanionTemplate("companion-prospect-peter")!;
 assert.equal(peter.playbookKey, "linkedin_outreach_draft");
+assert.match(peter.instructions, /Urdu/);
+assert.match(peter.instructions, /Never claim English-only/);
+assert.doesNotMatch(peter.instructions, /operate in English only/i);
+assert.doesNotMatch(peter.instructions, /I can only (use|speak|operate)/i);
 assert.ok(expandToolGroups(["browser"]).includes("browser_click"));
 assert.ok(expandToolGroups(["browser"]).includes("browser_extract"));
 const ivy = getCompanionTemplate("companion-invoice-ivy")!;

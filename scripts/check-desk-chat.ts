@@ -10,8 +10,9 @@ import {
   liveProgressFromEvents,
 } from "../src/lib/live-progress";
 import type { MessageDTO } from "../src/lib/types";
-import { decideDeskQa } from "../src/lib/desk-qa-pure";
+import { decideDeskQa, deskQaSystemPrompt } from "../src/lib/desk-qa-pure";
 import { JOB_ACTION_MESSAGES } from "../src/lib/constants";
+import { LANGUAGE_AND_SCOPE_RULE, messagesWithLanguagePolicy } from "../src/lib/language-policy";
 
 function event(
   partial: Partial<JobEventDTO> & Pick<JobEventDTO, "id" | "type" | "message">,
@@ -190,6 +191,35 @@ assert.equal(decideDeskQa({ message: "what is our ICP?" }).qa, true);
 assert.equal(decideDeskQa({ message: JOB_ACTION_MESSAGES.generate_week }).qa, false);
 assert.equal(decideDeskQa({ message: "hi, what's the offer?" }).qa, true);
 assert.equal(decideDeskQa({ message: "generate a linkedin week of posts" }).qa, false);
+assert.equal(decideDeskQa({ message: "MRE SATH URDU MEN BAAT KRO" }).qa, true);
+assert.equal(decideDeskQa({ message: "WHAT IS THE CAPITAL CITY OF PAKISTAN" }).qa, true);
+assert.equal(decideDeskQa({ message: "اردو میں بات کرو" }).qa, true);
 console.log("ok: lightweight Q&A vs playbook intent");
+
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Urdu/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Roman/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Never refuse to speak a language/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Never claim you operate in English only/);
+assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /I operate in English only/);
+const qaPrompt = deskQaSystemPrompt({
+  agentName: "Prospect Peter",
+  role: "Sales",
+  kitBrief: "Hospitality brand kit",
+});
+assert.match(qaPrompt, /Urdu/);
+assert.match(qaPrompt, /capital of a country/);
+assert.match(qaPrompt, /Never claim you operate in English only/);
+assert.doesNotMatch(qaPrompt, /I operate in English only/);
+const injected = messagesWithLanguagePolicy(
+  [{ role: "system", content: "You are Prospect Peter." }],
+  "general",
+);
+assert.match(injected[0]?.content || "", /Never refuse to speak a language/);
+assert.equal(
+  messagesWithLanguagePolicy([{ role: "system", content: "Pick a selector." }], "classify")[0]
+    ?.content,
+  "Pick a selector.",
+);
+console.log("ok: desk Q&A + global layer mirror Urdu and do not English-lock");
 
 console.log("Desk chat checks passed.");

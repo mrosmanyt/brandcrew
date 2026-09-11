@@ -1,4 +1,5 @@
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
+import { withAgentHelpfulness } from "@/lib/language-policy";
 
 export type TeamLaunchRole = {
   id: string;
@@ -14,7 +15,7 @@ export type TeamLaunchRole = {
  * These are role labels + real job instructions — not named personas and not
  * pre-written artifacts. Names stay "New Agent" until the user edits them.
  */
-export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
+const TEAM_LAUNCH_ROLES_BASE: TeamLaunchRole[] = [
   {
     id: "bot-main",
     role: "Main",
@@ -124,6 +125,11 @@ export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = [
     starter: "Draft a short FAQ from the Brand Kit. Do not send.",
   },
 ];
+
+export const TEAM_LAUNCH_ROLES: TeamLaunchRole[] = TEAM_LAUNCH_ROLES_BASE.map((row) => ({
+  ...row,
+  instructions: withAgentHelpfulness(row.instructions),
+}));
 
 export type ProposedAgent = {
   templateId: string;
