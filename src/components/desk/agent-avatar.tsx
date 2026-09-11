@@ -1,9 +1,11 @@
+import { CinemMark } from "@/components/brand/logo";
 import {
   agentAvatarSpec,
   avatarFill,
   avatarHighlight,
   avatarSeedFor,
   avatarShade,
+  defaultAgentAvatarKind,
   type AgentAvatarSpec,
   type AvatarShape,
 } from "@/lib/agent-avatar";
@@ -32,8 +34,6 @@ export function AgentAvatar({
   spec?: AgentAvatarSpec;
   instanceId?: string;
 }) {
-  const spec = specOverride ?? agentAvatarSpec(avatarSeedFor({ id, name, role }));
-  const uid = cssId(`${instanceId || spec.seed}-${size}`);
   const px = SIZE_PX[size];
   const label = title || name || "Agent";
   return (
@@ -47,41 +47,64 @@ export function AgentAvatar({
       title={label}
       aria-hidden
     >
-      <svg
-        viewBox="0 0 40 40"
-        width={px}
-        height={px}
-        className="agent-avatar-svg overflow-visible"
-        style={{ transform: `rotate(${spec.tilt}deg)` }}
-      >
-        <defs>
-          <linearGradient id={`${uid}-body`} x1="18%" y1="8%" x2="88%" y2="96%">
-            <stop offset="0%" stopColor={avatarHighlight(spec)} />
-            <stop offset="42%" stopColor={avatarFill(spec)} />
-            <stop offset="100%" stopColor={avatarShade(spec)} />
-          </linearGradient>
-          <radialGradient id={`${uid}-shine`} cx="32%" cy="26%" r="55%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
-            <stop offset="55%" stopColor="rgba(255,255,255,0.08)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-          </radialGradient>
-          <filter id={`${uid}-depth`} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1.4" stdDeviation="1.1" floodColor="#000" floodOpacity="0.35" />
-          </filter>
-          <clipPath id={`${uid}-clip`}>
-            <ShapePath shape={spec.shape} />
-          </clipPath>
-        </defs>
-        <g filter={`url(#${uid}-depth)`}>
-          <ShapePath shape={spec.shape} fill={`url(#${uid}-body)`} />
-        </g>
-        <g clipPath={`url(#${uid}-clip)`}>
-          <rect width="40" height="40" fill={`url(#${uid}-shine)`} />
-          <ellipse cx="13" cy="11" rx="9" ry="5" fill="rgba(255,255,255,0.18)" />
-        </g>
-        <Eyes spec={spec} />
-      </svg>
+      {defaultAgentAvatarKind(specOverride) === "cinem-mark" ? (
+        <CinemMark className="agent-avatar-svg size-full" />
+      ) : (
+        <GeneratedAgentGlyph
+          spec={specOverride ?? agentAvatarSpec(avatarSeedFor({ id, name, role }))}
+          size={px}
+          instanceId={instanceId}
+        />
+      )}
     </span>
+  );
+}
+
+function GeneratedAgentGlyph({
+  spec,
+  size,
+  instanceId,
+}: {
+  spec: AgentAvatarSpec;
+  size: number;
+  instanceId?: string;
+}) {
+  const uid = cssId(`${instanceId || spec.seed}-${size}`);
+  return (
+    <svg
+      viewBox="0 0 40 40"
+      width={size}
+      height={size}
+      className="agent-avatar-svg overflow-visible"
+      style={{ transform: `rotate(${spec.tilt}deg)` }}
+    >
+      <defs>
+        <linearGradient id={`${uid}-body`} x1="18%" y1="8%" x2="88%" y2="96%">
+          <stop offset="0%" stopColor={avatarHighlight(spec)} />
+          <stop offset="42%" stopColor={avatarFill(spec)} />
+          <stop offset="100%" stopColor={avatarShade(spec)} />
+        </linearGradient>
+        <radialGradient id={`${uid}-shine`} cx="32%" cy="26%" r="55%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
+          <stop offset="55%" stopColor="rgba(255,255,255,0.08)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </radialGradient>
+        <filter id={`${uid}-depth`} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1.4" stdDeviation="1.1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
+        <clipPath id={`${uid}-clip`}>
+          <ShapePath shape={spec.shape} />
+        </clipPath>
+      </defs>
+      <g filter={`url(#${uid}-depth)`}>
+        <ShapePath shape={spec.shape} fill={`url(#${uid}-body)`} />
+      </g>
+      <g clipPath={`url(#${uid}-clip)`}>
+        <rect width="40" height="40" fill={`url(#${uid}-shine)`} />
+        <ellipse cx="13" cy="11" rx="9" ry="5" fill="rgba(255,255,255,0.18)" />
+      </g>
+      <Eyes spec={spec} />
+    </svg>
   );
 }
 
@@ -117,13 +140,6 @@ function ShapePath({
       return <path d="M20 4c9 8 14 14 14 21a14 14 0 1 1-28 0c0-7 5-13 14-21z" {...common} />;
     case "oval":
       return <ellipse cx="20" cy="20" rx="13" ry="16.5" transform="rotate(-16 20 20)" {...common} />;
-    case "cloud":
-      return (
-        <path
-          d="M12 26c-4 0-7-3-7-6.5S8 13 12 13c.6-3.4 3.6-6 7.3-6 3.5 0 6.5 2.3 7.3 5.5 3.6.3 6.4 3.3 6.4 7s-2.9 6.5-6.6 6.5H12z"
-          {...common}
-        />
-      );
   }
 }
 

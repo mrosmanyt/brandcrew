@@ -6,7 +6,6 @@ export const AVATAR_SHAPES = [
   "triangle",
   "teardrop",
   "oval",
-  "cloud",
 ] as const;
 
 export type AvatarShape = (typeof AVATAR_SHAPES)[number];
@@ -41,6 +40,16 @@ export function avatarSeedFor(input: {
   return [input.id?.trim(), input.name?.trim(), input.role?.trim()]
     .filter(Boolean)
     .join(":") || "new-agent";
+}
+
+/**
+ * Desk / chat avatars use the CINEM mark by default.
+ * A passed `spec` is a custom generated glyph (hero perch, etc.).
+ */
+export function defaultAgentAvatarKind(
+  spec?: AgentAvatarSpec | null,
+): "cinem-mark" | "generated" {
+  return spec ? "generated" : "cinem-mark";
 }
 
 export function agentAvatarSpec(seed: string): AgentAvatarSpec {

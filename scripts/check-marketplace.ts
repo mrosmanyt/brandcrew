@@ -52,6 +52,11 @@ for (const bot of MARKETPLACE_BOTS) {
   assert.doesNotMatch(bot.instructions, /I can only (use|speak|operate)/i);
   assert.doesNotMatch(bot.instructions, /then offer brand or desk work/i);
   assert.match(bot.instructions, /Do not append unsolicited/);
+  assert.match(bot.instructions, /CINEM Pro's AI/);
+  assert.match(bot.instructions, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+  assert.doesNotMatch(bot.instructions, /Google made me/i);
+  assert.doesNotMatch(bot.instructions, /powered by (Google|OpenAI|Anthropic|Gemini|Claude|GPT|xAI)/i);
+  assert.doesNotMatch(bot.instructions, /trained by (Google|OpenAI|Anthropic)/i);
 }
 console.log("ok: marketplace bots mirror language; no English-only lock");
 assert.equal(getMarketplaceBot("bot-manager")?.featured, true);

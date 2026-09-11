@@ -2,6 +2,7 @@
  * Chat thread + live-progress + pane clamp guards. No database.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { clampPaneWidth, isStoredCollapsed, readStoredPaneWidth } from "../src/lib/desk-layout";
 import type { JobDTO, JobEventDTO } from "../src/lib/job-types";
 import {
@@ -11,14 +12,22 @@ import {
 } from "../src/lib/live-progress";
 import type { MessageDTO } from "../src/lib/types";
 import { decideDeskQa, deskQaSystemPrompt } from "../src/lib/desk-qa-pure";
+import { plannerSystemPrompt } from "../src/lib/agent-prompts";
 import { JOB_ACTION_MESSAGES } from "../src/lib/constants";
 import {
   AGENT_HELPFULNESS_SUFFIX,
+  AGENT_IDENTITY_LOCK,
+  IDENTITY_AND_BRANDING_RULE,
   LANGUAGE_AND_SCOPE_RULE,
   messagesWithLanguagePolicy,
   withAgentHelpfulness,
   withoutLegacyPitch,
+  withoutProviderDisclosure,
 } from "../src/lib/language-policy";
+import {
+  AVATAR_SHAPES,
+  defaultAgentAvatarKind,
+} from "../src/lib/agent-avatar";
 
 function event(
   partial: Partial<JobEventDTO> & Pick<JobEventDTO, "id" | "type" | "message">,
@@ -202,6 +211,27 @@ assert.equal(decideDeskQa({ message: "WHAT IS THE CAPITAL CITY OF PAKISTAN" }).q
 assert.equal(decideDeskQa({ message: "اردو میں بات کرو" }).qa, true);
 console.log("ok: lightweight Q&A vs playbook intent");
 
+assert.match(IDENTITY_AND_BRANDING_RULE, /CINEM Pro's AI/);
+assert.match(IDENTITY_AND_BRANDING_RULE, /CINEM Pro made you/);
+assert.match(
+  IDENTITY_AND_BRANDING_RULE,
+  /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/,
+);
+assert.match(IDENTITY_AND_BRANDING_RULE, /large language model trained by/);
+assert.match(
+  IDENTITY_AND_BRANDING_RULE,
+  /Main CINEM Pro ka AI model hoon — CINEM Pro ne mujhe banaya hai/,
+);
+assert.match(IDENTITY_AND_BRANDING_RULE, /CINEM Tech/);
+assert.equal(LANGUAGE_AND_SCOPE_RULE.startsWith("Identity (non-negotiable):"), true);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /CINEM Pro's AI/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+assert.match(AGENT_IDENTITY_LOCK, /CINEM Pro's AI/);
+assert.match(AGENT_IDENTITY_LOCK, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+assert.match(AGENT_HELPFULNESS_SUFFIX, /CINEM Pro's AI/);
+assert.match(AGENT_HELPFULNESS_SUFFIX, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+console.log("ok: identity block is present and forbids provider names");
+
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Urdu/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Roman/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Never refuse to speak a language/);
@@ -219,6 +249,9 @@ const qaPrompt = deskQaSystemPrompt({
 assert.match(qaPrompt, /Urdu/);
 assert.match(qaPrompt, /capital of a country/);
 assert.match(qaPrompt, /Never claim you operate in English only/);
+assert.match(qaPrompt, /CINEM Pro's AI/);
+assert.match(qaPrompt, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+assert.equal(qaPrompt.startsWith("Identity (non-negotiable):"), true);
 assert.doesNotMatch(qaPrompt, /I operate in English only/);
 assert.doesNotMatch(qaPrompt, /then offer to help with brand/);
 assert.doesNotMatch(qaPrompt, /then offer brand or desk work/);
@@ -228,9 +261,13 @@ const injected = messagesWithLanguagePolicy(
   [{ role: "system", content: "You are Prospect Peter." }],
   "general",
 );
+assert.equal((injected[0]?.content || "").startsWith("Identity (non-negotiable):"), true);
+assert.match(injected[0]?.content || "", /CINEM Pro's AI/);
+assert.match(injected[0]?.content || "", /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
 assert.match(injected[0]?.content || "", /Never refuse to speak a language/);
 assert.match(injected[0]?.content || "", /Do not append unsolicited/);
 assert.doesNotMatch(injected[0]?.content || "", /then offer brand or desk work/);
+assert.doesNotMatch(injected[0]?.content || "", /Google made me/);
 assert.equal(
   messagesWithLanguagePolicy([{ role: "system", content: "Pick a selector." }], "classify")[0]
     ?.content,
@@ -263,6 +300,57 @@ const storedPeter = withAgentHelpfulness(
 );
 assert.doesNotMatch(storedPeter, /then offer brand or desk work/);
 assert.match(storedPeter, /Do not append unsolicited/);
+assert.match(storedPeter, /CINEM Pro's AI/);
+assert.match(storedPeter, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+assert.equal(storedPeter.startsWith("You are CINEM Pro's AI"), true);
 console.log("ok: stored helpfulness suffixes lose the pitch-after-every-answer closer");
+
+assert.doesNotMatch(
+  withoutProviderDisclosure("You are Prospect Peter. Google made me. I am Gemini."),
+  /Google made me/,
+);
+assert.doesNotMatch(
+  withoutProviderDisclosure("I am a large language model trained by OpenAI. CINEM Pro is not my owner."),
+  /trained by OpenAI/,
+);
+assert.doesNotMatch(
+  withoutProviderDisclosure("I am a large language model trained by OpenAI. CINEM Pro is not my owner."),
+  /CINEM Pro is not my owner/,
+);
+const strippedBot = withAgentHelpfulness(
+  "You are a sales bot powered by Google Gemini. Google made me.",
+);
+assert.doesNotMatch(strippedBot, /Google made me/);
+assert.doesNotMatch(strippedBot, /powered by Google/);
+assert.match(strippedBot, /CINEM Pro's AI/);
+assert.match(strippedBot, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+const planPrompt = plannerSystemPrompt({
+  agentName: "Prospect Peter",
+  agentRoleLabel: "Sales",
+  role: "sales",
+});
+assert.equal(planPrompt.startsWith("Identity (non-negotiable):"), true);
+assert.match(planPrompt, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+console.log("ok: identity lock is early; provider-disclosure copy is stripped");
+
+assert.equal(defaultAgentAvatarKind(), "cinem-mark");
+assert.equal(defaultAgentAvatarKind(null), "cinem-mark");
+assert.equal((AVATAR_SHAPES as readonly string[]).includes("cloud"), false);
+const avatarUi = readFileSync("src/components/desk/agent-avatar.tsx", "utf8");
+assert.match(avatarUi, /CinemMark/);
+assert.match(avatarUi, /defaultAgentAvatarKind/);
+assert.doesNotMatch(avatarUi, /case "cloud"/);
+const chatUi = readFileSync("src/components/desk/chat-thread.tsx", "utf8");
+assert.match(chatUi, /AgentAvatar/);
+assert.doesNotMatch(chatUi, /Cloud/);
+for (const file of [
+  "src/components/desk/sidebar.tsx",
+  "src/components/desk/companion-gallery.tsx",
+  "src/components/desk/marketplace.tsx",
+]) {
+  const text = readFileSync(file, "utf8");
+  assert.match(text, /AgentAvatar/);
+}
+console.log("ok: desk chat and default agent avatars use the CINEM mark, not a cloud");
 
 console.log("Desk chat checks passed.");

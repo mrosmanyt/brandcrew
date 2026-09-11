@@ -6,6 +6,7 @@ import {
   agentAvatarSpec,
   avatarSeedFor,
   AVATAR_SHAPES,
+  defaultAgentAvatarKind,
   hashSeed,
 } from "../src/lib/agent-avatar";
 import { asCheckoutPlan } from "../src/lib/billing";
@@ -80,6 +81,9 @@ const b = agentAvatarSpec(avatarSeedFor({ id: "ag_1", name: "New Agent" }));
 assert.equal(a.shape, b.shape);
 assert.equal(a.hue, b.hue);
 assert.ok(AVATAR_SHAPES.includes(a.shape));
+assert.equal((AVATAR_SHAPES as readonly string[]).includes("cloud"), false);
+assert.equal(defaultAgentAvatarKind(), "cinem-mark");
+assert.equal(defaultAgentAvatarKind(a), "generated");
 assert.notEqual(hashSeed("ag_1"), hashSeed("ag_2"));
 const other = agentAvatarSpec(avatarSeedFor({ id: "ag_2", name: "New Agent" }));
 assert.ok(a.shape !== other.shape || a.hue !== other.hue);
