@@ -560,7 +560,7 @@ async function setWorkspacePlan(input: {
     data: {
       plan: input.plan,
       tokenBudget,
-      ...(input.resetUsage ? { tokenUsed: 0 } : {}),
+      ...(input.resetUsage ? { tokenUsed: 0, chatTokenUsed: 0 } : {}),
       ...(input.plan === "demo" ? { whopMembershipId: null } : {}),
       ...(typeof input.suspended === "boolean" ? { suspended: input.suspended } : {}),
     },

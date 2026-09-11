@@ -19,7 +19,7 @@ import {
   shouldUseVisionFallback,
 } from "../src/lib/dom-first";
 import { promptCacheForProvider, anthropicCachedSystem } from "../src/lib/prompt-cache";
-import { PLAN_IDS_CAPPED, PLANS, planDisplayName } from "../src/lib/constants";
+import { CHECKOUT_PLANS, PLAN_IDS_CAPPED, PLANS, planDisplayName } from "../src/lib/constants";
 import { creditsFromTokens, CREDITS_HINT } from "../src/lib/credits";
 import { packSessionReplay, emptyCostStats, bumpCost } from "../src/lib/session-replay";
 import { PHASE2_STATUS } from "../src/lib/phase2";
@@ -27,12 +27,12 @@ import { annotateUntrustedPageText, looksLikeInstructionInjection, PAGE_CONTENT_
 import { routineDeliveryNote } from "../src/lib/routines-pure";
 import { defaultPlaybookForKind, noteForKind } from "../src/lib/event-triggers-pure";
 import { pickRoute } from "../src/lib/llm";
-import { CHECKOUT_PLANS } from "../src/lib/constants";
 import {
   evaluateBudgetCaps,
   tokenBudgetExceeded,
 } from "../src/lib/budget-caps";
 import { decideDeskQa } from "../src/lib/desk-qa-pure";
+import { usesSeparateChatBudget } from "../src/lib/limits";
 
 const brief = weeklyClientBriefPlaybook("https://example.com");
 const firstPass = scoreCachedReplay(brief.steps, []);
@@ -250,6 +250,60 @@ assert.equal(credits.creditsBudget, 15_000);
 assert.match(CREDITS_HINT, /no unlimited plan/);
 assert.match(CREDITS_HINT, /Free\/Pro\/Pro Plus\/Ultra/);
 assert.match(readFileSync("src/lib/limits.ts", "utf8"), /no unlimited plan/);
+assert.equal(PLANS.demo.chatTokenBudget, 500_000);
+assert.ok(PLANS.demo.chatTokenBudget > PLANS.demo.tokenBudget);
+assert.equal(usesSeparateChatBudget("demo"), true);
+assert.equal(usesSeparateChatBudget("starter"), true);
+assert.equal(usesSeparateChatBudget("pro"), false);
+assert.equal(usesSeparateChatBudget("ultra"), false);
+const chatOk = evaluateBudgetCaps(
+  {
+    tokenUsed: 15_000,
+    tokenBudget: 15_000,
+    chatTokenUsed: 10,
+    chatTokenBudget: 500_000,
+    separateChatBudget: true,
+  },
+  "chat",
+);
+assert.equal(chatOk.ok, true);
+const chatStop = evaluateBudgetCaps(
+  {
+    tokenUsed: 0,
+    tokenBudget: 15_000,
+    chatTokenUsed: 500_000,
+    chatTokenBudget: 500_000,
+    separateChatBudget: true,
+  },
+  "chat",
+);
+assert.equal(chatStop.ok, false);
+if (!chatStop.ok) assert.equal(chatStop.code, "BUDGET");
+const paidChatSharesJobs = evaluateBudgetCaps(
+  {
+    tokenUsed: 200_000,
+    tokenBudget: 200_000,
+    chatTokenUsed: 0,
+    chatTokenBudget: 200_000,
+    separateChatBudget: false,
+  },
+  "chat",
+);
+assert.equal(paidChatSharesJobs.ok, false);
+const jobStillCapped = evaluateBudgetCaps(
+  {
+    tokenUsed: 15_000,
+    tokenBudget: 15_000,
+    chatTokenUsed: 10,
+    chatTokenBudget: 500_000,
+    separateChatBudget: true,
+  },
+  "job",
+);
+assert.equal(jobStillCapped.ok, false);
+assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /tum kia kia kr sakte ho/);
+assert.match(readFileSync("src/lib/desk-qa.ts", "utf8"), /budgetMode: "chat"/);
+assert.match(readFileSync("src/lib/desk-qa.ts", "utf8"), /bucket: "chat"/);
 console.log("ok: Free plan (not Demo) is capped; no unlimited plan");
 
 assert.equal(PHASE2_STATUS.scheduledRoutines.status, "shipped");

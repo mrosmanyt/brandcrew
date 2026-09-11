@@ -35,6 +35,8 @@ const demo = limitsForPlan("demo");
 assert.equal(demo.jobsPerHour, PLANS.demo.jobsPerHour);
 assert.equal(demo.maxConcurrentJobs, 1);
 assert.equal(demo.paid, false);
+assert.equal(demo.chatTokenBudget, PLANS.demo.chatTokenBudget);
+assert.ok(demo.chatTokenBudget > demo.tokenBudget);
 assert.equal(PLANS.starter.price, 20);
 assert.equal(PLANS.pro.price, 79);
 assert.equal(PLANS.ultra.price, 200);

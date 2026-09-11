@@ -12,12 +12,19 @@ import { memoryBriefForWorkspace } from "@/lib/learning-memory";
 import { serializeMessage } from "@/lib/job-serialize";
 import type { MessageDTO } from "@/lib/types";
 import { assertLlmCallBudget, recordUsage, rethrowIfBudget } from "@/lib/usage";
-import { deskQaSystemPrompt } from "@/lib/desk-qa-pure";
+import {
+  deskQaSystemPrompt,
+  isCapabilityQuestion,
+  offlineCapabilityAnswer,
+} from "@/lib/desk-qa-pure";
+import { persistLegacyHospitalityDemoBrandKit } from "@/lib/workspace";
 
 export {
   decideDeskQa,
   deskQaSystemPrompt,
+  isCapabilityQuestion,
   isLightweightDeskQuestion,
+  offlineCapabilityAnswer,
   type DeskQaDecision,
 } from "@/lib/desk-qa-pure";
 
@@ -44,11 +51,13 @@ export async function answerDeskQuestion(input: {
   agentId: string;
   message: string;
 }): Promise<DeskQaResult> {
-  await assertLlmCallBudget(input.workspaceId);
+  await assertLlmCallBudget(input.workspaceId, "chat");
 
-  const workspace = await prisma.workspace.findUniqueOrThrow({
-    where: { id: input.workspaceId },
-  });
+  const workspace = await persistLegacyHospitalityDemoBrandKit(
+    await prisma.workspace.findUniqueOrThrow({
+      where: { id: input.workspaceId },
+    }),
+  );
   const agent = await prisma.agent.findFirst({
     where: {
       id: input.agentId,
@@ -82,7 +91,7 @@ export async function answerDeskQuestion(input: {
   const prior = await prisma.message.findMany({
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "desc" },
-    take: 6,
+    take: 40,
   });
 
   const history = [...prior].reverse().map((row) => ({
@@ -107,6 +116,7 @@ export async function answerDeskQuestion(input: {
           prefer,
           plan: workspace.plan,
           workspaceId: input.workspaceId,
+          budgetMode: "chat",
         },
         () =>
           llm.complete({
@@ -138,7 +148,9 @@ export async function answerDeskQuestion(input: {
   }
 
   if (!text) {
-    text = offlineAnswer(kitBrief, input.message);
+    text = isCapabilityQuestion(input.message)
+      ? offlineCapabilityAnswer(input.message)
+      : offlineAnswer(kitBrief, input.message);
     demo = true;
     model = "demo";
     tokens = 0;
@@ -151,6 +163,7 @@ export async function answerDeskQuestion(input: {
       model,
       agentRole: agent.role || "writer",
       agentId: agent.id,
+      bucket: "chat",
     });
   }
 

@@ -3,7 +3,7 @@ import {
   evaluateBudgetCaps,
   type BudgetCapMode,
 } from "@/lib/budget-caps";
-import { getWorkspaceLimits, limitsForPlan, serializeLimits } from "@/lib/limits";
+import { getWorkspaceLimits, limitsForPlan, serializeLimits, usesSeparateChatBudget } from "@/lib/limits";
 import { planDisplayName } from "@/lib/constants";
 import {
   aggregateUsageByModel,
@@ -42,6 +42,11 @@ async function assertCaps(workspaceId: string, mode: BudgetCapMode) {
 
   const caps = limitsForPlan(workspace.plan);
   const tokenBudget = workspace.tokenBudget || caps.tokenBudget;
+  const separateChat = usesSeparateChatBudget(workspace.plan);
+  const chatTokenUsed =
+    "chatTokenUsed" in workspace
+      ? Number((workspace as { chatTokenUsed?: number }).chatTokenUsed) || 0
+      : 0;
   const hourly =
     mode === "job"
       ? await getWorkspaceLimits(workspaceId)
@@ -57,6 +62,9 @@ async function assertCaps(workspaceId: string, mode: BudgetCapMode) {
       suspended: workspace.suspended,
       tokenUsed: workspace.tokenUsed,
       tokenBudget,
+      chatTokenUsed,
+      chatTokenBudget: caps.chatTokenBudget,
+      separateChatBudget: separateChat,
       jobsThisHour: hourly.jobsThisHour,
       jobsPerHour: hourly.jobsPerHour,
       concurrentJobs: hourly.concurrentJobs,
@@ -79,10 +87,14 @@ export async function assertWorkspaceBudget(workspaceId: string) {
 
 /**
  * Hard stop before an LLM call. Tokens + suspended only — a running job
- * already occupies its concurrent slot.
+ * already occupies its concurrent slot. Pass "chat" for desk Q&A so Free/Pro
+ * cheap-model chat uses chatTokenBudget instead of the job token cap.
  */
-export async function assertLlmCallBudget(workspaceId: string) {
-  return assertCaps(workspaceId, "llm");
+export async function assertLlmCallBudget(
+  workspaceId: string,
+  mode: Extract<BudgetCapMode, "llm" | "chat"> = "llm",
+) {
+  return assertCaps(workspaceId, mode);
 }
 
 export function estimateUsdStub(tokens: number) {
@@ -159,7 +171,14 @@ export async function recordUsage(input: {
   model: string;
   agentRole: string;
   agentId?: string | null;
+  bucket?: "job" | "chat";
 }) {
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: input.workspaceId },
+    select: { plan: true },
+  });
+  const chatBucket =
+    input.bucket === "chat" && usesSeparateChatBudget(workspace?.plan);
   await prisma.$transaction([
     prisma.usageEvent.create({
       data: {
@@ -172,7 +191,9 @@ export async function recordUsage(input: {
     }),
     prisma.workspace.update({
       where: { id: input.workspaceId },
-      data: { tokenUsed: { increment: input.tokens } },
+      data: chatBucket
+        ? { chatTokenUsed: { increment: input.tokens } }
+        : { tokenUsed: { increment: input.tokens } },
     }),
   ]);
 }

@@ -39,6 +39,8 @@ model Workspace {
   plan               String            @default("demo")
   tokenUsed          Int               @default(0)
   tokenBudget        Int               @default(15000)
+  /// Cheap-model desk Q&A on Free/Pro. Separate from playbook job tokenUsed.
+  chatTokenUsed      Int               @default(0)
   brandKit           String            @default("{}")
   modelRouting       String            @default("auto")
   /// Auto-run safe click/type. High-risk sends, Slack posts, payments, and file writes still wait.

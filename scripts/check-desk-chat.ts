@@ -11,7 +11,7 @@ import {
   liveProgressFromEvents,
 } from "../src/lib/live-progress";
 import type { MessageDTO } from "../src/lib/types";
-import { decideDeskQa, deskQaSystemPrompt } from "../src/lib/desk-qa-pure";
+import { decideDeskQa, deskQaSystemPrompt, isCapabilityQuestion, offlineCapabilityAnswer } from "../src/lib/desk-qa-pure";
 import { plannerSystemPrompt } from "../src/lib/agent-prompts";
 import { JOB_ACTION_MESSAGES } from "../src/lib/constants";
 import {
@@ -28,6 +28,15 @@ import {
   AVATAR_SHAPES,
   defaultAgentAvatarKind,
 } from "../src/lib/agent-avatar";
+import {
+  DEMO_BRAND_KIT,
+  LEGACY_HOSPITALITY_DEMO_BRAND_KIT,
+  isLegacyHospitalityDemoBrandKit,
+  isLegacyHospitalityDemoBrandKitRaw,
+  parseBrandKit,
+  stringifyBrandKit,
+  brandLabel,
+} from "../src/lib/brand-kit";
 
 function event(
   partial: Partial<JobEventDTO> & Pick<JobEventDTO, "id" | "type" | "message">,
@@ -209,6 +218,25 @@ assert.equal(decideDeskQa({ message: "generate a linkedin week of posts" }).qa, 
 assert.equal(decideDeskQa({ message: "MRE SATH URDU MEN BAAT KRO" }).qa, true);
 assert.equal(decideDeskQa({ message: "WHAT IS THE CAPITAL CITY OF PAKISTAN" }).qa, true);
 assert.equal(decideDeskQa({ message: "اردو میں بات کرو" }).qa, true);
+assert.equal(decideDeskQa({ message: "tum kia kia kr sakte ho" }).qa, true);
+assert.equal(decideDeskQa({ message: "what can you do" }).qa, true);
+assert.equal(isCapabilityQuestion("tum kia kia kr sakte ho"), true);
+assert.equal(isCapabilityQuestion("Tum kya kar sakte ho?"), true);
+assert.equal(isCapabilityQuestion("what can you do"), true);
+assert.equal(isCapabilityQuestion("How can you help?"), true);
+assert.equal(isCapabilityQuestion("what is our ICP?"), false);
+assert.equal(isCapabilityQuestion("WHAT IS THE CAPITAL CITY OF PAKISTAN"), false);
+const urduCap = offlineCapabilityAnswer("tum kia kia kr sakte ho");
+assert.match(urduCap, /Files aur documents/i);
+assert.match(urduCap, /CINEM Pro desk/i);
+assert.doesNotMatch(urduCap, /House Look/);
+assert.doesNotMatch(urduCap, /hospitality groups/);
+assert.doesNotMatch(urduCap, /Claude|GPT|Gemini|OpenAI|Anthropic/i);
+const enCap = offlineCapabilityAnswer("what can you do");
+assert.match(enCap, /Files and documents/i);
+assert.match(enCap, /CINEM Pro desk tools/i);
+assert.doesNotMatch(enCap, /House Look/);
+assert.doesNotMatch(enCap, /Claude|GPT|Gemini|OpenAI|Anthropic/i);
 console.log("ok: lightweight Q&A vs playbook intent");
 
 assert.match(IDENTITY_AND_BRANDING_RULE, /CINEM Pro's AI/);
@@ -257,6 +285,10 @@ assert.doesNotMatch(qaPrompt, /then offer to help with brand/);
 assert.doesNotMatch(qaPrompt, /then offer brand or desk work/);
 assert.match(qaPrompt, /Do not pitch hospitality/);
 assert.match(qaPrompt, /Only offer next steps when the user asks for work/);
+assert.match(qaPrompt, /tum kia kia kr sakte ho/);
+assert.match(qaPrompt, /what can you do/);
+assert.match(qaPrompt, /Brand Kit is facts/);
+assert.doesNotMatch(qaPrompt, /I only do hospitality/);
 const injected = messagesWithLanguagePolicy(
   [{ role: "system", content: "You are Prospect Peter." }],
   "general",
@@ -286,6 +318,20 @@ const rewritten = messagesWithLanguagePolicy(
 assert.doesNotMatch(rewritten[0]?.content || "", /then offer brand or desk work/);
 assert.match(rewritten[0]?.content || "", /Do not append unsolicited/);
 console.log("ok: desk Q&A + global layer mirror Urdu, do not English-lock, and do not pitch after every answer");
+
+assert.doesNotMatch(DEMO_BRAND_KIT.audience, /hospitality groups/i);
+assert.doesNotMatch(DEMO_BRAND_KIT.offer, /House Look/);
+assert.match(DEMO_BRAND_KIT.offer, /AI employee desk/);
+assert.equal(brandLabel(DEMO_BRAND_KIT), "CINEM Pro desk");
+assert.equal(isLegacyHospitalityDemoBrandKit(LEGACY_HOSPITALITY_DEMO_BRAND_KIT), true);
+assert.equal(isLegacyHospitalityDemoBrandKit(DEMO_BRAND_KIT), false);
+assert.equal(
+  isLegacyHospitalityDemoBrandKitRaw(stringifyBrandKit(LEGACY_HOSPITALITY_DEMO_BRAND_KIT)),
+  true,
+);
+assert.deepEqual(parseBrandKit(stringifyBrandKit(LEGACY_HOSPITALITY_DEMO_BRAND_KIT)), DEMO_BRAND_KIT);
+assert.equal(parseBrandKit(stringifyBrandKit(DEMO_BRAND_KIT)).offer, DEMO_BRAND_KIT.offer);
+console.log("ok: default Brand Kit is a general desk, and the old hospitality demo remaps");
 
 assert.doesNotMatch(AGENT_HELPFULNESS_SUFFIX, /then offer brand/);
 assert.match(AGENT_HELPFULNESS_SUFFIX, /Do not append unsolicited/);
