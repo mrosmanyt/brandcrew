@@ -22,7 +22,7 @@ This does **not** change `Workspace.plan`. Cancel/deactivate on a Support member
 
 ## What CINEM Pro sends
 
-Whop’s payment + inline-plan OpenAPI requires `plan.company_id` (`biz_…`). `@whop/sdk` 1.1.2 still types `account_id` as an alias. CINEM Pro sends **both** so checkout does not 404 with `Account not found`.
+Whop’s payment + inline-plan OpenAPI requires `plan.company_id` (`biz_…`). `@whop/sdk` 1.1.2 still types `account_id` as an alias. CINEM Pro sends **both** so live checkout matches current docs and older SDK/API aliases. If `WHOP_COMPANY_ID` (or `WHOP_ACCOUNT_ID`) is unset, the API returns a clear ClientError instead of calling Whop with an empty company.
 
 ```
 POST checkoutConfigurations.create
