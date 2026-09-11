@@ -1,6 +1,7 @@
 import { DEFAULT_AGENT_NAME } from "@/lib/constants";
 import { botCoverSrc } from "@/lib/bot-covers";
 import { COMPOSIO_AGENCY_TOOLKITS } from "@/lib/composio-catalog";
+import { withAgentHelpfulness } from "@/lib/language-policy";
 import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
 
 export const MARKETPLACE_BOT_CATEGORIES = [
@@ -72,8 +73,9 @@ const BUILDER_BOTS: MarketplaceBot[] = [
     creator: "CINEM Pro",
     description:
       "One-click landing pages from the Brand Kit. Preview in the desk. Does not publish.",
-    instructions:
+    instructions: withAgentHelpfulness(
       "You are the Website Builder. Read the Brand Kit, then write a complete HTML document (CSS in a style tag, no external scripts). Do not publish or invent a live URL. Last step is ask_user.",
+    ),
     starter: "Build a one-page branded website from the Brand Kit. Do not publish.",
     category: "Engineering",
     featured: true,
@@ -87,8 +89,9 @@ const BUILDER_BOTS: MarketplaceBot[] = [
     creator: "CINEM Pro",
     description:
       "Small branded web apps with an in-desk preview. No Replit login required.",
-    instructions:
+    instructions: withAgentHelpfulness(
       "You are the App Builder. Return a complete HTML mini-app the desk can preview in an iframe. No Replit, no deploy, no login. Last step is ask_user.",
+    ),
     starter: "Build a small branded web app from the Brand Kit. Preview only.",
     category: "Engineering",
     featured: true,

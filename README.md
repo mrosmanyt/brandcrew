@@ -526,9 +526,9 @@ When the UI does not pick a model (`Auto`):
 
 Hard stop: `assertWorkspaceBudget` before a job is queued (tokens + jobs/hour + concurrent). `assertLlmCallBudget` before every LLM call (tokens + suspended). Crossing `tokenBudget` returns `BUDGET` (402) and the desk shows the stop dialog. Usage `estimateUsd` is a stub — not a provider bill.
 
-Desk chat: a normal question (“what is our ICP?”) gets one cheap reply in the thread (Brand Kit context, counted against the workspace token budget). Explicit generate chips / playbooks still call `createJobFromChat`.
+Desk chat: a normal question (“what is our ICP?”, Roman Urdu, or another language) gets one cheap reply in the thread (Brand Kit context, counted against the workspace token budget). Agents mirror the user’s language — including Urdu — and do not claim English-only. Explicit generate chips / playbooks still call `createJobFromChat`.
 
-Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. No keys → labeled **offline templates**.
+Keys stay on the server: `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. **Vercel Production must set `GEMINI_API_KEY`** so Free-plan Auto and paid-key failures use Gemini Flash instead of offline templates. No keys → labeled **offline templates**. If a preferred provider errors (invalid OpenAI key, 429, outage), `llm.complete` retries remaining cheap backends starting with Gemini Flash.
 
 ## Cost controls
 

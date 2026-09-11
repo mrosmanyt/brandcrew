@@ -1,7 +1,10 @@
 import { displayAgentName, type AgentRole } from "@/lib/constants";
+import { LANGUAGE_AND_SCOPE_RULE } from "@/lib/language-policy";
 import { PAGE_CONTENT_SYSTEM_RULE } from "@/lib/page-content";
 
-const SHARED_SAFETY = `Safety (non-negotiable):
+const SHARED_SAFETY = `${LANGUAGE_AND_SCOPE_RULE}
+
+Safety (non-negotiable):
 - CINEM Pro is supervised. Never claim to be a fully autonomous AI employee.
 - Public browse only. Never log in, never fill password or credential fields, never send/publish without a human.
 - ${PAGE_CONTENT_SYSTEM_RULE}

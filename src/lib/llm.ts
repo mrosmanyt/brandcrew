@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { normalizePlanId, planForcesCheapBackends } from "@/lib/limits";
+import { messagesWithLanguagePolicy } from "@/lib/language-policy";
 import {
   displayModelById,
   geminiFlashModelId,
@@ -372,6 +373,41 @@ export function pickRoute(
   return pickRouteDefault(kind, json, plan, boost);
 }
 
+function routeKey(route: LlmRoute) {
+  return `${route.provider}:${route.model}`;
+}
+
+/**
+ * Preferred route first, then remaining cheap backends (Gemini Flash, GPT Terra,
+ * Haiku, xAI). Used so a missing/failing OpenAI or Anthropic key still reaches
+ * Gemini when GEMINI_API_KEY is set — never a demo English-only stub.
+ */
+export function completeRouteCandidates(
+  mode: TaskMode,
+  kind: LlmJobKind = "general",
+  prefer: LlmRoutingPreference | string = currentRoutingPreference(),
+  extras?: { json?: boolean; plan?: string; boost?: boolean },
+): LlmRoute[] {
+  const primary = pickRoute(mode, kind, prefer, extras);
+  const cheap = CHEAP_FALLBACKS.map((fn) => fn()).filter((row): row is LlmRoute => Boolean(row));
+  const out: LlmRoute[] = [];
+  const seen = new Set<string>();
+  for (const route of primary ? [primary, ...cheap] : cheap) {
+    const key = routeKey(route);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(route);
+  }
+  return out;
+}
+
+export function isRetryableLlmProviderError(error: unknown): boolean {
+  if (!error) return false;
+  if (error instanceof Error && error.name === "BudgetError") return false;
+  if (error instanceof Error && error.message === "NO_LLM_KEYS") return false;
+  return true;
+}
+
 export function createAnthropicClient(apiKey: string) {
   return new Anthropic({ apiKey });
 }
@@ -420,13 +456,38 @@ export class LLMProvider {
       const { assertLlmCallBudget } = await import("@/lib/usage");
       await assertLlmCallBudget(workspaceId);
     }
-    const route = pickRoute(input.mode, input.kind ?? "general", currentRoutingPreference(), {
+    const kind = input.kind ?? "general";
+    const payload = {
+      ...input,
+      messages: messagesWithLanguagePolicy(input.messages, kind),
+    };
+    const candidates = completeRouteCandidates(input.mode, kind, currentRoutingPreference(), {
       json: input.json,
     });
-    if (!route) {
+    if (!candidates.length) {
       throw new Error("NO_LLM_KEYS");
     }
 
+    let lastError: unknown;
+    for (const route of candidates) {
+      try {
+        return await this.completeOnRoute(route, payload);
+      } catch (error) {
+        if (!isRetryableLlmProviderError(error)) throw error;
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error("NO_LLM_KEYS");
+  }
+
+  private async completeOnRoute(
+    route: LlmRoute,
+    input: {
+      mode: TaskMode;
+      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      json?: boolean;
+    },
+  ): Promise<LlmCompleteResult> {
     if (route.provider === "anthropic") {
       return this.completeAnthropic(route, input);
     }

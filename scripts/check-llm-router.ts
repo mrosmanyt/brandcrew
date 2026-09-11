@@ -7,7 +7,9 @@ import {
   createAnthropicClient,
   createGeminiClient,
   createXaiClient,
+  completeRouteCandidates,
   getLlmStatus,
+  isRetryableLlmProviderError,
   pickRoute,
   runWithLlmRouting,
   runWithRoutingPreference,
@@ -192,6 +194,27 @@ try {
   );
   assert.match(base, /x\.ai/);
   console.log("ok: posts stay Gemini Flash even if xAI is keyed; Free/Pro apps stay Flash, Pro Plus apps stay Sonnet");
+
+  const autoCandidates = completeRouteCandidates("draft", "general", "auto", { plan: "demo" });
+  assert.equal(autoCandidates[0]?.provider, "gemini");
+  assert.equal(autoCandidates[0]?.model, "gemini-2.5-flash");
+  assert.ok(autoCandidates.some((row) => row.provider === "openai"));
+  const openaiPreferred = completeRouteCandidates("draft", "general", "gpt-astra", { plan: "demo" });
+  assert.equal(openaiPreferred[0]?.provider, "openai");
+  assert.equal(openaiPreferred[1]?.provider, "gemini");
+  assert.equal(openaiPreferred[1]?.model, "gemini-2.5-flash");
+  const budgetErr = new Error("token budget");
+  budgetErr.name = "BudgetError";
+  assert.equal(isRetryableLlmProviderError(budgetErr), false);
+  assert.equal(isRetryableLlmProviderError(new Error("NO_LLM_KEYS")), false);
+  assert.equal(isRetryableLlmProviderError(new Error("401 Incorrect API key")), true);
+  console.log("ok: Free Auto → Gemini Flash; OpenAI pick falls back to Gemini on error");
+
+  setKeys({ openai: "sk-openai-fake", anthropic: fakeAnthropic });
+  const noGemini = completeRouteCandidates("draft", "general", "auto", { plan: "demo" });
+  assert.equal(noGemini[0]?.provider, "openai");
+  assert.equal(noGemini.some((row) => row.provider === "gemini"), false);
+  console.log("ok: without GEMINI_API_KEY, Auto cannot invent Gemini — founder must set it on Vercel");
 
   console.log("LLM router checks passed (no paid API calls).");
 } finally {

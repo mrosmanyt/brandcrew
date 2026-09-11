@@ -46,6 +46,12 @@ for (const id of [
 }
 assert.ok(MARKETPLACE_BOTS.every((bot) => bot.creator === "CINEM Pro"));
 assert.ok(MARKETPLACE_BOTS.every((bot) => bot.cover.startsWith("/bots/")));
+for (const bot of MARKETPLACE_BOTS) {
+  assert.match(bot.instructions, /Never claim English-only/);
+  assert.doesNotMatch(bot.instructions, /I operate in English only/i);
+  assert.doesNotMatch(bot.instructions, /I can only (use|speak|operate)/i);
+}
+console.log("ok: marketplace bots mirror language; no English-only lock");
 assert.equal(getMarketplaceBot("bot-manager")?.featured, true);
 for (const id of [
   "bot-main",
