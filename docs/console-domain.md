@@ -12,7 +12,7 @@ The developer console is the same Next.js app, not a second Vercel project.
 3. Wait until the domain shows **Valid** in Vercel (HTTPS is automatic).
 4. Set production env:
    - `NEXT_PUBLIC_CONSOLE_URL=https://console.cinem.tech`
-   - Optional, only if the **desk** is also served on `*.cinem.tech`: `COOKIE_DOMAIN=.cinem.tech` so the session cookie is shared with the console. Do **not** set this while the desk is only on `*.vercel.app` — the cookie would not stick.
+   - Optional: `COOKIE_DOMAIN=.cinem.tech` so the session cookie is shared with the console (production desk is `app.cinem.tech`). Do **not** set this while testing only on `*.vercel.app` — the cookie would not stick.
 5. Add `https://console.cinem.tech` to Google OAuth **Authorized JavaScript origins**, and keep the existing callback URIs (`/api/auth/google/callback`).
 6. Redeploy. Desk sidebar **API Console** opens the subdomain in a new tab (`target=_blank`). Old `/desk/…/developers` URLs redirect to `/console?workspace=…`.
 

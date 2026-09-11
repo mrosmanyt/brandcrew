@@ -1,3 +1,5 @@
+import { DEFAULT_DESK_ORIGIN } from "./desk-origin.js";
+
 const form = document.getElementById("pair-form");
 const paired = document.getElementById("paired");
 const waiting = document.getElementById("waiting");
@@ -92,6 +94,6 @@ document.getElementById("cancel-wait").addEventListener("click", async () => {
   await refresh();
 });
 
-originInput.value = "https://brandcrew.vercel.app";
+originInput.value = DEFAULT_DESK_ORIGIN;
 void refresh();
 setInterval(() => void refresh(), 2000);

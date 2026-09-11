@@ -28,9 +28,9 @@ npm run pack:extension
 
 Upload **`public/downloads/cinem-pro-chrome.zip`**. Do not zip a parent folder around it. `extension/icons/cinem-logo.png` is the store icon source. If Google rejects the size, export a **128×128 PNG** as `extension/icons/icon-128.png` and point `manifest.json` `icons.128` at it.
 
-Current manifest version: **0.2.1**. Bump this string on every store upload.
+Current manifest version: **0.2.2**. Bump this string on every store upload.
 
-Chrome Web Store rejects `http://127.0.0.1:*/*` and `http://localhost:*/*` in `host_permissions`. Keep those out of `extension/manifest.json` (the same file is packed for the store). Test against the production desk URL (`https://brandcrew.vercel.app` or `https://*.cinem.tech`) — including Load unpacked.
+Chrome Web Store rejects `http://127.0.0.1:*/*` and `http://localhost:*/*` in `host_permissions`. Keep those out of `extension/manifest.json` (the same file is packed for the store). Store-installed **Sign in with CINEM** defaults to `https://app.cinem.tech` (`DEFAULT_DESK_ORIGIN` in `extension/desk-origin.js`). `https://brandcrew.vercel.app` stays in `host_permissions` as an allowed alternate desk — including Load unpacked. Test against the production desk URL (`https://app.cinem.tech`; Vercel remains valid if the user pastes it).
 
 `https://*/*` stays: after **Sign in with CINEM**, jobs drive arbitrary https tabs via CDP (`browser_navigate`, `browser_tabs`, click/type). Desk API calls use `https://*.cinem.tech/*` and `https://brandcrew.vercel.app/*`. Justify both on the store listing (desk origin vs user-owned https pages).
 
@@ -51,7 +51,7 @@ Chrome Web Store rejects `http://127.0.0.1:*/*` and `http://localhost:*/*` in `h
 
 ## Privacy policy URL
 
-Use `https://cinem.tech/privacy` or production `/privacy` (`https://brandcrew.vercel.app/privacy`). The policy states the extension stores only the desk origin + device token locally, and that Sign in with CINEM uses the same account as the website.
+Use `https://cinem.tech/privacy` or production `/privacy` (`https://app.cinem.tech/privacy`; Vercel `https://brandcrew.vercel.app/privacy` is the same app). The policy states the extension stores only the desk origin + device token locally, and that Sign in with CINEM uses the same account as the website.
 
 ## Unlisted vs public
 

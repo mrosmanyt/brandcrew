@@ -116,13 +116,16 @@ Connected **Web Search** exposes `web_search`. Connected **Gmail** exposes `gmai
 Reuse `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`. On the same Google Cloud **Web application** client, add **all** of these Authorized redirect URIs (exact match, including `127.0.0.1` vs `localhost`):
 
 - `http://127.0.0.1:43180/api/auth/google/callback`
+- `https://app.cinem.tech/api/auth/google/callback`
 - `https://brandcrew.vercel.app/api/auth/google/callback`
 - `http://127.0.0.1:43180/api/oauth/callback`
+- `https://app.cinem.tech/api/oauth/callback`
 - `https://brandcrew.vercel.app/api/oauth/callback`
 
 Authorized JavaScript origins:
 
 - `http://127.0.0.1:43180`
+- `https://app.cinem.tech`
 - `https://brandcrew.vercel.app`
 
 Set `OAUTH_REDIRECT_BASE` (or `APP_URL` / `NEXT_PUBLIC_APP_URL`) to the origin you are serving. Missing client id/secret shows a setup tip on the login/signup button — CINEM Pro does **not** fake a signed-in session or a Connected plugin.
@@ -384,7 +387,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 | `DATABASE_URL` | Neon pooled URL |
 | `DIRECT_URL` | Neon direct URL |
 | `SESSION_SECRET` | long random string (not the example) |
-| `NEXT_PUBLIC_APP_URL` | `https://<project>.vercel.app` or custom domain |
+| `NEXT_PUBLIC_APP_URL` | `https://app.cinem.tech` (Preview: this deployment’s URL or leave unset so `siteOrigin()` uses `VERCEL_URL`) |
 | `APP_URL` | same origin |
 | `OAUTH_REDIRECT_BASE` | same origin |
 | `PLAYWRIGHT_ENABLED` | `false` |
@@ -409,7 +412,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 3. Copy the business id (`biz_…`) into `WHOP_COMPANY_ID`.
 4. Optional: create three products/plans at $20 / $79 / $200 monthly and set `WHOP_STARTER_PLAN_ID`, `WHOP_PRO_PLAN_ID`, `WHOP_ULTRA_PLAN_ID`. If those are empty, checkout creates a matching monthly renewal inline.
 5. Developer → Webhooks → Create webhook:
-   - URL: `https://brandcrew.vercel.app/api/webhooks/whop` (or your custom origin + `/api/webhooks/whop`)
+   - URL: `https://app.cinem.tech/api/webhooks/whop` (alternate `https://brandcrew.vercel.app/api/webhooks/whop`)
    - API version: `v1`
    - Events: `payment.succeeded`, `membership.activated`, `membership.deactivated`
 6. Copy the signing secret (`ws_…`) into `WHOP_WEBHOOK_SECRET` on Vercel. Never commit it.
@@ -445,7 +448,7 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 
 ### 5. Website launch + security baseline
 
-Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name **CINEM Pro**, company **CINEM**.
+Public site: [app.cinem.tech](https://app.cinem.tech) (Vercel alias [brandcrew.vercel.app](https://brandcrew.vercel.app)). Product name **CINEM Pro**, company **CINEM**.
 
 **HTTPS:** Vercel terminates TLS and redirects HTTP→HTTPS on `*.vercel.app`. This app also sends `Strict-Transport-Security: max-age=31536000` (no `preload` on a vercel.app subdomain) and CSP `upgrade-insecure-requests`. Headers live in one module: `src/lib/security-headers.ts` (applied from `next.config.ts` and `src/proxy.ts`). Follow-up hardening (nonce CSP, COOP/COEP) should extend that file — do not add a WAF product.
 
@@ -492,7 +495,7 @@ Public site: [brandcrew.vercel.app](https://brandcrew.vercel.app). Product name 
 - **No Chrome on Vercel.** Playwright is off. Browse tools fall back to `fetch` + a short public crawl. Not Browserbase.
 - Function timeout/size limits apply to long jobs; this slice does not add a queue worker.
 - Prisma query engine uses the `rhel-openssl-3.0.x` binary on Vercel. Local/desktop generate `native` as well.
-- **Whop is the live billing provider.** Register webhook `https://brandcrew.vercel.app/api/webhooks/whop` for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Free when that membership matches the current plan (a stale Pro cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
+- **Whop is the live billing provider.** Register webhook `https://app.cinem.tech/api/webhooks/whop` (alternate `https://brandcrew.vercel.app/api/webhooks/whop`) for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Cancel/deactivate drops the workspace to Free when that membership matches the current plan (a stale Pro cancel after an Ultra upgrade is ignored). Mock billing still applies plans without payment when neither Whop nor Stripe is configured.
 - **Scheduled jobs** enqueue when someone opens Mission Control (`GET /jobs`) or when `/api/cron/jobs` is called with `CRON_SECRET`. Vercel Hobby cron is daily (`0 12 * * *`) — not an always-on worker. Times are 09:00 UTC.
 
 ## Model routing

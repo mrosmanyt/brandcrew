@@ -25,7 +25,7 @@ export const DESKTOP_PROTOCOL = "cinem-pro";
 export const ANDROID_PACKAGE_ID = "tech.cinem.pro";
 export const ANDROID_APP_NAME = "CINEM Pro";
 
-/** Production desk the store clients should hit (same account as the website). */
+/** Canonical production desk (`SITE_ORIGIN`). Packaged Electron and store clients. Override with CINEM_CLOUD_URL / APP_URL. Vercel alias remains allowed. */
 export const CLOUD_DESK_ORIGIN = SITE_ORIGIN;
 
 export const CHROME_WEB_STORE_URL = "";

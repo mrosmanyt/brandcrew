@@ -4,8 +4,17 @@ export const GITHUB_RELEASES = `${GITHUB_REPO}/releases`;
 /** Public installer host — anonymous visitors can download without GitHub login. */
 export const PUBLIC_RELEASES_REPO = "https://github.com/mrosmanyt/cinem-pro-releases";
 export const COMPANY_SITE = "https://cinem.tech";
-/** Canonical production origin (Vercel). HTTP→HTTPS is handled by the platform. */
-export const SITE_ORIGIN = "https://brandcrew.vercel.app";
+/**
+ * Canonical production desk (custom domain).
+ * `siteOrigin()` prefers NEXT_PUBLIC_APP_URL / APP_URL so Preview and local
+ * deploys can override without rewriting this constant.
+ */
+export const SITE_ORIGIN = "https://app.cinem.tech";
+/**
+ * Vercel project alias — documented alternate / Preview host.
+ * Keep in Chrome `host_permissions` and Electron navigation allowlists.
+ */
+export const VERCEL_SITE_ORIGIN = "https://brandcrew.vercel.app";
 /** Developer console. Vercel project alias + DNS — see docs/console-domain.md. */
 export { CONSOLE_HOST, CONSOLE_ORIGIN, CONSOLE_PATH, consoleAppHref } from "@/lib/console-site";
 
@@ -14,6 +23,10 @@ export function siteOrigin() {
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     process.env.APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
+  const vercelHost = process.env.VERCEL_URL?.replace(/\/$/, "");
+  if (process.env.VERCEL_ENV === "preview" && vercelHost) {
+    return vercelHost.startsWith("http") ? vercelHost : `https://${vercelHost}`;
+  }
   return SITE_ORIGIN;
 }
 

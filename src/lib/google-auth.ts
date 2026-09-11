@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 import { oauthRedirectBase } from "@/lib/crypto-secret";
+import { SITE_ORIGIN, VERCEL_SITE_ORIGIN } from "@/lib/site";
 import {
   GOOGLE_LOGIN_CALLBACK_PATH,
   GOOGLE_LOGIN_SCOPES,
@@ -75,7 +76,7 @@ export function googleLoginRedirectUri() {
 export function googleLoginSetupHint() {
   const missing = googleLoginMissingEnv();
   if (missing.length) {
-    return `Google sign-in is not configured. Set ${missing.join(" and ")} on the server, then add these Authorized redirect URIs on the same Google Cloud Web client: ${googleLoginRedirectUri()} (login) and ${oauthRedirectBase()}/api/oauth/callback (Gmail plugin). Local: http://127.0.0.1:43180${GOOGLE_LOGIN_CALLBACK_PATH}. Production: https://brandcrew.vercel.app${GOOGLE_LOGIN_CALLBACK_PATH}.`;
+    return `Google sign-in is not configured. Set ${missing.join(" and ")} on the server, then add these Authorized redirect URIs on the same Google Cloud Web client: ${googleLoginRedirectUri()} (login) and ${oauthRedirectBase()}/api/oauth/callback (Gmail plugin). Local: http://127.0.0.1:43180${GOOGLE_LOGIN_CALLBACK_PATH}. Production: ${SITE_ORIGIN}${GOOGLE_LOGIN_CALLBACK_PATH} (alternate ${VERCEL_SITE_ORIGIN}${GOOGLE_LOGIN_CALLBACK_PATH}).`;
   }
   return "Google sign-in is configured. Continue with Google opens Google — a CINEM Pro session is created only after a successful callback.";
 }
