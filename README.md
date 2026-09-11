@@ -58,7 +58,7 @@ The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer
    ```
 5. **Try it:** open a public page → run **Prospecting scan** from a Sales agent → watch Live results (narration + sources) → approve before any write.
 
-Desktop Windows installer and Android Play path are on `/download`. Auth across web / desktop / extension / Android: `docs/auth-bridge.md`. Play Store: `docs/play-store-launch.md`.
+Desktop Windows installer and Android Play path are on `/download`. Auth across web / desktop / extension / Android: `docs/auth-bridge.md`. Play Store: `docs/play-store-launch.md`. Windows SmartScreen / code signing: `docs/windows-code-signing.md`.
 
 Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>` (data, never instructions); writes go through the approval queue; each job has a **domain allowlist** and aborts if the agent leaves allowed hosts. Audit lines live on the On-device page and in `WorkspaceAudit`.
 
@@ -304,7 +304,7 @@ Set `OAUTH_REDIRECT_BASE=http://127.0.0.1:43180` (default). Google/Slack authori
 **Cross-build limits (honest):**
 
 - **Mac `.dmg`:** run `desktop:build:mac` on **macOS**. Linux cannot produce a usable signed/stapled dmg (electron-builder will skip or fail; that is expected).
-- **Windows `.exe`:** `desktop:build:win` on Windows is the straightforward path. On Linux, **wine32** (i386) is required for a complete NSIS `CINEM-Pro-Setup.exe` — `wine64` alone leaves a tiny stub. Portable `.exe` still builds without wine32. Code signing is off (`signAndEditExecutable: false`); ship unsigned unless you add your own cert.
+- **Windows `.exe`:** `desktop:build:win` on Windows is the straightforward path. On Linux, **wine32** (i386) is required for a complete NSIS `CINEM-Pro-Setup.exe` — `wine64` alone leaves a tiny stub. Portable `.exe` still builds without wine32. `package.json` keeps `signAndEditExecutable: false` so unsigned local builds always work. `desktop:build:win` turns signing **on** only when Azure Artifact Signing or CSC_LINK credentials are complete — see `docs/windows-code-signing.md`. Unsigned Setup.exe shows SmartScreen until a signed build is published to `cinem-pro-releases`.
 - CI is optional — there is no GitHub Actions workflow in this slice. Do not expect a Mac dmg from a Linux agent.
 
 ### First account + first job
@@ -353,6 +353,9 @@ See [`.env.example`](./.env.example). Summary:
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | no | Reserved for Stripe test-mode. |
 | `NEXT_PUBLIC_GA_ID` | no | Optional GA4 id. Script loads only after cookie Accept. |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | no | Optional Plausible domain. Script loads only after cookie Accept. |
+| `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` | no (Windows packager) | Entra app for Azure Artifact Signing. Empty → unsigned Setup.exe. See `docs/windows-code-signing.md`. |
+| `AZURE_TRUSTED_SIGNING_ENDPOINT` / `AZURE_TRUSTED_SIGNING_ACCOUNT_NAME` / `AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME` / `AZURE_TRUSTED_SIGNING_PUBLISHER_NAME` | no (Windows packager) | Artifact Signing profile (names, not secrets). Endpoint must match the account region. |
+| `CSC_LINK` / `CSC_KEY_PASSWORD` | no (Windows packager) | Alternate OV/EV Authenticode PFX. Never commit the `.pfx`. |
 
 API keys are read **only on the server**. Users never paste LLM keys. Plugin keys are workspace-scoped and encrypted.
 

@@ -265,8 +265,8 @@ export function DownloadSection() {
             Downloads <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
             Run it, then open CINEM Pro. First launch writes{" "}
             <code className="font-mono text-xs">%APPDATA%\CINEM Pro\.env</code>. The
-            build is unsigned — Windows SmartScreen may ask you to keep / run
-            anyway.
+            build is unsigned until signed releases ship — Windows SmartScreen
+            may ask More info → Run anyway.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button

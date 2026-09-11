@@ -46,6 +46,7 @@
     "test:onboarding": "tsx scripts/check-onboarding-wizard.ts",
     "test:on-device": "tsx scripts/check-on-device.ts",
     "test:auth-bridge": "tsx scripts/check-auth-bridge.ts",
+    "test:win-signing": "tsx scripts/check-win-code-signing.ts",
     "test:write-gate": "tsx scripts/check-write-gate.ts",
     "test:cost": "tsx scripts/check-cost-controls.ts",
     "test:phase3": "tsx scripts/check-phase3.ts",
