@@ -48,6 +48,7 @@ export default function DownloadPage() {
               NSIS installer <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
               Packaged builds open the cloud desk signed in (same account as
               this site). Build: <code className="font-mono text-xs">npm run desktop:build:win</code>.
+              Windows may show SmartScreen until signed builds ship — More info → Run anyway.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Button

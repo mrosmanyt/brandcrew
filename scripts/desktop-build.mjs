@@ -14,10 +14,17 @@ import {
   realpathSync,
   rmSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
+
+const require = createRequire(import.meta.url);
+const { detectWinSigning, describeWinSigning } = require("./win-code-signing.cjs");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+loadEnv({ path: path.join(root, ".env.local"), quiet: true });
+loadEnv({ path: path.join(root, ".env"), quiet: true });
 const args = process.argv.slice(2);
 
 function run(cmd, cmdArgs, extraEnv = {}) {
@@ -138,12 +145,31 @@ if (targets.includes("--mac") && process.platform !== "darwin") {
   );
 }
 
+const winSigning = detectWinSigning(process.env);
+console.log(describeWinSigning(winSigning));
+if (winSigning.warning) {
+  console.warn(winSigning.warning);
+}
+if (winSigning.mode !== "none" && targets.includes("--win") && process.platform !== "win32") {
+  console.warn(
+    "Windows code signing runs on a Windows release machine. This host will still pack an unsigned or Wine-built .exe.",
+  );
+}
+
 const builderEnv = {
   CSC_IDENTITY_AUTO_DISCOVERY: "false",
 };
 
+const builderConfig = path.join(root, "scripts", "electron-builder.config.cjs");
 console.log(`electron-builder ${targets.join(" ")}`);
-const builderArgs = ["electron-builder", "--publish", "never", ...targets];
+const builderArgs = [
+  "electron-builder",
+  "--config",
+  builderConfig,
+  "--publish",
+  "never",
+  ...targets,
+];
 const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", builderArgs, {
   cwd: root,
   stdio: "inherit",
@@ -168,7 +194,10 @@ if (targets.includes("--win") && (wineMissing || result.status !== 0)) {
       ? "NSIS on Linux needs Wine (wine32/i386, not only wine64). Building portable…"
       : "Windows NSIS step failed. Building portable so a downloadable .exe still exists…",
   );
-  npx(["electron-builder", "--publish", "never", "--win", "portable"], builderEnv);
+  npx(
+    ["electron-builder", "--config", builderConfig, "--publish", "never", "--win", "portable"],
+    builderEnv,
+  );
   ensureFriendlyWinNames();
   console.warn(
     "Produced win-unpacked / portable .exe. Full NSIS installer needs wine32 or a Windows runner.",
