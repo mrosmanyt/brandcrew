@@ -45,6 +45,7 @@ import {
   composeJobMessage,
   COMPOSER_PLUS_ITEMS,
   connectorStatusLabel,
+  focusComposer,
   isComposerTextFile,
   type ComposerAttachment,
 } from "@/lib/composer";
@@ -110,6 +111,7 @@ export function ChatComposer({
   autoApproveSafe,
   onAutoApproveSafeApplied,
   canAlwaysApproved = true,
+  messageCount = 0,
 }: {
   workspaceId: string;
   value: string;
@@ -135,9 +137,13 @@ export function ChatComposer({
   autoApproveSafe?: boolean;
   onAutoApproveSafeApplied?: (next: boolean) => void;
   canAlwaysApproved?: boolean;
+  messageCount?: number;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const prevBusy = useRef(busy);
+  const prevMessageCount = useRef(messageCount);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [connectors, setConnectors] = useState<ConnectorRow[]>(
     MARKETPLACE_PLUGINS.map((plugin) => ({
@@ -175,6 +181,28 @@ export function ChatComposer({
       cancelled = true;
     };
   }, [workspaceId]);
+
+  function refocusComposer() {
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        focusComposer(textareaRef.current, document.activeElement);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }
+
+  useEffect(() => {
+    const busyEnded = Boolean(prevBusy.current) && !busy;
+    const replyArrived = messageCount > prevMessageCount.current;
+    prevBusy.current = busy;
+    prevMessageCount.current = messageCount;
+    if (!busyEnded && !replyArrived) return;
+    return refocusComposer();
+  }, [busy, messageCount]);
 
   async function toggleAlwaysApproved() {
     if (!canAlwaysApproved) return;
@@ -223,6 +251,7 @@ export function ChatComposer({
     if (disabled || busy || !canSend) return;
     onSubmit(readyMessage, { action: "default" });
     setAttachments([]);
+    refocusComposer();
   }
 
   function runBuildIntent(intent: BuildPromptIntent, fill?: string) {
@@ -332,6 +361,7 @@ export function ChatComposer({
             </ul>
           ) : null}
           <Textarea
+            ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={3}

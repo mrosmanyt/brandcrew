@@ -12,6 +12,7 @@ import {
   connectorStatusLabel,
   formatAttachedFiles,
   isComposerTextFile,
+  shouldRefocusComposer,
 } from "../src/lib/composer";
 import { jobDeskHref, settingsDeskLinks } from "../src/lib/desk-settings";
 
@@ -67,7 +68,24 @@ console.log("ok: Settings hub lists Plugins, Bots, Marketplace, Plans, and Jobs 
 const composerSrc = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
 assert.match(composerSrc, /Always approved/);
 assert.match(composerSrc, /autoApproveSafe/);
-console.log("ok: composer textbar has Always approved");
+assert.match(composerSrc, /textareaRef/);
+assert.match(composerSrc, /focusComposer/);
+assert.match(composerSrc, /messageCount/);
+assert.match(composerSrc, /requestAnimationFrame/);
+assert.match(readFileSync("src/components/desk/mission-control.tsx", "utf8"), /messageCount=\{messages\.length\}/);
+console.log("ok: composer textbar has Always approved and autofocus after reply");
+
+const composerEl = { id: "composer" };
+assert.equal(shouldRefocusComposer(null, composerEl), true);
+assert.equal(shouldRefocusComposer(composerEl, composerEl), true);
+assert.equal(shouldRefocusComposer({ tagName: "BODY" }, composerEl), true);
+assert.equal(shouldRefocusComposer({ tagName: "INPUT" }, composerEl), false);
+assert.equal(shouldRefocusComposer({ tagName: "TEXTAREA" }, composerEl), false);
+assert.equal(shouldRefocusComposer({ tagName: "SELECT" }, composerEl), false);
+assert.equal(shouldRefocusComposer({ isContentEditable: true, tagName: "DIV" }, composerEl), false);
+assert.equal(shouldRefocusComposer({ tagName: "BUTTON" }, composerEl), true);
+assert.equal(shouldRefocusComposer({ tagName: "INPUT" }, null), false);
+console.log("ok: composer autofocus skips when another field is focused");
 
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", email: "a@b.com" }).success);
 assert.ok(accountPatchSchema.safeParse({ currentPassword: "secret12", newPassword: "newpass99" }).success);
