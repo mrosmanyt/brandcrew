@@ -2,13 +2,13 @@
 
 **CINEM Pro is not SOC 2 certified.** This file is a founder/auditor handoff: what exists in the product today, what is documentation only, and what is still a process. A Type I examination is typically many months of evidence collection after controls are operating. Do not put a badge on marketing.
 
-Canonical control list (shared with `/security`): `src/lib/soc2.ts`.
+Canonical control list: `src/lib/soc2.ts` (private/auditor handoff — not a public marketing page). Public `/security` redirects to `/privacy`.
 
 ## What this is
 
 - Evidence map + checklist, not a report.
 - Product hooks that make later Type I easier: append-only `WorkspaceAudit` / `AdminAuditLog`, hash-chained JSON export, named approver on send/artifact decisions, Admin HQ `admin_access` page-view rows.
-- Honest copy: `/security` and `/dpa` say **Not certified**.
+- Do not publish this checklist or a “not certified” essay on the marketing site. `/security` redirects to Privacy.
 
 ## What this is not
 

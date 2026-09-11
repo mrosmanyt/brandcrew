@@ -4,7 +4,7 @@ In-product:
 
 - Privacy policy: `/privacy` (device vs server processing table)
 - DPA template: `/dpa` (not a signed agreement, not legal advice)
-- Security / subprocessors: `/security`
+- Security / subprocessors: listed on Privacy (public `/security` redirects there; do not republish SOC scaffolding)
 - Cookie banner: essential session cookie vs optional analytics (only if an analytics env var is set **and** the user accepts)
 - Whop checkout pixel: always in the document head (`t.whop.tw`, business `biz_VrtL8S4duREQg4`) for membership attribution — not cookie-gated
 

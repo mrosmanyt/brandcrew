@@ -1,7 +1,7 @@
-/** Public marketing URLs. Repo stays brandcrew; product is CINEM Pro. */
+/** Internal repo URL — do not link from marketing, footer, or customer CTAs. */
 export const GITHUB_REPO = "https://github.com/mrosmanyt/brandcrew";
 export const GITHUB_RELEASES = `${GITHUB_REPO}/releases`;
-/** Public installer host — anonymous visitors can download without GitHub login. */
+/** Installer host for Windows asset URLs. Do not surface as a GitHub CTA. */
 export const PUBLIC_RELEASES_REPO = "https://github.com/mrosmanyt/cinem-pro-releases";
 export const COMPANY_SITE = "https://cinem.tech";
 /** Canonical production origin (Vercel). HTTP→HTTPS is handled by the platform. */

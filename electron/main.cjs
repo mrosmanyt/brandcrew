@@ -455,12 +455,6 @@ function installAppMenu() {
             if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/dpa`);
           },
         },
-        {
-          label: "Security (not SOC 2 certified)",
-          click: () => {
-            if (mainWindow) void mainWindow.loadURL(`${deskOrigin()}/security`);
-          },
-        },
       ],
     },
   ];

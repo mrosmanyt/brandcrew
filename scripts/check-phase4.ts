@@ -168,10 +168,15 @@ for (const file of [
 ]) {
   assert.ok(existsSync(file), `missing ${file}`);
 }
-assert.match(readFileSync("src/app/security/page.tsx", "utf8"), /not SOC 2 certified/i);
+const securityPage = readFileSync("src/app/security/page.tsx", "utf8");
+assert.match(securityPage, /redirect\("\/privacy"\)/);
+assert.doesNotMatch(securityPage, /SOC 2|Type I readiness|soc2-readiness|SOC2_CONTROLS|subprocessors/i);
 assert.match(readFileSync("src/app/dpa/page.tsx", "utf8"), /not a signed agreement/i);
+assert.doesNotMatch(readFileSync("src/app/dpa/page.tsx", "utf8"), /\/security|SOC2_STATUS_LABEL/);
+assert.doesNotMatch(readFileSync("src/app/privacy/page.tsx", "utf8"), /href="\/security"|SOC2_STATUS_LABEL/);
 assert.match(readFileSync("AGENTS.md", "utf8"), /Phase 4/);
-assert.match(readFileSync("electron/main.cjs", "utf8"), /not SOC 2 certified/);
+assert.match(readFileSync("electron/main.cjs", "utf8"), /Privacy/);
+assert.doesNotMatch(readFileSync("electron/main.cjs", "utf8"), /\/security|not SOC 2 certified/);
 assert.match(readFileSync("src/server/api/router.ts", "utf8"), /audit", "export"/);
 assert.match(readFileSync("src/lib/auth.ts", "utf8"), /requireWorkspaceCapability/);
 assert.equal(readFileSync("src/lib/composio.ts", "utf8").includes("COMPOSIO_API_KEY"), true);

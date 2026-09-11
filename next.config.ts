@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma", "playwright-core", "@composio/core"],
   // Static metadata PNGs live at /apple-icon.png etc. Alias the
   // extensionless Metadata API paths so crawlers and old bookmarks 200.
+  async redirects() {
+    return [{ source: "/security", destination: "/privacy", permanent: true }];
+  },
   async rewrites() {
     return [
       { source: "/apple-icon", destination: "/apple-icon.png" },
