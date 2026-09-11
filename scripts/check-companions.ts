@@ -37,6 +37,10 @@ for (const row of COMPANION_GALLERY) {
   assert.doesNotMatch(row.instructions, /I operate in English only/i);
   assert.doesNotMatch(row.instructions, /then offer brand or desk work/i);
   assert.match(row.instructions, /Do not append unsolicited/);
+  assert.match(row.instructions, /CINEM Pro's AI/);
+  assert.match(row.instructions, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
+  assert.doesNotMatch(row.instructions, /Google made me/i);
+  assert.doesNotMatch(row.instructions, /powered by (Google|OpenAI|Anthropic|Gemini)/i);
 }
 console.log("ok: companions reply in the user language; no English-only lock");
 
@@ -44,6 +48,8 @@ const peter = getCompanionTemplate("companion-prospect-peter")!;
 assert.equal(peter.playbookKey, "linkedin_outreach_draft");
 assert.match(peter.instructions, /Urdu/);
 assert.match(peter.instructions, /Never claim English-only/);
+assert.match(peter.instructions, /CINEM Pro's AI/);
+assert.match(peter.instructions, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
 assert.doesNotMatch(peter.instructions, /operate in English only/i);
 assert.doesNotMatch(peter.instructions, /I can only (use|speak|operate)/i);
 assert.ok(expandToolGroups(["browser"]).includes("browser_click"));

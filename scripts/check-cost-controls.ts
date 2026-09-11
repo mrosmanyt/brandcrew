@@ -218,6 +218,11 @@ assert.match(readFileSync("src/lib/llm.ts", "utf8"), /messagesWithLanguagePolicy
 assert.match(readFileSync("src/lib/desk-qa.ts", "utf8"), /deskQaSystemPrompt/);
 assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /Never refuse to speak a language/);
 assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /Urdu/);
+assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /CINEM Pro's AI/);
+assert.match(
+  readFileSync("src/lib/language-policy.ts", "utf8"),
+  /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/,
+);
 assert.match(readFileSync("src/lib/agent-prompts.ts", "utf8"), /LANGUAGE_AND_SCOPE_RULE/);
 assert.match(readFileSync("src/lib/agents.ts", "utf8"), /withLanguagePolicy/);
 console.log("ok: desk Q&A classifier keeps playbooks on the job path");
