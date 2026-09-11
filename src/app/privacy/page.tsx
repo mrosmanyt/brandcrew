@@ -3,7 +3,6 @@ import Link from "next/link";
 import { LegalPage } from "@/components/marketing/legal-page";
 import { DATA_PROCESSING_ROWS } from "@/lib/gdpr";
 import { COMPANY_SITE, SITE_ORIGIN } from "@/lib/site";
-import { SOC2_STATUS_LABEL } from "@/lib/soc2";
 
 export const dynamic = "force-static";
 
@@ -28,8 +27,9 @@ export default function PrivacyPage() {
       </p>
 
       <p>
-        Agency buyers: see the <Link href="/dpa">DPA template</Link> and{" "}
-        <Link href="/security">Security</Link>. <strong>{SOC2_STATUS_LABEL}.</strong>
+        We protect the data you entrust to CINEM Pro. Agency buyers: see the{" "}
+        <Link href="/dpa">DPA template</Link>. Related:{" "}
+        <Link href="/terms">Terms</Link>.
       </p>
 
       <h2>What we collect</h2>

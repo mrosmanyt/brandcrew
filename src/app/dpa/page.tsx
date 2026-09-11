@@ -3,7 +3,6 @@ import Link from "next/link";
 import { LegalPage } from "@/components/marketing/legal-page";
 import { DPA_CONTACT_NOTE } from "@/lib/gdpr";
 import { COMPANY_SITE, SITE_ORIGIN } from "@/lib/site";
-import { SOC2_STATUS_LABEL } from "@/lib/soc2";
 
 export const dynamic = "force-static";
 
@@ -26,11 +25,6 @@ export default function DpaPage() {
         . Product:{" "}
         <Link href={SITE_ORIGIN}>{SITE_ORIGIN.replace("https://", "")}</Link>.
       </p>
-      <p>
-        <strong>{SOC2_STATUS_LABEL}.</strong> Do not treat this template as a SOC 2
-        report.
-      </p>
-
       <h2>1. Parties</h2>
       <p>
         <strong>Controller:</strong> the agency (or client) that creates a CINEM Pro
@@ -68,9 +62,10 @@ export default function DpaPage() {
 
       <h2>5. Subprocessors</h2>
       <p>
-        Listed on <Link href="/security">Security</Link> (Vercel, Postgres host, optional
-        LLM providers, Composio, OAuth apps the customer connects, Whop/Stripe).
-        CINEM does not sell workspace content.
+        Hosting is on Vercel. Postgres stores accounts and workspace rows. Optional
+        LLM providers, Composio, and OAuth apps you connect receive only what you
+        authorize. Billing may use Whop or Stripe. See{" "}
+        <Link href="/privacy">Privacy</Link>. CINEM does not sell workspace content.
       </p>
 
       <h2>6. Customer instructions</h2>
@@ -87,7 +82,7 @@ export default function DpaPage() {
         <li>Encrypted plugin secrets; env-only <code>COMPOSIO_API_KEY</code>.</li>
         <li>Write-gate and role-based approvals; client-named email always gated.</li>
         <li>Untrusted page wrap and domain allowlist.</li>
-        <li>Append-only audit with hash-chained export for later evidence.</li>
+        <li>Append-only audit of who approved what.</li>
       </ul>
 
       <h2>8. International transfers</h2>
@@ -109,8 +104,7 @@ export default function DpaPage() {
       <p>
         Email CINEM with the agency legal name, billing contact, and list of client
         workspaces in scope. Until countersigned, this page is documentation only.
-        Related: <Link href="/privacy">Privacy</Link>, <Link href="/terms">Terms</Link>,{" "}
-        <Link href="/security">Security</Link>.
+        Related: <Link href="/privacy">Privacy</Link>, <Link href="/terms">Terms</Link>.
       </p>
     </LegalPage>
   );

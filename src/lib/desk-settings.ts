@@ -38,7 +38,7 @@ export function settingsDeskLinks(workspaceId: string) {
     {
       href: `/desk/${workspaceId}/trust`,
       label: "Trust & audit",
-      hint: "Who approved what, hash-chained export, DPA and security docs. Not a SOC 2 badge.",
+      hint: "Who approved what, hash-chained export, Privacy, and DPA.",
     },
     {
       href: `/desk/${workspaceId}/brand-kit`,

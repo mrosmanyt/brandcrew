@@ -34,8 +34,8 @@ export const SOC2_CONTROLS: Soc2Control[] = [
     criterion: "Communication",
     title: "Honest trust copy (no fake certification)",
     status: "in_product",
-    evidence: "/security and /dpa state Not certified. Privacy describes processors without inventing badges.",
-    product: "/security",
+    evidence: "Privacy describes processors without inventing badges. Public /security redirects to /privacy — marketing does not publish this inventory.",
+    product: "/privacy",
   },
   {
     id: "CC5.2",

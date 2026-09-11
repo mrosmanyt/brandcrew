@@ -54,9 +54,6 @@ export function TrustCenter({ workspaceId }: { workspaceId: string }) {
         <Button variant="ghost" nativeButton={false} render={<Link href="/dpa" />}>
           DPA template
         </Button>
-        <Button variant="ghost" nativeButton={false} render={<Link href="/security" />}>
-          Security
-        </Button>
         <Button variant="ghost" nativeButton={false} render={<Link href="/privacy" />}>
           Privacy
         </Button>

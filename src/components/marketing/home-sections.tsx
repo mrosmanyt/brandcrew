@@ -10,7 +10,6 @@ import {
   COMPANY_SITE,
   DESKTOP_WIN_DOWNLOAD,
   DESKTOP_WIN_PORTABLE,
-  GITHUB_REPO,
   WIN_PORTABLE_FILENAME,
   WIN_SETUP_FILENAME,
 } from "@/lib/site";
@@ -351,11 +350,9 @@ export function DownloadSection() {
         </article>
       </div>
       <p className="mt-6 text-sm leading-7 text-muted-foreground">
-        Windows builds are hosted on a public releases repo, so the download
-        starts without a GitHub login. The link is a release asset (
+        Windows builds are a direct installer download (
         <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>
-        ), not the source tree. Prefer the web desk if you want to skip the
-        installer.
+        ). Prefer the web desk if you want to skip the installer.
       </p>
       <div className="mt-8 flex flex-col items-start justify-between gap-6 rounded-xl border border-border px-6 py-5 md:flex-row md:items-center">
         <p className="max-w-xl text-sm leading-7 text-muted-foreground">
@@ -451,16 +448,16 @@ export function DeveloperApiSection() {
 
 const TRUST = [
   {
+    title: "Registered company",
+    body: "CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients.",
+  },
+  {
     title: "Keys stay server-side",
     body: "LLM keys live in server env. Users never paste them. Plugin secrets are encrypted with SESSION_SECRET and never returned to the client.",
   },
   {
     title: "Approve before send",
     body: "Gmail can create a draft. Slack chat.postMessage runs only after ask_user is done. Ads never buy media. WhatsApp never sends.",
-  },
-  {
-    title: "Honest connect states",
-    body: "Missing OAuth client ids stay disconnected. Empty API-key forms stay disconnected. Browse falls back to fetch — it does not invent page text.",
   },
 ] as const;
 
@@ -470,8 +467,8 @@ export function TrustSection() {
       id="trust"
       bordered
       kicker="Trust"
-      title="Nothing leaves without you"
-      lead="CINEM Pro is a desk of AI employees. They email, post, scrape, and work the browser for you — you approve what goes out."
+      title="A registered company, trusted by 5,000+ clients"
+      lead="CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients. Agents email, post, and work the browser — you approve what goes out."
     >
       <ul className="grid gap-10 md:grid-cols-3">
         {TRUST.map((item) => (
@@ -500,7 +497,7 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe from the public cinem-pro-releases GitHub Releases (latest/download). No GitHub sign-in is required. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
   },
   {
     q: "How does pricing work?",
@@ -545,9 +542,7 @@ const FOOTER_LINKS = [
   { href: "/signup", label: "Get started" },
   { href: "/privacy", label: "Privacy" },
   { href: "/dpa", label: "DPA" },
-  { href: "/security", label: "Security" },
   { href: "/terms", label: "Terms" },
-  { href: GITHUB_REPO, label: "GitHub", external: true },
   { href: COMPANY_SITE, label: "CINEM", external: true },
 ] as const;
 

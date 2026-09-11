@@ -69,6 +69,12 @@ assert.match(footer, /AI employee desk/);
 assert.doesNotMatch(footer, /not a robot that posts/i);
 assert.doesNotMatch(footer, /not a robot/i);
 assert.match(footer, /BrandMark/);
+assert.doesNotMatch(footer, /GITHUB_REPO|github\.com\/mrosmanyt|label: "GitHub"/);
+assert.doesNotMatch(footer, /href: "\/security"/);
+assert.match(footer, /registered company/i);
+assert.match(footer, /5,000\+/);
+assert.doesNotMatch(footer, /not registered/i);
+assert.doesNotMatch(footer, /SOC 2|Type I readiness|not certified/i);
 const landing = readFileSync("src/app/page.tsx", "utf8");
 assert.doesNotMatch(landing, /nothing posts/i);
 assert.doesNotMatch(landing, /not a robot that posts/i);
@@ -207,6 +213,10 @@ async function main() {
   assert.ok(urls.some((url) => url.includes("/privacy")));
   assert.ok(urls.some((url) => url.includes("/terms")));
   assert.ok(urls.some((url) => url.includes("/download")));
+  assert.ok(!urls.some((url) => url.includes("/security")));
+  const nextConfigSrc = readFileSync("next.config.ts", "utf8");
+  assert.match(nextConfigSrc, /source: "\/security"/);
+  assert.match(nextConfigSrc, /destination: "\/privacy"/);
   const bots = robots();
   const disallow = Array.isArray(bots.rules)
     ? bots.rules.flatMap((row) => row.disallow ?? [])
