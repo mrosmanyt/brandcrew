@@ -6,9 +6,15 @@
 export const NATIVE_HOST_NAME = "com.cinem.pro.agent";
 export const DEVICE_TOKEN_PREFIX = "cinem_dev_";
 export const DEVICE_PAIRING_TTL_MS = 10 * 60 * 1000;
-export const DEVICE_ONLINE_MS = 45_000;
-export const DEVICE_COMMAND_WAIT_MS = 12_000;
+/** Heartbeat + chained alarms (~24s). Must stay longer than Chrome SW sleep. */
+export const DEVICE_ONLINE_MS = 90_000;
+export const DEVICE_COMMAND_WAIT_MS = 45_000;
+export const DEVICE_TABS_WAIT_MS = 90_000;
 export const NATIVE_HTTP_PORT = 43181;
+
+export function deviceCommandWaitMs(tool: string) {
+  return tool === "browser_tabs" ? DEVICE_TABS_WAIT_MS : DEVICE_COMMAND_WAIT_MS;
+}
 
 export const DEVICE_TOOLS = [
   "browser_navigate",

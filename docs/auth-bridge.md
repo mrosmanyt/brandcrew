@@ -35,11 +35,14 @@ These auth routes send `Access-Control-Allow-Origin: *` (no cookie credential) s
 
 ## Chrome — Sign in with CINEM
 
-1. Popup **Sign in with CINEM** (desk origin, default `https://app.cinem.tech`; `https://brandcrew.vercel.app` remains an allowed alternate).
+The toolbar opens the **side panel** (primary UI). The popup is a short Open panel / status / Sign in strip.
+
+1. Side panel or popup **Sign in with CINEM** (desk origin, default `https://app.cinem.tech`; `https://brandcrew.vercel.app` remains an allowed alternate).
 2. Extension `POST /api/auth/connect` `{ surface: "extension", nonce }` and opens `/connect/extension?nonce=`.
 3. You sign in on the website if needed, pick a workspace, **Attach this Chrome**.
 4. Server creates a `LocalDevice` with `linkedUserId` (account-linked, not only a 10-minute pairing code).
 5. Extension polls `POST /api/auth/connect/claim` and stores `cinem_dev_…`. Jobs run as that workspace user.
+6. Desk shows **Extension connected**. The side panel chats via `/api/device/session` and `/api/device/jobs`.
 
 Fallback: paste a login link from On-device Chrome → **Create login link**, or the old 6-character pairing code (`POST /api/device/claim`). Pairing codes are unchanged.
 

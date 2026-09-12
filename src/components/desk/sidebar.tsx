@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
+import { ExtensionStatusChip } from "@/components/desk/extension-status";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import {
   ResizeHandle,
@@ -429,6 +430,15 @@ function NavBody({
             >
               On-device Chrome
             </SideLink>
+            {!collapsed ? (
+              <li className="px-2 py-1">
+                <ExtensionStatusChip workspaceId={workspace.id} />
+              </li>
+            ) : (
+              <li className="flex justify-center py-1">
+                <ExtensionStatusChip workspaceId={workspace.id} compact />
+              </li>
+            )}
             <li>
               <ConsoleNavLink
                 workspaceId={workspace.id}

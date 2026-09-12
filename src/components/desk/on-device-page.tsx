@@ -38,9 +38,9 @@ export function OnDevicePage({ workspaceId }: { workspaceId: string }) {
         <p className="page-kicker">On-device</p>
         <h1 className="font-heading mt-1 text-2xl tracking-tight">Chrome + local agent</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          CINEM Pro is supervised. Your Chrome runs the browser tools via{" "}
-          <code>chrome.debugger</code> (CDP). The cloud keeps accounts, billing, schedule, and
-          audit. Nothing is fully autonomous.
+          CINEM Pro is supervised. The Chrome side panel is the live browser employee.
+          Your Chrome runs the browser tools via <code>chrome.debugger</code> (CDP). The
+          cloud keeps accounts, billing, schedule, and audit. Nothing is fully autonomous.
         </p>
       </header>
       <section>

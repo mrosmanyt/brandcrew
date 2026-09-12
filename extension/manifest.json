@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CINEM Pro — on-device agent",
-  "version": "0.2.2",
-  "description": "Drive this Chrome with CINEM Pro. Supervised CDP automation — every write waits for you.",
+  "name": "CINEM Pro — live browser",
+  "version": "0.3.0",
+  "description": "CINEM Pro AI in your Chrome. Supervised live-browser employee — navigate, snapshot, and click with approval. Writes wait for you.",
   "icons": {
     "16": "icons/cinem-logo.png",
     "48": "icons/cinem-logo.png",
@@ -16,6 +16,9 @@
       "48": "icons/cinem-logo.png"
     }
   },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -26,7 +29,8 @@
     "storage",
     "nativeMessaging",
     "alarms",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://*.cinem.tech/*",

@@ -221,7 +221,8 @@ assert.match(send.reason, /send|stub|read-only/i);
 const publicClick = browserInteractGuard("browser_click", { selector: "a.more" });
 assert.equal(publicClick.ok, true);
 assert.equal(MAX_PAGES_PER_JOB, 4);
-assert.match(playwrightDesktopRequiredReason("browser_click"), /desktop|Playwright|Chrome/i);
+assert.match(playwrightDesktopRequiredReason("browser_click"), /extension|Chrome/i);
+assert.match(playwrightDesktopRequiredReason("browser_click"), /side panel/i);
 console.log("ok: browse guards refuse password/send; public click is allowed; page cap is 4");
 console.log(`ok: playwrightEnabled=${playwrightEnabled()} (informational)`);
 

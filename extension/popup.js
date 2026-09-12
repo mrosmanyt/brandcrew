@@ -1,67 +1,58 @@
 import { DEFAULT_DESK_ORIGIN } from "./desk-origin.js";
 
-const form = document.getElementById("pair-form");
-const paired = document.getElementById("paired");
-const waiting = document.getElementById("waiting");
-const originInput = document.getElementById("origin");
-const codeInput = document.getElementById("code");
-const loginLinkInput = document.getElementById("login-link");
 const errorEl = document.getElementById("error");
 const statusLine = document.getElementById("status-line");
-const waitingLine = document.getElementById("waiting-line");
+const detail = document.getElementById("detail");
+const signin = document.getElementById("signin");
+const unpair = document.getElementById("unpair");
+const loginLinkInput = document.getElementById("login-link");
 
 function showError(message) {
   errorEl.hidden = !message;
   errorEl.textContent = message || "";
 }
 
+function deskUrl(workspaceId) {
+  return workspaceId ? `${DEFAULT_DESK_ORIGIN}/desk/${workspaceId}` : `${DEFAULT_DESK_ORIGIN}/desk`;
+}
+
 async function refresh() {
   const status = await chrome.runtime.sendMessage({ type: "status" });
   if (status?.paired) {
-    form.hidden = true;
-    waiting.hidden = true;
-    paired.hidden = false;
-    statusLine.textContent = status.nativeHost
-      ? `Signed in · ${status.origin} · local agent connected`
-      : `Signed in · ${status.origin} · extension only (install native host for files)`;
+    statusLine.textContent = "Extension connected";
+    detail.textContent = status.pollError
+      ? `Reconnecting — ${status.pollError}`
+      : "Paired to this Chrome. Open the side panel to chat and run live-tab jobs.";
+    signin.hidden = true;
+    unpair.hidden = false;
     return;
   }
-  paired.hidden = true;
+  unpair.hidden = true;
+  signin.hidden = false;
   if (status?.connecting) {
-    form.hidden = true;
-    waiting.hidden = false;
-    waitingLine.textContent = "Waiting for Sign in with CINEM…";
+    statusLine.textContent = "Waiting for Sign in with CINEM…";
+    detail.textContent = "Approve this Chrome in the tab that opened.";
     return;
   }
-  waiting.hidden = true;
-  form.hidden = false;
+  statusLine.textContent = "Not connected";
+  detail.textContent = "Open the side panel or Sign in with CINEM. Production desk only.";
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+document.getElementById("open-panel").addEventListener("click", async () => {
   showError("");
-  const result = await chrome.runtime.sendMessage({
-    type: "pair",
-    origin: originInput.value.trim(),
-    code: codeInput.value.trim(),
-  });
-  if (!result?.ok) {
-    showError(result?.error || "Pairing failed.");
-    return;
-  }
-  await refresh();
+  const result = await chrome.runtime.sendMessage({ type: "openPanel" });
+  if (!result?.ok) showError(result?.error || "Could not open the side panel.");
 });
 
-document.getElementById("signin").addEventListener("click", async () => {
+document.getElementById("open-desk").addEventListener("click", async () => {
+  const status = await chrome.runtime.sendMessage({ type: "status" });
+  await chrome.tabs.create({ url: deskUrl(status?.workspaceId) });
+});
+
+signin.addEventListener("click", async () => {
   showError("");
-  const result = await chrome.runtime.sendMessage({
-    type: "signIn",
-    origin: originInput.value.trim(),
-  });
-  if (!result?.ok) {
-    showError(result?.error || "Could not start Sign in with CINEM.");
-    return;
-  }
+  const result = await chrome.runtime.sendMessage({ type: "signIn", origin: DEFAULT_DESK_ORIGIN });
+  if (!result?.ok) showError(result?.error || "Could not start Sign in with CINEM.");
   await refresh();
 });
 
@@ -69,31 +60,17 @@ document.getElementById("paste-link").addEventListener("click", async () => {
   showError("");
   const result = await chrome.runtime.sendMessage({
     type: "pasteLink",
-    origin: originInput.value.trim(),
+    origin: DEFAULT_DESK_ORIGIN,
     link: loginLinkInput.value.trim(),
   });
-  if (!result?.ok) {
-    showError(result?.error || "Could not use that login link.");
-    return;
-  }
+  if (!result?.ok) showError(result?.error || "Could not use that login link.");
   await refresh();
 });
 
-document.getElementById("poll").addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({ type: "poll" });
-  await refresh();
-});
-
-document.getElementById("unpair").addEventListener("click", async () => {
+unpair.addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "unpair" });
   await refresh();
 });
 
-document.getElementById("cancel-wait").addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({ type: "cancelConnect" });
-  await refresh();
-});
-
-originInput.value = DEFAULT_DESK_ORIGIN;
 void refresh();
 setInterval(() => void refresh(), 2000);

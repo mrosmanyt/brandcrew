@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CINEM Pro</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img src="icons/cinem-logo.png" alt="" width="22" height="22" />
+        <div>
+          <strong>CINEM Pro</strong>
+          <p id="status-pill">Not connected</p>
+        </div>
+      </div>
+      <a id="open-desk" class="icon-btn" href="https://app.cinem.tech/desk" target="_blank" rel="noreferrer" title="Open full desk">↗</a>
+    </header>
+
+    <section id="waiting" hidden>
+      <p class="lead">Waiting for Sign in with CINEM…</p>
+      <p class="hint">Approve this Chrome in the tab that just opened. Same account as the website.</p>
+      <button type="button" id="cancel-wait" class="ghost">Cancel</button>
+    </section>
+
+    <section id="signin" hidden>
+      <div class="empty">
+        <h1>AI that works in your browser</h1>
+        <p>Sign in to attach this Chrome to your desk. CINEM Pro AI can research public pages, snapshot the DOM, and click or type only after you approve. It never fills passwords or sends on its own.</p>
+        <button type="button" id="signin-btn">Sign in with CINEM</button>
+        <details>
+          <summary>Paste login link or pairing code</summary>
+          <label>
+            Login link
+            <input id="login-link" type="text" placeholder="https://app.cinem.tech/connect/extension?nonce=…" autocomplete="off" />
+          </label>
+          <button type="button" id="paste-link" class="ghost">Use login link</button>
+          <label>
+            Pairing code
+            <input id="code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" />
+          </label>
+          <button type="button" id="pair-code" class="ghost">Pair with code</button>
+        </details>
+        <ol class="howto">
+          <li>Sign in with CINEM — same account as the desk.</li>
+          <li>Ask in this panel. Jobs run in your live Chrome tabs.</li>
+          <li>Approve clicks, typing, and any send or post.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="chat" hidden>
+      <div id="thread" class="thread" aria-live="polite"></div>
+      <div class="composer-wrap">
+        <div class="composer-meta">
+          <label class="agent-pick">
+            <span>Agent</span>
+            <select id="agent" aria-label="Agent"></select>
+          </label>
+          <button type="button" id="approve" class="ghost compact" hidden>Approve</button>
+        </div>
+        <form id="composer">
+          <button type="button" id="attach" class="icon-btn" title="Add a public URL">+</button>
+          <textarea id="prompt" rows="1" placeholder="How can I help…" maxlength="4000"></textarea>
+          <button type="button" id="mic" class="icon-btn" title="Voice is not available in this panel" disabled>🎙️</button>
+          <button type="submit" id="send" class="send" title="Send">➤</button>
+        </form>
+        <p class="fine">CINEM Pro AI · supervised · no silent send</p>
+      </div>
+    </section>
+
+    <p id="error" class="error" hidden></p>
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>

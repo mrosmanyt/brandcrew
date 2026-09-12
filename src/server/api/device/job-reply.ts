@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireWorkspaceCapability, requireWorkspaceMember } from "@/lib/auth";
+import { requireDevice } from "@/lib/device-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { answerJobClarification, completeJobIfApproved } from "@/lib/job-runtime";
 import { serializeJob } from "@/lib/job-serialize";
@@ -12,29 +12,30 @@ const schema = z.object({
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ workspaceId: string; jobId: string }> },
+  context: { params: Promise<{ jobId: string }> },
 ) {
   try {
-    const { workspaceId, jobId } = await context.params;
+    const device = await requireDevice(request);
+    const { jobId } = await context.params;
+    const body = schema.parse(await request.json());
     const existing = await prisma.job.findFirst({
-      where: { id: jobId, workspaceId },
-      select: { askKind: true },
+      where: { id: jobId, workspaceId: device.workspaceId },
     });
     if (!existing) {
       return NextResponse.json({ error: "Job not found." }, { status: 404 });
     }
-    const body = schema.parse(await request.json());
     if ((existing.askKind || "") === "clarify") {
-      await requireWorkspaceMember(workspaceId);
       const job = await answerJobClarification({
-        workspaceId,
+        workspaceId: device.workspaceId,
         jobId,
         answer: body.answer,
       });
       return jsonOk({ job: serializeJob(job!) });
     }
-    const { user, role } = await requireWorkspaceCapability(workspaceId, "approve_artifacts");
-    const job = await completeJobIfApproved(jobId, { email: user.email, role });
+    const job = await completeJobIfApproved(jobId, {
+      email: `chrome:${device.name}`,
+      role: "approver",
+    });
     if (!job) {
       return NextResponse.json({ error: "Job not found." }, { status: 404 });
     }

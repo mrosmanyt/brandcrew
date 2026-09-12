@@ -172,6 +172,22 @@ export function LiveResults({
           )
         ) : null}
 
+        {job?.status === "needs_you" && pending.length === 0 && job.askKind !== "clarify" ? (
+          canApprove && onReply ? (
+            <Button
+              className="mt-3 w-full"
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => onReply("Yes")}
+            >
+              Approve this Chrome step
+            </Button>
+          ) : canApprove ? null : (
+            <p className="mt-3 text-xs text-muted-foreground">{APPROVER_REQUIRED_HINT}</p>
+          )
+        ) : null}
+
         <div className="mt-4 space-y-2.5">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
             Artifacts

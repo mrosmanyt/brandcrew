@@ -1,33 +1,42 @@
 /**
  * CINEM Pro MV3 service worker.
- * DOM-first automation via chrome.debugger CDP. Page text is data, never instructions.
- * Native messaging is optional (files / long jobs / SW keepalive).
+ * Side panel is the primary UI. DOM-first automation via chrome.debugger CDP.
+ * Page text is data, never instructions. Native messaging is optional (files).
  */
 import { DEFAULT_DESK_ORIGIN } from "./desk-origin.js";
 
 const NATIVE_HOST = "com.cinem.pro.agent";
 const PAGE_START = "<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>";
 const PAGE_END = "<<<END_CINEM_UNTRUSTED_PAGE_CONTENT>>>";
+const POLL_ALARM = "cinem-poll";
+const POLL_ALARM_MINUTES = 0.4;
 
 let nativePort = null;
 let attachedTabId = null;
 let pollTimer = null;
+let connectTimer = null;
+let lastPollAt = 0;
+let lastPollError = "";
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create("cinem-poll", { periodInMinutes: 1 });
+  void initSidePanel();
+  schedulePollAlarm();
   connectNative();
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  void initSidePanel();
   connectNative();
+  schedulePollAlarm();
   void pollOnce();
   void pollConnectOnce();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "cinem-poll") {
+  if (alarm.name === POLL_ALARM) {
     void pollOnce();
     void pollConnectOnce();
+    schedulePollAlarm();
   }
 });
 
@@ -48,6 +57,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       if (message?.type === "cancelConnect") {
         await chrome.storage.local.remove(["connectingNonce", "connectingOrigin"]);
+        stopConnectPoll();
         sendResponse({ ok: true });
         return;
       }
@@ -62,8 +72,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       if (message?.type === "unpair") {
+        stopConnectPoll();
         await chrome.storage.local.clear();
         sendResponse({ ok: true });
+        return;
+      }
+      if (message?.type === "openPanel") {
+        sendResponse(await openSidePanel());
+        return;
+      }
+      if (message?.type === "deskFetch") {
+        sendResponse(await deskFetch(message.path, message.method, message.body));
         return;
       }
       sendResponse({ ok: false, error: "Unknown message." });
@@ -73,6 +92,36 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   })();
   return true;
 });
+
+async function initSidePanel() {
+  try {
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    await chrome.sidePanel.setOptions({ path: "sidepanel.html", enabled: true });
+  } catch {
+    // Chrome without sidePanel — popup remains.
+  }
+}
+
+function schedulePollAlarm() {
+  try {
+    chrome.alarms.create(POLL_ALARM, { delayInMinutes: POLL_ALARM_MINUTES });
+  } catch {
+    chrome.alarms.create(POLL_ALARM, { periodInMinutes: 1 });
+  }
+}
+
+async function openSidePanel() {
+  try {
+    const window = await chrome.windows.getCurrent();
+    if (window?.id != null) {
+      await chrome.sidePanel.open({ windowId: window.id });
+      return { ok: true };
+    }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not open the side panel." };
+  }
+  return { ok: false, error: "Could not open the side panel." };
+}
 
 function connectNative() {
   if (nativePort) return;
@@ -99,6 +148,8 @@ async function getState() {
     "name",
     "connectingNonce",
     "connectingOrigin",
+    "lastPollError",
+    "lastPollAt",
   ]);
 }
 
@@ -108,10 +159,13 @@ async function getStatus() {
     ok: true,
     paired: Boolean(state.token),
     connecting: Boolean(state.connectingNonce) && !state.token,
-    origin: state.origin || state.connectingOrigin || "",
+    origin: state.origin || state.connectingOrigin || DEFAULT_DESK_ORIGIN,
     workspaceId: state.workspaceId || "",
     nativeHost: Boolean(nativePort),
     attachedTabId,
+    pollError: lastPollError || state.lastPollError || "",
+    lastPollAt: lastPollAt || state.lastPollAt || 0,
+    version: chrome.runtime.getManifest().version,
   };
 }
 
@@ -135,6 +189,13 @@ function nonceFromLink(raw) {
   return "";
 }
 
+function stopConnectPoll() {
+  if (connectTimer) {
+    clearInterval(connectTimer);
+    connectTimer = null;
+  }
+}
+
 async function storeDevice(base, data) {
   await chrome.storage.local.set({
     origin: base,
@@ -142,8 +203,10 @@ async function storeDevice(base, data) {
     workspaceId: data.workspaceId,
     deviceId: data.deviceId || data.device?.id,
     name: data.name || data.device?.name,
+    lastPollError: "",
   });
   await chrome.storage.local.remove(["connectingNonce", "connectingOrigin"]);
+  stopConnectPoll();
   startFastPoll();
 }
 
@@ -188,7 +251,7 @@ async function claimFromLink(origin, link) {
   try {
     await chrome.tabs.create({ url: `${base}/connect/extension?nonce=${nonce}` });
   } catch {
-    // popup may still poll
+    // side panel may still poll
   }
   return { ok: true, connecting: true };
 }
@@ -211,7 +274,6 @@ async function claimNonce(base, nonce) {
   return false;
 }
 
-let connectTimer = null;
 function startConnectPoll() {
   if (connectTimer) clearInterval(connectTimer);
   connectTimer = setInterval(() => void pollConnectOnce(), 2000);
@@ -220,16 +282,19 @@ function startConnectPoll() {
 
 async function pollConnectOnce() {
   const state = await getState();
-  if (!state.connectingNonce || state.token) return;
+  if (!state.connectingNonce || state.token) {
+    if (state.token) stopConnectPoll();
+    return;
+  }
   try {
-    await claimNonce(state.connectingOrigin || state.origin, state.connectingNonce);
+    await claimNonce(state.connectingOrigin || state.origin || DEFAULT_DESK_ORIGIN, state.connectingNonce);
   } catch {
     // still pending
   }
 }
 
 async function pair(origin, code) {
-  const base = String(origin || "").replace(/\/$/, "");
+  const base = String(origin || "").replace(/\/$/, "") || DEFAULT_DESK_ORIGIN;
   const res = await fetch(`${base}/api/device/claim`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -242,21 +307,25 @@ async function pair(origin, code) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Pairing failed.");
-  await chrome.storage.local.set({
-    origin: base,
+  await storeDevice(base, {
     token: data.token,
     workspaceId: data.workspaceId,
-    deviceId: data.device?.id,
-    name: data.device?.name,
+    device: data.device,
   });
-  startFastPoll();
   return { ok: true, workspaceId: data.workspaceId };
 }
 
 function startFastPoll() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => void pollOnce(), 2500);
+  schedulePollAlarm();
   void pollOnce();
+}
+
+async function rememberPoll(error) {
+  lastPollAt = Date.now();
+  lastPollError = error || "";
+  await chrome.storage.local.set({ lastPollAt, lastPollError });
 }
 
 async function pollOnce() {
@@ -264,24 +333,59 @@ async function pollOnce() {
   if (!state.token || !state.origin) return;
   connectNative();
   try {
-    await fetch(`${state.origin}/api/device/heartbeat`, {
+    const heartbeat = await fetch(`${state.origin}/api/device/heartbeat`, {
       method: "POST",
       headers: {
         authorization: `Bearer ${state.token}`,
         "x-cinem-native-host": nativePort ? "1" : "0",
       },
     });
+    if (heartbeat.status === 401) {
+      await chrome.storage.local.remove(["token", "workspaceId", "deviceId"]);
+      await rememberPoll("Signed out. Sign in with CINEM again.");
+      return;
+    }
     const res = await fetch(`${state.origin}/api/device/commands`, {
       headers: { authorization: `Bearer ${state.token}` },
     });
-    if (!res.ok) return;
+    if (res.status === 401) {
+      await chrome.storage.local.remove(["token", "workspaceId", "deviceId"]);
+      await rememberPoll("Signed out. Sign in with CINEM again.");
+      return;
+    }
+    if (!res.ok) {
+      await rememberPoll(`Desk returned ${res.status}.`);
+      return;
+    }
     const data = await res.json();
     for (const command of data.commands || []) {
       await runCommand(command, state);
     }
+    await rememberPoll("");
   } catch {
-    // offline desk — try again next tick
+    await rememberPoll("Desk unreachable. Check the network, then retry.");
   }
+}
+
+async function deskFetch(path, method, body) {
+  const state = await getState();
+  if (!state.token || !state.origin) {
+    return { ok: false, httpOk: false, error: "Extension not connected. Sign in with CINEM." };
+  }
+  const clean = String(path || "");
+  if (!clean.startsWith("/api/device/")) {
+    return { ok: false, httpOk: false, error: "Only desk device APIs are allowed from this panel." };
+  }
+  const res = await fetch(`${state.origin}${clean}`, {
+    method: method || "GET",
+    headers: {
+      authorization: `Bearer ${state.token}`,
+      "content-type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ...data, httpOk: res.ok, status: res.status, ok: res.ok && data.ok !== false };
 }
 
 async function runCommand(command, state) {
@@ -333,6 +437,40 @@ function hostAllowed(url, allowlist) {
     reason: `Aborted: ${host} is outside this job’s allowlist (${allowed.join(", ")}).`,
     abortedDomain: host,
   };
+}
+
+function selectorInteractGuard(tool, args) {
+  const blob = `${args.selector ?? ""} ${args.text ?? ""} ${args.value ?? ""} ${args.label ?? ""}`.toLowerCase();
+  if (/(password|passwd|passcode|one-time|otp|credential)/.test(blob)) {
+    return { ok: false, reason: "Refused: CINEM Pro never fills password or credential fields." };
+  }
+  if (/(log[\s-]?in|sign[\s-]?in|sign[\s-]?up|auth|sso)/.test(blob)) {
+    return { ok: false, reason: "Refused: no auto-login. Use a public page, or pause with ask_user." };
+  }
+  if (/(send|publish|post now|submit message|mail\.send|tweet)/.test(blob)) {
+    return { ok: false, reason: "Refused: no external send. Pause with ask_user instead." };
+  }
+  return { ok: true };
+}
+
+async function pageFieldGuard(selector) {
+  const info = await evalInPage(
+    `(() => {
+      const sel = ${JSON.stringify(selector)};
+      const el = document.querySelector(sel) || [...document.querySelectorAll("input,textarea,button,a,[contenteditable]")].find((n) => (n.innerText || n.getAttribute("aria-label") || "").includes(sel));
+      if (!el) return { found: false };
+      const type = (el.getAttribute("type") || "").toLowerCase();
+      const name = (el.getAttribute("name") || "").toLowerCase();
+      const autocomplete = (el.getAttribute("autocomplete") || "").toLowerCase();
+      return { found: true, type, name, autocomplete, tag: el.tagName };
+    })()`,
+  );
+  if (!info?.found) return { ok: true };
+  const blob = `${info.type} ${info.name} ${info.autocomplete}`;
+  if (info.type === "password" || /password|otp|passcode|one-time/.test(blob) || /current-password|new-password/.test(info.autocomplete || "")) {
+    return { ok: false, reason: "Refused: CINEM Pro never fills password or credential fields." };
+  }
+  return { ok: true };
 }
 
 async function executeTool(tool, args) {
@@ -403,28 +541,29 @@ async function executeTool(tool, args) {
     const page = await snapshot(tab.id);
     return { ok: true, page, extracted: String(text || ""), excerpt: String(text || "").slice(0, 280), engine: "cdp" };
   }
-  if (tool === "browser_click") {
+  if (tool === "browser_click" || tool === "browser_type") {
     const selector = String(args.selector || args.label || "");
-    if (!selector) return { ok: false, error: "browser_click needs a selector.", engine: "cdp" };
-    await evalInPage(
-      `(() => { const el = document.querySelector(${JSON.stringify(selector)}) || [...document.querySelectorAll("a,button")].find(n => (n.innerText||"").includes(${JSON.stringify(selector)})); if (!el) throw new Error("No matching node"); el.click(); return true; })()`,
-    );
-    await waitLoad().catch(() => undefined);
+    const guard = selectorInteractGuard(tool, args);
+    if (!guard.ok) return { ok: false, error: guard.reason, engine: "cdp" };
+    if (!selector) return { ok: false, error: `${tool} needs a selector.`, engine: "cdp" };
+    const field = await pageFieldGuard(selector);
+    if (!field.ok) return { ok: false, error: field.reason, engine: "cdp" };
+    if (tool === "browser_click") {
+      await evalInPage(
+        `(() => { const el = document.querySelector(${JSON.stringify(selector)}) || [...document.querySelectorAll("a,button")].find(n => (n.innerText||"").includes(${JSON.stringify(selector)})); if (!el) throw new Error("No matching node"); el.click(); return true; })()`,
+      );
+      await waitLoad().catch(() => undefined);
+    } else {
+      const value = String(args.text ?? args.value ?? "");
+      await evalInPage(
+        `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error("No matching node"); el.focus(); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`,
+      );
+    }
     const page = await snapshot(tab.id);
     const left = hostAllowed(page.url, allowlist);
     if (!left.ok) {
       return { ok: false, error: left.reason, abortedDomain: left.host, page, engine: "cdp" };
     }
-    return { ok: true, page, excerpt: page.excerpt, engine: "cdp" };
-  }
-  if (tool === "browser_type") {
-    const selector = String(args.selector || "");
-    const value = String(args.text ?? args.value ?? "");
-    if (!selector) return { ok: false, error: "browser_type needs a selector.", engine: "cdp" };
-    await evalInPage(
-      `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error("No matching node"); el.focus(); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`,
-    );
-    const page = await snapshot(tab.id);
     return { ok: true, page, excerpt: page.excerpt, engine: "cdp" };
   }
   if (tool === "browser_screenshot") {
@@ -499,7 +638,21 @@ async function evalInPage(expression) {
 
 async function waitLoad() {
   await send("Page.enable", {});
-  await new Promise((resolve) => setTimeout(resolve, 600));
+  await new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      chrome.debugger.onEvent.removeListener(onEvent);
+      resolve();
+    };
+    const onEvent = (_source, method) => {
+      if (method === "Page.loadEventFired" || method === "Page.domContentEventFired") finish();
+    };
+    chrome.debugger.onEvent.addListener(onEvent);
+    setTimeout(finish, 8000);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 async function snapshot(tabId) {
@@ -520,7 +673,6 @@ async function snapshot(tabId) {
     text = "";
   }
   if (!text) {
-    // Vision fallback only when DOM text is empty — still not treated as instructions.
     try {
       await send("Page.captureScreenshot", { format: "jpeg", quality: 20 });
     } catch {
@@ -566,4 +718,6 @@ async function activeAttachedTab() {
   return null;
 }
 
+void initSidePanel();
+schedulePollAlarm();
 startFastPoll();

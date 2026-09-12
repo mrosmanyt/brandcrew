@@ -10,38 +10,22 @@
       <img src="icons/cinem-logo.png" alt="" width="28" height="28" />
       <div>
         <strong>CINEM Pro</strong>
-        <p>Supervised on-device agent</p>
+        <p id="status-line">Live browser employee</p>
       </div>
     </header>
-    <section id="paired" hidden>
-      <p id="status-line">Paired.</p>
-      <p class="hint">Keep this popup open (or install the local agent) while a job runs so Chrome CDP stays attached.</p>
-      <button type="button" id="poll">Poll now</button>
-      <button type="button" id="unpair" class="ghost">Unpair</button>
-    </section>
-    <section id="waiting" hidden>
-      <p id="waiting-line">Waiting for Sign in with CINEM…</p>
-      <p class="hint">Approve this Chrome in the tab that just opened. Same account as the website.</p>
-      <button type="button" id="cancel-wait" class="ghost">Cancel</button>
-    </section>
-    <form id="pair-form">
-      <label>
-        Desk origin
-        <input id="origin" type="url" required placeholder="https://app.cinem.tech" />
-      </label>
+    <section id="main">
+      <p id="detail" class="hint">Toolbar click opens the side panel.</p>
+      <button type="button" id="open-panel">Open panel</button>
+      <button type="button" id="open-desk" class="ghost">Open desk</button>
       <button type="button" id="signin">Sign in with CINEM</button>
-      <p class="hint">Opens your CINEM Pro account and attaches this Chrome to a workspace. Jobs then run as you.</p>
+      <p class="hint">Or paste login link / pairing code in the side panel.</p>
       <label>
         Or paste login link
-        <input id="login-link" type="text" placeholder="https://…/connect/extension?nonce=…" autocomplete="off" />
+        <input id="login-link" type="text" placeholder="https://app.cinem.tech/connect/extension?nonce=…" autocomplete="off" />
       </label>
       <button type="button" id="paste-link" class="ghost">Use login link</button>
-      <label>
-        Or pairing code
-        <input id="code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" />
-      </label>
-      <button type="submit" class="ghost">Pair with code</button>
-    </form>
+      <button type="button" id="unpair" class="ghost" hidden>Unpair</button>
+    </section>
     <p id="error" class="error" hidden></p>
     <script type="module" src="popup.js"></script>
   </body>

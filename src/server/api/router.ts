@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/http";
 import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
-import { isNativeCorsPath, nativeCorsPreflight } from "@/lib/auth-native";
+import { isNativeCorsPath, nativeCorsPreflight, withNativeCors } from "@/lib/auth-native";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
 import * as adminRoot from "./admin/root";
 import * as authGoogle from "./auth/google";
@@ -82,6 +82,9 @@ import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
 import * as deviceCommandResult from "./device/command-result";
+import * as deviceSession from "./device/session";
+import * as deviceJobs from "./device/jobs";
+import * as deviceJobReply from "./device/job-reply";
 
 export const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
@@ -154,6 +157,12 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(deviceCommandResult),
   },
   { pattern: ["api", "device", "commands"], handlers: asHandlers(deviceCommands) },
+  { pattern: ["api", "device", "session"], handlers: asHandlers(deviceSession) },
+  {
+    pattern: ["api", "device", "jobs", ":jobId", "reply"],
+    handlers: asHandlers(deviceJobReply),
+  },
+  { pattern: ["api", "device", "jobs"], handlers: asHandlers(deviceJobs) },
   { pattern: ["api", "invites", ":token"], handlers: asHandlers(inviteToken) },
   { pattern: ["api", "workspaces"], handlers: asHandlers(workspacesCollection) },
   {
@@ -407,5 +416,9 @@ export async function dispatchApi(
       },
     );
   }
-  return handler(request, { params: Promise.resolve(matched.params) });
+  const response = await handler(request, { params: Promise.resolve(matched.params) });
+  if (isNativeCorsPath(segments) && response instanceof NextResponse) {
+    return withNativeCors(response);
+  }
+  return response;
 }

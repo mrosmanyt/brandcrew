@@ -26,6 +26,7 @@ const TOOL_NOW: Record<string, string> = {
   browser_type: "Typing on the page…",
   browser_extract: "Extracting page text…",
   browser_screenshot: "Capturing a screenshot…",
+  browser_tabs: "Opening live Chrome tabs…",
   crawl_links: "Crawling links…",
   narration: "Working…",
   domain_abort: "Left the allowed domain — stopped.",
@@ -78,6 +79,8 @@ function doneLabel(tool: string, message: string, url?: string): string {
       return host ? `Extracted text from ${host}.` : "Extracted page text.";
     case "browser_screenshot":
       return host ? `Captured a screenshot of ${host}.` : "Captured a screenshot.";
+    case "browser_tabs":
+      return "Opened live Chrome tabs.";
     case "crawl_links":
       return "Crawled public links.";
     case "web_search":
