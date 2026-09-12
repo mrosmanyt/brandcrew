@@ -48,11 +48,15 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 
 ## Desktop (Electron)
 
-- **Dev** (`npm run desktop:dev`): still boots local Next on `http://127.0.0.1:43180` and opens `/desk`.
-- **Packaged** (`npm run desktop:build` / `desktop:build:win`): default **cloud desk** (`CINEM_CLOUD_URL` or `https://app.cinem.tech/desk`; `https://brandcrew.vercel.app` remains an allowed alternate). Same account as the website. Google OAuth stays in-window (`accounts.google.com` is not sent to the system browser).
-- `CINEM_DESK_MODE=local` keeps the old bundled Next + Postgres path.
+- **Packaged** (`npm run desktop:build` / `desktop:build:win` / Setup.exe): always **cloud desk** at `https://app.cinem.tech` unless `CINEM_DESK_MODE=local`. Same account as the website. No local Postgres on the happy path. `APP_URL=http://127.0.0.1:…` is ignored so a leftover local env cannot blank the window.
+- Google OAuth stays in-window (`accounts.google.com`). The shell strips `Electron/…` from the user agent so Google does not return `disallowed_useragent`. Session cookies persist (`brandcrew_session`, SameSite=Lax, Secure on HTTPS).
+- Billing (Stripe/Whop) opens in the system browser via `shell.openExternal`. Slack/Notion/Composio Connect stay in-window so Marketplace OAuth can finish.
+- If the cloud desk is unreachable, the window shows a **Retry** page instead of a white screen or quit.
+- **Dev** (`npm run desktop:dev`): still boots local Next on `http://127.0.0.1:43180`. `npm run desktop:cloud` opens the production desk without Docker.
+- `CINEM_DESK_MODE=local` keeps the old bundled Next + Postgres path (power users only).
 - Deep link `cinem-pro://connect?nonce=…&origin=…` claims a desktop ticket and writes the session cookie into Electron.
 - Windows installer: `npm run desktop:build:win` → `dist/desktop/CINEM-Pro-Setup.exe`. Hosted copy: public releases repo (see `/download`). Unsigned builds: SmartScreen **More info → Run anyway** until Azure Artifact Signing is configured (`docs/windows-code-signing.md`).
+- Verify: install Setup.exe → desk loads `https://app.cinem.tech/desk` → Continue with Google or email → agents, chat, Marketplace work. Offline: toggle airplane mode and confirm Retry.
 
 ## Android (Expo)
 

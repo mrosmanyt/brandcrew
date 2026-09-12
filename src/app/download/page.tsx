@@ -46,9 +46,11 @@ export default function DownloadPage() {
             <h2 className="mt-2 text-lg font-medium tracking-tight">Desktop app</h2>
             <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
               NSIS installer <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
-              Packaged builds open the cloud desk signed in (same account as
-              this site). Build: <code className="font-mono text-xs">npm run desktop:build:win</code>.
-              Windows may show SmartScreen until signed builds ship — More info → Run anyway.
+              The packaged app is a shell for{" "}
+              <code className="font-mono text-xs">https://app.cinem.tech</code> — same
+              desk and login as this site. No local database or Postgres. Build:{" "}
+              <code className="font-mono text-xs">npm run desktop:build:win</code>.
+              Unsigned builds: SmartScreen → More info → Run anyway.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Button

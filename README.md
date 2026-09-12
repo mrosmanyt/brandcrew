@@ -244,10 +244,11 @@ CINEM Pro can run in an Electron window like a local Grok Bot — not only `npm 
 
 ```bash
 npm install
-npm run desktop:dev
+npm run desktop:cloud   # production desk (https://app.cinem.tech) — no Postgres
+npm run desktop:dev     # local Next on http://127.0.0.1:43180
 ```
 
-This starts (or attaches to) Next on `http://127.0.0.1:43180` and opens **CINEM Pro**. Mission Control, agents, Marketplace, Gmail/Slack OAuth, and job tools are the same app.
+Packaged Setup.exe users always get the cloud desk. `desktop:dev` is for contributors who already have Docker/Neon. Mission Control, agents, Marketplace, Gmail/Slack OAuth, and job tools are the same app as the website.
 
 ### Terminal one-liner (Mac / Linux)
 
@@ -261,15 +262,17 @@ Or: `bash scripts/install-desktop.sh` from a clone. Override checkout with `BRAN
 
 ### Windows PowerShell
 
+Downloads `CINEM-Pro-Setup.exe` (cloud desk). SmartScreen: **More info → Run anyway**.
+
 ```powershell
 irm https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.ps1 | iex
 ```
 
-Or: `powershell -File scripts/install-desktop.ps1`
+Or: `powershell -File scripts/install-desktop.ps1`. Dev checkout: `$env:CINEM_INSTALL_DEV=1`.
 
 ### Installers (.exe / .dmg)
 
-Hosted Windows builds (public repo `cinem-pro-releases`, GitHub Release `v0.1.0` and `latest`):
+Hosted Windows builds (public repo `cinem-pro-releases`, GitHub Release `v0.2.0` and `latest`):
 
 - NSIS setup: https://github.com/mrosmanyt/cinem-pro-releases/releases/latest/download/CINEM-Pro-Setup.exe
 - Portable: https://github.com/mrosmanyt/cinem-pro-releases/releases/latest/download/CINEM-Pro-Portable.exe
@@ -285,21 +288,23 @@ npm run desktop:build       # current platform (Linux → AppImage)
 Artifacts land in `dist/desktop/`. Publish:
 
 ```bash
-gh release create v0.1.0 \
+gh release create v0.2.0 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
-  --title "CINEM Pro 0.1.0" \
-  --notes "Windows installer for CINEM Pro."
+  --title "CINEM Pro 0.2.0" \
+  --notes "Windows installer — cloud desk at app.cinem.tech."
 ```
 
 **Where keys live**
 
 | Mode | `.env` | Postgres |
 | --- | --- | --- |
+| Packaged Setup.exe (default **cloud**) | none — loads `https://app.cinem.tech` | **not used** |
+| `npm run desktop:cloud` | none | **not used** |
 | `desktop:dev` / `npm run dev` | project `.env` | `DATABASE_URL` (Docker on `:5432` or Neon) |
-| Packaged app | **macOS** `~/Library/Application Support/CINEM Pro/.env` · **Windows** `%APPDATA%\CINEM Pro\.env` | same `DATABASE_URL` / `DIRECT_URL` (Docker or Neon). First launch writes the local Docker URL. Apply schema with `npx prisma migrate deploy` against that URL. |
+| Packaged `CINEM_DESK_MODE=local` | **macOS** `~/Library/Application Support/CINEM Pro/.env` · **Windows** `%APPDATA%\CINEM Pro\.env` | same `DATABASE_URL` / `DIRECT_URL` (Docker or Neon). First launch writes the local Docker URL. Apply schema with `npx prisma migrate deploy` against that URL. |
 
-Set `OAUTH_REDIRECT_BASE=http://127.0.0.1:43180` (default). Google/Slack authorized redirect URI: `http://127.0.0.1:43180/api/oauth/callback`. Override the port with `BRANDCREW_PORT` if needed.
+Cloud-mode Google login uses the production redirect `https://app.cinem.tech/api/auth/google/callback`. Local-mode OAuth still uses `http://127.0.0.1:43180/api/oauth/callback` (`OAUTH_REDIRECT_BASE`, override port with `BRANDCREW_PORT`).
 
 **Cross-build limits (honest):**
 
@@ -450,6 +455,7 @@ Local desktop stays `http://127.0.0.1:43180/api/oauth/callback`. Keep both URIs 
 - [ ] Marketplace bots Add / plugins stay disconnected without keys
 - [ ] A job with browse uses **fetch** (not Playwright) — activity still shows a URL
 - [ ] Gmail/Slack Connect (if client ids set) returns to `/api/oauth/callback` on the Vercel origin
+- [ ] Electron `desktop:cloud` opens `https://app.cinem.tech/desk` (no local Postgres)
 - [ ] Electron `desktop:dev` still works against local Docker/Neon `DATABASE_URL`
 
 ### 5. Website launch + security baseline
@@ -683,6 +689,7 @@ npm run test:limits
 npm run test:billing
 npm run test:launch
 npm run test:on-device
+npm run desktop:cloud    # Electron window against https://app.cinem.tech
 npm run desktop:dev      # Electron window against local Next (:43180)
 npm run desktop:build:win
 npm run desktop:build:mac  # needs macOS

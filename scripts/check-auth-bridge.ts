@@ -118,13 +118,16 @@ assert.ok(onDeviceIndex >= 0 && unpackedIndex > onDeviceIndex);
 console.log("ok: extension Sign in with CINEM; On-device is download-first");
 
 const electron = readFileSync("electron/main.cjs", "utf8");
-assert.match(electron, /cinem-pro/);
+const deskShell = readFileSync("electron/desk-shell.cjs", "utf8");
+assert.match(deskShell, /cinem-pro/);
 assert.match(electron, /CINEM_DESK_MODE/);
-assert.match(electron, /accounts\.google\.com/);
-assert.match(electron, /https:\/\/app\.cinem\.tech/);
-assert.match(electron, /brandcrew\.vercel\.app/);
+assert.match(deskShell, /accounts\.google\.com/);
+assert.match(deskShell, /https:\/\/app\.cinem\.tech/);
+assert.match(deskShell, /brandcrew\.vercel\.app/);
 assert.match(electron, /\/desk/);
 assert.match(electron, /setAsDefaultProtocolClient/);
+assert.match(electron, /did-fail-load/);
+assert.match(electron, /chromeUserAgent/);
 assert.match(readFileSync("package.json", "utf8"), /"schemes": \[\s*"cinem-pro"/);
 console.log("ok: Electron cloud desk + protocol handler");
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CHROME_WEB_STORE_URL } from "@/lib/auth-bridge";
 import { EXTENSION_ZIP_PUBLIC_PATH } from "@/lib/extension-download";
 import { ExtensionStatusChip } from "@/components/desk/extension-status";
+import { DESKTOP_WIN_DOWNLOAD, WIN_SETUP_FILENAME } from "@/lib/site";
 
 type DeviceRow = {
   id: string;
@@ -120,6 +121,14 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
             Alternate download
           </Button>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          nativeButton={false}
+          render={<a href={DESKTOP_WIN_DOWNLOAD} download={WIN_SETUP_FILENAME} />}
+        >
+          Windows desktop
+        </Button>
         <Button type="button" variant="outline" nativeButton={false} render={<a href="/download" />}>
           All downloads
         </Button>
