@@ -13,6 +13,10 @@ import {
   getMarketplacePlugin,
   MARKETPLACE_BOTS,
   MARKETPLACE_PLUGINS,
+  COMPOSIO_CONNECT_MISSING_HINT,
+  COMPOSIO_CONNECT_READY_HINT,
+  composioBannerHint,
+  composioConnectCardHint,
   emptyConnectMessage,
   pastedConnectSecret,
   resolveApiKeyConnect,
@@ -128,8 +132,8 @@ assert.match(marketplaceUi, /pastedConnectSecret/);
 assert.match(marketplaceUi, /emptyConnectMessage/);
 assert.match(marketplaceUi, /Connect did not persist/);
 assert.doesNotMatch(marketplaceUi, /disabled=\{busyId === connectPlugin\?\.id \|\| !apiKey\.trim\(\)\}/);
-assert.match(marketplaceUi, /sanitizeComposioCopy/);
-assert.match(marketplaceUi, /Connect opens Composio/);
+assert.match(marketplaceUi, /composioBannerHint/);
+assert.match(marketplaceUi, /composioConnectCardHint/);
 assert.match(marketplaceUi, /pluginOAuthStartPath/);
 assert.match(marketplaceUi, /location\.assign/);
 assert.doesNotMatch(marketplaceUi, /COMPOSER_API_KEY/);
@@ -139,15 +143,22 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(marketplaceUi, /COMPOSIO_API_KEY missing — Connect stays disconnected/);
 const marketplaceApi = readFileSync("src/server/api/workspaces/marketplace.ts", "utf8");
-assert.match(marketplaceApi, /await connection\(\)/);
+assert.match(marketplaceApi, /waitForRequest/);
 assert.match(marketplaceApi, /Connect opens Composio for Gmail \(Composio\)/);
+assert.equal(composioBannerHint(null), COMPOSIO_CONNECT_READY_HINT);
+assert.equal(composioBannerHint(true), COMPOSIO_CONNECT_READY_HINT);
+assert.equal(composioBannerHint(false), COMPOSIO_CONNECT_MISSING_HINT);
+assert.match(composioConnectCardHint(), /Connect opens Composio/);
+assert.doesNotMatch(composioBannerHint(null), /Set COMPOSIO_API_KEY/);
+assert.match(marketplaceUi, /useState<boolean \| null>\(null\)/);
+assert.match(marketplaceUi, /composioReady === false/);
 const oauthStart = readFileSync("src/server/api/workspaces/plugin-oauth-start.ts", "utf8");
 assert.match(oauthStart, /composioConfigured/);
 assert.match(oauthStart, /startComposioLink/);
 assert.doesNotMatch(oauthStart, /jsonError/);
 assert.match(oauthStart, /composio_not_configured/);
 assert.match(oauthStart, /composio_no_redirect/);
-assert.match(oauthStart, /await connection\(\)/);
+assert.match(oauthStart, /waitForRequest/);
 assert.doesNotMatch(oauthStart, /COMPOSIO_API_KEY\|not configured/);
 assert.equal(
   sanitizeComposioCopy("Set COMPOSER_API_KEY on the server."),

@@ -1,3 +1,4 @@
+import { connection as waitForRequest } from "next/server";
 import { redirect } from "next/navigation";
 import { OnboardingWizard } from "@/components/desk/onboarding-wizard";
 import { getCurrentUser } from "@/lib/auth";
@@ -30,6 +31,7 @@ export default async function OnboardingPage({
     (requested ? workspaces.find((row) => row.id === requested) : null) ?? workspaces[0];
   if (!workspace) redirect("/desk");
 
+  await waitForRequest();
   const connections = await listPluginConnections(workspace.id);
 
   return (

@@ -1,4 +1,4 @@
-import { connection, NextResponse } from "next/server";
+import { connection as waitForRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { jsonError, jsonOk } from "@/lib/http";
@@ -21,7 +21,7 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string; pluginId: string }> },
 ) {
   try {
-    await connection();
+    await waitForRequest();
     const { workspaceId, pluginId } = await context.params;
     const { user } = await requireWorkspaceMember(workspaceId);
     const body = schema.parse(await request.json().catch(() => ({})));

@@ -1,4 +1,4 @@
-import { connection, NextResponse } from "next/server";
+import { connection as waitForRequest, NextResponse } from "next/server";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { appOrigin } from "@/lib/crypto-secret";
 import { ClientError } from "@/lib/http";
@@ -16,7 +16,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ workspaceId: string; pluginId: string }> },
 ) {
-  await connection();
+  await waitForRequest();
   const { workspaceId, pluginId } = await context.params;
   const next = new URL(request.url).searchParams.get("next") || "";
   const plugin = getMarketplacePlugin(pluginId);

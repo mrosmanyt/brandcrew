@@ -22,9 +22,10 @@ import { FEATURED_JOB_TEMPLATES, type JobTemplate } from "@/lib/job-templates";
 import {
   MARKETPLACE_BOT_CATEGORIES,
   PLUGIN_CATEGORIES,
+  composioBannerHint,
+  composioConnectCardHint,
   emptyConnectMessage,
   pastedConnectSecret,
-  sanitizeComposioCopy,
   type MarketplaceBot,
   type PluginDef,
 } from "@/lib/marketplace";
@@ -74,7 +75,7 @@ export function MarketplaceDesk({
   const keyInputRef = useRef<HTMLInputElement>(null);
   const [viewAll, setViewAll] = useState<string | null>(null);
   const [composioHint, setComposioHint] = useState("");
-  const [composioReady, setComposioReady] = useState(false);
+  const [composioReady, setComposioReady] = useState<boolean | null>(null);
   const [probeBusy, setProbeBusy] = useState(false);
   const [probeNote, setProbeNote] = useState("");
 
@@ -445,24 +446,18 @@ export function MarketplaceDesk({
           </p>
           <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
             <p>
-              {sanitizeComposioCopy(
-                composioReady
-                  ? composioHint ||
-                    "Connect opens Composio for Gmail (Composio), HubSpot, and other agency connectors. Native Gmail uses Google OAuth. Connected only after an ACTIVE account."
-                  : composioHint ||
-                    "Set COMPOSIO_API_KEY to connect HubSpot, Pipedrive, Apollo, Ahrefs, and Gmail (Composio). Native Gmail uses Google OAuth and does not need that key.",
-              )}
+              {composioBannerHint(composioReady, composioHint)}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Button
                 size="xs"
                 variant="outline"
-                disabled={probeBusy || !composioReady}
+                disabled={probeBusy || composioReady === false}
                 onClick={() => void proveComposio()}
               >
                 {probeBusy ? "Calling…" : "Run first tool call"}
               </Button>
-              {!composioReady ? (
+              {composioReady === false ? (
                 <span>Button stays disabled until the server has COMPOSIO_API_KEY.</span>
               ) : null}
             </div>
@@ -846,9 +841,7 @@ function PluginCard({
         {plugin.connected ? (
           <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-primary">Connected</p>
         ) : plugin.auth === "composio" ? (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Connect opens Composio. Connected only after an ACTIVE account.
-          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{composioConnectCardHint()}</p>
         ) : plugin.auth === "oauth" && !plugin.connection?.oauthReady ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
             {plugin.connection?.setupHint || "OAuth client id missing — Connect stays disconnected."}

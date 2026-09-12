@@ -563,7 +563,7 @@ export async function runComposioFirstCall(workspaceId: string): Promise<Composi
       userId: "probe",
     }),
   });
-  const connectUrl = redirectFromUnknown(authorize);
+  const connectUrl = readComposioConnectLink(authorize).redirectUrl;
   return {
     ok: data.successful !== false && !data.error,
     configured: true,

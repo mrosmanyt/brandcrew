@@ -41,7 +41,7 @@ import {
   type OnboardingPluginRow,
   type SetupWizardStepId,
 } from "@/lib/setup-wizard";
-import { emptyConnectMessage, pastedConnectSecret } from "@/lib/marketplace";
+import { composioConnectCardHint, emptyConnectMessage, pastedConnectSecret } from "@/lib/marketplace";
 import { pluginOAuthErrorMessage } from "@/lib/plugin-oauth-errors";
 import { cn } from "@/lib/utils";
 
@@ -389,7 +389,13 @@ export function OnboardingWizard({
                   description={slot.plugin.description}
                   connected={slot.plugin.connected}
                   actionLabel={slot.plugin.connected ? "Connected" : "Connect"}
-                  hint={slot.plugin.connection?.setupHint}
+                  hint={
+                    slot.plugin.auth === "composio"
+                      ? composioConnectCardHint()
+                      : slot.plugin.auth === "oauth" && !slot.plugin.connected
+                        ? slot.plugin.connection?.setupHint
+                        : undefined
+                  }
                   busy={busy}
                   onClick={() => startConnect(slot.plugin)}
                 />

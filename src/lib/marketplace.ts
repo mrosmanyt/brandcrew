@@ -404,3 +404,22 @@ export function emptyConnectMessage(plugin: PluginDef) {
 export function sanitizeComposioCopy(text: string) {
   return text.replaceAll("COMPOSER_API_KEY", "COMPOSIO_API_KEY");
 }
+
+/** Card/banner copy when COMPOSIO_API_KEY is set or status is still unknown. */
+export const COMPOSIO_CONNECT_READY_HINT =
+  "Connect opens Composio for Gmail (Composio), HubSpot, and other agency connectors. Native Gmail uses Google OAuth. Connected only after an ACTIVE account.";
+
+/** Only show this after the server explicitly reports the key is missing. */
+export const COMPOSIO_CONNECT_MISSING_HINT =
+  "Set COMPOSIO_API_KEY to connect HubSpot, Pipedrive, Apollo, Ahrefs, and Gmail (Composio). Native Gmail uses Google OAuth and does not need that key.";
+
+export function composioConnectCardHint() {
+  return "Connect opens Composio. Connected only after an ACTIVE account.";
+}
+
+export function composioBannerHint(configured: boolean | null, serverHint?: string) {
+  if (configured === false) {
+    return sanitizeComposioCopy(serverHint || COMPOSIO_CONNECT_MISSING_HINT);
+  }
+  return sanitizeComposioCopy(serverHint || COMPOSIO_CONNECT_READY_HINT);
+}
