@@ -62,6 +62,7 @@ let serverChild = null;
 let nativeChild = null;
 let spawnedServer = false;
 let mainWindow = null;
+let showingOffline = false;
 
 function projectRoot() {
   return path.join(__dirname, "..");
@@ -267,14 +268,16 @@ function attachNavigationGuards(contents) {
 }
 
 function showOfflinePage() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!mainWindow || mainWindow.isDestroyed() || showingOffline) return;
   const file = offlinePagePath();
   if (!fs.existsSync(file)) return;
+  showingOffline = true;
   void mainWindow.loadFile(file);
 }
 
 function loadDesk(pathName = "/desk") {
   if (!mainWindow || mainWindow.isDestroyed()) return Promise.resolve();
+  showingOffline = false;
   const url = `${deskOrigin()}${deskPath(pathName)}`;
   return mainWindow.loadURL(url).catch((error) => {
     console.error("CINEM desktop desk load failed", error);
@@ -314,8 +317,9 @@ function createWindow() {
 
   mainWindow.webContents.on(
     "did-fail-load",
-    (_event, errorCode, errorDescription, _validatedURL, isMainFrame) => {
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (!isMainFrame || isIgnorableLoadError(errorCode)) return;
+      if (validatedURL && String(validatedURL).startsWith("file:")) return;
       console.error("CINEM desktop did-fail-load", errorCode, errorDescription);
       showOfflinePage();
     },
@@ -556,9 +560,12 @@ function installAppMenu() {
     ipcMain.on("cinem:open-desk-external", () => {
       void shell.openExternal(`${deskOrigin()}/desk`);
     });
+    const guardedContents = new WeakSet();
     app.on("web-contents-created", (_event, contents) => {
       const chromeUa = chromeUserAgent(contents.getUserAgent());
       if (chromeUa) contents.setUserAgent(chromeUa);
+      if (guardedContents.has(contents)) return;
+      guardedContents.add(contents);
       attachNavigationGuards(contents);
     });
     const protoArg = process.argv.find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}:`));

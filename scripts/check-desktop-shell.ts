@@ -126,6 +126,8 @@ assert.match(main, /applyUserEnv/);
 assert.match(main, /Never apply userData APP_URL/);
 assert.match(main, /if \(useCloudDesk\(\)\)/);
 assert.match(main, /showOfflinePage/);
+assert.match(main, /showingOffline/);
+assert.match(main, /startsWith\("file:"\)/);
 assert.ok(existsSync("electron/offline.html"));
 assert.ok(existsSync("electron/desk-shell.cjs"));
 assert.ok(existsSync("electron/preload.cjs"));
