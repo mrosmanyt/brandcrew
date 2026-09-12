@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ChevronDown, Info, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -11,17 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AGENT_MODE_PLANS,
   AGENT_MODES_SHORTCUT,
   MODEL_ROUTING_GROUPS,
   MODEL_ROUTING_OPTIONS,
   SERVER_KEYS_COPY,
+  modelRoutingLabel,
   modelRoutingLocked,
   planApplyAction,
-  planModeCaption,
-  planModeDescription,
-  planModeName,
-  planPowerLabel,
 } from "@/lib/agent-modes";
 import { PLANS, type PlanId } from "@/lib/constants";
 import { normalizePlanId } from "@/lib/limits";
@@ -65,153 +60,92 @@ export async function applyWorkspacePlan(input: {
   };
 }
 
+export async function applyWorkspaceRouting(input: {
+  workspaceId: string;
+  next: LlmRoutingPreference;
+  llm: LlmStatus;
+}): Promise<LlmRoutingPreference> {
+  if (modelRoutingLocked(input.next, input.llm)) {
+    throw new Error("Add that key on the server, then refresh.");
+  }
+  const res = await fetch(`/api/workspaces/${input.workspaceId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ modelRouting: input.next }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Could not save model routing.");
+  }
+  return normalizeModelRouting(data.workspace?.modelRouting ?? input.next);
+}
+
 export function AgentModesMenu({
   workspaceId,
-  plan,
-  billingMock,
   llm,
   modelRouting,
-  onPlanApplied,
   onRoutingApplied,
 }: {
   workspaceId: string;
-  plan: string;
-  billingMock: boolean;
+  plan?: string;
+  billingMock?: boolean;
   llm: LlmStatus;
   modelRouting: string;
   onPlanApplied?: (next: { plan: PlanId; tokenBudget: number }) => void;
   onRoutingApplied?: (next: LlmRoutingPreference) => void;
 }) {
-  const router = useRouter();
-  const currentPlan = normalizePlanId(plan);
   const routing = normalizeModelRouting(modelRouting);
   const plansHref = `/desk/${workspaceId}/billing`;
   const settingsHref = `/desk/${workspaceId}/settings`;
 
-  async function applyPlan(next: PlanId) {
-    try {
-      const result = await applyWorkspacePlan({
-        workspaceId,
-        next,
-        current: currentPlan,
-        billingMock,
-      });
-      if (result.action === "noop") return;
-      if (result.action === "open-plans") {
-        toast.message("Open Plans to change a live subscription.");
-        router.push(plansHref);
-        return;
-      }
-      if (result.url) {
-        window.location.assign(result.url);
-        return;
-      }
-      onPlanApplied?.({
-        plan: result.plan,
-        tokenBudget: result.tokenBudget ?? PLANS[result.plan].tokenBudget,
-      });
-      toast.success(
-        billingMock
-          ? `Mock billing: workspace is now on ${planModeName(result.plan)}.`
-          : `Plan updated to ${planModeName(result.plan)}.`,
-      );
-      router.refresh();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not change plan.");
-      router.push(plansHref);
-    }
-  }
-
   async function applyRouting(next: LlmRoutingPreference) {
-    if (modelRoutingLocked(next, llm)) {
-      toast.message("Add that key on the server, then refresh.");
-      return;
+    try {
+      const saved = await applyWorkspaceRouting({ workspaceId, next, llm });
+      onRoutingApplied?.(saved);
+      toast.success(
+        next === "auto"
+          ? "Using automatic model routing."
+          : `Using ${MODEL_ROUTING_OPTIONS.find((row) => row.id === next)?.label ?? next}.`,
+      );
+    } catch (error) {
+      toast.message(
+        error instanceof Error ? error.message : "Could not save model routing.",
+      );
     }
-    const res = await fetch(`/api/workspaces/${workspaceId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ modelRouting: next }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      toast.error(data.error || "Could not save model routing.");
-      return;
-    }
-    onRoutingApplied?.(normalizeModelRouting(data.workspace?.modelRouting ?? next));
-    toast.success(
-      next === "auto"
-        ? "Using automatic model routing."
-        : `Using ${MODEL_ROUTING_OPTIONS.find((row) => row.id === next)?.label ?? next}.`,
-    );
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex h-8 max-w-[9.5rem] items-center gap-1 rounded-full bg-composer-control px-2.5 text-[12px] font-medium text-composer-foreground hover:opacity-80"
-        aria-label="Agent modes"
-        title="Agent modes"
+        className="inline-flex h-8 max-w-[10.5rem] items-center gap-1 rounded-full bg-composer-control px-2.5 text-[12px] font-medium text-composer-foreground hover:opacity-80"
+        aria-label="Model"
+        title="Model"
       >
-        <span className="truncate">{planModeName(currentPlan)}</span>
+        <span className="truncate">{modelRoutingLabel(routing)}</span>
         <ChevronDown className="size-3.5 shrink-0 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="top"
         align="end"
         sideOffset={8}
-        className="w-80 min-w-80 p-0"
+        className="w-72 min-w-72 p-0"
       >
-        <div className="flex items-center justify-between gap-3 px-3 pt-2.5 pb-1">
-          <p className="text-xs font-medium">Agent modes</p>
+        <div className="flex items-center justify-between gap-3 px-3 pt-2 pb-1">
+          <div className="flex items-center gap-1">
+            <p className="text-xs font-medium">Model</p>
+            <span title={SERVER_KEYS_COPY}>
+              <Info className="size-3 text-muted-foreground" />
+            </span>
+          </div>
           <p className="text-[10px] tracking-wide text-muted-foreground">
             Cycle {AGENT_MODES_SHORTCUT}
           </p>
         </div>
         <ul className="px-1.5 pb-1">
-          {AGENT_MODE_PLANS.map((id) => {
-            const selected = id === currentPlan;
-            const power = planPowerLabel(id);
-            return (
-              <li key={id}>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-start justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
-                    selected && "text-chart-2",
-                  )}
-                  onClick={() => void applyPlan(id)}
-                >
-                  <span>
-                    <span className="block font-medium">{PLANS[id].name}</span>
-                    <span className="block text-[11px] text-muted-foreground">
-                      {planModeCaption(id)}
-                    </span>
-                  </span>
-                  {power ? (
-                    <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">
-                      {power}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="px-3 pb-2 text-[11px] leading-5 text-muted-foreground">
-          {planModeDescription(currentPlan)}
-        </p>
-        <DropdownMenuSeparator className="mx-0" />
-        <div className="flex items-center gap-1 px-3 pt-2 pb-1">
-          <p className="text-xs font-medium">Model</p>
-          <span title={SERVER_KEYS_COPY}>
-            <Info className="size-3 text-muted-foreground" />
-          </span>
-        </div>
-        <ul className="px-1.5 pb-1">
           {MODEL_ROUTING_GROUPS.map((group) => (
             <li key={group.id}>
               {group.label ? (
-                <p className="px-2 pt-1.5 pb-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="px-2 pt-1.5 pb-0.5 text-[10px] text-muted-foreground">
                   {group.label}
                 </p>
               ) : null}
@@ -224,20 +158,22 @@ export function AgentModesMenu({
                       <button
                         type="button"
                         className={cn(
-                          "flex w-full items-start justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
+                          "flex w-full items-start justify-between gap-2 rounded-md px-2 py-1 text-left hover:bg-accent",
                           selected && !locked && "text-chart-2",
                           locked && "opacity-70",
                         )}
                         onClick={() => void applyRouting(option.id)}
                       >
-                        <span>
-                          <span className="block font-medium">{option.label}</span>
-                          <span className="block text-[11px] text-muted-foreground">
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-medium leading-tight">
+                            {option.label}
+                          </span>
+                          <span className="block text-[11px] leading-tight text-muted-foreground">
                             {locked ? "Add key on server" : option.hint}
                           </span>
                         </span>
                         {locked ? (
-                          <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                          <Lock className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
                         ) : null}
                       </button>
                     </li>

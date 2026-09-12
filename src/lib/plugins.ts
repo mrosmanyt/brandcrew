@@ -163,7 +163,7 @@ export async function connectApiKeyPlugin(input: {
   useEnv?: boolean;
 }) {
   const plugin = getMarketplacePlugin(input.pluginId);
-  if (!plugin) throw new Error("Unknown plugin.");
+  if (!plugin) throw new ClientError("Unknown plugin.");
   const resolved = resolveApiKeyConnect(plugin, {
     apiKey: input.apiKey,
     useEnv: input.useEnv,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Check, FileText, Loader2, Plug, Search, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +22,9 @@ import { FEATURED_JOB_TEMPLATES, type JobTemplate } from "@/lib/job-templates";
 import {
   MARKETPLACE_BOT_CATEGORIES,
   PLUGIN_CATEGORIES,
+  emptyConnectMessage,
+  pastedConnectSecret,
+  sanitizeComposioCopy,
   type MarketplaceBot,
   type PluginDef,
 } from "@/lib/marketplace";
@@ -67,6 +70,7 @@ export function MarketplaceDesk({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [connectPlugin, setConnectPlugin] = useState<PluginRow | null>(null);
   const [apiKey, setApiKey] = useState("");
+  const keyInputRef = useRef<HTMLInputElement>(null);
   const [viewAll, setViewAll] = useState<string | null>(null);
   const [composioHint, setComposioHint] = useState("");
   const [composioReady, setComposioReady] = useState(false);
@@ -227,25 +231,57 @@ export function MarketplaceDesk({
 
   async function connectKey(useEnv: boolean) {
     if (!connectPlugin) return;
-    setBusyId(connectPlugin.id);
-    const res = await fetch(
-      `/api/workspaces/${workspaceId}/plugins/${connectPlugin.id}/connect`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: useEnv ? undefined : apiKey, useEnv }),
-      },
-    );
-    const data = await res.json();
-    setBusyId(null);
-    if (!res.ok) {
-      toast.error(data.error || "Not connected.");
+    const pasted = pastedConnectSecret(apiKey, keyInputRef.current?.value);
+    if (!useEnv && !pasted) {
+      toast.error(emptyConnectMessage(connectPlugin));
       return;
     }
-    toast.success(`${connectPlugin.name} connected.`);
-    setConnectPlugin(null);
-    setApiKey("");
-    await refresh();
+    setBusyId(connectPlugin.id);
+    try {
+      const res = await fetch(
+        `/api/workspaces/${workspaceId}/plugins/${connectPlugin.id}/connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            apiKey: useEnv ? undefined : pasted,
+            useEnv,
+          }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Not connected.");
+        return;
+      }
+      const connected = Boolean(data.connection?.connected);
+      if (!connected) {
+        toast.error("Connect did not persist. Still disconnected.");
+        return;
+      }
+      setPlugins((prev) =>
+        prev.map((plugin) =>
+          plugin.id === connectPlugin.id
+            ? {
+                ...plugin,
+                connected: true,
+                connection: data.connection ?? plugin.connection,
+              }
+            : plugin,
+        ),
+      );
+      setInstalledPluginCount((prev) =>
+        connectPlugin.connected ? prev : prev + 1,
+      );
+      toast.success(`${connectPlugin.name} connected.`);
+      setConnectPlugin(null);
+      setApiKey("");
+      await refresh();
+    } catch {
+      toast.error("Could not reach Connect. Still disconnected.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function proveComposio() {
@@ -407,11 +443,13 @@ export function MarketplaceDesk({
           </p>
           <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
             <p>
-              {composioReady
-                ? composioHint ||
-                  "COMPOSIO_API_KEY is set. Gmail and agency connectors Connect through Composio — never marked Connected without an ACTIVE account."
-                : composioHint ||
-                  "Set COMPOSIO_API_KEY to connect Gmail, HubSpot, Pipedrive, Apollo, Ahrefs, and more. Without the key they stay disconnected — CINEM Pro does not fake Connected."}
+              {sanitizeComposioCopy(
+                composioReady
+                  ? composioHint ||
+                    "COMPOSIO_API_KEY is set. Gmail and agency connectors Connect through Composio — never marked Connected without an ACTIVE account."
+                  : composioHint ||
+                    "Set COMPOSIO_API_KEY to connect Gmail, HubSpot, Pipedrive, Apollo, Ahrefs, and more. Without the key they stay disconnected — CINEM Pro does not fake Connected.",
+              )}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Button
@@ -616,6 +654,12 @@ export function MarketplaceDesk({
         onOpenChange={(open) => !open && setConnectPlugin(null)}
       >
         <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void connectKey(false);
+            }}
+          >
           <DialogHeader>
             <DialogTitle>Connect {connectPlugin?.name}</DialogTitle>
             <DialogDescription>
@@ -624,11 +668,13 @@ export function MarketplaceDesk({
             </DialogDescription>
           </DialogHeader>
           <Input
+            ref={keyInputRef}
             type="password"
             autoComplete="off"
             placeholder={connectPlugin?.secretLabel || "API key"}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
+            onInput={(e) => setApiKey((e.target as HTMLInputElement).value)}
           />
           {connectPlugin?.docsUrl ? (
             <a
@@ -643,20 +689,19 @@ export function MarketplaceDesk({
           <DialogFooter className="sm:flex-col sm:items-stretch">
             {connectPlugin?.connection?.envReady ? (
               <Button
+                type="button"
                 variant="secondary"
                 disabled={busyId === connectPlugin.id}
-                onClick={() => connectKey(true)}
+                onClick={() => void connectKey(true)}
               >
                 Use server {connectPlugin.envKeys[0]}
               </Button>
             ) : null}
-            <Button
-              disabled={busyId === connectPlugin?.id || !apiKey.trim()}
-              onClick={() => connectKey(false)}
-            >
+            <Button type="submit" disabled={busyId === connectPlugin?.id}>
               Connect
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

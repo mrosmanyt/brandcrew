@@ -6,7 +6,11 @@ import {
   type LlmRoutingPreference,
   type LlmStatus,
 } from "@/lib/llm-routing";
-import { DISPLAY_MODELS, MODEL_CAPABILITIES, type ModelCapability } from "@/lib/model-catalog";
+import {
+  PICKER_GROUPS,
+  PICKER_MODELS,
+  type PickerGroupId,
+} from "@/lib/model-catalog";
 
 export const AGENT_MODE_PLANS: PlanId[] = ["demo", "starter", "pro", "ultra"];
 
@@ -16,7 +20,7 @@ export type ModelRoutingOption = {
   id: LlmRoutingPreference;
   label: string;
   hint: string;
-  capability?: ModelCapability;
+  pickerGroup?: PickerGroupId;
 };
 
 export function planModeName(plan?: string | null) {
@@ -79,13 +83,13 @@ export const MODEL_ROUTING_OPTIONS: ModelRoutingOption[] = [
   {
     id: "auto",
     label: "Auto",
-    hint: "Picks the best model for the job",
+    hint: "Picks the best model for the job.",
   },
-  ...DISPLAY_MODELS.map((row) => ({
+  ...PICKER_MODELS.map((row) => ({
     id: row.id as LlmRoutingPreference,
     label: row.displayName,
     hint: row.hint,
-    capability: row.capability,
+    pickerGroup: row.pickerGroup ?? undefined,
   })),
 ];
 
@@ -95,10 +99,10 @@ export const MODEL_ROUTING_GROUPS = [
     label: null,
     options: MODEL_ROUTING_OPTIONS.filter((row) => row.id === "auto"),
   },
-  ...MODEL_CAPABILITIES.map((capability) => ({
-    id: capability,
-    label: capability,
-    options: MODEL_ROUTING_OPTIONS.filter((row) => row.capability === capability),
+  ...PICKER_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    options: MODEL_ROUTING_OPTIONS.filter((row) => row.pickerGroup === group.id),
   })),
 ];
 
@@ -116,8 +120,24 @@ export function modelRoutingLocked(
 export function modelRoutingLabel(id?: string | null) {
   const normalized = normalizeModelRouting(id);
   return (
-    MODEL_ROUTING_OPTIONS.find((row) => row.id === normalized)?.label ?? "Auto"
+    MODEL_ROUTING_OPTIONS.find((row) => row.id === normalized)?.label ??
+    (normalized === "claude-haiku" ? "Claude Haiku" : "Auto")
   );
+}
+
+export function nextModelRouting(
+  current?: string | null,
+  llm?: Pick<LlmStatus, "openai" | "anthropic" | "gemini">,
+): LlmRoutingPreference {
+  const ids = MODEL_ROUTING_OPTIONS.map((row) => row.id);
+  const start = ids.indexOf(normalizeModelRouting(current));
+  for (let step = 1; step <= ids.length; step += 1) {
+    const next = ids[(Math.max(start, 0) + step) % ids.length];
+    if (!next) continue;
+    if (llm && modelRoutingLocked(next, llm)) continue;
+    return next;
+  }
+  return "auto";
 }
 
 export function jobWorkingLabel(status: "queued" | "running") {

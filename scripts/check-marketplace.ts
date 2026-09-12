@@ -13,7 +13,10 @@ import {
   getMarketplacePlugin,
   MARKETPLACE_BOTS,
   MARKETPLACE_PLUGINS,
+  emptyConnectMessage,
+  pastedConnectSecret,
   resolveApiKeyConnect,
+  sanitizeComposioCopy,
 } from "../src/lib/marketplace";
 import { oauthReady } from "../src/lib/plugins";
 import {
@@ -121,7 +124,20 @@ for (const stem of CONNECTOR_LOGO_FILES) {
 }
 const marketplaceUi = readFileSync("src/components/desk/marketplace.tsx", "utf8");
 assert.match(marketplaceUi, /ConnectorLogo/);
+assert.match(marketplaceUi, /pastedConnectSecret/);
+assert.match(marketplaceUi, /emptyConnectMessage/);
+assert.match(marketplaceUi, /Connect did not persist/);
+assert.doesNotMatch(marketplaceUi, /disabled=\{busyId === connectPlugin\?\.id \|\| !apiKey\.trim\(\)\}/);
+assert.match(marketplaceUi, /sanitizeComposioCopy/);
+assert.doesNotMatch(marketplaceUi, /COMPOSER_API_KEY/);
+assert.equal(
+  sanitizeComposioCopy("Set COMPOSER_API_KEY on the server."),
+  "Set COMPOSIO_API_KEY on the server.",
+);
 assert.doesNotMatch(marketplaceUi, /\{plugin\.letter\}/);
+const wizardConnect = readFileSync("src/components/desk/onboarding-wizard.tsx", "utf8");
+assert.match(wizardConnect, /pastedConnectSecret/);
+assert.doesNotMatch(wizardConnect, /disabled=\{busy \|\| !apiKey\.trim\(\)\}/);
 const wizardUi = readFileSync("src/components/desk/onboarding-wizard.tsx", "utf8");
 assert.match(wizardUi, /ConnectorLogo/);
 assert.doesNotMatch(wizardUi, /letter=\{slot\.plugin\.letter\}/);
@@ -129,6 +145,7 @@ console.log(`ok: ${MARKETPLACE_PLUGINS.length} connectors have brand logos, no l
 
 const empty = resolveApiKeyConnect(web!, { apiKey: "" });
 assert.equal(empty.ok, false);
+if (!empty.ok) assert.match(empty.error, /Empty Connect stays disconnected/);
 const pasted = resolveApiKeyConnect(web!, { apiKey: "tvly-test-key" });
 assert.equal(pasted.ok, true);
 if (pasted.ok) {
@@ -139,6 +156,11 @@ const missingEnv = resolveApiKeyConnect(web!, { useEnv: true });
 if (!process.env.TAVILY_API_KEY) {
   assert.equal(missingEnv.ok, false);
 }
+assert.equal(pastedConnectSecret("  tvly-live  ", ""), "tvly-live");
+assert.equal(pastedConnectSecret("", "  autofilled-token  "), "autofilled-token");
+assert.equal(pastedConnectSecret("   ", "   "), "");
+assert.match(emptyConnectMessage(web!), /Tavily API key/);
+assert.match(emptyConnectMessage(getMarketplacePlugin("whatsapp")!), /Twilio Auth Token/);
 console.log("ok: empty Connect stays disconnected");
 
 const gmail = getMarketplacePlugin("gmail")!;
@@ -206,7 +228,36 @@ async function dbSmoke() {
       },
     });
     assert.equal(connection.status, "disconnected");
-    console.log("ok: Add bot writes Agent; empty plugin stays disconnected in DB");
+    const { connectApiKeyPlugin } = await import("../src/lib/plugins");
+    await assert.rejects(
+      () =>
+        connectApiKeyPlugin({
+          workspaceId: workspace.id,
+          pluginId: "web-search",
+          apiKey: "   ",
+        }),
+      /Empty Connect stays disconnected/,
+    );
+    const webLive = await connectApiKeyPlugin({
+      workspaceId: workspace.id,
+      pluginId: "web-search",
+      apiKey: "tvly-workspace-key",
+    });
+    assert.equal(webLive.connected, true);
+    const waLive = await connectApiKeyPlugin({
+      workspaceId: workspace.id,
+      pluginId: "whatsapp",
+      apiKey: "twilio-auth-token",
+    });
+    assert.equal(waLive.connected, true);
+    const stored = await prisma.pluginConnection.findUnique({
+      where: {
+        workspaceId_pluginId: { workspaceId: workspace.id, pluginId: "web-search" },
+      },
+    });
+    assert.equal(stored?.status, "connected");
+    assert.ok(stored?.secretEnc);
+    console.log("ok: Add bot writes Agent; paste+Connect persists Connected");
   } finally {
     await prisma.workspace.delete({ where: { id: workspace.id } });
     await prisma.$disconnect();

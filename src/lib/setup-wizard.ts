@@ -51,7 +51,7 @@ export const SETUP_WIZARD_STEP_COPY: Record<
   model: {
     kicker: "Step 7",
     title: "Who writes",
-    hint: "Named choices plus Fast & cheap / Smart / Smartest. All map to engines already on this desk.",
+    hint: "Named choices plus Fastest and quick answer / For complex / Most advanced. All map to engines already on this desk.",
   },
 };
 

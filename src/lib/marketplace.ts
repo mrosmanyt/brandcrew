@@ -384,6 +384,23 @@ export function resolveApiKeyConnect(
   }
   return {
     ok: false,
-    error: `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Connect cannot be empty.`,
+    error: `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Empty Connect stays disconnected.`,
   };
+}
+
+/** Prefer React state, then the live input (browser autofill often skips onChange). */
+export function pastedConnectSecret(
+  apiKey?: string | null,
+  inputValue?: string | null,
+) {
+  return (apiKey || "").trim() || (inputValue || "").trim();
+}
+
+export function emptyConnectMessage(plugin: PluginDef) {
+  return `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Empty Connect stays disconnected.`;
+}
+
+/** Repair the COMPOSER/COMPOSIO banner typo if a stale hint still uses it. */
+export function sanitizeComposioCopy(text: string) {
+  return text.replaceAll("COMPOSER_API_KEY", "COMPOSIO_API_KEY");
 }
