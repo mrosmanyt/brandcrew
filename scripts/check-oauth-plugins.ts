@@ -82,6 +82,9 @@ const pendingAsk: JobStep[] = [
 assert.equal(slackPostAllowed(pendingAsk, "post"), false);
 assert.equal(mapPluginOAuthError({ error: "access_denied", pluginId: "gmail" }), "google_unverified");
 assert.match(pluginOAuthErrorMessage("google_unverified", "gmail"), /Test user/);
+assert.match(pluginOAuthErrorMessage("composio_not_configured"), /COMPOSIO_API_KEY/);
+assert.match(pluginOAuthErrorMessage("composio_failed"), /COMPOSIO_API_KEY is set/);
+assert.doesNotMatch(pluginOAuthErrorMessage("composio_failed"), /Set COMPOSIO_API_KEY/);
 console.log("ok: disconnected guards + slack post blocked before approval");
 
 const originalFetch = globalThis.fetch;

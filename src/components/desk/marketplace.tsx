@@ -29,6 +29,7 @@ import {
   type PluginDef,
 } from "@/lib/marketplace";
 import { pluginOAuthErrorMessage } from "@/lib/plugin-oauth-errors";
+import { pluginOAuthStartPath } from "@/lib/setup-wizard";
 import { cn } from "@/lib/utils";
 
 type BotRow = MarketplaceBot & { added: boolean };
@@ -333,18 +334,19 @@ export function MarketplaceDesk({
   }
 
   function startConnect(plugin: PluginRow, reconnect = false) {
-    if (plugin.auth === "composio" && plugin.secretLabel) {
-      setApiKey("");
-      setConnectPlugin(plugin);
+    if (plugin.auth === "composio") {
+      // Always start Composio Connect Link. A stale oauthReady=false must not
+      // toast "COMPOSIO_API_KEY missing" when the server key is set.
+      window.location.assign(pluginOAuthStartPath({ workspaceId, pluginId: plugin.id }));
       void reconnect;
       return;
     }
-    if (plugin.auth === "oauth" || plugin.auth === "composio") {
+    if (plugin.auth === "oauth") {
       if (!plugin.connection?.oauthReady) {
         toast.error(plugin.connection?.setupHint || "OAuth is not configured. Connect stays disconnected.");
         return;
       }
-      window.location.href = `/api/workspaces/${workspaceId}/plugins/${plugin.id}/oauth/start`;
+      window.location.assign(pluginOAuthStartPath({ workspaceId, pluginId: plugin.id }));
       return;
     }
     setApiKey("");
@@ -446,9 +448,9 @@ export function MarketplaceDesk({
               {sanitizeComposioCopy(
                 composioReady
                   ? composioHint ||
-                    "COMPOSIO_API_KEY is set. Gmail and agency connectors Connect through Composio — never marked Connected without an ACTIVE account."
+                    "Connect opens Composio for Gmail (Composio), HubSpot, and other agency connectors. Native Gmail uses Google OAuth. Connected only after an ACTIVE account."
                   : composioHint ||
-                    "Set COMPOSIO_API_KEY to connect Gmail, HubSpot, Pipedrive, Apollo, Ahrefs, and more. Without the key they stay disconnected — CINEM Pro does not fake Connected.",
+                    "Set COMPOSIO_API_KEY to connect HubSpot, Pipedrive, Apollo, Ahrefs, and Gmail (Composio). Native Gmail uses Google OAuth and does not need that key.",
               )}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -843,9 +845,9 @@ function PluginCard({
         <p className="line-clamp-2 text-xs text-muted-foreground">{plugin.description}</p>
         {plugin.connected ? (
           <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-primary">Connected</p>
-        ) : plugin.auth === "composio" && !plugin.connection?.oauthReady ? (
+        ) : plugin.auth === "composio" ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {plugin.connection?.setupHint || "COMPOSIO_API_KEY missing — Connect stays disconnected."}
+            Connect opens Composio. Connected only after an ACTIVE account.
           </p>
         ) : plugin.auth === "oauth" && !plugin.connection?.oauthReady ? (
           <p className="mt-1 text-[11px] text-muted-foreground">

@@ -34,15 +34,36 @@ export {
 
 const DEFAULT_BASE = "https://backend.composio.dev/api/v3.1";
 
+function isPlaceholderComposioKey(key: string) {
+  return /^(your_|changeme|placeholder|xxx)/i.test(key);
+}
+
+const COMPOSIO_API_KEY_NAME = "COMPOSIO_API_KEY";
+const COMPOSIO_TYPO_KEY_NAME = "COMPOSER_API_KEY";
+
+/**
+ * Dynamic lookup so Next.js cannot replace `process.env.COMPOSIO_API_KEY`
+ * with a build-time empty string. Vercel can have the key at runtime even
+ * when the compile snapshot did not.
+ */
+function readProcessEnv(name: string) {
+  return String(process.env[name] ?? "").trim();
+}
+
+/**
+ * Server key for Composio Platform. Canonical name is COMPOSIO_API_KEY.
+ * COMPOSER_API_KEY is accepted only as a founder typo fallback — never shown in UI.
+ */
 export function composioApiKey() {
-  return (process.env.COMPOSIO_API_KEY || "").trim();
+  const primary = readProcessEnv(COMPOSIO_API_KEY_NAME);
+  if (primary && !isPlaceholderComposioKey(primary)) return primary;
+  const typo = readProcessEnv(COMPOSIO_TYPO_KEY_NAME);
+  if (typo && !isPlaceholderComposioKey(typo)) return typo;
+  return "";
 }
 
 export function composioConfigured() {
-  const key = composioApiKey();
-  if (!key) return false;
-  if (/^(your_|changeme|placeholder|xxx)/i.test(key)) return false;
-  return true;
+  return Boolean(composioApiKey());
 }
 
 export function composioBaseUrl() {
@@ -56,10 +77,16 @@ export function composioMissingHint() {
 
 let sdkSingleton: Composio | null = null;
 
-/** Official SDK. Reads COMPOSIO_API_KEY from the environment — never pass the key inline. */
+/** Official SDK. Pass COMPOSIO_API_KEY explicitly so a COMPOSER typo fallback still works. */
 export function getComposioSdk(): Composio | null {
-  if (!composioConfigured()) return null;
-  if (!sdkSingleton) sdkSingleton = new Composio();
+  const apiKey = composioApiKey();
+  if (!apiKey) return null;
+  if (!sdkSingleton) {
+    sdkSingleton = new Composio({
+      apiKey,
+      baseURL: composioBaseUrl(),
+    });
+  }
   return sdkSingleton;
 }
 
@@ -239,13 +266,46 @@ export function composioCallbackUrl(input: { workspaceId: string; pluginId: stri
   return url.toString();
 }
 
-function redirectFromUnknown(value: unknown): string {
-  if (!value || typeof value !== "object") return "";
+function firstHttpUrl(...values: unknown[]): string {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (/^https?:\/\//i.test(text)) return text;
+  }
+  return "";
+}
+
+/** session.authorize() returns a ConnectionRequest `{ id, status, redirectUrl }`. */
+export function readComposioConnectLink(value: unknown): {
+  redirectUrl: string;
+  connectionId: string;
+} {
+  if (!value || typeof value !== "object") {
+    return { redirectUrl: "", connectionId: "" };
+  }
   const row = value as Record<string, unknown>;
-  const nested = row.connection && typeof row.connection === "object" ? (row.connection as Record<string, unknown>) : {};
-  return String(
-    row.redirectUrl || row.redirect_url || row.link || nested.redirectUrl || nested.redirect_url || "",
-  ).trim();
+  const nested =
+    row.connection && typeof row.connection === "object"
+      ? (row.connection as Record<string, unknown>)
+      : {};
+  return {
+    redirectUrl: firstHttpUrl(
+      row.redirectUrl,
+      row.redirect_url,
+      row.link,
+      row.url,
+      nested.redirectUrl,
+      nested.redirect_url,
+      nested.link,
+    ),
+    connectionId: String(
+      row.id ||
+        row.connectedAccountId ||
+        row.connected_account_id ||
+        nested.id ||
+        nested.connectedAccountId ||
+        "",
+    ).trim(),
+  };
 }
 
 export async function startComposioLink(input: {
@@ -271,13 +331,8 @@ export async function startComposioLink(input: {
     callbackUrl: callback_url,
   });
 
-  if (toolkit.auth === "api_key") {
-    const pasted = input.apiKey?.trim() || "";
-    if (!pasted) {
-      throw new ClientError(
-        `Paste a ${toolkit.name} API key. Empty Connect stays disconnected.`,
-      );
-    }
+  const pasted = input.apiKey?.trim() || "";
+  if (toolkit.auth === "api_key" && pasted) {
     const created = await composioRequest("/connected_accounts", {
       method: "POST",
       body: JSON.stringify({
@@ -298,19 +353,14 @@ export async function startComposioLink(input: {
   }
 
   const request = await session.authorize(toolkit.slug, { callbackUrl: callback_url });
-  const redirectUrl = redirectFromUnknown(request);
-  const connectionId = String(
-    (request as { id?: string; connectedAccountId?: string }).id ||
-      (request as { connectedAccountId?: string }).connectedAccountId ||
-      "",
-  ).trim();
+  const { redirectUrl, connectionId } = readComposioConnectLink(request);
 
   if (!redirectUrl && connectionId) {
     return { redirectUrl: "", connectionId };
   }
   if (!redirectUrl) {
     throw new ClientError(
-      "Composio did not return a Connect Link. Not marked Connected. Open Marketplace after setting COMPOSIO_API_KEY.",
+      "COMPOSIO_API_KEY is set, but Composio did not return a Connect Link. Not marked Connected.",
     );
   }
   return { redirectUrl, connectionId: connectionId || undefined };

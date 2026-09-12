@@ -18,7 +18,7 @@ import {
   resolveApiKeyConnect,
   sanitizeComposioCopy,
 } from "../src/lib/marketplace";
-import { oauthReady } from "../src/lib/plugins";
+import { oauthReady, setupHint } from "../src/lib/plugins";
 import {
   CONNECTOR_LOGO_BY_PLUGIN_ID,
   CONNECTOR_LOGO_FILES,
@@ -129,7 +129,26 @@ assert.match(marketplaceUi, /emptyConnectMessage/);
 assert.match(marketplaceUi, /Connect did not persist/);
 assert.doesNotMatch(marketplaceUi, /disabled=\{busyId === connectPlugin\?\.id \|\| !apiKey\.trim\(\)\}/);
 assert.match(marketplaceUi, /sanitizeComposioCopy/);
+assert.match(marketplaceUi, /Connect opens Composio/);
+assert.match(marketplaceUi, /pluginOAuthStartPath/);
+assert.match(marketplaceUi, /location\.assign/);
 assert.doesNotMatch(marketplaceUi, /COMPOSER_API_KEY/);
+assert.doesNotMatch(
+  marketplaceUi,
+  /if \(!plugin\.connection\?\.oauthReady\) \{\s*toast\.error\(\s*sanitizeComposioCopy/,
+);
+assert.doesNotMatch(marketplaceUi, /COMPOSIO_API_KEY missing — Connect stays disconnected/);
+const marketplaceApi = readFileSync("src/server/api/workspaces/marketplace.ts", "utf8");
+assert.match(marketplaceApi, /await connection\(\)/);
+assert.match(marketplaceApi, /Connect opens Composio for Gmail \(Composio\)/);
+const oauthStart = readFileSync("src/server/api/workspaces/plugin-oauth-start.ts", "utf8");
+assert.match(oauthStart, /composioConfigured/);
+assert.match(oauthStart, /startComposioLink/);
+assert.doesNotMatch(oauthStart, /jsonError/);
+assert.match(oauthStart, /composio_not_configured/);
+assert.match(oauthStart, /composio_no_redirect/);
+assert.match(oauthStart, /await connection\(\)/);
+assert.doesNotMatch(oauthStart, /COMPOSIO_API_KEY\|not configured/);
 assert.equal(
   sanitizeComposioCopy("Set COMPOSER_API_KEY on the server."),
   "Set COMPOSIO_API_KEY on the server.",
@@ -137,7 +156,12 @@ assert.equal(
 assert.doesNotMatch(marketplaceUi, /\{plugin\.letter\}/);
 const wizardConnect = readFileSync("src/components/desk/onboarding-wizard.tsx", "utf8");
 assert.match(wizardConnect, /pastedConnectSecret/);
+assert.match(wizardConnect, /pluginOAuthStartPath/);
 assert.doesNotMatch(wizardConnect, /disabled=\{busy \|\| !apiKey\.trim\(\)\}/);
+assert.doesNotMatch(
+  wizardConnect,
+  /if \(!plugin\.connection\?\.oauthReady\) \{\s*toast\.error\(\s*sanitizeComposioCopy/,
+);
 const wizardUi = readFileSync("src/components/desk/onboarding-wizard.tsx", "utf8");
 assert.match(wizardUi, /ConnectorLogo/);
 assert.doesNotMatch(wizardUi, /letter=\{slot\.plugin\.letter\}/);
@@ -175,6 +199,8 @@ delete process.env.GMAIL_CLIENT_SECRET;
 delete process.env.GOOGLE_CLIENT_ID;
 delete process.env.GOOGLE_CLIENT_SECRET;
 assert.equal(oauthReady(gmail), false);
+assert.doesNotMatch(setupHint(gmail), /COMPOSIO_API_KEY/);
+assert.doesNotMatch(setupHint(getMarketplacePlugin("whatsapp")!), /COMPOSIO_API_KEY/);
 for (const [key, value] of Object.entries(savedGoogle)) {
   if (value) process.env[key] = value;
   else delete process.env[key];

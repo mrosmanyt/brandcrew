@@ -16,6 +16,7 @@ import {
   parseSetupWizardStep,
   pluginOAuthNextPath,
   pluginOAuthReturnPath,
+  pluginOAuthStartPath,
   prevSetupWizardStep,
   shouldShowSetupWizard,
 } from "../src/lib/setup-wizard";
@@ -54,6 +55,18 @@ assert.equal(
   "/onboarding?workspace=ws_1&step=integrations",
 );
 assert.equal(
+  pluginOAuthStartPath({ workspaceId: "ws_1", pluginId: "composio-hubspot" }),
+  "/api/workspaces/ws_1/plugins/composio-hubspot/oauth/start",
+);
+assert.equal(
+  pluginOAuthStartPath({
+    workspaceId: "ws_1",
+    pluginId: "composio-hubspot",
+    next: pluginOAuthNextPath("ws_1"),
+  }),
+  "/api/workspaces/ws_1/plugins/composio-hubspot/oauth/start?next=%2Fonboarding%3Fworkspace%3Dws_1%26step%3Dintegrations",
+);
+assert.equal(
   pluginOAuthReturnPath({ workspaceId: "ws_1", connected: "gmail" }),
   "/desk/ws_1/marketplace?tab=plugins&connected=gmail",
 );
@@ -86,7 +99,8 @@ const wizardLib = readFileSync("src/lib/setup-wizard.ts", "utf8");
 assert.match(wizardLib, /Which agent would you like to use\?/);
 assert.match(wizard, /Skip to Mission Control/);
 assert.match(wizard, /pluginOAuthNextPath/);
-assert.match(wizard, /oauth\/start\?next=/);
+assert.match(wizard, /pluginOAuthStartPath/);
+assert.doesNotMatch(wizard, /Set COMPOSIO_API_KEY on the server\. Connect stays disconnected/);
 assert.match(wizard, /initialPlugins/);
 assert.match(wizardLib, /hydrateOnboardingPlugins/);
 assert.match(wizard, /LINKEDIN_ONBOARDING_CONNECTOR/);

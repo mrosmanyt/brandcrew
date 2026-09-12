@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { appOrigin } from "@/lib/crypto-secret";
-import { jsonError } from "@/lib/http";
+import { ClientError } from "@/lib/http";
 import { composioConfigured, startComposioLink } from "@/lib/composio";
 import { getMarketplacePlugin } from "@/lib/marketplace";
 import {
@@ -16,20 +16,22 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ workspaceId: string; pluginId: string }> },
 ) {
+  await connection();
+  const { workspaceId, pluginId } = await context.params;
+  const next = new URL(request.url).searchParams.get("next") || "";
+  const plugin = getMarketplacePlugin(pluginId);
+  const fail = (error: string) =>
+    NextResponse.redirect(
+      `${appOrigin()}${pluginOAuthReturnPath({
+        workspaceId,
+        next,
+        error,
+        plugin: plugin?.id || pluginId,
+      })}`,
+    );
+
   try {
-    const { workspaceId, pluginId } = await context.params;
     const { user } = await requireWorkspaceMember(workspaceId);
-    const plugin = getMarketplacePlugin(pluginId);
-    const next = new URL(request.url).searchParams.get("next") || "";
-    const fail = (error: string) =>
-      NextResponse.redirect(
-        `${appOrigin()}${pluginOAuthReturnPath({
-          workspaceId,
-          next,
-          error,
-          plugin: plugin?.id || pluginId,
-        })}`,
-      );
     if (!plugin || (plugin.auth !== "oauth" && plugin.auth !== "composio")) {
       return fail("unknown_plugin");
     }
@@ -69,6 +71,13 @@ export async function GET(
     });
     return NextResponse.redirect(oauthAuthorizeUrl(plugin, state));
   } catch (error) {
-    return jsonError(error);
+    if (plugin?.auth === "composio") {
+      if (!composioConfigured()) return fail("composio_not_configured");
+      if (error instanceof ClientError && /Connect Link/i.test(error.message)) {
+        return fail("composio_no_redirect");
+      }
+      return fail("composio_failed");
+    }
+    return fail("oauth_failed");
   }
 }

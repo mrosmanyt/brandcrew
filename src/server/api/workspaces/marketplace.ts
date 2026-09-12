@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
@@ -16,6 +17,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
+    await connection();
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     const [agents, plugins] = await Promise.all([
@@ -51,7 +53,7 @@ export async function GET(
       composio: {
         configured: composioConfigured(),
         hint: composioConfigured()
-          ? "COMPOSIO_API_KEY is set. Connect opens Composio — Connected only after an ACTIVE account."
+          ? "Connect opens Composio for Gmail (Composio), HubSpot, and other agency connectors. Native Gmail uses Google OAuth. Connected only after an ACTIVE account."
           : composioMissingHint(),
       },
     });

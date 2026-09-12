@@ -158,6 +158,18 @@ export function pluginOAuthNextPath(workspaceId: string) {
   return `/onboarding?workspace=${encodeURIComponent(workspaceId)}&step=integrations`;
 }
 
+/** Marketplace / onboarding Connect for OAuth and Composio toolkits. */
+export function pluginOAuthStartPath(input: {
+  workspaceId: string;
+  pluginId: string;
+  next?: string | null;
+}) {
+  const path = `/api/workspaces/${input.workspaceId}/plugins/${input.pluginId}/oauth/start`;
+  const next = String(input.next || "").trim();
+  if (!next) return path;
+  return `${path}?next=${encodeURIComponent(next)}`;
+}
+
 /** Safe return after Marketplace plugin OAuth. Defaults to plugins tab. */
 export function pluginOAuthReturnPath(input: {
   workspaceId: string;

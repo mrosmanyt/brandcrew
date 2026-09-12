@@ -12,10 +12,13 @@ import {
   getComposioToolkit,
 } from "../src/lib/composio-catalog";
 import {
+  composioApiKey,
   composioConfigured,
   composioMissingHint,
+  readComposioConnectLink,
   resetComposioSdkForTests,
 } from "../src/lib/composio";
+import { setupHint } from "../src/lib/plugins";
 import { memoryFromArtifact, formatMemoryBrief, parseMemoryKind } from "../src/lib/learning-memory";
 import {
   MAX_RESEARCH_TABS,
@@ -42,14 +45,61 @@ import { approvalClass, toolNeedsApproval } from "../src/lib/write-gate";
 import { getMarketplacePlugin, MARKETPLACE_PLUGINS } from "../src/lib/marketplace";
 
 const savedKey = process.env.COMPOSIO_API_KEY;
+const savedTypo = process.env.COMPOSER_API_KEY;
 delete process.env.COMPOSIO_API_KEY;
+delete process.env.COMPOSER_API_KEY;
 resetComposioSdkForTests();
 assert.equal(composioConfigured(), false);
+assert.equal(composioApiKey(), "");
 assert.match(composioMissingHint(), /COMPOSIO_API_KEY/);
+assert.doesNotMatch(composioMissingHint(), /COMPOSER_API_KEY/);
 assert.match(composioMissingHint(), /does not fake Connected/);
-if (savedKey !== undefined) process.env.COMPOSIO_API_KEY = savedKey;
+process.env.COMPOSER_API_KEY = "ak_typo_fallback_do_not_commit";
 resetComposioSdkForTests();
-console.log("ok: missing COMPOSIO_API_KEY stays disconnected");
+assert.equal(composioConfigured(), true);
+assert.equal(composioApiKey(), "ak_typo_fallback_do_not_commit");
+delete process.env.COMPOSER_API_KEY;
+if (savedKey !== undefined) process.env.COMPOSIO_API_KEY = savedKey;
+if (savedTypo !== undefined) process.env.COMPOSER_API_KEY = savedTypo;
+resetComposioSdkForTests();
+console.log("ok: missing COMPOSIO_API_KEY stays disconnected; COMPOSER typo still configures");
+
+const composioSrc = readFileSync("src/lib/composio.ts", "utf8");
+assert.match(composioSrc, /function readProcessEnv\(name: string\)/);
+assert.match(composioSrc, /process\.env\[name\]/);
+assert.match(composioSrc, /readProcessEnv\(COMPOSIO_API_KEY_NAME\)/);
+assert.doesNotMatch(composioSrc, /process\.env\.COMPOSIO_API_KEY\s*\|\|/);
+assert.doesNotMatch(composioSrc, /process\.env\.COMPOSER_API_KEY\s*\|\|/);
+assert.match(composioSrc, /session\.authorize\(toolkit\.slug/);
+assert.doesNotMatch(
+  composioSrc,
+  /if \(toolkit\.auth === "api_key"\) \{\s*const pasted = input\.apiKey/,
+);
+const hubspot = getMarketplacePlugin("composio-hubspot")!;
+const savedForHint = process.env.COMPOSIO_API_KEY;
+process.env.COMPOSIO_API_KEY = "ak_runtime_present";
+resetComposioSdkForTests();
+assert.equal(composioConfigured(), true);
+assert.match(setupHint(hubspot), /Connect opens Composio/);
+assert.doesNotMatch(setupHint(hubspot), /Set COMPOSIO_API_KEY/);
+if (savedForHint !== undefined) process.env.COMPOSIO_API_KEY = savedForHint;
+else delete process.env.COMPOSIO_API_KEY;
+resetComposioSdkForTests();
+console.log("ok: COMPOSIO_API_KEY is read at runtime; Connect hint is not a missing-key prompt");
+
+const link = readComposioConnectLink({
+  id: "ca_1",
+  status: "INITIATED",
+  redirectUrl: "https://connect.composio.dev/link/abc",
+});
+assert.equal(link.redirectUrl, "https://connect.composio.dev/link/abc");
+assert.equal(link.connectionId, "ca_1");
+assert.equal(readComposioConnectLink({ redirectUrl: "null", id: "ca_2" }).redirectUrl, "");
+assert.equal(
+  readComposioConnectLink({ redirect_url: "https://backend.composio.dev/connect/x" }).redirectUrl,
+  "https://backend.composio.dev/connect/x",
+);
+console.log("ok: session.authorize ConnectionRequest maps to a Connect Link");
 
 assert.ok(getComposioToolkit("composio-gmail"));
 assert.ok(getComposioToolkit("gmail"));
@@ -67,6 +117,12 @@ for (const row of COMPOSIO_AGENCY_TOOLKITS) {
   assert.ok(plugin.envKeys.includes("COMPOSIO_API_KEY"));
 }
 assert.ok(MARKETPLACE_PLUGINS.some((row) => row.id === "composio-gmail"));
+assert.equal(getMarketplacePlugin("gmail")?.auth, "oauth");
+assert.equal(getMarketplacePlugin("web-search")?.auth, "api_key");
+assert.equal(getMarketplacePlugin("whatsapp")?.auth, "api_key");
+assert.doesNotMatch(getMarketplacePlugin("gmail")!.envKeys.join(" "), /COMPOSIO/);
+assert.doesNotMatch(getMarketplacePlugin("web-search")!.envKeys.join(" "), /COMPOSIO/);
+assert.doesNotMatch(getMarketplacePlugin("whatsapp")!.envKeys.join(" "), /COMPOSIO/);
 console.log(`ok: ${COMPOSIO_AGENCY_TOOLKITS.length} Composio agency toolkits in Marketplace`);
 
 const approved = memoryFromArtifact({

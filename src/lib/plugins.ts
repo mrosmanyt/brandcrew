@@ -93,7 +93,7 @@ export function oauthReady(plugin: PluginDef) {
 export function setupHint(plugin: PluginDef) {
   if (plugin.auth === "composio") {
     if (composioConfigured()) {
-      return "COMPOSIO_API_KEY is set. Connect opens Composio — Connected only after an ACTIVE connected account.";
+      return "Connect opens Composio. Connected only after an ACTIVE connected account.";
     }
     return composioMissingHint();
   }

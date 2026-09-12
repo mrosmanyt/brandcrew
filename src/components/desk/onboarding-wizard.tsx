@@ -36,6 +36,7 @@ import {
   nextSetupWizardStep,
   parseSetupWizardStep,
   pluginOAuthNextPath,
+  pluginOAuthStartPath,
   prevSetupWizardStep,
   type OnboardingPluginRow,
   type SetupWizardStepId,
@@ -213,6 +214,13 @@ export function OnboardingWizard({
   }
 
   function startConnect(plugin: OnboardingPluginRow) {
+    if (plugin.auth === "composio") {
+      const next = pluginOAuthNextPath(workspaceId);
+      window.location.assign(
+        pluginOAuthStartPath({ workspaceId, pluginId: plugin.id, next }),
+      );
+      return;
+    }
     if (plugin.auth === "oauth") {
       if (!plugin.connection?.oauthReady) {
         toast.error(
@@ -221,9 +229,9 @@ export function OnboardingWizard({
         return;
       }
       const next = pluginOAuthNextPath(workspaceId);
-      const start = `/api/workspaces/${workspaceId}/plugins/${plugin.id}/oauth/start?next=${encodeURIComponent(next)}`;
-      // API route 302s to the provider — not a Next.js page navigation.
-      window.location.assign(new URL(start, window.location.origin).toString());
+      window.location.assign(
+        pluginOAuthStartPath({ workspaceId, pluginId: plugin.id, next }),
+      );
       return;
     }
     setApiKey("");
