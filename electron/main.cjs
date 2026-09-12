@@ -280,6 +280,8 @@ function loadDesk(pathName = "/desk") {
   showingOffline = false;
   const url = `${deskOrigin()}${deskPath(pathName)}`;
   return mainWindow.loadURL(url).catch((error) => {
+    const code = error && (error.errno ?? error.code);
+    if (isIgnorableLoadError(code) || code === "ERR_ABORTED") return;
     console.error("CINEM desktop desk load failed", error);
     showOfflinePage();
   });
