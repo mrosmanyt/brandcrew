@@ -125,7 +125,7 @@ assert.match(readFileSync("electron/main.cjs", "utf8"), /native-host/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /host\.mjs/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /installAppMenu/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /\/privacy/);
-assert.match(readFileSync("electron/main.cjs", "utf8"), /cinem-pro/);
+assert.match(readFileSync("electron/desk-shell.cjs", "utf8"), /cinem-pro/);
 assert.match(readFileSync("electron/main.cjs", "utf8"), /CINEM_DESK_MODE/);
 console.log("ok: MV3 extension + native host + Electron local agent");
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# CINEM Pro desktop — clone (or update) and open the Electron window.
+# CINEM Pro desktop — open the Electron window against the cloud desk.
+# Default: CINEM_DESK_MODE=cloud (https://app.cinem.tech). No local Postgres.
+# Local Next + Docker: CINEM_DESK_MODE=local bash scripts/install-desktop.sh
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.sh | bash
 # Or from a checkout:  bash scripts/install-desktop.sh
@@ -8,6 +10,7 @@ set -euo pipefail
 REPO="${BRANDCREW_REPO:-https://github.com/mrosmanyt/brandcrew.git}"
 DIR="${BRANDCREW_DIR:-$HOME/brandcrew}"
 REF="${BRANDCREW_REF:-main}"
+MODE="${CINEM_DESK_MODE:-cloud}"
 
 if ! command -v git >/dev/null 2>&1; then
   echo "git is required." >&2
@@ -36,6 +39,11 @@ cd "$DIR"
 echo "Installing dependencies…"
 npm install
 
-echo "Opening CINEM Pro desktop (Mission Control on http://127.0.0.1:43180)…"
-echo "Put API keys / OAuth client ids in $DIR/.env (dev) or the app userData .env (packaged)."
-npm run desktop:dev
+export CINEM_DESK_MODE="$MODE"
+if [ "$MODE" = "local" ]; then
+  echo "Opening local Next desk (needs Postgres on :5432 or Neon)…"
+  npm run desktop:dev
+else
+  echo "Opening cloud desk https://app.cinem.tech — no local database."
+  npm run desktop:cloud
+fi
