@@ -18,6 +18,13 @@ export async function findOnlineDevice(workspaceId: string) {
   return devices.find((row) => row.status !== "revoked" && isDeviceOnline(row.lastSeenAt)) ?? null;
 }
 
+export async function findPairedDevice(workspaceId: string) {
+  return prisma.localDevice.findFirst({
+    where: { workspaceId, status: { in: ["online", "offline"] } },
+    orderBy: { lastSeenAt: "desc" },
+  });
+}
+
 export async function enqueueDeviceCommand(input: {
   workspaceId: string;
   jobId: string;

@@ -1,6 +1,6 @@
 # Publish the CINEM Pro Chrome extension to the Chrome Web Store
 
-The MV3 source is `extension/` (manifest, service worker, popup, icons). CI / `npm run pack:extension` writes a store-ready zip to:
+The MV3 source is `extension/` (manifest, service worker, **side panel**, popup, icons). CI / `npm run pack:extension` writes a store-ready zip to:
 
 `public/downloads/cinem-pro-chrome.zip`
 
@@ -28,7 +28,7 @@ npm run pack:extension
 
 Upload **`public/downloads/cinem-pro-chrome.zip`**. Do not zip a parent folder around it. `extension/icons/cinem-logo.png` is the store icon source. If Google rejects the size, export a **128×128 PNG** as `extension/icons/icon-128.png` and point `manifest.json` `icons.128` at it.
 
-Current manifest version: **0.2.2**. Bump this string on every store upload.
+Current manifest version: **0.3.0**. Bump this string on every store upload.
 
 Chrome Web Store rejects `http://127.0.0.1:*/*` and `http://localhost:*/*` in `host_permissions`. Keep those out of `extension/manifest.json` (the same file is packed for the store). Store-installed **Sign in with CINEM** defaults to `https://app.cinem.tech` (`DEFAULT_DESK_ORIGIN` in `extension/desk-origin.js`). `https://brandcrew.vercel.app` stays in `host_permissions` as an allowed alternate desk — including Load unpacked. Test against the production desk URL (`https://app.cinem.tech`; Vercel remains valid if the user pastes it).
 
@@ -36,16 +36,16 @@ Chrome Web Store rejects `http://127.0.0.1:*/*` and `http://localhost:*/*` in `h
 
 ## Store listing (required fields)
 
-- **Name:** CINEM Pro — on-device agent
-- **Summary / description:** Supervised Chrome automation for the CINEM Pro desk. Sign in with your CINEM account (or paste a login link / pairing code). Writes wait for approval. Does not send email or post to Slack by itself.
+- **Name:** CINEM Pro — live browser
+- **Summary / description:** Supervised Chrome side panel for the CINEM Pro desk. Sign in with your CINEM account (or paste a login link / pairing code). The toolbar opens a docked side panel (chat + connection status). Jobs navigate, snapshot, and click your https tabs. Writes wait for approval. Does not send email or post to Slack by itself.
 - **Category:** Productivity (or Developer Tools).
 - **Language:** English.
-- **Privacy:** single-purpose — pair with a CINEM Pro workspace and run approved CDP commands. Hosts: the user’s desk origin (`https://*.cinem.tech/*`, `https://brandcrew.vercel.app/*`) plus `https://*/*` so CDP can attach to the user’s https tabs after they sign in. No localhost. No selling of browsing data. Local storage: desk origin + device token only.
-- **Permissions justification:** `debugger` (CDP for the job), `tabs` / `scripting` (page text for the desk; opening the Sign in with CINEM tab), `storage` (device token + in-flight connect nonce), `nativeMessaging` (optional local host), `alarms` (command poll). Be explicit that debugger is for the user’s own tabs after they sign in. Host permissions: desk origins for `/api/auth/connect*` and `/api/device/*`; `https://*/*` for supervised automation of https pages the user navigates to.
+- **Privacy:** single-purpose — pair with a CINEM Pro workspace, show the side panel, and run approved CDP commands. Hosts: the user’s desk origin (`https://*.cinem.tech/*`, `https://brandcrew.vercel.app/*`) plus `https://*/*` so CDP can attach to the user’s https tabs after they sign in. No localhost. No selling of browsing data. Local storage: desk origin + device token only.
+- **Permissions justification:** `sidePanel` (primary UI — docked CINEM Pro chat / live browser employee, Claude-style layout, CINEM branding), `debugger` (CDP for the job), `tabs` / `scripting` (page text for the desk; opening the Sign in with CINEM tab), `storage` (device token + in-flight connect nonce), `nativeMessaging` (optional local host), `alarms` (command poll after Chrome sleep). Be explicit that debugger is for the user’s own tabs after they sign in. Host permissions: desk origins for `/api/auth/connect*` and `/api/device/*`; `https://*/*` for supervised automation of https pages the user navigates to.
 - **Remote code:** none. All logic is in the zip. The extension calls the user’s chosen desk origin APIs (`/api/auth/connect*`, `/api/device/*`).
 - **Screenshots checklist (minimum):**
-  1. **1280×800** (or current store minimum) of the popup: **Sign in with CINEM** visible, dark/paper theme.
-  2. **1280×800** of the desk On-device page with **Download extension** as the first button (not a Load unpacked essay).
+  1. **1280×800** (or current store minimum) of the **side panel**: CINEM Pro header, **Extension connected** (or Sign in with CINEM), dark chat + composer. No Claude orange branding.
+  2. **1280×800** of the desk On-device page with **Download extension** as the first button and **Extension connected** when paired (not a Load unpacked essay).
   3. Optional: Mission Control job with Live results / approval pause.
 - **Store icon:** 128×128 PNG.
 

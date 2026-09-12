@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CHROME_WEB_STORE_URL } from "@/lib/auth-bridge";
 import { EXTENSION_ZIP_PUBLIC_PATH } from "@/lib/extension-download";
+import { ExtensionStatusChip } from "@/components/desk/extension-status";
 
 type DeviceRow = {
   id: string;
@@ -32,6 +33,8 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
 
   useEffect(() => {
     void load();
+    const timer = window.setInterval(() => void load(), 10_000);
+    return () => window.clearInterval(timer);
   }, [workspaceId]);
 
   async function pair() {
@@ -121,10 +124,14 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
           All downloads
         </Button>
       </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <ExtensionStatusChip workspaceId={workspaceId} />
+      </div>
       <p className="text-sm leading-6 text-muted-foreground">
-        Download the zip, unzip it, and add it to Chrome. Then in the extension popup tap{" "}
-        <strong className="text-foreground">Sign in with CINEM</strong> — same account as this
-        desk. Pairing codes remain as a fallback.
+        Download the zip, unzip it, and add it to Chrome. The toolbar icon opens the{" "}
+        <strong className="text-foreground">side panel</strong> — Sign in with CINEM there
+        (same account as this desk). Pairing codes remain as a fallback. Live jobs drive
+        this Chrome; Electron is optional.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={() => void createLoginLink()} disabled={busy}>
@@ -188,7 +195,7 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
               <span>
                 <span className="font-medium">{device.name}</span>
                 <span className="ml-2 text-muted-foreground">
-                  {device.online ? "online" : device.status}
+                  {device.online ? "Extension connected" : device.status}
                   {device.nativeHost ? " · local agent" : ""}
                 </span>
               </span>

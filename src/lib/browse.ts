@@ -84,10 +84,15 @@ export type InteractGuard =
   | { ok: false; reason: string };
 
 export function playwrightDesktopRequiredReason(tool: string): string {
-  if (process.env.VERCEL || process.env.VERCEL_ENV) {
-    return `${tool} needs Playwright. Vercel serverless has no Chrome — run CINEM Pro desktop (npm run desktop:dev) or local npm run dev with PLAYWRIGHT_ENABLED=true. Navigate still works via fetch.`;
-  }
-  return `${tool} needs Playwright + Chrome on this machine. Set PLAYWRIGHT_ENABLED=true (and PLAYWRIGHT_CHROME_PATH if Chrome is not on a default path). Navigate still works via fetch.`;
+  return `${tool} needs the CINEM Pro Chrome extension on this machine. Install it from Desk → On-device Chrome, tap Sign in with CINEM, and keep the side panel open so this Chrome stays paired. Desktop Playwright is optional. Navigate and multi-tab research still work via fetch.`;
+}
+
+export function extensionOfflineReason(tool: string): string {
+  return `${tool} did not reach your Chrome — the extension is paired but offline. Open Chrome, click the CINEM Pro toolbar icon to open the side panel, then retry.`;
+}
+
+export function extensionMissingReason(tool: string): string {
+  return playwrightDesktopRequiredReason(tool);
 }
 
 export function browserInteractGuard(

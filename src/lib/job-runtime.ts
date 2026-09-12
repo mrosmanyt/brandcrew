@@ -18,8 +18,10 @@ import {
   browserInteractGuard,
   crawlLinks,
   excerptFromText,
+  extensionOfflineReason,
   formatSnapshot,
   MAX_PAGES_PER_JOB,
+  playwrightDesktopRequiredReason,
 } from "@/lib/browse";
 import {
   closeBrowserSession,
@@ -136,6 +138,7 @@ import {
   resolveClickSelector,
   tryDeviceBrowser,
 } from "@/lib/on-device-browse";
+import { findPairedDevice } from "@/lib/device-commands";
 import { isDeviceTool } from "@/lib/device-protocol";
 
 const STEP_GAP_MS = 280;
@@ -1061,8 +1064,12 @@ async function executeTool(input: {
         assertHostAllowed(page.url, allowedDomains);
         rememberPage(context, page);
       }
+      const paired = await findPairedDevice(input.workspaceId);
+      const offlineNote = paired
+        ? " Chrome extension is paired but offline — open the CINEM Pro side panel for live tabs."
+        : " Pair the CINEM Pro Chrome extension for live tabs; fetch ran instead.";
       return {
-        summary: `browser_tabs fetched ${pages.length} public page${pages.length === 1 ? "" : "s"} in parallel (DOM-first)`,
+        summary: `browser_tabs fetched ${pages.length} public page${pages.length === 1 ? "" : "s"} in parallel (DOM-first).${offlineNote}`,
         context,
         url: pages[0]?.url,
         excerpt: pages[0] ? excerptFromText(pages[0].text) : undefined,
@@ -1208,6 +1215,15 @@ async function executeTool(input: {
         args,
       });
     }
+    if (!live.ok && (live.mode === "desktop_required" || live.mode === "no_session")) {
+      const paired = await findPairedDevice(input.workspaceId);
+      return {
+        summary: paired ? extensionOfflineReason(step.tool) : playwrightDesktopRequiredReason(step.tool),
+        context,
+        url: live.page?.url || context.currentPage?.url,
+        excerpt: live.excerpt,
+      };
+    }
     return {
       summary: live.ok
         ? `${step.tool} on live tab (${live.mode})`
@@ -1308,6 +1324,17 @@ async function executeTool(input: {
     const live = await sessionScreenshot(input.jobId);
     if (live.screenshot) context.screenshot = live.screenshot;
     if (live.page) rememberPage(context, toBrowsedPage(live.page), { count: false });
+    if (!live.ok && (live.mode === "desktop_required" || live.mode === "no_session")) {
+      const paired = await findPairedDevice(input.workspaceId);
+      return {
+        summary: paired
+          ? extensionOfflineReason("browser_screenshot")
+          : playwrightDesktopRequiredReason("browser_screenshot"),
+        context,
+        url: live.page?.url,
+        excerpt: live.excerpt,
+      };
+    }
     return {
       summary: live.ok
         ? live.screenshot

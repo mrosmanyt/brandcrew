@@ -39,8 +39,12 @@ import { SITE_ORIGIN, VERCEL_SITE_ORIGIN } from "../src/lib/site";
 assert.ok(existsSync("extension/manifest.json"));
 assert.ok(existsSync("extension/background.js"));
 assert.ok(existsSync("extension/popup.html"));
+assert.ok(existsSync("extension/sidepanel.html"));
+assert.ok(existsSync("extension/sidepanel.js"));
 assert.ok(existsSync("extension/icons/cinem-logo.png"));
 assert.ok(existsSync("docs/chrome-extension-store.md"));
+assert.match(readFileSync("docs/chrome-extension-store.md", "utf8"), /0\.3\.0/);
+assert.match(readFileSync("docs/chrome-extension-store.md", "utf8"), /sidePanel/);
 const zipBuf = packExtensionDirectory(join(process.cwd(), "extension"));
 assert.equal(zipBuf[0], 0x50);
 assert.equal(zipBuf[1], 0x4b);
@@ -58,6 +62,11 @@ assert.match(
   /Developer: Load unpacked/,
 );
 assert.match(readFileSync("extension/popup.html", "utf8"), /Sign in with CINEM/);
+assert.match(readFileSync("extension/sidepanel.html", "utf8"), /Sign in with CINEM/);
+assert.match(readFileSync("extension/sidepanel.html", "utf8"), /How can I help/);
+assert.match(readFileSync("extension/sidepanel.js", "utf8"), /Extension connected/);
+assert.doesNotMatch(readFileSync("extension/popup.html", "utf8"), /Keep this popup open/);
+assert.doesNotMatch(readFileSync("extension/popup.js", "utf8"), /localhost/);
 assert.match(
   readFileSync("src/components/desk/on-device-setup.tsx", "utf8"),
   /extension-download/,
@@ -81,7 +90,12 @@ const manifest = JSON.parse(readFileSync("extension/manifest.json", "utf8")) as 
 assert.equal(manifest.manifest_version, 3);
 assert.ok(manifest.permissions.includes("debugger"));
 assert.ok(manifest.permissions.includes("nativeMessaging"));
+assert.ok(manifest.permissions.includes("sidePanel"));
 assert.equal(manifest.background?.service_worker, "background.js");
+assert.equal(
+  (manifest as { side_panel?: { default_path?: string } }).side_panel?.default_path,
+  "sidepanel.html",
+);
 const hosts = manifest.host_permissions ?? [];
 assert.match(readFileSync("extension/desk-origin.js", "utf8"), new RegExp(SITE_ORIGIN.replaceAll(".", "\\.")));
 assert.ok(hosts.includes("https://*.cinem.tech/*"));
@@ -97,6 +111,8 @@ assert.match(bg, /chrome\.debugger/);
 assert.match(bg, /CINEM_UNTRUSTED_PAGE_CONTENT/);
 assert.match(bg, /allowlist/);
 assert.match(bg, /DEFAULT_DESK_ORIGIN/);
+assert.match(bg, /sidePanel/);
+assert.match(bg, /deskFetch/);
 assert.doesNotMatch(bg, /brandcrew\.vercel\.app/);
 assert.match(readFileSync("extension/desk-origin.js", "utf8"), /https:\/\/app\.cinem\.tech/);
 assert.match(readFileSync("extension/popup.js", "utf8"), /DEFAULT_DESK_ORIGIN/);
@@ -122,7 +138,8 @@ assert.ok(DEVICE_TOOLS.includes("browser_tabs"));
 assert.ok(DEVICE_TOOLS.includes("native_file_write"));
 assert.equal(pairingCode().length, 6);
 assert.equal(isDeviceOnline(new Date()), true);
-assert.equal(isDeviceOnline(new Date(Date.now() - 60_000)), false);
+assert.equal(isDeviceOnline(new Date(Date.now() - 60_000)), true);
+assert.equal(isDeviceOnline(new Date(Date.now() - 120_000)), false);
 console.log("ok: device protocol + native file tools");
 
 assert.equal(isWriteExternalTool("browser_click"), true);
@@ -215,6 +232,9 @@ assert.match(
   /on-device/,
 );
 assert.match(readFileSync("src/lib/desk-settings.ts", "utf8"), /On-device Chrome/);
+assert.match(readFileSync("src/components/desk/extension-status.tsx", "utf8"), /Extension connected/);
+assert.match(readFileSync("src/components/desk/on-device-setup.tsx", "utf8"), /Extension connected/);
+assert.match(readFileSync("src/lib/browse.ts", "utf8"), /Chrome extension/);
 console.log("ok: cost controls shipped; desk On-device route exists");
 
 const launch = readFileSync("scripts/check-launch.ts", "utf8");

@@ -25,7 +25,8 @@ import { ClientError } from "@/lib/http";
 export const NATIVE_CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Cinem-Client",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Cinem-Client, X-Cinem-Native-Host, X-Cinem-Device-Token",
   "Access-Control-Max-Age": "86400",
 };
 
@@ -41,6 +42,7 @@ export function nativeCorsPreflight() {
 }
 
 export function isNativeCorsPath(segments: string[]) {
+  if (segments[0] === "api" && segments[1] === "device") return true;
   const path = segments.join("/");
   return (
     path === "api/auth/token" ||

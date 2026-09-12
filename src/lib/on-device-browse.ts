@@ -9,7 +9,7 @@ import {
   enqueueDeviceCommand,
   waitForDeviceCommand,
 } from "@/lib/device-commands";
-import type { DeviceCommandResult, DeviceTool } from "@/lib/device-protocol";
+import { deviceCommandWaitMs, type DeviceCommandResult, type DeviceTool } from "@/lib/device-protocol";
 import { DomainAllowlistAbort, hostFromUrl } from "@/lib/domain-allowlist";
 import type { BrowsePage } from "@/lib/browse";
 import type { BrowsedPage } from "@/lib/job-types";
@@ -26,7 +26,7 @@ export async function tryDeviceBrowser(input: {
 }): Promise<DeviceCommandResult | null> {
   const queued = await enqueueDeviceCommand(input);
   if (!queued) return null;
-  const result = await waitForDeviceCommand(queued.commandId);
+  const result = await waitForDeviceCommand(queued.commandId, deviceCommandWaitMs(input.tool));
   if (result?.abortedDomain || (result?.error && /allowlist|outside this job/i.test(result.error))) {
     throw new DomainAllowlistAbort(
       result.error || `Aborted: left allowlist (${result.abortedDomain || "unknown host"}).`,

@@ -24,6 +24,7 @@ import {
   ProgressCard,
   ThreadDraftCard,
 } from "@/components/desk/chat-thread";
+import { ExtensionStatusChip } from "@/components/desk/extension-status";
 import { LiveResults } from "@/components/desk/live-results";
 import {
   ResizeHandle,
@@ -662,6 +663,9 @@ export function MissionControl({
                         {selected.role || "Agent"}
                         {agentStatus[selected.id] === "working" ? " · working" : ""}
                       </p>
+                      <div className="mt-1">
+                        <ExtensionStatusChip workspaceId={workspaceId} />
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1">

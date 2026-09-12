@@ -141,6 +141,7 @@ assert.equal(labels.includes("Wrote draft."), true);
 assert.equal(labels.filter((label) => label === "Wrote draft.").length, 1);
 assert.equal(labels.includes("Waiting for your approval…"), true);
 assert.equal(labels.some((label) => label.startsWith("browser_navigate")), false);
+assert.match(readFileSync("src/lib/live-progress.ts", "utf8"), /browser_tabs: "Opening live Chrome tabs/);
 assert.equal(labels.filter((label) => label === "Now reading Brand Kit…").length, 0);
 console.log("ok: live progress uses chat-status language, not raw tool_call lines");
 

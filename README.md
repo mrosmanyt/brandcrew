@@ -4,7 +4,7 @@
 
 The GitHub repo remains [`mrosmanyt/brandcrew`](https://github.com/mrosmanyt/brandcrew); the product is **CINEM Pro**. **CINEM** (cinem.tech) is the company.
 
-This is a vertical slice, not a Strawberry clone: no per-agent VMs, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results. Jobs can **browse public pages** (`browser_navigate` / `browser_snapshot` / `crawl_links`) and, on desktop/local Playwright, **click / type / extract / screenshot** on a live tab. Vercel serverless has no Chrome — interact tools return a clear “needs desktop” result instead of fake success.
+This is a vertical slice, not a Strawberry clone: no per-agent VMs, no LinkedIn auto-post, no live email/WhatsApp send. Installing a Marketplace bot or launching a team **only creates Agent rows** — it does not invent business results. Jobs can **browse public pages** (`browser_navigate` / `browser_snapshot` / `crawl_links`) and, with the **Chrome side panel** paired, **click / type / extract / screenshot** on a live tab. Desktop Playwright is optional. Without the extension, interact tools return a clear “needs the Chrome extension” result instead of fake success.
 
 The public site is **Replit-simple** (warm paper, generous space, one primary CTA). Mission Control is a **Grok Bot–style** agent desk (sidebar agents, chat-first, jobs you approve). Visual tokens live in `src/app/globals.css`.
 
@@ -621,7 +621,7 @@ v1 tools:
 
 - `read_brand_kit`
 - `browser_navigate` / `browser_snapshot` (paired Chrome CDP first; Playwright + system Chrome when `PLAYWRIGHT_ENABLED`; otherwise fetch)
-- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **user Chrome via the MV3 extension**, else a job-scoped Playwright tab on desktop. On Vercel without a paired device they return “needs desktop” and never fake success. Still refuse login, password fields, and send. Click/type pause unless **Always approved** is on.
+- `browser_click` / `browser_type` / `browser_extract` / `browser_screenshot` — **user Chrome via the MV3 side panel**, else a job-scoped Playwright tab on desktop. On Vercel without a paired device they return “needs the Chrome extension” and never fake success. Still refuse login, password fields, and send. Click/type pause unless **Always approved** is on.
 - `crawl_links` (depth 1–2, hard cap of 4 pages per job; off-allowlist hosts abort)
 - `fetch_url` (public HTTP GET, HTML→text, size-capped; localhost/private IPs blocked)
 - `web_search` (Tavily; requires Connected Web Search plugin)

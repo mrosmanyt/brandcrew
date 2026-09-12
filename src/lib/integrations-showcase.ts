@@ -50,9 +50,9 @@ export const INTEGRATIONS_NODES: ShowcaseNode[] = [
     id: "browser",
     name: "Browser",
     kind: "browser-tools",
-    caption: "Read-only browse",
+    caption: "Live Chrome + fetch",
     honest:
-      "browser_navigate, browser_snapshot, and crawl_links on public pages. Fetch fallback if Playwright is off. Never invents page text.",
+      "browser_navigate, browser_snapshot, browser_tabs, and crawl_links on public pages. Live Chrome via the MV3 side panel when paired; fetch fallback otherwise. Click/type wait for approval. Never invents page text.",
     x: 50,
     y: 12,
   },
