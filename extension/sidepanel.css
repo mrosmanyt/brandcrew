@@ -49,6 +49,8 @@ body {
 
 .brand img {
   border-radius: 6px;
+  background: var(--paper);
+  padding: 2px;
 }
 
 .brand strong {
