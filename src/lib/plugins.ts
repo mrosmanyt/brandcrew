@@ -93,7 +93,7 @@ export function oauthReady(plugin: PluginDef) {
 export function setupHint(plugin: PluginDef) {
   if (plugin.auth === "composio") {
     if (composioConfigured()) {
-      return "COMPOSIO_API_KEY is set. Connect opens Composio — Connected only after an ACTIVE connected account.";
+      return "Connect opens Composio. Connected only after an ACTIVE connected account.";
     }
     return composioMissingHint();
   }
@@ -163,7 +163,7 @@ export async function connectApiKeyPlugin(input: {
   useEnv?: boolean;
 }) {
   const plugin = getMarketplacePlugin(input.pluginId);
-  if (!plugin) throw new Error("Unknown plugin.");
+  if (!plugin) throw new ClientError("Unknown plugin.");
   const resolved = resolveApiKeyConnect(plugin, {
     apiKey: input.apiKey,
     useEnv: input.useEnv,

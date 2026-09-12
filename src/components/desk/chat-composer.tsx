@@ -36,10 +36,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   AgentModesMenu,
-  applyWorkspacePlan,
+  applyWorkspaceRouting,
 } from "@/components/desk/agent-modes-menu";
 import { ConnectorLogo } from "@/components/desk/connector-logo";
-import { JobStartingStatus } from "@/components/desk/job-starting-status";
 import {
   clipComposerText,
   composeJobMessage,
@@ -49,7 +48,7 @@ import {
   isComposerTextFile,
   type ComposerAttachment,
 } from "@/lib/composer";
-import { nextAgentModePlan, planModeName } from "@/lib/agent-modes";
+import { modelRoutingLabel, nextModelRouting } from "@/lib/agent-modes";
 import {
   ALWAYS_APPROVED_HINT,
   ALWAYS_APPROVED_LABEL,
@@ -66,7 +65,7 @@ import {
   type BuildPromptChip,
   type BuildPromptIntent,
 } from "@/lib/build-prompt";
-import { marketplaceBotsHref, PLANS, type JobChip, type PlanId } from "@/lib/constants";
+import { marketplaceBotsHref, type JobChip, type PlanId } from "@/lib/constants";
 import type { SkillDTO } from "@/lib/job-types";
 import type { LlmRoutingPreference, LlmStatus } from "@/lib/llm-routing";
 import { MARKETPLACE_PLUGINS } from "@/lib/marketplace";
@@ -105,7 +104,6 @@ export function ChatComposer({
   billingMock,
   llm,
   modelRouting,
-  workingStatus,
   onPlanApplied,
   onRoutingApplied,
   autoApproveSafe,
@@ -287,34 +285,19 @@ export function ChatComposer({
           e.key.toLowerCase() === "i"
         ) {
           e.preventDefault();
-          const next = nextAgentModePlan(plan);
-          void applyWorkspacePlan({
-            workspaceId,
-            next,
-            current: plan,
-            billingMock,
-          })
-            .then((result) => {
-              if (result.action === "open-plans") {
-                toast.message("Open Plans to change a live subscription.");
-                router.push(`/desk/${workspaceId}/billing`);
-                return;
-              }
-              if (result.url) {
-                window.location.href = result.url;
-                return;
-              }
-              if (result.action === "noop") return;
-              onPlanApplied?.({
-                plan: result.plan,
-                tokenBudget: result.tokenBudget ?? PLANS[result.plan].tokenBudget,
-              });
-              toast.success(`Agent mode: ${planModeName(result.plan)}`);
-              router.refresh();
+          const next = nextModelRouting(modelRouting, llm);
+          void applyWorkspaceRouting({ workspaceId, next, llm })
+            .then((saved) => {
+              onRoutingApplied?.(saved);
+              toast.success(
+                saved === "auto"
+                  ? "Using automatic model routing."
+                  : `Using ${modelRoutingLabel(saved)}.`,
+              );
             })
             .catch((error: unknown) => {
-              toast.error(
-                error instanceof Error ? error.message : "Could not change plan.",
+              toast.message(
+                error instanceof Error ? error.message : "Could not save model routing.",
               );
             });
         }
@@ -328,9 +311,6 @@ export function ChatComposer({
             </h2>
             <p className="mt-1.5 text-sm text-muted-foreground">{BUILD_PROMPT_SUBCOPY}</p>
           </div>
-        ) : null}
-        {workingStatus ? (
-          <JobStartingStatus status={workingStatus} className="mb-2 px-1" />
         ) : null}
         <div className="relative">
           <div

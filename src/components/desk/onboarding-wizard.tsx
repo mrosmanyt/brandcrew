@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -36,10 +36,12 @@ import {
   nextSetupWizardStep,
   parseSetupWizardStep,
   pluginOAuthNextPath,
+  pluginOAuthStartPath,
   prevSetupWizardStep,
   type OnboardingPluginRow,
   type SetupWizardStepId,
 } from "@/lib/setup-wizard";
+import { composioConnectCardHint, emptyConnectMessage, pastedConnectSecret } from "@/lib/marketplace";
 import { pluginOAuthErrorMessage } from "@/lib/plugin-oauth-errors";
 import { cn } from "@/lib/utils";
 
@@ -86,6 +88,7 @@ export function OnboardingWizard({
   const [busy, setBusy] = useState(false);
   const [connectPlugin, setConnectPlugin] = useState<OnboardingPluginRow | null>(null);
   const [apiKey, setApiKey] = useState("");
+  const keyInputRef = useRef<HTMLInputElement>(null);
 
   const copy = SETUP_WIZARD_STEP_COPY[step];
   const stepIndex = SETUP_WIZARD_STEPS.indexOf(step);
@@ -211,6 +214,13 @@ export function OnboardingWizard({
   }
 
   function startConnect(plugin: OnboardingPluginRow) {
+    if (plugin.auth === "composio") {
+      const next = pluginOAuthNextPath(workspaceId);
+      window.location.assign(
+        pluginOAuthStartPath({ workspaceId, pluginId: plugin.id, next }),
+      );
+      return;
+    }
     if (plugin.auth === "oauth") {
       if (!plugin.connection?.oauthReady) {
         toast.error(
@@ -219,9 +229,9 @@ export function OnboardingWizard({
         return;
       }
       const next = pluginOAuthNextPath(workspaceId);
-      const start = `/api/workspaces/${workspaceId}/plugins/${plugin.id}/oauth/start?next=${encodeURIComponent(next)}`;
-      // API route 302s to the provider — not a Next.js page navigation.
-      window.location.assign(new URL(start, window.location.origin).toString());
+      window.location.assign(
+        pluginOAuthStartPath({ workspaceId, pluginId: plugin.id, next }),
+      );
       return;
     }
     setApiKey("");
@@ -230,25 +240,47 @@ export function OnboardingWizard({
 
   async function connectKey(useEnv: boolean) {
     if (!connectPlugin) return;
-    setBusy(true);
-    const res = await fetch(
-      `/api/workspaces/${workspaceId}/plugins/${connectPlugin.id}/connect`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: useEnv ? undefined : apiKey, useEnv }),
-      },
-    );
-    const data = await res.json();
-    setBusy(false);
-    if (!res.ok) {
-      toast.error(data.error || "Not connected.");
+    const pasted = pastedConnectSecret(apiKey, keyInputRef.current?.value);
+    if (!useEnv && !pasted) {
+      toast.error(emptyConnectMessage(connectPlugin));
       return;
     }
-    toast.success(`${connectPlugin.name} connected.`);
-    setConnectPlugin(null);
-    setApiKey("");
-    await refreshPlugins();
+    setBusy(true);
+    try {
+      const res = await fetch(
+        `/api/workspaces/${workspaceId}/plugins/${connectPlugin.id}/connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            apiKey: useEnv ? undefined : pasted,
+            useEnv,
+          }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Not connected.");
+        return;
+      }
+      if (!data.connection?.connected) {
+        toast.error("Connect did not persist. Still disconnected.");
+        return;
+      }
+      setPlugins((prev) =>
+        prev.map((plugin) =>
+          plugin.id === connectPlugin.id ? { ...plugin, connected: true } : plugin,
+        ),
+      );
+      toast.success(`${connectPlugin.name} connected.`);
+      setConnectPlugin(null);
+      setApiKey("");
+      await refreshPlugins();
+    } catch {
+      toast.error("Could not reach Connect. Still disconnected.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const canNext =
@@ -357,7 +389,13 @@ export function OnboardingWizard({
                   description={slot.plugin.description}
                   connected={slot.plugin.connected}
                   actionLabel={slot.plugin.connected ? "Connected" : "Connect"}
-                  hint={slot.plugin.connection?.setupHint}
+                  hint={
+                    slot.plugin.auth === "composio"
+                      ? composioConnectCardHint()
+                      : slot.plugin.auth === "oauth" && !slot.plugin.connected
+                        ? slot.plugin.connection?.setupHint
+                        : undefined
+                  }
                   busy={busy}
                   onClick={() => startConnect(slot.plugin)}
                 />
@@ -427,7 +465,7 @@ export function OnboardingWizard({
             {MODEL_ROUTING_GROUPS.map((group) => (
               <section key={group.id}>
                 {group.label ? (
-                  <p className="mb-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="mb-2 text-[11px] text-muted-foreground">
                     {group.label}
                   </p>
                 ) : null}
@@ -523,6 +561,12 @@ export function OnboardingWizard({
         onOpenChange={(open) => !open && setConnectPlugin(null)}
       >
         <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void connectKey(false);
+            }}
+          >
           <DialogHeader>
             <DialogTitle>Connect {connectPlugin?.name}</DialogTitle>
             <DialogDescription>
@@ -531,15 +575,18 @@ export function OnboardingWizard({
             </DialogDescription>
           </DialogHeader>
           <Input
+            ref={keyInputRef}
             type="password"
             autoComplete="off"
             placeholder={connectPlugin?.secretLabel || "API key"}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
+            onInput={(e) => setApiKey((e.target as HTMLInputElement).value)}
           />
           <DialogFooter className="sm:flex-col sm:items-stretch">
             {connectPlugin?.connection?.envReady ? (
               <Button
+                type="button"
                 variant="secondary"
                 disabled={busy}
                 onClick={() => void connectKey(true)}
@@ -547,10 +594,11 @@ export function OnboardingWizard({
                 Use server {connectPlugin.envKeys[0]}
               </Button>
             ) : null}
-            <Button disabled={busy || !apiKey.trim()} onClick={() => void connectKey(false)}>
+            <Button type="submit" disabled={busy}>
               Connect
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

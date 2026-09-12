@@ -353,6 +353,7 @@ function catalogRoute(prefer: LlmRoutingPreference): LlmRoute | null {
   if (!row) return null;
   if (row.backendClass === "haiku") return firstCheap([anthropicHaikuRoute()]);
   if (row.backendClass === "sonnet") return firstCheap([anthropicSonnetRoute()]);
+  if (row.backendClass === "sonnet-max") return firstCheap([anthropicSonnetRoute(true)]);
   if (row.backendClass === "terra") return firstCheap([openaiTerraRoute()]);
   if (row.backendClass === "flash") return firstCheap([geminiFlashRoute()]);
   return null;

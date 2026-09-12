@@ -155,6 +155,11 @@ try {
   assert.equal(pickRoute("draft", "general", "gpt-sol")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "claude-opus")?.model, "claude-haiku-4-5");
   assert.equal(pickRoute("draft", "general", "gemini-flash")?.model, "gemini-2.5-flash");
+  assert.equal(pickRoute("draft", "general", "cinem-super-4.8")?.model, "gemini-2.5-flash");
+  assert.equal(
+    pickRoute("draft", "general", "cinem-super-4.8", { plan: "pro" })?.model,
+    "claude-sonnet-5",
+  );
   assert.equal(
     runWithRoutingPreference("anthropic", () => pickRoute("draft")?.model),
     "claude-haiku-4-5",

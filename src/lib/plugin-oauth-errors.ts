@@ -65,7 +65,7 @@ export function pluginOAuthErrorMessage(
     error === "composio_not_active" ||
     error === "composio_missing_account"
   ) {
-    return "Composio did not finish Connect. Not marked Connected.";
+    return "COMPOSIO_API_KEY is set, but Composio did not finish Connect. Not marked Connected. Try Connect again.";
   }
   if (error === "oauth_not_configured") {
     return pluginId

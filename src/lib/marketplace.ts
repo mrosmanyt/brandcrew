@@ -384,6 +384,42 @@ export function resolveApiKeyConnect(
   }
   return {
     ok: false,
-    error: `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Connect cannot be empty.`,
+    error: `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Empty Connect stays disconnected.`,
   };
+}
+
+/** Prefer React state, then the live input (browser autofill often skips onChange). */
+export function pastedConnectSecret(
+  apiKey?: string | null,
+  inputValue?: string | null,
+) {
+  return (apiKey || "").trim() || (inputValue || "").trim();
+}
+
+export function emptyConnectMessage(plugin: PluginDef) {
+  return `Paste a ${plugin.secretLabel || "API key"} or use the documented server env var. Empty Connect stays disconnected.`;
+}
+
+/** Repair the COMPOSER/COMPOSIO banner typo if a stale hint still uses it. */
+export function sanitizeComposioCopy(text: string) {
+  return text.replaceAll("COMPOSER_API_KEY", "COMPOSIO_API_KEY");
+}
+
+/** Card/banner copy when COMPOSIO_API_KEY is set or status is still unknown. */
+export const COMPOSIO_CONNECT_READY_HINT =
+  "Connect opens Composio for Gmail (Composio), HubSpot, and other agency connectors. Native Gmail uses Google OAuth. Connected only after an ACTIVE account.";
+
+/** Only show this after the server explicitly reports the key is missing. */
+export const COMPOSIO_CONNECT_MISSING_HINT =
+  "Set COMPOSIO_API_KEY to connect HubSpot, Pipedrive, Apollo, Ahrefs, and Gmail (Composio). Native Gmail uses Google OAuth and does not need that key.";
+
+export function composioConnectCardHint() {
+  return "Connect opens Composio. Connected only after an ACTIVE account.";
+}
+
+export function composioBannerHint(configured: boolean | null, serverHint?: string) {
+  if (configured === false) {
+    return sanitizeComposioCopy(serverHint || COMPOSIO_CONNECT_MISSING_HINT);
+  }
+  return sanitizeComposioCopy(serverHint || COMPOSIO_CONNECT_READY_HINT);
 }

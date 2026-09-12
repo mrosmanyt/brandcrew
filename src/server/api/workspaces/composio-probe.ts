@@ -1,4 +1,5 @@
 import { requireWorkspaceMember } from "@/lib/auth";
+import { connection as waitForRequest } from "next/server";
 import { composioConfigured, composioMissingHint, runComposioFirstCall } from "@/lib/composio";
 import { jsonError, jsonOk } from "@/lib/http";
 
@@ -8,6 +9,7 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
+    await waitForRequest();
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     if (!composioConfigured()) {

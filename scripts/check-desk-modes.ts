@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import {
   AGENT_MODE_PLANS,
   AGENT_MODES_SHORTCUT,
+  MODEL_ROUTING_GROUPS,
   MODEL_ROUTING_OPTIONS,
   SERVER_KEYS_COPY,
   deskChatGlowClass,
@@ -15,6 +16,7 @@ import {
   modelRoutingLabel,
   modelRoutingLocked,
   nextAgentModePlan,
+  nextModelRouting,
   planApplyAction,
   planModeDescription,
   planModeName,
@@ -45,14 +47,24 @@ assert.equal(modelRoutingLocked("auto", { openai: false, anthropic: false, gemin
 assert.equal(modelRoutingLocked("gemini-3.8-flash", { openai: true, anthropic: true, gemini: false }), true);
 assert.equal(modelRoutingLocked("opus-4.8", { openai: false, anthropic: true, gemini: false }), false);
 assert.equal(modelRoutingLocked("gpt-astra", { openai: false, anthropic: true, gemini: true }), true);
+assert.equal(modelRoutingLocked("cinem-super-4.8", { openai: true, anthropic: false, gemini: true }), true);
 assert.ok(MODEL_ROUTING_OPTIONS.length >= 8);
 assert.equal(MODEL_ROUTING_OPTIONS[0].label, "Auto");
-assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "GPT-4o mini"));
+assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "GPT 4.0 mini"));
 assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "GPT Sol"));
-assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Claude Opus"));
-assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Gemini Flash"));
-assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.hint.includes("Fast & cheap")));
-assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.hint.includes("Smartest")));
+assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Claude Sonnet 5"));
+assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Cinem super 4.8"));
+assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Gemini Flash 3.8"));
+assert.equal(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Claude Opus"), false);
+assert.equal(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Claude Haiku"), false);
+assert.equal(MODEL_ROUTING_OPTIONS.some((row) => row.label === "Gemini Flash"), false);
+assert.ok(MODEL_ROUTING_OPTIONS.some((row) => row.hint.includes("Picks the best model")));
+assert.deepEqual(
+  MODEL_ROUTING_GROUPS.map((row) => row.label),
+  [null, "Fastest and quick answer", "For complex", "Most advanced"],
+);
+assert.equal(nextModelRouting("auto"), "claude-sonnet");
+assert.equal(nextModelRouting("cinem-super-4.8"), "auto");
 assert.match(SERVER_KEYS_COPY, /server/);
 assert.match(AGENT_MODES_SHORTCUT, /Ctrl Shift I/);
 console.log("ok: routing options lock when the server key is missing");
@@ -80,7 +92,7 @@ process.env.ANTHROPIC_API_KEY = "sk-ant-fake";
 process.env.GEMINI_API_KEY = "gemini-fake";
 assert.equal(pickRoute("draft", "general", "openai")?.provider, "openai");
 assert.equal(pickRoute("draft", "general", "gemini")?.provider, "gemini");
-assert.equal(pickRoute("final", "general", "anthropic")?.model, "claude-haiku-4-5");
+assert.equal(pickRoute("draft", "general", "anthropic")?.model, "claude-haiku-4-5");
 assert.equal(
   runWithRoutingPreference("openai", () => pickRoute("draft")?.provider),
   "openai",
@@ -102,22 +114,30 @@ console.log("ok: glow + shine CSS and reduced-motion static text");
 
 const composer = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
 assert.match(composer, /AgentModesMenu/);
+assert.match(composer, /nextModelRouting/);
+assert.doesNotMatch(composer, /JobStartingStatus/);
+assert.doesNotMatch(composer, /nextAgentModePlan/);
 assert.doesNotMatch(composer, /bring your own key/i);
 const menu = readFileSync("src/components/desk/agent-modes-menu.tsx", "utf8");
 assert.match(menu, /Use server API keys/);
 assert.match(menu, /Add key on server/);
-assert.match(menu, /\/api\/billing\/checkout/);
 assert.match(menu, /MODEL_ROUTING_GROUPS/);
+assert.match(menu, /modelRoutingLabel/);
+assert.match(menu, /text-\[13px\]/);
+assert.doesNotMatch(menu, /AGENT_MODE_PLANS/);
+assert.doesNotMatch(menu, /planModeCaption/);
 assert.doesNotMatch(menu, /Prefer Gemini|Prefer Claude/);
 const catalog = readFileSync("src/lib/model-catalog.ts", "utf8");
 assert.match(catalog, /Opus 4.8/);
 assert.match(catalog, /Fable 5.1/);
 assert.match(catalog, /GPT Astra/);
-assert.match(catalog, /Gemini 3.8 Flash/);
-assert.match(catalog, /GPT-4o mini/);
+assert.match(catalog, /Gemini Flash 3.8/);
+assert.match(catalog, /GPT 4.0 mini/);
 assert.match(catalog, /GPT Sol/);
-assert.match(catalog, /Claude Opus/);
-assert.match(catalog, /Gemini Flash/);
+assert.match(catalog, /Cinem super 4.8/);
+assert.match(catalog, /Claude Sonnet 5/);
+assert.doesNotMatch(catalog, /displayName: "Claude Opus"/);
+assert.doesNotMatch(catalog, /displayName: "Gemini Flash"/);
 const mid = readFileSync("src/components/desk/mission-control.tsx", "utf8");
 assert.match(mid, /deskChatGlowClass/);
 assert.match(mid, /JobStartingStatus/);
