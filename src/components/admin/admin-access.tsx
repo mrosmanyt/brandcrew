@@ -6,7 +6,7 @@ export function AdminAccess({ data }: { data: AdminAccessPayload }) {
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Access"
-      hint="Superadmin is the only role. It comes from ADMIN_EMAILS — there is no roles table yet."
+      hint="Superadmin is the only role. It comes from ADMIN_EMAILS on Vercel. Founder inboxes cinemtech@gmail.com and mrosmanyt@gmail.com are always included."
     >
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-medium">Effective admins</h2>

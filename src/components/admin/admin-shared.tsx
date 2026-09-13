@@ -24,9 +24,11 @@ export type AdminPending =
   | { kind: "revoke"; workspaceId: string; name: string }
   | { kind: "suspend"; workspaceId: string; name: string }
   | { kind: "unsuspend"; workspaceId: string; name: string }
+  | { kind: "budget"; workspaceId: string; name: string; tokenBudget: number }
   | { kind: "assign-user"; email: string; plan: PlanId }
   | { kind: "revoke-user"; email: string }
   | { kind: "suspend-user"; email: string }
+  | { kind: "unsuspend-user"; email: string }
   | { kind: "flag"; key: string; enabled: boolean; note?: string };
 
 export async function fetchAdminJson<T>(path: string): Promise<T> {
@@ -98,6 +100,50 @@ export function PlanSelect({
   );
 }
 
+function BudgetField({
+  name,
+  tokenBudget,
+  disabled,
+  onBudget,
+}: {
+  name: string;
+  tokenBudget: number;
+  disabled?: boolean;
+  onBudget: (tokenBudget: number) => void;
+}) {
+  const [value, setValue] = useState(String(tokenBudget));
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        type="number"
+        min={1}
+        max={5_000_000}
+        value={value}
+        disabled={disabled}
+        aria-label={`Token budget for ${name}`}
+        className="h-8 w-24 rounded-lg border border-input bg-transparent px-2 text-xs"
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          const next = Number(value);
+          if (Number.isFinite(next)) onBudget(Math.round(next));
+        }}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => {
+          const next = Number(value);
+          if (Number.isFinite(next)) onBudget(Math.round(next));
+        }}
+      >
+        Set budget
+      </Button>
+    </span>
+  );
+}
+
 export function WorkspaceActions({
   row,
   disabled,
@@ -105,6 +151,7 @@ export function WorkspaceActions({
   onRevoke,
   onSuspend,
   onUnsuspend,
+  onBudget,
 }: {
   row: AdminWorkspaceRow;
   disabled?: boolean;
@@ -112,10 +159,20 @@ export function WorkspaceActions({
   onRevoke: () => void;
   onSuspend?: () => void;
   onUnsuspend?: () => void;
+  onBudget?: (tokenBudget: number) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <PlanSelect label={`Assign plan for ${row.name}`} disabled={disabled} onAssign={onAssign} />
+      {onBudget ? (
+        <BudgetField
+          key={`${row.id}-${row.tokenBudget}`}
+          name={row.name}
+          tokenBudget={row.tokenBudget}
+          disabled={disabled}
+          onBudget={onBudget}
+        />
+      ) : null}
       <Button size="sm" variant="destructive" disabled={disabled} onClick={onRevoke}>
         Revoke
       </Button>
@@ -185,6 +242,11 @@ export function WorkspaceTable({
               </td>
               <td className="px-3 py-3 text-muted-foreground">
                 {row.tokenUsed.toLocaleString()} / {row.tokenBudget.toLocaleString()}
+                {row.chatTokenUsed ? (
+                  <span className="block text-[11px]">
+                    chat {row.chatTokenUsed.toLocaleString()}
+                  </span>
+                ) : null}
               </td>
               <td className="px-3 py-3 font-mono text-[11px] text-muted-foreground">
                 {row.whopMembershipId || "—"}
@@ -205,6 +267,14 @@ export function WorkspaceTable({
                   onUnsuspend={() =>
                     onPending({ kind: "unsuspend", workspaceId: row.id, name: row.name })
                   }
+                  onBudget={(tokenBudget) =>
+                    onPending({
+                      kind: "budget",
+                      workspaceId: row.id,
+                      name: row.name,
+                      tokenBudget,
+                    })
+                  }
                 />
               </td>
             </tr>
@@ -218,12 +288,14 @@ export function WorkspaceTable({
 export function UserActionList({
   rows,
   onPending,
+  empty = "No users match that email.",
 }: {
   rows: AdminSignupRow[];
   onPending: (pending: AdminPending) => void;
+  empty?: string;
 }) {
   if (!rows.length) {
-    return <p className="mt-3 text-sm text-muted-foreground">No users match that email.</p>;
+    return <p className="mt-3 text-sm text-muted-foreground">{empty}</p>;
   }
   return (
     <ul className="mt-3 divide-y divide-border">
@@ -259,6 +331,15 @@ export function UserActionList({
             >
               Suspend
             </Button>
+            {row.workspaces.some((ws) => ws.suspended) ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onPending({ kind: "unsuspend-user", email: row.email })}
+              >
+                Unsuspend
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="ghost"
@@ -301,6 +382,12 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
       body: `Clear the suspend flag on ${pending.name}. Plan stays as-is (usually Free). Assign a paid plan separately if needed.`,
     };
   }
+  if (pending.kind === "budget") {
+    return {
+      title: `Set token budget to ${pending.tokenBudget.toLocaleString()}?`,
+      body: `Override the job token cap on ${pending.name}. Plan is unchanged. This is not a new Whop SKU.`,
+    };
+  }
   if (pending.kind === "assign-user") {
     return {
       title: `Assign ${PLANS[pending.plan].name} to this user?`,
@@ -316,7 +403,13 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
   if (pending.kind === "suspend-user") {
     return {
       title: "Suspend this user?",
-      body: `Every workspace for ${pending.email} is forced to Free and new jobs are blocked.`,
+      body: `Every workspace for ${pending.email} is forced to Free and new jobs are blocked. Accounts are not hard-deleted.`,
+    };
+  }
+  if (pending.kind === "unsuspend-user") {
+    return {
+      title: "Unsuspend this user?",
+      body: `Clear the suspend flag on every workspace for ${pending.email}. Plans stay as-is.`,
     };
   }
   return {
@@ -396,6 +489,16 @@ export function useAdminMutation(onDone?: () => Promise<void> | void) {
       } else if (pending.kind === "suspend-user") {
         await postAdmin({ action: "suspend", userEmail: pending.email });
         toast.success("User workspaces suspended.");
+      } else if (pending.kind === "unsuspend-user") {
+        await postAdmin({ action: "unsuspend", userEmail: pending.email });
+        toast.success("User workspaces unsuspended.");
+      } else if (pending.kind === "budget") {
+        await postAdmin({
+          action: "budget",
+          workspaceId: pending.workspaceId,
+          tokenBudget: pending.tokenBudget,
+        });
+        toast.success("Token budget updated.");
       } else {
         await postAdmin({
           action: "flag",
@@ -421,18 +524,25 @@ export function AdminPageFrame({
   kicker,
   title,
   hint,
+  actions,
   children,
 }: {
   kicker: string;
   title: string;
   hint?: string;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <p className="page-kicker">{kicker}</p>
-      <h1 className="font-heading mt-1 text-2xl tracking-tight">{title}</h1>
-      {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="page-kicker">{kicker}</p>
+          <h1 className="font-heading mt-1 text-2xl tracking-tight">{title}</h1>
+          {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
       <div className="mt-6">{children}</div>
     </div>
   );

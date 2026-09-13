@@ -6,6 +6,7 @@ import type { AdminAuditPayload } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminBackupButton } from "@/components/admin/admin-backup-button";
 import { AdminPageFrame, fetchAdminJson } from "@/components/admin/admin-shared";
 
 const ACTION_FILTERS = [
@@ -17,6 +18,8 @@ const ACTION_FILTERS = [
   "toggle_flag",
   "admin_access",
   "admin_audit_export",
+  "admin_backup_export",
+  "set_budget",
 ];
 
 export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
@@ -46,7 +49,8 @@ export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Audit"
-      hint="AdminAuditLog rows only. Filters search action, actor email, target id, and meta JSON. Export is a hash-chained pack — not a SOC 2 report."
+      hint="AdminAuditLog rows only. Filters search action, actor email, target id, and meta JSON. Hash-chained export is not a SOC 2 report. Download backup is a founder PC copy of ops tables."
+      actions={<AdminBackupButton />}
     >
       <form onSubmit={onFilter} className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">

@@ -14,6 +14,9 @@ import {
 } from "@/lib/model-catalog";
 
 export const DEFAULT_ADMIN_EMAIL = "cinemtech@gmail.com";
+/** Founder inbox — always allowed even if omitted from ADMIN_EMAILS. */
+export const FOUNDER_ADMIN_EMAIL = "mrosmanyt@gmail.com";
+export const DEFAULT_ADMIN_EMAILS = [DEFAULT_ADMIN_EMAIL, FOUNDER_ADMIN_EMAIL] as const;
 
 export const ADMIN_SECTIONS = [
   "overview",
@@ -33,7 +36,7 @@ export function parseAdminEmails(raw?: string | null): string[] {
     .split(",")
     .map((row) => row.trim().toLowerCase())
     .filter(Boolean);
-  return [...new Set([DEFAULT_ADMIN_EMAIL, ...extras])];
+  return [...new Set([...DEFAULT_ADMIN_EMAILS, ...extras])];
 }
 
 export function adminEmails(): string[] {
@@ -94,6 +97,7 @@ export type AdminWorkspaceRow = {
   suspended: boolean;
   tokenUsed: number;
   tokenBudget: number;
+  chatTokenUsed: number;
   whopMembershipId: string | null;
   createdAt: string;
   ownerEmail: string | null;
@@ -154,6 +158,39 @@ export type AdminCustomer360 = {
   workspaces: AdminWorkspace360[];
 };
 
+export type AdminJobFailureRow = {
+  id: string;
+  title: string;
+  status: string;
+  error: string;
+  workspaceId: string;
+  workspaceName: string;
+  updatedAt: string;
+};
+
+export type AdminApprovalRow = {
+  id: string;
+  title: string;
+  askKind: string;
+  status: string;
+  workspaceId: string;
+  workspaceName: string;
+  createdAt: string;
+};
+
+export type AdminBillingEventRow = {
+  id: string;
+  kind: "support" | "webhook";
+  status: string;
+  eventType?: string;
+  amountCents?: number;
+  currency?: string;
+  email?: string;
+  provider?: string;
+  externalId?: string | null;
+  createdAt: string;
+};
+
 export type AdminDashboard = {
   section: "overview";
   users: { total: number };
@@ -173,8 +210,16 @@ export type AdminDashboard = {
   usage: {
     tokensUsedThisCycle: number;
     tokenBudgetTotal: number;
+    chatTokenUsed: number;
     usageEventTokens: number;
   };
+  billing: {
+    supportPaid: number;
+    supportPending: number;
+    webhooksLast7d: number;
+  };
+  failedJobs: AdminJobFailureRow[];
+  approvals: AdminApprovalRow[];
   recentSignups: AdminSignupRow[];
   workspacesList: AdminWorkspaceRow[];
   audit: AdminAuditRow[];
@@ -192,6 +237,8 @@ export type AdminBillingPayload = {
   paid: AdminWorkspaceRow[];
   credits: null;
   creditsNote: string;
+  supports: AdminBillingEventRow[];
+  webhooks: AdminBillingEventRow[];
 };
 
 export type AdminModelsPayload = {
@@ -272,6 +319,7 @@ function serializeWorkspaceRow(row: {
   plan: string;
   tokenUsed: number;
   tokenBudget: number;
+  chatTokenUsed?: number;
   suspended?: boolean;
   whopMembershipId?: string | null;
   createdAt: Date;
@@ -292,6 +340,7 @@ function serializeWorkspaceRow(row: {
     suspended: Boolean(row.suspended),
     tokenUsed: row.tokenUsed,
     tokenBudget: row.tokenBudget,
+    chatTokenUsed: row.chatTokenUsed ?? 0,
     whopMembershipId: row.whopMembershipId ?? null,
     createdAt: row.createdAt.toISOString(),
     ownerEmail: owner?.user.email ?? null,
@@ -320,6 +369,12 @@ function serializeSignup(row: {
       suspended: Boolean(membership.workspace.suspended),
     })),
   };
+}
+
+function truncateJobError(raw?: string | null): string {
+  const text = (raw ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  return text.length > 240 ? `${text.slice(0, 237)}…` : text;
 }
 
 function parseMeta(raw: string): Record<string, unknown> {
@@ -364,6 +419,7 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
   const q = search?.trim() || "";
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const [
     totalUsers,
     totalWorkspaces,
@@ -379,6 +435,11 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
     workspacesList,
     auditRows,
     searchHits,
+    failedJobs,
+    approvalJobs,
+    supportPaid,
+    supportPending,
+    webhooksLast7d,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.workspace.count(),
@@ -394,7 +455,7 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
     }),
     prisma.job.count({ where: { createdAt: { gte: since } } }),
     prisma.workspace.aggregate({
-      _sum: { tokenUsed: true, tokenBudget: true },
+      _sum: { tokenUsed: true, tokenBudget: true, chatTokenUsed: true },
     }),
     prisma.usageEvent.aggregate({
       _sum: { tokens: true },
@@ -437,6 +498,37 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
           },
         })
       : Promise.resolve(null),
+    prisma.job.findMany({
+      where: { status: "failed" },
+      orderBy: { updatedAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        error: true,
+        workspaceId: true,
+        updatedAt: true,
+        workspace: { select: { name: true } },
+      },
+    }),
+    prisma.job.findMany({
+      where: { status: "needs_you" },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        askKind: true,
+        workspaceId: true,
+        createdAt: true,
+        workspace: { select: { name: true } },
+      },
+    }),
+    prisma.brandSupport.count({ where: { status: "paid" } }),
+    prisma.brandSupport.count({ where: { status: { not: "paid" } } }),
+    prisma.processedWebhook.count({ where: { createdAt: { gte: weekAgo } } }),
   ]);
 
   const byPlan = emptyByPlan();
@@ -465,8 +557,32 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
     usage: {
       tokensUsedThisCycle: tokenSums._sum.tokenUsed ?? 0,
       tokenBudgetTotal: tokenSums._sum.tokenBudget ?? 0,
+      chatTokenUsed: tokenSums._sum.chatTokenUsed ?? 0,
       usageEventTokens: usageSum._sum.tokens ?? 0,
     },
+    billing: {
+      supportPaid,
+      supportPending,
+      webhooksLast7d,
+    },
+    failedJobs: failedJobs.map((job) => ({
+      id: job.id,
+      title: job.title,
+      status: job.status,
+      error: truncateJobError(job.error),
+      workspaceId: job.workspaceId,
+      workspaceName: job.workspace.name,
+      updatedAt: job.updatedAt.toISOString(),
+    })),
+    approvals: approvalJobs.map((job) => ({
+      id: job.id,
+      title: job.title,
+      askKind: job.askKind,
+      status: job.status,
+      workspaceId: job.workspaceId,
+      workspaceName: job.workspace.name,
+      createdAt: job.createdAt.toISOString(),
+    })),
     recentSignups: recentSignups.map(serializeSignup),
     workspacesList: workspacesList.map(serializeWorkspaceRow),
     audit: auditRows.map(serializeAudit),
@@ -751,6 +867,62 @@ export async function adminUnsuspendWorkspace(input: {
   return { workspaces };
 }
 
+export async function adminSetBudget(input: {
+  actorEmail: string;
+  tokenBudget: number;
+  workspaceId?: string | null;
+  userEmail?: string | null;
+}): Promise<{ workspaces: AdminWorkspaceRow[] }> {
+  const tokenBudget = Math.round(input.tokenBudget);
+  if (!Number.isFinite(tokenBudget) || tokenBudget < 1 || tokenBudget > 5_000_000) {
+    throw new ClientError("Token budget must be between 1 and 5,000,000.");
+  }
+  const { ids, userTarget } = await resolveWorkspaceIds(input);
+  const workspaces: AdminWorkspaceRow[] = [];
+  for (const workspaceId of ids) {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true, name: true, tokenBudget: true, plan: true },
+    });
+    if (!workspace) {
+      throw new ClientError("Workspace not found.", 404, "not_found");
+    }
+    const updated = await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { tokenBudget },
+      include: workspaceListInclude,
+    });
+    workspaces.push(serializeWorkspaceRow(updated));
+    await writeAudit({
+      actorEmail: input.actorEmail,
+      action: "set_budget",
+      targetId: workspaceId,
+      meta: {
+        tokenBudget,
+        previousTokenBudget: workspace.tokenBudget,
+        workspaceName: workspace.name,
+        plan: workspace.plan,
+        userEmail: userTarget,
+        note: "Token budget override. Plan is unchanged.",
+      },
+    });
+  }
+  return { workspaces };
+}
+
+export async function recordAdminBackupExport(input: {
+  actorEmail: string;
+  counts: Record<string, number>;
+  full: boolean;
+}) {
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "admin_backup_export",
+    targetId: "admin_backup",
+    meta: { ...input.counts, full: input.full },
+  });
+}
+
 async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -836,24 +1008,22 @@ export async function getAdminCustomers(input: {
 }): Promise<AdminCustomersPayload> {
   const q = input.q?.trim() || "";
   const userId = input.userId?.trim() || "";
-  const results = q
-    ? (
-        await prisma.user.findMany({
-          where: { email: { contains: q, mode: "insensitive" } },
-          take: 25,
-          orderBy: { createdAt: "desc" },
+  const results = (
+    await prisma.user.findMany({
+      where: q ? { email: { contains: q, mode: "insensitive" } } : undefined,
+      take: q ? 25 : 40,
+      orderBy: { createdAt: "desc" },
+      include: {
+        memberships: {
           include: {
-            memberships: {
-              include: {
-                workspace: {
-                  select: { id: true, name: true, plan: true, suspended: true },
-                },
-              },
+            workspace: {
+              select: { id: true, name: true, plan: true, suspended: true },
             },
           },
-        })
-      ).map(serializeSignup)
-    : [];
+        },
+      },
+    })
+  ).map(serializeSignup);
 
   let profile: AdminCustomer360 | null = null;
   if (userId) {
@@ -865,18 +1035,63 @@ export async function getAdminCustomers(input: {
 }
 
 export async function getAdminBilling(): Promise<AdminBillingPayload> {
-  const paid = await prisma.workspace.findMany({
-    where: { plan: { not: "demo" } },
-    orderBy: { updatedAt: "desc" },
-    take: 80,
-    include: workspaceListInclude,
-  });
+  const [paid, supports, webhooks] = await Promise.all([
+    prisma.workspace.findMany({
+      where: { plan: { not: "demo" } },
+      orderBy: { updatedAt: "desc" },
+      take: 80,
+      include: workspaceListInclude,
+    }),
+    prisma.brandSupport.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: {
+        id: true,
+        amountCents: true,
+        currency: true,
+        email: true,
+        status: true,
+        provider: true,
+        paymentId: true,
+        createdAt: true,
+      },
+    }),
+    prisma.processedWebhook.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: {
+        id: true,
+        eventType: true,
+        externalId: true,
+        createdAt: true,
+      },
+    }),
+  ]);
   return {
     section: "billing",
     paid: paid.map(serializeWorkspaceRow),
     credits: null,
     creditsNote:
-      "No credits column exists on Workspace. This page does not invent a balance.",
+      "No credits column exists on Workspace. Credits are token budget 1:1. This page does not invent a balance.",
+    supports: supports.map((row) => ({
+      id: row.id,
+      kind: "support" as const,
+      status: row.status,
+      amountCents: row.amountCents,
+      currency: row.currency,
+      email: row.email,
+      provider: row.provider,
+      externalId: row.paymentId,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    webhooks: webhooks.map((row) => ({
+      id: row.id,
+      kind: "webhook" as const,
+      status: "processed",
+      eventType: row.eventType,
+      externalId: row.externalId,
+      createdAt: row.createdAt.toISOString(),
+    })),
   };
 }
 
@@ -945,9 +1160,9 @@ export function getAdminAccess(): AdminAccessPayload {
       masked: maskAdminEmail(email),
       domain: emailDomain(email),
       role: "superadmin" as const,
-      isDefault: email === DEFAULT_ADMIN_EMAIL,
+      isDefault: (DEFAULT_ADMIN_EMAILS as readonly string[]).includes(email),
     })),
-    note: "Set ADMIN_EMAILS on Vercel (Production and Preview) to every staff email that should open /admin. cinemtech@gmail.com is always included even if omitted. A signed-in address missing from the list receives 403.",
+    note: "Set ADMIN_EMAILS on Vercel (Production and Preview) to every staff email that should open /admin. cinemtech@gmail.com and mrosmanyt@gmail.com are always included even if omitted. A signed-in address missing from the list receives 403.",
   };
 }
 

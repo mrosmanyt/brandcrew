@@ -62,7 +62,7 @@ export function AdminCustomers({
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Customers 360"
-      hint="Search a real user email. Workspaces, memberships, jobs, and usage events are from Postgres."
+      hint="Recent signups load automatically. Search an email for a 360. Suspend disables jobs; accounts are not hard-deleted."
     >
       <form onSubmit={onSearch} className="flex w-full max-w-lg items-end gap-2">
         <div className="min-w-0 flex-1 space-y-1.5">
@@ -79,16 +79,19 @@ export function AdminCustomers({
         </Button>
       </form>
 
-      {query.trim() || initialUserId ? (
-        <section className="mt-6 rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-sm font-medium">Matches</h2>
-          <UserActionList rows={data.results} onPending={setPending} />
-        </section>
-      ) : (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Enter an email to load that account. Nothing is listed until you search.
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-sm font-medium">{query.trim() ? "Matches" : "Recent users"}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {query.trim()
+            ? "Email contains search against Postgres."
+            : "Latest 40 accounts. Search to narrow."}
         </p>
-      )}
+        <UserActionList
+          rows={data.results}
+          onPending={setPending}
+          empty={query.trim() ? "No users match that email." : "No users in Postgres yet."}
+        />
+      </section>
 
       {data.profile ? <CustomerProfile profile={data.profile} busy={busy} onPending={setPending} /> : null}
 
@@ -179,6 +182,9 @@ function CustomerProfile({
               onRevoke={() => onPending({ kind: "revoke", workspaceId: ws.id, name: ws.name })}
               onSuspend={() => onPending({ kind: "suspend", workspaceId: ws.id, name: ws.name })}
               onUnsuspend={() => onPending({ kind: "unsuspend", workspaceId: ws.id, name: ws.name })}
+              onBudget={(tokenBudget) =>
+                onPending({ kind: "budget", workspaceId: ws.id, name: ws.name, tokenBudget })
+              }
             />
           </div>
 

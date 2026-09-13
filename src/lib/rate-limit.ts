@@ -113,7 +113,10 @@ export function sensitiveRateLimit(
   if (path.startsWith("api/device/") && (verb === "POST" || verb === "GET")) {
     return { key: "device", limit: 120, windowMs: 60 * 1000 };
   }
-  if (path === "api/admin") {
+  if (path === "api/admin/backup") {
+    return { key: "admin-backup", limit: 8, windowMs: 10 * 60 * 1000 };
+  }
+  if (path === "api/admin" || path.startsWith("api/admin/")) {
     if (verb === "POST" || verb === "PUT" || verb === "PATCH" || verb === "DELETE") {
       return { key: "admin-write", limit: 20, windowMs: 60 * 1000 };
     }

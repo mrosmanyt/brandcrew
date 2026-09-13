@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   adminAssignPlan,
   adminRevokePlan,
+  adminSetBudget,
   adminSetFeatureFlag,
   adminSuspendWorkspace,
   adminUnsuspendWorkspace,
@@ -81,6 +82,7 @@ const mutateSchema = z.object({
     "suspend",
     "unsuspend",
     "flag",
+    "budget",
   ]),
   plan: z.enum(["demo", "starter", "pro", "ultra", "growth"]).optional(),
   workspaceId: z.string().min(1).optional(),
@@ -88,6 +90,7 @@ const mutateSchema = z.object({
   flagKey: z.string().min(1).max(80).optional(),
   enabled: z.boolean().optional(),
   note: z.string().max(240).optional(),
+  tokenBudget: z.number().int().min(1).max(5_000_000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -110,6 +113,22 @@ export async function POST(request: Request) {
         note: body.note,
       });
       return jsonOk({ ok: true, action: "flag" as const, flag });
+    }
+
+    if (body.action === "budget") {
+      if (typeof body.tokenBudget !== "number") {
+        return NextResponse.json(
+          { error: "Token budget is required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const result = await adminSetBudget({
+        actorEmail,
+        tokenBudget: body.tokenBudget,
+        workspaceId: body.workspaceId,
+        userEmail: body.userEmail,
+      });
+      return jsonOk({ ok: true, action: "budget" as const, updated: result.workspaces });
     }
 
     if (body.action === "revoke") {

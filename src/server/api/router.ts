@@ -4,6 +4,7 @@ import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
 import { isNativeCorsPath, nativeCorsPreflight, withNativeCors } from "@/lib/auth-native";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
 import * as adminRoot from "./admin/root";
+import * as adminBackup from "./admin/backup";
 import * as authGoogle from "./auth/google";
 import * as authGoogleCallback from "./auth/google-callback";
 import * as authLogin from "./auth/login";
@@ -116,6 +117,7 @@ function asHandlers(mod: object): HandlerModule {
  */
 export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "admin"], handlers: asHandlers(adminRoot) },
+  { pattern: ["api", "admin", "backup"], handlers: asHandlers(adminBackup) },
   { pattern: ["api", "downloads", "extension"], handlers: asHandlers(downloadsExtension) },
   {
     pattern: ["api", "downloads", "cinem-ai-assistant"],
