@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { composerAttachmentsSchema } from "@/lib/composer-media";
 import { requireDevice } from "@/lib/device-auth";
 import { createDeviceJob, deviceJobsPayload } from "@/lib/device-desk";
 import { jsonError, jsonOk } from "@/lib/http";
@@ -7,8 +8,9 @@ import { BudgetError } from "@/lib/usage";
 
 const postSchema = z.object({
   agentId: z.string().min(1),
-  message: z.string().max(4000),
+  message: z.string().max(4000).optional(),
   playbookKey: z.string().max(80).optional(),
+  attachments: composerAttachmentsSchema,
 });
 
 export async function GET(request: Request) {

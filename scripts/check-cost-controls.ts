@@ -213,10 +213,17 @@ assert.equal(decideDeskQa({ message: "hamara ICP kya hai?" }).qa, true);
 assert.equal(decideDeskQa({ message: "Build a one-page branded website from the Brand Kit." }).qa, false);
 assert.match(readFileSync("src/server/api/workspaces/jobs.ts", "utf8"), /answerDeskQuestion/);
 assert.match(readFileSync("src/server/api/workspaces/chat.ts", "utf8"), /answerDeskQuestion/);
+assert.match(readFileSync("src/server/api/workspaces/jobs.ts", "utf8"), /attachments/);
+assert.match(readFileSync("src/server/api/workspaces/chat.ts", "utf8"), /attachments/);
 assert.match(readFileSync("src/lib/llm.ts", "utf8"), /completeRouteCandidates/);
 assert.match(readFileSync("src/lib/llm.ts", "utf8"), /messagesWithLanguagePolicy/);
+assert.match(readFileSync("src/lib/llm.ts", "utf8"), /geminiParts/);
+assert.match(readFileSync("src/lib/llm.ts", "utf8"), /inlineData/);
 assert.match(readFileSync("src/lib/desk-qa.ts", "utf8"), /deskQaSystemPrompt/);
+assert.match(readFileSync("src/lib/desk-qa.ts", "utf8"), /prepareComposerMedia/);
+assert.match(readFileSync("src/lib/desk-qa.ts", "utf8"), /prepared.content/);
 assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /Never refuse to speak a language/);
+assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /Default language is English when the user's language is unclear/);
 assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /Urdu/);
 assert.match(readFileSync("src/lib/language-policy.ts", "utf8"), /CINEM Pro's AI/);
 assert.match(

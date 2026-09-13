@@ -14,6 +14,15 @@ import {
   isComposerTextFile,
   shouldRefocusComposer,
 } from "../src/lib/composer";
+import {
+  attachmentsToLlmParts,
+  classifyComposerFile,
+  COMPOSER_ACCEPT,
+  hasAnalyzableMedia,
+  mergeTextAndAttachments,
+  normalizeComposerAttachments,
+  validateComposerAttachment,
+} from "../src/lib/composer-media";
 import { jobDeskHref, settingsDeskLinks } from "../src/lib/desk-settings";
 
 assert.deepEqual(
@@ -47,7 +56,47 @@ assert.match(
   /Draft this[\s\S]*Attached file notes\.txt/,
 );
 assert.ok(clipComposerText("x".repeat(20_010)).endsWith("…"));
+assert.match(
+  formatAttachedFiles([{ name: "shot.png", size: 12, kind: "image", data: "abcd" }]),
+  /Analyze the picture/,
+);
+assert.match(
+  formatAttachedFiles([{ name: "note.webm", size: 80, kind: "audio", transcript: "salaam" }]),
+  /Transcript: salaam/,
+);
+assert.match(
+  formatAttachedFiles([{ name: "clip.mp4", size: 200, kind: "video" }]),
+  /short clip \/ first frames/,
+);
+assert.equal(classifyComposerFile({ name: "hero.png", type: "image/png" }).ok, true);
+assert.equal(classifyComposerFile({ name: "note.m4a", type: "audio/mp4" }).ok, true);
+assert.equal(classifyComposerFile({ name: "clip.webm", type: "video/webm" }).ok, true);
+assert.equal(classifyComposerFile({ name: "secret.exe", type: "application/octet-stream" }).ok, false);
+assert.match(
+  validateComposerAttachment({ name: "huge.jpg", type: "image/jpeg", size: 9_000_000 }).ok
+    ? "ok"
+    : validateComposerAttachment({ name: "huge.jpg", type: "image/jpeg", size: 9_000_000 }).error,
+  /too large/,
+);
+const png = normalizeComposerAttachments([
+  { name: "shot.png", size: 12, kind: "image", mime: "image/png", data: "iVBORw0KGgo=" },
+]);
+assert.equal(hasAnalyzableMedia(png), true);
+assert.equal(hasAnalyzableMedia([{ name: "shot.png", size: 12 }]), false);
+const parts = attachmentsToLlmParts(png);
+assert.equal(parts[0]?.type, "image");
+assert.equal(parts[0]?.data, "iVBORw0KGgo=");
+const merged = mergeTextAndAttachments("What is this?", png);
+assert.equal(Array.isArray(merged), true);
+if (Array.isArray(merged)) {
+  assert.equal(merged.some((part) => part.type === "image" && part.data === "iVBORw0KGgo="), true);
+  assert.equal(merged.some((part) => part.type === "text" && part.text.includes("What is this?")), true);
+}
+assert.match(COMPOSER_ACCEPT, /image\/jpeg/);
+assert.match(COMPOSER_ACCEPT, /audio\/webm/);
+assert.match(COMPOSER_ACCEPT, /video\/mp4/);
 console.log("ok: composer attachments format without inventing uploads");
+console.log("ok: composer media keeps bytes for multimodal analysis");
 
 const links = settingsDeskLinks("ws_1");
 const labels = links.map((link) => link.label);
@@ -72,6 +121,12 @@ assert.match(composerSrc, /textareaRef/);
 assert.match(composerSrc, /focusComposer/);
 assert.match(composerSrc, /messageCount/);
 assert.match(composerSrc, /requestAnimationFrame/);
+assert.match(composerSrc, /fileToBase64/);
+assert.match(composerSrc, /previewUrl/);
+assert.match(composerSrc, /toWireAttachments/);
+assert.match(composerSrc, /COMPOSER_ACCEPT/);
+assert.match(composerSrc, /toggleVoiceNote/);
+assert.doesNotMatch(composerSrc, /Voice input is not available/);
 assert.match(readFileSync("src/components/desk/mission-control.tsx", "utf8"), /messageCount=\{messages\.length\}/);
 console.log("ok: composer textbar has Always approved and autofocus after reply");
 

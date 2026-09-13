@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireApiKey } from "@/lib/api-keys";
+import { composerAttachmentsSchema } from "@/lib/composer-media";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonFail, jsonOk } from "@/lib/http";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
@@ -10,6 +11,7 @@ const postSchema = z.object({
   agentId: z.string().min(1),
   message: z.string().min(1).max(4000),
   playbookKey: z.string().max(80).optional(),
+  attachments: composerAttachmentsSchema,
 });
 
 export async function GET(request: Request) {
@@ -57,6 +59,7 @@ export async function POST(request: Request) {
       message: body.message.trim(),
       playbookKey: body.playbookKey,
       action: "default",
+      attachments: body.attachments,
     });
     return jsonOk({ job: result.job }, 201);
   } catch (error) {

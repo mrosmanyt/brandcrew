@@ -36,8 +36,20 @@ export function isLightweightDeskQuestion(input: {
   action?: string | null;
   playbookKey?: string | null;
   skillId?: string | null;
+  attachments?: Array<{ kind?: string; data?: string }> | null;
 }): boolean {
   return decideDeskQa(input).qa;
+}
+
+function hasMediaAttachment(
+  files: Array<{ kind?: string; data?: string }> | null | undefined,
+): boolean {
+  return Boolean(
+    files?.some(
+      (file) =>
+        file.kind === "image" || file.kind === "audio" || file.kind === "video" || Boolean(file.data),
+    ),
+  );
 }
 
 export function decideDeskQa(input: {
@@ -45,6 +57,7 @@ export function decideDeskQa(input: {
   action?: string | null;
   playbookKey?: string | null;
   skillId?: string | null;
+  attachments?: Array<{ kind?: string; data?: string }> | null;
 }): DeskQaDecision {
   if (input.skillId?.trim()) {
     return { qa: false, reason: "skill" };
@@ -58,7 +71,11 @@ export function decideDeskQa(input: {
   }
 
   const message = input.message.trim();
-  if (!message) return { qa: false, reason: "empty" };
+  const media = hasMediaAttachment(input.attachments);
+  if (!message) {
+    if (media) return { qa: true, reason: "media" };
+    return { qa: false, reason: "empty" };
+  }
 
   for (const canned of Object.values(JOB_ACTION_MESSAGES)) {
     if (canned && message === canned) {
@@ -193,7 +210,8 @@ export function deskQaSystemPrompt(input: {
 
 You are ${input.agentName} (${input.role || "desk"}) on CINEM Pro — CINEM Pro's AI.
 Answer the user's question in a few short paragraphs. This is chat, not a job.
-Mirror the user's language (including Urdu and Roman Urdu such as "MRE SATH URDU MEN BAAT KRO"). Never refuse to speak a language. Never claim you operate in English only.
+Default answers in English when the user's language is unclear. If they write or speak another language — including Urdu and Roman Urdu such as "MRE SATH URDU MEN BAAT KRO" — reply in that language. Spoken words in a voice-note transcript count. Never refuse to speak a language. Never claim you operate in English only.
+If they attached a picture, voice note, or short video, analyze it. Never ignore attachments or answer from the filename alone. For voice notes, mention a brief transcript when it helps, then answer. For video, say if you only saw a short clip / first frames.
 Use the Brand Kit when it is relevant to the question. Prefer your niche when the request is about that work, but do not refuse basic helpful answers — for example the capital of a country. Answer the question and stop. Do not pitch hospitality, House Look, brand systems, or "how else can I help" after a general answer. Only offer next steps when the user asks for work, asks what you can do, or the message is clearly a job request.
 ${CAPABILITY_QUESTION_RULE}
 If a fact is missing, say so — do not invent metrics, quotes, or sends.

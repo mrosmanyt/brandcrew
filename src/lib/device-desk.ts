@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { SITE_ORIGIN } from "@/lib/site";
+import type { ComposerAttachment } from "@/lib/composer";
 import { isLightweightDeskQuestion, answerDeskQuestion } from "@/lib/desk-qa";
 import { createJobFromChat } from "@/lib/job-runtime";
 import { liveProgressFromEvents } from "@/lib/live-progress";
@@ -74,21 +75,28 @@ export async function deviceJobsPayload(device: AuthedDevice, agentId?: string) 
 
 export async function createDeviceJob(
   device: AuthedDevice,
-  input: { agentId: string; message: string; playbookKey?: string },
+  input: {
+    agentId: string;
+    message?: string;
+    playbookKey?: string;
+    attachments?: ComposerAttachment[];
+  },
 ) {
-  const message = input.message.trim();
+  const message = (input.message || "").trim();
   if (
     isLightweightDeskQuestion({
       message,
       action: "default",
       playbookKey: input.playbookKey,
       skillId: undefined,
+      attachments: input.attachments,
     })
   ) {
     const qa = await answerDeskQuestion({
       workspaceId: device.workspaceId,
       agentId: input.agentId,
       message,
+      attachments: input.attachments,
     });
     return { ok: true, ...qa };
   }
@@ -97,6 +105,7 @@ export async function createDeviceJob(
     agentId: input.agentId,
     message,
     playbookKey: input.playbookKey,
+    attachments: input.attachments,
   });
   return { ok: true, ...result };
 }

@@ -4,6 +4,10 @@
  */
 import assert from "node:assert/strict";
 import {
+  contentHasMedia,
+  mergeTextAndAttachments,
+} from "../src/lib/composer-media";
+import {
   createAnthropicClient,
   createGeminiClient,
   createXaiClient,
@@ -220,6 +224,14 @@ try {
   assert.equal(noGemini[0]?.provider, "openai");
   assert.equal(noGemini.some((row) => row.provider === "gemini"), false);
   console.log("ok: without GEMINI_API_KEY, Auto cannot invent Gemini — founder must set it on Vercel");
+
+  const vision = mergeTextAndAttachments("Look at this", [
+    { name: "shot.png", size: 12, kind: "image", mime: "image/png", data: "abcd" },
+  ]);
+  assert.equal(contentHasMedia(vision), true);
+  assert.equal(contentHasMedia("plain text"), false);
+  assert.equal(Array.isArray(vision), true);
+  console.log("ok: multimodal user content keeps inline image bytes");
 
   console.log("LLM router checks passed (no paid API calls).");
 } finally {
