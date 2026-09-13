@@ -1,0 +1,41 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for the Cinem AI Assistant main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-always-on-top",
+    "core:app:allow-version",
+    "process:default",
+    "shell:allow-open",
+    "store:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.anthropic.com/*" },
+        { "url": "https://api.elevenlabs.io/*" },
+        { "url": "https://api.telegram.org/*" },
+        { "url": "https://generativelanguage.googleapis.com/*" },
+        { "url": "https://www.googleapis.com/*" },
+        { "url": "https://oauth2.googleapis.com/*" },
+        { "url": "https://gmail.googleapis.com/*" },
+        { "url": "https://app.cinem.tech/*" },
+        { "url": "https://brandcrew.vercel.app/*" },
+        { "url": "https://*.supabase.co/*" },
+        { "url": "https://news.google.com/*" },
+        { "url": "https://hn.algolia.com/*" },
+        { "url": "http://localhost:11434/*" },
+        { "url": "http://127.0.0.1:7878/*" },
+        { "url": "http://localhost:7878/*" },
+        { "url": "http://127.0.0.1:7880/*" },
+        { "url": "http://localhost:7880/*" },
+        { "url": "http://127.0.0.1:1430/*" },
+        { "url": "http://localhost:1430/*" }
+      ]
+    }
+  ]
+}
