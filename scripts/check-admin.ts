@@ -153,11 +153,11 @@ async function main() {
   assert.equal(isSecretFieldName("tokenUsed"), false);
   assert.equal(isSecretFieldName("hasPassword"), false);
   assert.equal(BACKUP_KIND, "cinem_pro_admin_backup");
-  const leaked = JSON.stringify(redacted);
-  assert.equal(leaked.includes("$2b$"), false);
-  assert.equal(leaked.includes("sk-admin-test"), false);
-  assert.equal(leaked.includes("sk-live"), false);
-  assert.equal(leaked.includes("google-sub-123"), false);
+  const backupLeaked = JSON.stringify(redacted);
+  assert.equal(backupLeaked.includes("$2b$"), false);
+  assert.equal(backupLeaked.includes("sk-admin-test"), false);
+  assert.equal(backupLeaked.includes("sk-live"), false);
+  assert.equal(backupLeaked.includes("google-sub-123"), false);
   console.log("ok: backup redaction strips hashes, OAuth ids, and key-shaped strings");
 
   const adminApi = readFileSync("src/server/api/admin/root.ts", "utf8");
