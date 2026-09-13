@@ -8,6 +8,11 @@ import { matchBestPattern, pathToSegments } from "../src/server/api/match";
 const PATTERNS: string[][] = [
   ["api", "admin"],
   ["api", "admin", "backup"],
+  ["api", "admin", "support"],
+  ["api", "admin", "support", ":threadId"],
+  ["api", "support"],
+  ["api", "support", "presence"],
+  ["api", "support", ":threadId"],
   ["api", "downloads", "extension"],
   ["api", "downloads", "cinem-ai-assistant"],
   ["api", "cinem-ai-assistant", "usage"],
@@ -100,6 +105,19 @@ function matchPath(pathname: string) {
 const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/admin", ["api", "admin"], {}],
   ["/api/admin/backup", ["api", "admin", "backup"], {}],
+  ["/api/admin/support", ["api", "admin", "support"], {}],
+  [
+    "/api/admin/support/th_1",
+    ["api", "admin", "support", ":threadId"],
+    { threadId: "th_1" },
+  ],
+  ["/api/support", ["api", "support"], {}],
+  ["/api/support/presence", ["api", "support", "presence"], {}],
+  [
+    "/api/support/th_1",
+    ["api", "support", ":threadId"],
+    { threadId: "th_1" },
+  ],
   ["/api/downloads/extension", ["api", "downloads", "extension"], {}],
   ["/api/downloads/cinem-ai-assistant", ["api", "downloads", "cinem-ai-assistant"], {}],
   ["/api/cinem-ai-assistant/usage", ["api", "cinem-ai-assistant", "usage"], {}],
@@ -357,8 +375,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 85);
-console.log("ok: 85 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 90);
+console.log("ok: 90 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

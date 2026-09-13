@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import type { AdminDashboard } from "@/lib/admin";
 import { planModeName } from "@/lib/agent-modes";
@@ -73,6 +74,16 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
           value={data.approvals.length.toLocaleString()}
           hint={`${data.jobs.needsYou} jobs in needs_you`}
         />
+      </div>
+
+      <div className="mt-3">
+        <Link href="/admin/support" className="block rounded-xl focus-visible:ring-2 focus-visible:ring-ring">
+          <Kpi
+            label="Helpdesk tickets"
+            value={data.helpdesk.open.toLocaleString()}
+            hint={`Open + live ${data.helpdesk.open} · Live now ${data.helpdesk.live}. Team Support inbox — not Whop tips.`}
+          />
+        </Link>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-4">

@@ -98,7 +98,7 @@ export function settingsDeskCategories(workspaceId: string): SettingsDeskCategor
         {
           href: `/support`,
           label: "Support",
-          hint: "One-time $1–$99,999 via Whop. Does not change the workspace plan.",
+          hint: "One-time $1–$99,999 via Whop. Does not change the workspace plan. Product issues use the Help button (lower right), not this tip page.",
         },
         {
           href: `/console?workspace=${workspaceId}`,

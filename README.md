@@ -603,6 +603,7 @@ npm run test:llm           # routing + client boot checks (fake keys, no paid ca
 npm run test:models        # display-name catalog → cheap backend ids
 npm run test:onboarding    # one-box wizard, OAuth return, Free plan copy
 npm run test:admin         # Admin HQ allow-list, masking, backup redaction, section APIs, 403 authz
+npm run test:helpdesk      # Help widget, English ack, Admin inbox + live handoff contracts
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:companions    # gallery templates, allowed tools, Yes/No clarify helpers
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected

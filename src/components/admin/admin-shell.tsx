@@ -9,6 +9,7 @@ import {
   Receipt,
   ScrollText,
   ShieldAlert,
+  LifeBuoy,
   Users,
   Cpu,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/billing", label: "Billing", icon: Receipt },
+  { href: "/admin/support", label: "Support", icon: LifeBuoy },
   { href: "/admin/models", label: "Model / cost", icon: Cpu },
   { href: "/admin/access", label: "Access", icon: KeyRound },
   { href: "/admin/audit", label: "Audit", icon: ScrollText },

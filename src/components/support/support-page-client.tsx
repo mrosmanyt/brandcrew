@@ -24,6 +24,8 @@ function SupportPageInner({ provider }: { provider: BillingProvider }) {
         Anyone can back the brand with a custom amount from $1 to $99,999. This is a
         one-time checkout — it does not change Pro / Pro Plus / Ultra. Supporters get
         a visible badge and a short perk on the account. Shukriya in advance.
+        Product questions belong in the Help button (lower right) — that inbox is
+        separate from this tip page.
       </p>
       {status === "success" ? (
         <p className="mt-6 rounded-lg border border-border bg-card px-3 py-2 text-sm">

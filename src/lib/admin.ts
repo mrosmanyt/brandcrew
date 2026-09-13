@@ -218,6 +218,10 @@ export type AdminDashboard = {
     supportPending: number;
     webhooksLast7d: number;
   };
+  helpdesk: {
+    open: number;
+    live: number;
+  };
   failedJobs: AdminJobFailureRow[];
   approvals: AdminApprovalRow[];
   recentSignups: AdminSignupRow[];
@@ -440,6 +444,8 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
     supportPaid,
     supportPending,
     webhooksLast7d,
+    helpdeskOpen,
+    helpdeskLive,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.workspace.count(),
@@ -529,6 +535,8 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
     prisma.brandSupport.count({ where: { status: "paid" } }),
     prisma.brandSupport.count({ where: { status: { not: "paid" } } }),
     prisma.processedWebhook.count({ where: { createdAt: { gte: weekAgo } } }),
+    prisma.supportThread.count({ where: { status: { in: ["open", "live"] } } }),
+    prisma.supportThread.count({ where: { status: "live" } }),
   ]);
 
   const byPlan = emptyByPlan();
@@ -564,6 +572,10 @@ export async function getAdminDashboard(search?: string | null): Promise<AdminDa
       supportPaid,
       supportPending,
       webhooksLast7d,
+    },
+    helpdesk: {
+      open: helpdeskOpen,
+      live: helpdeskLive,
     },
     failedJobs: failedJobs.map((job) => ({
       id: job.id,
