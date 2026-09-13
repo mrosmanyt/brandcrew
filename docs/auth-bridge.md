@@ -51,7 +51,15 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 ## Desktop (Electron)
 
 - **Packaged** (`npm run desktop:build` / `desktop:build:win` / Setup.exe): always **cloud desk** at `https://app.cinem.tech` unless `CINEM_DESK_MODE=local`. Same account as the website. No local Postgres on the happy path. `APP_URL=http://127.0.0.1:…` is ignored so a leftover local env cannot blank the window.
-- Google OAuth stays in-window (`accounts.google.com`). The shell strips `Electron/…` from the user agent so Google does not return `disallowed_useragent`. Session cookies persist (`brandcrew_session`, SameSite=Lax, Secure on HTTPS).
+- **Windows Desk sign-in (0.3.4+):** do **not** finish Google OAuth inside Electron, and do **not** send the raw Google authorize URL to Chrome. That leaves `brandcrew_session` in the system browser (or a Chrome error) while the Desk webview stays signed out. Desk uses the same **Sign in with CINEM Pro** loop as AI Assistant:
+  1. Electron `POST /api/auth/connect` `{ surface: "desktop", deviceName: "CINEM Pro Desk" }`.
+  2. Opens `/connect/desktop?nonce=` in the **system browser** (`shell.openExternal`).
+  3. Continue with Google (or email) on the website — real Chrome, cookies work.
+  4. Approve **Continue**, or **Open CINEM Pro desktop** (`cinem-pro://connect?nonce=`).
+  5. Electron polls `POST /api/auth/connect/claim` (or claims via the deep link), writes the HttpOnly cookie into the Desk webview, and stores the refresh token in `userData`.
+- Clicking website **Continue with Google** inside the Desk webview is intercepted and starts that loop (so a shipped Setup.exe works even before the site UI deploys). When `window.brandcrewDesktop` is present, login/signup replace the Google button with **Sign in with CINEM Pro**. Website login in a normal browser is unchanged.
+- After Desk or Assistant signs in once, the shared `userData/refresh-token` unlocks the other mode without a second Google prompt. Assistant `storeSession` also writes the access JWT as the Desk cookie.
+- Marketplace plugin Google OAuth (Gmail/Calendar/Drive, `redirect_uri` …`/api/oauth/callback`) still stays in-window. The shell strips `Electron/…` from the user agent and drops `Sec-CH-UA` Client Hints so Google does not return `disallowed_useragent` for those plugin flows.
 - Billing (Stripe/Whop) opens in the system browser via `shell.openExternal`. Slack/Notion/Composio Connect stay in-window so Marketplace OAuth can finish.
 - If the cloud desk is unreachable, the window shows a **Retry** page instead of a white screen or quit.
 - **Dev** (`npm run desktop:dev`): still boots local Next on `http://127.0.0.1:43180`. `npm run desktop:cloud` opens the production desk without Docker.
@@ -59,7 +67,7 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 - Deep link `cinem-pro://connect?nonce=…&origin=…` claims a desktop ticket and writes the session cookie into Electron.
 - Windows installer: `npm run desktop:build:win` → `dist/desktop/CINEM-Pro-Setup.exe` (cloud desk **and** Cinem AI Assistant). Hosted copy: public releases repo (see `/download`). Unsigned builds: SmartScreen **More info → Run anyway** until Azure Artifact Signing is configured (`docs/windows-code-signing.md`).
 - Mode switch: menu **Desk** / **AI Assistant** / **Open both**, or Start Menu **Cinem AI Assistant** (`--mode=assistant`). Deep links `cinem-pro://assistant` and `cinem-pro://desk`.
-- Verify: install Setup.exe → desk loads `https://app.cinem.tech/desk` → switch to AI Assistant → Continue with Google or email → agents, chat, Marketplace work. Offline: toggle airplane mode and confirm Retry.
+- Verify: install Setup.exe **0.3.4+** → Desk **Sign in with CINEM Pro** → finish Google in Chrome → Desk opens `/desk` → switch to AI Assistant (already signed in). Or sign in on Assistant first, then Desk picks up the same account. Offline: toggle airplane mode and confirm Retry.
 
 ## Cinem AI Assistant (unified Electron)
 

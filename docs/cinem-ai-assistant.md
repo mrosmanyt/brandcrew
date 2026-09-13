@@ -49,7 +49,7 @@ Vercel / `next build` ignores this folder — Rust is never compiled on the Next
 
 Auth matches desktop cloud shell (`docs/auth-bridge.md`):
 
-1. **Sign in with CINEM Pro** (preferred): `POST /api/auth/connect` `{ surface: "desktop", deviceName: "Cinem AI Assistant" }`, open `approveUrl` (`/connect/desktop?nonce=`) in the **system browser**, poll `POST /api/auth/connect/claim`, store `accessToken` + `refreshToken`. The unified Electron app also shares the desk refresh token in `userData`.
+1. **Sign in with CINEM Pro** (preferred, Desk and Assistant): `POST /api/auth/connect` `{ surface: "desktop" }`, open `approveUrl` (`/connect/desktop?nonce=`) in the **system browser**, poll `POST /api/auth/connect/claim`, store `accessToken` + `refreshToken`. Desk intercepts in-window **Continue with Google** and uses this loop so Windows Chrome OAuth is not left hanging. The unified Electron app shares the refresh token in `userData` — one sign-in unlocks both modes.
 2. Or email/password: `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop) → `accessToken` + `refreshToken`.
 3. Call APIs with `Authorization: Bearer <accessToken>`. Refresh via `POST /api/auth/refresh`.
 4. Device tokens (`cinem_dev_…`) also work on the usage route; usage is billed to the linked user or desk owner.

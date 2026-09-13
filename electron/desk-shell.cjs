@@ -6,9 +6,11 @@ const PRODUCTION_DESK_ORIGIN = "https://app.cinem.tech";
 const VERCEL_DESK_ORIGIN = "https://brandcrew.vercel.app";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 43180;
-const DESKTOP_SHELL_VERSION = "0.3.3";
+const DESKTOP_SHELL_VERSION = "0.3.4";
 const SESSION_COOKIE = "brandcrew_session";
 const PROTOCOL = "cinem-pro";
+const GOOGLE_LOGIN_START_PATH = "/api/auth/google";
+const GOOGLE_LOGIN_CALLBACK_MARK = "/api/auth/google/callback";
 
 const PAYMENT_HOSTS = [
   "stripe.com",
@@ -30,6 +32,8 @@ const IN_WINDOW_HOST_SUFFIXES = [
   ".notion.com",
   ".composio.dev",
   ".worldmonitor.app",
+  ".recaptcha.net",
+  ".withgoogle.com",
 ];
 
 const IN_WINDOW_HOSTS = new Set([
@@ -49,6 +53,9 @@ const IN_WINDOW_HOSTS = new Set([
   "worldmonitor.app",
   "www.worldmonitor.app",
   "api.worldmonitor.app",
+  "recaptcha.net",
+  "www.recaptcha.net",
+  "withgoogle.com",
 ]);
 
 function stripTrailingSlash(value) {
@@ -134,6 +141,35 @@ function isInternalScheme(url) {
   );
 }
 
+/**
+ * Website Google *user login* (OpenID). Not Marketplace Gmail/Calendar
+ * (`redirect_uri` …/api/oauth/callback), which must stay in-window.
+ */
+function isGoogleUserLoginUrl(url) {
+  const parsed = parseOrigin(url);
+  if (!parsed) return false;
+  const path = parsed.pathname || "";
+  if (path === GOOGLE_LOGIN_START_PATH || path.endsWith(GOOGLE_LOGIN_START_PATH)) {
+    if (parsed.searchParams.get("format") === "json" && parsed.searchParams.get("start") !== "1") {
+      return false;
+    }
+    return true;
+  }
+  const redirect = parsed.searchParams.get("redirect_uri") || "";
+  return redirect.includes(GOOGLE_LOGIN_CALLBACK_MARK);
+}
+
+/**
+ * Desk navigation: user Google login uses the system-browser connect loop.
+ * Payments go external. Plugin Google OAuth stays in-window.
+ */
+function classifyDesktopNavigation(url, opts) {
+  if (isGoogleUserLoginUrl(url)) return "google-user-login";
+  if (isPaymentExternal(url)) return "payment";
+  if (isAllowedNavigation(url, opts)) return "allow";
+  return "external";
+}
+
 function isAllowedNavigation(url, { deskOrigin, localOrigin: local, assistantOrigin } = {}) {
   if (isInternalScheme(url)) return true;
   const parsed = parseOrigin(url);
@@ -193,6 +229,8 @@ module.exports = {
   localOrigin,
   resolveDeskOrigin,
   isPaymentExternal,
+  isGoogleUserLoginUrl,
+  classifyDesktopNavigation,
   isAllowedNavigation,
   chromeUserAgent,
   isIgnorableLoadError,

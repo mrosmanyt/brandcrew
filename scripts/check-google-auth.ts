@@ -105,6 +105,8 @@ assert.match(signupScreen, /safeNextPath\(next/);
 assert.match(signupScreen, /checkoutPlanFromNextPath/);
 assert.match(loginScreen, /authHrefWithNext\("\/signup"/);
 assert.match(googleBtn, /Continue with Google/);
+assert.match(googleBtn, /Sign in with CINEM Pro/);
+assert.match(googleBtn, /brandcrewDesktop/);
 assert.match(nav, /Account/);
 assert.match(nav, /accountHref/);
 assert.match(router, /\["api", "auth", "google"\]/);

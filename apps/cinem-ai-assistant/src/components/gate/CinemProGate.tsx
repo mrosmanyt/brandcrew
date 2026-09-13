@@ -7,6 +7,7 @@ import {
   signInWithPassword,
   startBrowserSignIn,
 } from "@/lib/cinemCloud";
+import { cinemDesktopBridge } from "@/lib/desktop-shell";
 import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 
 function SignInScreen() {
@@ -130,9 +131,18 @@ export default function CinemProGate({ children }: { children: ReactNode }) {
   }, [hydrate]);
 
   useEffect(() => {
-    if (phase !== "ready") return;
+    const bridge = cinemDesktopBridge();
+    if (!bridge?.onSession) return;
+    return bridge.onSession(() => {
+      void hydrate();
+    });
+  }, [hydrate]);
+
+  useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === "visible") void refreshUsage();
+      if (document.visibilityState !== "visible") return;
+      if (phase === "signed_out") void hydrate();
+      else if (phase === "ready") void refreshUsage();
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
@@ -140,7 +150,7 @@ export default function CinemProGate({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [phase, refreshUsage]);
+  }, [phase, hydrate, refreshUsage]);
 
   if (phase === "checking") {
     return (
