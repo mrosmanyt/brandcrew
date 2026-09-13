@@ -163,7 +163,8 @@ console.log("ok: Android Expo scaffold + Play docs");
 
 const sidebar = readFileSync("src/components/desk/sidebar.tsx", "utf8");
 assert.equal(sidebar.includes("/brand-kit"), false);
-assert.match(readFileSync("src/components/desk/settings-hub.tsx", "utf8"), /brand-kit/);
+assert.match(readFileSync("src/lib/desk-settings.ts", "utf8"), /brand-kit/);
+assert.match(readFileSync("src/components/desk/settings-hub.tsx", "utf8"), /settingsDeskCategories/);
 console.log("ok: Brand Kit stays under Settings (PR #49)");
 
 console.log("Auth bridge checks passed.");

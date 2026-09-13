@@ -43,8 +43,9 @@ Prefer these when adding job/browser/LLM behavior:
 
 # Desk navigation
 
+- **Primary sidebar:** Mission Control, API Console, Usage, Plans, Support, then Settings and Sign out. Marketplace, Client desks, Trust & audit, Calendar, Ops board, and On-device Chrome (plus Needs extension) live under **Settings** by category. Routes are unchanged.
 - **API Console** is not an in-desk page. Sidebar and Settings open same-origin `/console` (`target=_blank`). Do not send customers to `console.cinem.tech` — that host is not live. DNS + Vercel (optional later): `docs/console-domain.md`. Old `/desk/:id/developers` redirects to `/console?workspace=:id`.
 - **Brand Kit** is nested under **Settings** only (not the main sidebar). Route `/desk/:id/brand-kit` still exists.
-- **On-device Chrome:** **Download extension** serves `public/downloads/cinem-pro-chrome.zip` (`npm run pack:extension`). Popup **Sign in with CINEM** attaches the workspace to that Chrome (pairing codes still work). Chrome Web Store: `docs/chrome-extension-store.md`. Downloads hub: `/download`. **Cinem AI Assistant** (Windows-only, included with existing Free/Pro/Pro Plus/Ultra): `/cinem-ai-assistant`, `docs/cinem-ai-assistant.md`. Auth: `docs/auth-bridge.md`. Android Play: `docs/play-store-launch.md` (`mobile/`, package `tech.cinem.pro`).
+- **On-device Chrome:** Settings → Desk tools. **Download extension** serves `public/downloads/cinem-pro-chrome.zip` (`npm run pack:extension`). Popup **Sign in with CINEM** attaches the workspace to that Chrome (pairing codes still work). Chrome Web Store: `docs/chrome-extension-store.md`. Downloads hub: `/download`. **Cinem AI Assistant** (Windows-only, included with existing Free/Pro/Pro Plus/Ultra): `/cinem-ai-assistant`, `docs/cinem-ai-assistant.md`. Auth: `docs/auth-bridge.md`. Android Play: `docs/play-store-launch.md` (`mobile/`, package `tech.cinem.pro`).
 
 

@@ -23,7 +23,12 @@ import {
   normalizeComposerAttachments,
   validateComposerAttachment,
 } from "../src/lib/composer-media";
-import { jobDeskHref, settingsDeskLinks } from "../src/lib/desk-settings";
+import {
+  isSettingsFamilyPath,
+  jobDeskHref,
+  settingsDeskCategories,
+  settingsDeskLinks,
+} from "../src/lib/desk-settings";
 
 assert.deepEqual(
   COMPOSER_PLUS_ITEMS.map((item) => item.label),
@@ -98,9 +103,20 @@ assert.match(COMPOSER_ACCEPT, /video\/mp4/);
 console.log("ok: composer attachments format without inventing uploads");
 console.log("ok: composer media keeps bytes for multimodal analysis");
 
+const categories = settingsDeskCategories("ws_1");
+assert.deepEqual(
+  categories.map((category) => category.title),
+  ["Workspace", "Integrations", "Desk tools", "Billing & help"],
+);
+assert.ok(categories.find((category) => category.id === "workspace")?.links.some((link) => link.label === "Client desks"));
+assert.ok(categories.find((category) => category.id === "integrations")?.links.some((link) => link.label === "Marketplace"));
+assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "On-device Chrome"));
+assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "Calendar"));
+assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "Ops board"));
+
 const links = settingsDeskLinks("ws_1");
 const labels = links.map((link) => link.label);
-const required = ["Plugins", "Bots", "Marketplace", "Plans", "Support", "On-device Chrome", "Client desks", "Trust & audit", "Brand Kit", "API Console"] as const;
+const required = ["Plugins", "Bots", "Marketplace", "Plans", "Support", "On-device Chrome", "Client desks", "Trust & audit", "Brand Kit", "API Console", "Calendar", "Ops board"] as const;
 for (const label of required) {
   assert.equal(labels.includes(label), true, `missing ${label}`);
 }
@@ -112,7 +128,32 @@ assert.equal("external" in (apiConsole ?? {}) && apiConsole?.external, true);
 const brandKit = links.find((link) => link.label === "Brand Kit");
 assert.ok(brandKit?.href.includes("/brand-kit"));
 assert.equal(jobDeskHref("ws_1", { id: "job_9", agentId: "ag_2" }), "/desk/ws_1?agentId=ag_2&jobId=job_9");
+assert.equal(isSettingsFamilyPath("/desk/ws_1/settings", "ws_1"), true);
+assert.equal(isSettingsFamilyPath("/desk/ws_1/marketplace", "ws_1"), true);
+assert.equal(isSettingsFamilyPath("/desk/ws_1/usage", "ws_1"), false);
 console.log("ok: Settings hub lists Plugins, Bots, Marketplace, Plans, and Jobs deep-links");
+
+const sidebar = readFileSync("src/components/desk/sidebar.tsx", "utf8");
+assert.match(sidebar, /Mission Control/);
+assert.match(sidebar, /API Console/);
+assert.match(sidebar, /Usage/);
+assert.match(sidebar, /Plans/);
+assert.match(sidebar, /Support/);
+assert.doesNotMatch(sidebar, /\/marketplace/);
+assert.doesNotMatch(sidebar, /\/clients/);
+assert.doesNotMatch(sidebar, /\/trust/);
+assert.doesNotMatch(sidebar, /\/calendar/);
+assert.doesNotMatch(sidebar, /\/ops/);
+assert.doesNotMatch(sidebar, /\/on-device/);
+assert.doesNotMatch(sidebar, /ExtensionStatusChip/);
+const hub = readFileSync("src/components/desk/settings-hub.tsx", "utf8");
+const settingsLib = readFileSync("src/lib/desk-settings.ts", "utf8");
+assert.match(settingsLib, /title: "Integrations"/);
+assert.match(settingsLib, /title: "Desk tools"/);
+assert.match(hub, /settingsDeskCategories/);
+assert.match(hub, /ExtensionStatusChip/);
+assert.match(hub, /Chrome extension/);
+console.log("ok: primary sidebar is slim; moved destinations live under Settings categories");
 
 const composerSrc = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
 assert.match(composerSrc, /Always approved/);
