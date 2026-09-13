@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
+import { resolveDeskSection } from "@/lib/desk-routes";
 import { BillingPlans } from "@/components/desk/billing-plans";
 import { BrandKitForm } from "@/components/desk/brand-kit-form";
 import { LearningMemoryPanel } from "@/components/desk/learning-memory";
@@ -158,9 +159,9 @@ async function BillingPage({
       <p className="page-kicker">Billing</p>
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Plans</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Pro is $20/month for 2 seats and 50k tokens. Pro Plus is $79/month for 5
-        seats and 200k tokens. Ultra is $200/month for 12 seats and 600k tokens.
-        Token budgets, jobs per hour, and concurrent jobs are enforced by plan.
+        Pro is $20/month for 2 seats and 50k credits. Pro Plus is $79/month for 5
+        seats and 200k credits. Ultra is $200/month for 12 seats and 600k credits.
+        Credit budgets (tokens 1:1), jobs per hour, and concurrent jobs are enforced by plan.
         There is no self-serve model key field — keys stay on the server.
       </p>
       {query.status === "success" ? (
@@ -316,14 +317,14 @@ export default async function WorkspaceSectionPage({
 }) {
   const { workspaceId, section } = await params;
   const query = await searchParams;
-  const parts = section ?? [];
+  const resolved = resolveDeskSection(section);
 
-  if (parts.length === 0) {
+  if (resolved.kind === "not-found") notFound();
+  if (resolved.kind === "mission") {
     return <MissionControlPage workspaceId={workspaceId} query={query} />;
   }
-  if (parts.length > 1) notFound();
 
-  const head = parts[0];
+  const head = resolved.section;
   if (head === "calendar") {
     return (
       <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -381,5 +382,5 @@ export default async function WorkspaceSectionPage({
   if (head === "trust") {
     return <TrustCenter workspaceId={workspaceId} />;
   }
-  redirect(`/desk/${workspaceId}?agentId=${encodeURIComponent(head)}`);
+  notFound();
 }

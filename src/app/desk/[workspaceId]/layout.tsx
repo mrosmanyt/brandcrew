@@ -6,6 +6,7 @@ import { SetupBanner } from "@/components/desk/setup-banner";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
+import { creditsFromTokens, formatCreditsLine } from "@/lib/credits";
 import { limitsForPlan } from "@/lib/limits";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 
@@ -53,6 +54,12 @@ export default async function WorkspaceLayout({
     }
   }
 
+  const tokenBudget =
+    member.workspace.tokenBudget || limitsForPlan(member.workspace.plan).tokenBudget;
+  const creditsLine = formatCreditsLine(
+    creditsFromTokens(member.workspace.tokenUsed, tokenBudget),
+  );
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
       <Suspense
@@ -65,6 +72,7 @@ export default async function WorkspaceLayout({
           workspaces={workspaces}
           agents={member.workspace.agents.map(serializeAgent)}
           agentStatus={agentStatus}
+          creditsLine={creditsLine}
           needsYou={member.workspace.jobs
             .filter((job) => job.status === "needs_you")
             .map((job) => ({
@@ -80,14 +88,8 @@ export default async function WorkspaceLayout({
         <SetupBanner />
         <DeskChromeHeader
           workspaceId={member.workspace.id}
-          tokensLeft={Math.max(
-            0,
-            (member.workspace.tokenBudget || limitsForPlan(member.workspace.plan).tokenBudget) -
-              member.workspace.tokenUsed,
-          )}
-          tokenBudget={
-            member.workspace.tokenBudget || limitsForPlan(member.workspace.plan).tokenBudget
-          }
+          tokensLeft={Math.max(0, tokenBudget - member.workspace.tokenUsed)}
+          tokenBudget={tokenBudget}
           jobsLeft={limitsForPlan(member.workspace.plan).jobsPerHour}
           plan={limitsForPlan(member.workspace.plan).plan}
           supporter={Boolean(member.workspace.supporter)}

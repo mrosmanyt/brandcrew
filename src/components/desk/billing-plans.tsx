@@ -88,13 +88,13 @@ export function BillingPlans({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-xl border border-border bg-card p-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
+        <article className="min-w-0 rounded-xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">{demo.seats} seat · free</p>
           <h2 className="font-heading mt-1 text-2xl">{demo.name}</h2>
           <p className="mt-2 text-3xl tracking-tight">$0</p>
           <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-            <li>{demo.tokenBudget.toLocaleString()} tokens / cycle</li>
+            <li>{demo.tokenBudget.toLocaleString()} credits / cycle</li>
             <li>{demo.jobsPerHour} jobs / hour</li>
             <li>{demo.maxConcurrentJobs} concurrent job</li>
           </ul>
@@ -111,8 +111,8 @@ export function BillingPlans({
               key={id}
               className={
                 requested
-                  ? "rounded-xl border border-foreground bg-card p-5"
-                  : "rounded-xl border border-border bg-card p-5"
+                  ? "flex min-w-0 flex-col rounded-xl border border-foreground bg-card p-5"
+                  : "flex min-w-0 flex-col rounded-xl border border-border bg-card p-5"
               }
             >
               <p className="text-sm text-muted-foreground">{plan.seats} seats</p>
@@ -122,12 +122,12 @@ export function BillingPlans({
                 <span className="text-base text-muted-foreground">/mo</span>
               </p>
               <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-                <li>{plan.tokenBudget.toLocaleString()} tokens / cycle</li>
+                <li>{plan.tokenBudget.toLocaleString()} credits / cycle</li>
                 <li>{plan.jobsPerHour} jobs / hour</li>
                 <li>{plan.maxConcurrentJobs} concurrent job{plan.maxConcurrentJobs === 1 ? "" : "s"}</li>
               </ul>
               <Button
-                className="mt-5"
+                className="mt-5 h-auto min-h-8 w-full min-w-0 whitespace-normal px-3 py-2 text-center leading-snug"
                 disabled={current || busy !== null || !canCheckout}
                 onClick={() => checkout(id)}
               >
@@ -150,7 +150,7 @@ export function BillingPlans({
         {!canCheckout
           ? "Checkout is limited to owners and admins. You can still see plan caps. "
           : null}
-        See remaining tokens and jobs on{" "}
+        See remaining credits and jobs on{" "}
         <Link href={`/desk/${workspaceId}/usage`} className="underline">
           Usage
         </Link>

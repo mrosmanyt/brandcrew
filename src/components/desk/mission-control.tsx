@@ -35,6 +35,7 @@ import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deskChatGlowClass, deskChatIsEmpty, planModeName } from "@/lib/agent-modes";
+import { formatComposerUsageLine } from "@/lib/credits";
 import { DESK_RIGHT_PANE } from "@/lib/desk-layout";
 import {
   normalizeModelRouting,
@@ -814,7 +815,11 @@ export function MissionControl({
             usageLabel={
               atCap
                 ? "Budget reached."
-                : `${remaining.toLocaleString()} tokens · ${jobsLeft} jobs/hr left · ${planModeName(usage.plan)}`
+                : formatComposerUsageLine({
+                    creditsLeft: remaining,
+                    jobsLeft,
+                    planName: planModeName(usage.plan),
+                  })
             }
             skills={skills}
             roleChips={roleChips}

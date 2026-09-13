@@ -36,5 +36,26 @@ export function withCredits<T extends LimitsDTO>(limits: T): T & CreditsDTO {
 }
 
 export function formatCreditsLine(credits: CreditsDTO): string {
-  return `${credits.creditsLeft.toLocaleString()} / ${credits.creditsBudget.toLocaleString()} credits`;
+  return `${credits.creditsLeft.toLocaleString()} / ${credits.creditsBudget.toLocaleString()} credits this cycle`;
+}
+
+export function formatJobsCapLine(jobsPerHour: number): string {
+  return `${jobsPerHour} jobs/hr cap`;
+}
+
+export function formatJobsLeftLine(jobsLeft: number): string {
+  return `${jobsLeft} jobs/hr left`;
+}
+
+export function formatComposerUsageLine(input: {
+  creditsLeft: number;
+  jobsLeft: number;
+  planName: string;
+}): string {
+  return `${input.creditsLeft.toLocaleString()} credits this cycle · ${formatJobsLeftLine(input.jobsLeft)} · ${input.planName}`;
+}
+
+export function usageLookbackLabel(days: number): string {
+  const n = Math.max(1, Math.floor(days) || 1);
+  return n === 1 ? "last 1 day" : `last ${n} days`;
 }

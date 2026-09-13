@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DeskThemeToggle } from "@/components/desk/theme-toggle";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import { planModeName } from "@/lib/agent-modes";
-import { creditsFromTokens, formatCreditsLine } from "@/lib/credits";
+import { creditsFromTokens, formatCreditsLine, formatJobsCapLine } from "@/lib/credits";
 import { SupporterBadge } from "@/components/support/supporter-badge";
 
 export function DeskChromeHeader({
@@ -23,7 +23,6 @@ export function DeskChromeHeader({
   supporter?: boolean;
 }) {
   const credits = creditsFromTokens(Math.max(0, tokenBudget - tokensLeft), tokenBudget);
-  credits.creditsLeft = Math.max(0, tokensLeft);
   return (
     <header className="hidden h-11 shrink-0 items-center justify-end gap-3 border-b border-border bg-background px-4 md:flex">
       {supporter ? (
@@ -35,7 +34,7 @@ export function DeskChromeHeader({
         href={`/desk/${workspaceId}/usage`}
         className="text-[11px] text-muted-foreground hover:text-foreground"
       >
-        {formatCreditsLine(credits)} · {jobsLeft} jobs/hr cap · {planModeName(plan)}
+        {formatCreditsLine(credits)} · {formatJobsCapLine(jobsLeft)} · {planModeName(plan)}
       </Link>
       <NotificationBell workspaceId={workspaceId} initialItems={needsYou} />
       <DeskThemeToggle />

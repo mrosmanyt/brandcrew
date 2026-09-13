@@ -149,7 +149,7 @@ export async function getUsageSnapshot(workspaceId: string, days = 30) {
     approved: approvedCount,
     estimateUsd: estimateUsdStub(limits.tokenUsed),
     estimateNote:
-      "Rough stub: $0.50 per 100k tokens blended. Not a bill and not provider-accurate. The hard stop is tokenBudget, not this estimate.",
+      "Rough stub: $0.50 per 100k credits blended. Not a bill and not provider-accurate. The hard stop is this cycle’s credit budget, not this estimate.",
     days: windowDays,
     series,
     byModel,
@@ -158,6 +158,7 @@ export async function getUsageSnapshot(workspaceId: string, days = 30) {
     events: events.slice(0, 80).map((row) => ({
       id: row.id,
       tokens: row.tokens,
+      credits: row.tokens,
       model: row.model,
       agentRole: row.agentRole,
       createdAt: row.createdAt.toISOString(),

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { InviteTeam } from "@/components/desk/invite-team";
 import { ScheduleJobs } from "@/components/desk/schedule-jobs";
 import { UsageChart } from "@/components/desk/usage-chart";
+import { usageLookbackLabel } from "@/lib/credits";
 import { publicModelLabel } from "@/lib/model-catalog";
 import type { AgentDTO } from "@/lib/job-types";
 import type { UsageDayPoint } from "@/lib/usage-series";
@@ -37,7 +38,14 @@ type UsagePayload = {
   series?: UsageDayPoint[];
   seriesNote?: string;
   byModel?: { model: string; tokens: number; credits: number; events: number }[];
-  events: { id: string; tokens: number; model: string; agentRole: string; createdAt: string }[];
+  events: {
+    id: string;
+    tokens: number;
+    credits?: number;
+    model: string;
+    agentRole: string;
+    createdAt: string;
+  }[];
 };
 
 export function UsageDashboard({
@@ -65,9 +73,10 @@ export function UsageDashboard({
       <p className="page-kicker">Usage</p>
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Workspace usage</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Tokens remain the billing unit. The desk shows them as <strong>credits</strong> 1:1
-        (Free / Pro / Pro Plus / Ultra caps — there is no unlimited plan). Owners and
-        admins can change the plan; members and approvers see caps only.
+        The desk bills in <strong>credits</strong> (tokens 1:1). Chart totals below are a
+        rolling lookback. Remaining credits are this billing cycle. Free / Pro / Pro Plus /
+        Ultra are capped — there is no unlimited plan. Owners and admins can change the
+        plan; members and approvers see caps only.
       </p>
 
       <div className="mt-6">
@@ -90,7 +99,7 @@ export function UsageDashboard({
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <Stat
-          label="Credits remaining"
+          label="Credits remaining this cycle"
           value={
             limits
               ? `${(limits.creditsLeft ?? limits.tokensLeft).toLocaleString()} / ${(limits.creditsBudget ?? limits.tokenBudget).toLocaleString()}`
@@ -98,7 +107,7 @@ export function UsageDashboard({
           }
           hint={
             limits
-              ? `${(limits.creditsUsed ?? limits.tokenUsed).toLocaleString()} credits used this cycle (token budget)`
+              ? `${(limits.creditsUsed ?? limits.tokenUsed).toLocaleString()} credits used this billing cycle`
               : ""
           }
         />
@@ -121,7 +130,7 @@ export function UsageDashboard({
           value={data ? `$${data.estimateUsd.toFixed(2)}` : "…"}
           hint={
             data?.estimateNote ||
-            "Rough stub — not a provider bill. Token budget is the hard stop."
+            "Rough stub — not a provider bill. This cycle’s credit budget is the hard stop."
           }
         />
         <Stat
@@ -151,13 +160,15 @@ export function UsageDashboard({
 
       {data?.byModel?.length ? (
         <section className="mt-8 rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-sm font-medium">By model (this window)</h2>
+          <h2 className="text-sm font-medium">
+            By model ({usageLookbackLabel(data.days ?? days)})
+          </h2>
           <ul className="mt-3 divide-y divide-border text-sm">
             {data.byModel.slice(0, 8).map((row) => (
               <li key={row.model} className="flex justify-between gap-3 py-2">
                 <span>{publicModelLabel(row.model)}</span>
                 <span className="text-muted-foreground">
-                  {row.credits.toLocaleString()} cr · {row.events} calls
+                  {row.credits.toLocaleString()} credits · {row.events} calls
                 </span>
               </li>
             ))}
@@ -167,7 +178,7 @@ export function UsageDashboard({
 
       {data?.events?.length ? (
         <section className="mt-8 rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-sm font-medium">Recent token events</h2>
+          <h2 className="text-sm font-medium">Recent credit events</h2>
           <ul className="mt-3 divide-y divide-border text-sm">
             {data.events.slice(0, 12).map((row) => (
               <li key={row.id} className="flex justify-between gap-3 py-2">
@@ -175,7 +186,7 @@ export function UsageDashboard({
                   {row.agentRole || "job"} · {publicModelLabel(row.model)}
                 </span>
                 <span className="text-muted-foreground">
-                  {row.tokens.toLocaleString()} tok
+                  {(row.credits ?? row.tokens).toLocaleString()} credits
                 </span>
               </li>
             ))}
