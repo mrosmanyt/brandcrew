@@ -5,6 +5,13 @@ import { SiteNav } from "@/components/marketing/site-nav";
 import { SiteFooter } from "@/components/marketing/home-sections";
 import { Button } from "@/components/ui/button";
 import {
+  CINEM_AI_ASSISTANT_NAME,
+  CINEM_AI_ASSISTANT_PATH,
+  CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  cinemAiAssistantBillingPath,
+  cinemAiAssistantDownloadHref,
+} from "@/lib/cinem-ai-assistant";
+import {
   ANDROID_PACKAGE_ID,
   ANDROID_PLAY_URL,
   CHROME_EXTENSION_API,
@@ -40,7 +47,56 @@ export default function DownloadPage() {
           on the web; native apps use the same auth API.
         </p>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <article className="mkt-card-hover mt-12 flex flex-col rounded-xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between md:gap-8">
+          <div className="max-w-xl">
+            <p className="text-sm text-muted-foreground">Windows · {CINEM_AI_ASSISTANT_NAME}</p>
+            <h2 className="mt-2 text-lg font-medium tracking-tight">
+              Native assistant — included with your CINEM Pro plan
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              Voice, agents, and vision on Windows. Free build first; when turns run out,
+              Upgrade opens logged-in Pro checkout in the system browser. Installer{" "}
+              <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_SETUP_FILENAME}</code>{" "}
+              — drop it in <code className="font-mono text-xs">public/downloads</code> when
+              the binary is ready.
+            </p>
+          </div>
+          <div className="mt-6 flex shrink-0 flex-col gap-2 md:mt-0">
+            <Button
+              size="lg"
+              className="h-11"
+              nativeButton={false}
+              render={
+                <a
+                  href={cinemAiAssistantDownloadHref()}
+                  download={CINEM_AI_ASSISTANT_SETUP_FILENAME}
+                />
+              }
+            >
+              Get {CINEM_AI_ASSISTANT_NAME}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-11"
+              nativeButton={false}
+              render={<Link href={CINEM_AI_ASSISTANT_PATH} />}
+            >
+              Product page
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              className="h-11"
+              nativeButton={false}
+              render={<Link href={cinemAiAssistantBillingPath("pro")} />}
+            >
+              Upgrade to Pro
+            </Button>
+          </div>
+        </article>
+
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
           <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
             <p className="text-sm text-muted-foreground">Windows</p>
             <h2 className="mt-2 text-lg font-medium tracking-tight">Desktop app</h2>

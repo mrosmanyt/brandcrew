@@ -78,6 +78,8 @@ import * as workspaceJobReplay from "./workspaces/job-replay";
 import * as workspaceTriggers from "./workspaces/triggers";
 import * as workspaceTriggerFire from "./workspaces/trigger-fire";
 import * as downloadsExtension from "./downloads/extension";
+import * as downloadsCinemAiAssistant from "./downloads/cinem-ai-assistant";
+import * as cinemAiAssistantUsage from "./cinem-ai-assistant/usage";
 import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
@@ -115,6 +117,14 @@ function asHandlers(mod: object): HandlerModule {
 export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "admin"], handlers: asHandlers(adminRoot) },
   { pattern: ["api", "downloads", "extension"], handlers: asHandlers(downloadsExtension) },
+  {
+    pattern: ["api", "downloads", "cinem-ai-assistant"],
+    handlers: asHandlers(downloadsCinemAiAssistant),
+  },
+  {
+    pattern: ["api", "cinem-ai-assistant", "usage"],
+    handlers: asHandlers(cinemAiAssistantUsage),
+  },
   { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
   { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
   {

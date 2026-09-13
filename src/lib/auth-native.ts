@@ -44,6 +44,8 @@ export function nativeCorsPreflight() {
 export function isNativeCorsPath(segments: string[]) {
   if (segments[0] === "api" && segments[1] === "device") return true;
   const path = segments.join("/");
+  if (path === "api/cinem-ai-assistant/usage") return true;
+  if (path === "api/downloads/cinem-ai-assistant") return true;
   return (
     path === "api/auth/token" ||
     path === "api/auth/refresh" ||
@@ -78,6 +80,7 @@ async function assertWorkspaceMember(userId: string, workspaceId: string) {
 
 export function readCinemClient(request: Request): AuthSurface {
   const header = (request.headers.get("x-cinem-client") || "").trim().toLowerCase();
+  if (header === "assistant") return "desktop";
   if (header === "desktop" || header === "mobile" || header === "extension") return header;
   if (header === "web") return "web";
   return "web";

@@ -1,0 +1,10 @@
+Cinem AI Assistant Windows installer placeholder.
+
+Drop the real NSIS build here as:
+
+  public/downloads/Cinem-AI-Assistant-Setup.exe
+
+Or set CINEM_AI_ASSISTANT_SETUP_URL / NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL
+to a hosted copy of that filename.
+
+See docs/cinem-ai-assistant.md. Do not commit a fake .exe.

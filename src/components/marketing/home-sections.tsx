@@ -3,6 +3,12 @@ import { BrandMark } from "@/components/brand/logo";
 import { GetStartedButton, PricingDemoCta, PricingPlanCta } from "@/components/marketing/home-ctas";
 import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
+import {
+  CINEM_AI_ASSISTANT_NAME,
+  CINEM_AI_ASSISTANT_PATH,
+  CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  cinemAiAssistantDownloadHref,
+} from "@/lib/cinem-ai-assistant";
 import { PLANS } from "@/lib/constants";
 import {
   ANDROID_PACKAGE_ID,
@@ -252,11 +258,43 @@ export function DownloadSection() {
       title="Get desktop, Android, or Chrome"
       lead="Same CINEM Pro account on every surface. Windows is a direct installer download. Android and the Chrome extension use the same login API as this website."
     >
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3">
         <Button size="lg" className="h-11 px-5" nativeButton={false} render={<Link href="/download" />}>
           All downloads
         </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          className="h-11 px-5"
+          nativeButton={false}
+          render={<Link href={CINEM_AI_ASSISTANT_PATH} />}
+        >
+          {CINEM_AI_ASSISTANT_NAME}
+        </Button>
       </div>
+      <article className="mkt-card-hover mb-6 flex flex-col rounded-xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between md:gap-8">
+        <div className="max-w-xl">
+          <p className="text-sm text-muted-foreground">Windows · {CINEM_AI_ASSISTANT_NAME}</p>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">
+            Native assistant — included with your CINEM Pro plan
+          </h3>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            Voice Jarvis, agents, and vision. Free Windows build, then the same Pro checkout
+            as the desk. Installer{" "}
+            <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_SETUP_FILENAME}</code>.
+          </p>
+        </div>
+        <div className="mt-6 flex shrink-0 flex-wrap gap-3 md:mt-0">
+          <Button
+            size="lg"
+            className="mkt-cta-pulse h-11 px-5"
+            nativeButton={false}
+            render={<a href={cinemAiAssistantDownloadHref()} />}
+          >
+            Get {CINEM_AI_ASSISTANT_NAME}
+          </Button>
+        </div>
+      </article>
       <div className="grid gap-6 md:grid-cols-3">
         <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Windows</p>
@@ -391,6 +429,7 @@ export function PricingSection() {
             </p>
             <ul className="mt-5 mb-6 space-y-2 text-sm leading-6 text-muted-foreground">
               <li>{plan.jobsPerHour} jobs / hour · {plan.maxConcurrentJobs} concurrent</li>
+              <li>Cinem AI Assistant included (Windows)</li>
               <li>Mission Control, Marketplace, Brand Kit</li>
               <li>Approve-before-send jobs</li>
               <li>Developer API keys in the Console</li>
@@ -504,11 +543,11 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. Cinem AI Assistant is a separate Windows installer (Cinem-AI-Assistant-Setup.exe) on /cinem-ai-assistant — included with your CINEM Pro plan. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
   },
   {
     q: "How does pricing work?",
-    a: "Pro is $20/month (2 seats, 50k tokens). Pro Plus is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Pro / Get Pro Plus / Get Ultra signs you in, then desk billing checkouts with Whop when configured.",
+    a: "Pro is $20/month (2 seats, 50k tokens). Pro Plus is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Pro / Get Pro Plus / Get Ultra signs you in, then desk billing checkouts with Whop when configured. Cinem AI Assistant is included with those plans — not a separate purchase.",
   },
   {
     q: "Can I support CINEM without buying a plan?",
@@ -544,6 +583,7 @@ const FOOTER_LINKS = [
   { href: "/#integrations", label: "Connectors" },
   { href: "/#agents", label: "Agents" },
   { href: "/#how-it-works", label: "How it works" },
+  { href: "/cinem-ai-assistant", label: "Assistant" },
   { href: "/download", label: "Download" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/support", label: "Support" },

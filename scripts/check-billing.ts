@@ -28,6 +28,12 @@ import {
   shouldDowngradeToDemo,
 } from "../src/lib/billing-events";
 import {
+  assistantCheckoutPlanFromQuery,
+  cinemAiAssistantBillingPath,
+  cinemAiAssistantUpgradeUrl,
+  CINEM_AI_ASSISTANT_PRODUCT,
+} from "../src/lib/cinem-ai-assistant";
+import {
   authHrefWithNext,
   billingCheckoutLabel,
   billingSuccessBanner,
@@ -157,7 +163,18 @@ assert.equal(
 assert.equal(checkoutPlanFromNextPath("/desk?checkout=ultra"), "ultra");
 assert.equal(checkoutPlanFromNextPath("https://evil.example/?checkout=pro"), null);
 assert.equal(authHrefWithNext("/login", "/desk?checkout=pro"), "/login?next=%2Fdesk%3Fcheckout%3Dpro");
+assert.equal(assistantCheckoutPlanFromQuery("pro", CINEM_AI_ASSISTANT_PRODUCT), "starter");
+assert.equal(cinemAiAssistantBillingPath("pro"), "/billing?plan=pro&product=cinem-ai-assistant");
+assert.equal(
+  cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
+  "https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant",
+);
+assert.equal(
+  checkoutPlanFromNextPath("/billing?plan=pro&product=cinem-ai-assistant"),
+  "starter",
+);
 console.log("ok: marketing Get {plan} hrefs go through signup next then desk billing");
+console.log("ok: Cinem AI Assistant upgrade uses existing Pro ($20) checkout path");
 
 assert.equal(normalizeWhopEventType("payment_succeeded"), "payment.succeeded");
 assert.equal(isPaidUnlockEvent("payment.succeeded"), true);
