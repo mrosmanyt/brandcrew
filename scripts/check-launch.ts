@@ -126,6 +126,7 @@ assert.equal(sensitiveRateLimit(["api", "auth", "me"], "PATCH")?.key, "account")
 assert.equal(sensitiveRateLimit(["api", "billing", "checkout"], "POST")?.key, "checkout");
 assert.equal(sensitiveRateLimit(["api", "admin"], "GET")?.key, "admin");
 assert.equal(sensitiveRateLimit(["api", "admin"], "POST")?.key, "admin-write");
+assert.equal(sensitiveRateLimit(["api", "admin", "backup"], "GET")?.key, "admin-backup");
 assert.equal(sensitiveRateLimit(["api", "auth", "google", "callback"], "GET")?.key, "auth-google");
 assert.equal(sensitiveRateLimit(["api", "v1", "jobs"], "GET"), null);
 console.log("ok: in-memory rate limit trips after the window cap");
@@ -395,6 +396,8 @@ async function main() {
     [...adminApi.matchAll(/await requireAdmin\(\)/g)].length >= 2,
     "GET and POST /api/admin must call requireAdmin",
   );
+  const backupApi = readFileSync("src/server/api/admin/backup.ts", "utf8");
+  assert.match(backupApi, /await requireAdmin\(\)/, "GET /api/admin/backup must call requireAdmin");
   function walkPages(dir: string, acc: string[] = []): string[] {
     for (const name of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, name.name);

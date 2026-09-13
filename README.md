@@ -330,7 +330,7 @@ See [`.env.example`](./.env.example). Summary:
 | `DATABASE_URL` | yes | Postgres connection string. Local Docker default is in `.env.example`. Neon: pooled URL (`sslmode=require`, add `pgbouncer=true` if using the pooler). |
 | `DIRECT_URL` | yes | Unpooled Postgres URL for `prisma migrate deploy`. Local Docker: same as `DATABASE_URL`. Neon: the **direct** connection string. |
 | `SESSION_SECRET` | yes (dev default provided) | Signs the session cookie **and** encrypts plugin secrets. **Change in production.** |
-| `ADMIN_EMAILS` | no (`cinemtech@gmail.com` always included) | Comma-separated staff emails for Internal Admin HQ at `/admin`. Set on Vercel for every operator or they get 403. |
+| `ADMIN_EMAILS` | no (`cinemtech@gmail.com` and `mrosmanyt@gmail.com` always included) | Comma-separated staff emails for Internal Admin HQ at `/admin`. Set on Vercel for every operator or they get 403. See `docs/admin-ops.md`. |
 | `OPENAI_API_KEY` | no | OpenAI. Cheap drafts (`gpt-4o-mini`) and GPT-4.1-class finals when Claude is unset. |
 | `ANTHROPIC_API_KEY` | no | Claude. Preferred for strong finals (`claude-sonnet-5`). |
 | `GEMINI_API_KEY` | no | Gemini. Preferred cheap drafts (`gemini-2.5-flash`). Sole provider uses Flash + Pro. |
@@ -407,7 +407,7 @@ The initial migration is `prisma/migrations/20240907120000_init`.
 | `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | optional existing plan ids |
 | `WHOP_SUPPORT_PRODUCT_ID` | optional Support product (`prod_…`) for one-time tips |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional; no keys → offline templates |
-| `ADMIN_EMAILS` | comma-separated staff emails that may open `/admin`. `cinemtech@gmail.com` is always included. **Set this on Vercel** for every operator (QA included) or they get 403. |
+| `ADMIN_EMAILS` | comma-separated staff emails that may open `/admin`. `cinemtech@gmail.com` and `mrosmanyt@gmail.com` are always included. **Set this on Vercel** for every operator (QA included) or they get 403. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional; Gmail Connect |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | optional |
 
@@ -466,7 +466,7 @@ Public site: [app.cinem.tech](https://app.cinem.tech) (Vercel alias [brandcrew.v
 
 **CSRF:** Session cookie `brandcrew_session` is httpOnly, SameSite=Lax, Secure in production and on Vercel. Same-origin POSTs send it; cross-site POSTs from other origins do not. OAuth callbacks are top-level GET. There is no extra CSRF token. The session JWT is never written to `localStorage` / `sessionStorage` (those stores are cookie-banner consent, desk pane width, billing toast, and developer API keys — not login).
 
-**Auth (existing Google + cookie session — no second system):** Continue with Google already verifies email (`email_verified === true` or the callback bounces `email_unverified`). Email/password signup remains; there is **no SMTP mailer** and **no password-reset route**, so we do not fake a “we sent a verification email” or 2FA UI. Privileged Admin HQ is `ADMIN_EMAILS` + `requireAdmin` / `loadAdminPage` on every `/admin` page and `/api/admin` GET+POST — hiding the Settings link is not the gate. Password signup and Settings password-change require 8–72 characters, reject trivial passwords, and optionally query Have I Been Pwned (k-anonymity SHA-1 prefix, 2s timeout, **fail-open**). 2FA is a follow-up.
+**Auth (existing Google + cookie session — no second system):** Continue with Google already verifies email (`email_verified === true` or the callback bounces `email_unverified`). Email/password signup remains; there is **no SMTP mailer** and **no password-reset route**, so we do not fake a “we sent a verification email” or 2FA UI. Privileged Admin HQ is `ADMIN_EMAILS` + `requireAdmin` / `loadAdminPage` on every `/admin` page and `/api/admin` GET+POST (including `/api/admin/backup`) — hiding the Settings link is not the gate. Password signup and Settings password-change require 8–72 characters, reject trivial passwords, and optionally query Have I Been Pwned (k-anonymity SHA-1 prefix, 2s timeout, **fail-open**). 2FA is a follow-up.
 
 **Rate limits:** In-memory per-IP windows on login, signup, Google start/callback, checkout, admin reads, admin writes (tighter), account PATCH, and invite accept. Login/signup also bucket **per email** (cloned request body; Hobby has no Redis). Isolates do not share memory (Upstash-free). Developer API keys already have a 60/min hashed-key window in Postgres.
 
@@ -559,7 +559,7 @@ Keep useful work on APIs while driving spend toward zero. There is **no unlimite
 
 `npm run test:cost` is the fixture: a weekly-client-brief replay skips the LLM for the majority of steps once selectors are cached.
 
-Founder Admin HQ lives at `/admin` (path-based internal ops console, not a customer product). Access is emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com`). **Set `ADMIN_EMAILS` on Vercel** to every staff email or they get 403. Non-admins get 403. Plan assign / revoke / suspend and flag writes are audited in `AdminAuditLog`.
+Founder Admin HQ lives at `/admin` (path-based internal ops console, not a customer product). Access is emails in `ADMIN_EMAILS` (always includes `cinemtech@gmail.com` and `mrosmanyt@gmail.com`). **Set `ADMIN_EMAILS` on Vercel** to every staff email or they get 403. Non-admins get 403. Plan assign / revoke / suspend / budget and flag writes are audited in `AdminAuditLog`. Download backup (`GET /api/admin/backup`) is a redacted JSON copy for a founder PC — live truth stays on cloud Postgres. See `docs/admin-ops.md`.
 
 ## Internal Admin HQ
 
@@ -567,16 +567,16 @@ Founder Admin HQ lives at `/admin` (path-based internal ops console, not a custo
 
 | Section | What it shows (Postgres / env, never fake KPIs) |
 | --- | --- |
-| **Overview** | User count, paid vs free workspaces, by-plan counts, jobs running / needs_you / failed 24h / created 24h, token sums |
-| **Customers 360** | Search by email → user, workspaces, plan, tokens, memberships, recent jobs, usage events. Assign / revoke / suspend |
-| **Billing** | Paid workspaces, Whop membership id when stored, assign / revoke. No invented credit balances |
+| **Overview** | User count, paid vs free workspaces, by-plan counts, jobs running / needs_you / failed 24h / created 24h, token + chat sums, Support + webhook counts, recent failures, approvals. **Download backup** |
+| **Customers 360** | Recent users or email search → workspaces, plan, tokens, memberships, recent jobs, usage events. Assign / revoke / suspend / set budget |
+| **Billing** | Paid workspaces, Whop membership id, `BrandSupport` tips, `ProcessedWebhook` events. No invented credit balances |
 | **Model / cost** | Display→backend map, provider key present/absent (booleans only), `UsageEvent` totals by `model` |
 | **Access** | Effective admin emails from env (local part masked, domain visible). Role is `superadmin` via `ADMIN_EMAILS` only. SSO later |
-| **Audit** | Full `AdminAuditLog` with action / actor / target filters |
+| **Audit** | Full `AdminAuditLog` with action / actor / target filters + founder backup download |
 | **Trust & safety** | User or workspace search + revoke to Free / suspend (ban-lite) |
 | **Feature flags** | `FeatureFlag { key, enabled, note }` with confirm + audit |
 
-`ADMIN_EMAILS` parsing always unions `cinemtech@gmail.com`. Add each extra operator on Vercel (Production and Preview), comma-separated. QA accounts belong in that env var, not in source.
+`ADMIN_EMAILS` parsing always unions `cinemtech@gmail.com` and `mrosmanyt@gmail.com`. Add each extra operator on Vercel (Production and Preview), comma-separated. QA accounts belong in that env var, not in source. Backup JSON is a copy for a local PC — see `docs/admin-ops.md`.
 
 **Google Antigravity** (agent sessions / computer-use) is a follow-up — too heavy for this MVP. Website jobs use Gemini Flash when the key is present.
 
@@ -599,7 +599,7 @@ Token budget, hourly jobs, and concurrent running jobs are enforced on job creat
 npm run test:llm           # routing + client boot checks (fake keys, no paid calls)
 npm run test:models        # display-name catalog → cheap backend ids
 npm run test:onboarding    # one-box wizard, OAuth return, Free plan copy
-npm run test:admin         # Admin HQ allow-list, masking, section APIs, 403 authz
+npm run test:admin         # Admin HQ allow-list, masking, backup redaction, section APIs, 403 authz
 npm run test:jobs          # playbooks, live-output gate, URL guard, browse stubs (no database)
 npm run test:companions    # gallery templates, allowed tools, Yes/No clarify helpers
 npm run test:marketplace   # catalogs, encrypt, Connect-without-key stays disconnected

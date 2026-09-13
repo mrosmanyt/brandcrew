@@ -13,7 +13,7 @@ export function AdminModels({ data }: { data: AdminModelsPayload }) {
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Model / cost"
-      hint="Display names map to cheap backend ids. Key presence is boolean only — secret values are never loaded here."
+      hint="Display names map to cheap backend ids. Key presence is boolean only — secret values are never loaded here. Override a workspace token cap from Overview or Customers (Set budget). That does not create a new Whop plan."
     >
       <section className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-4">

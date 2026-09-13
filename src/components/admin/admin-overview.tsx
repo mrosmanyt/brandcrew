@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { AdminDashboard } from "@/lib/admin";
 import { planModeName } from "@/lib/agent-modes";
 import { PLANS } from "@/lib/constants";
+import { AdminBackupButton } from "@/components/admin/admin-backup-button";
 import {
   AdminConfirm,
   AdminPageFrame,
@@ -28,8 +29,14 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
   return (
     <AdminPageFrame
       kicker="Internal Admin HQ"
-      title="Overview"
-      hint="Live Postgres counts. Running and Needs you are current jobs, not estimates."
+      title="Founder control center"
+      hint="Live cloud Postgres on app.cinem.tech. Download backup is a copy for your PC — not a second database."
+      actions={
+        <>
+          <AdminBackupButton />
+          <AdminBackupButton full />
+        </>
+      }
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Users signed up" value={data.users.total.toLocaleString()} />
@@ -46,7 +53,25 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
         <Kpi
           label="Tokens this cycle"
           value={data.usage.tokensUsedThisCycle.toLocaleString()}
-          hint={`Budget cap ${data.usage.tokenBudgetTotal.toLocaleString()} · UsageEvent ${data.usage.usageEventTokens.toLocaleString()}`}
+          hint={`Budget cap ${data.usage.tokenBudgetTotal.toLocaleString()} · Chat ${data.usage.chatTokenUsed.toLocaleString()} · UsageEvent ${data.usage.usageEventTokens.toLocaleString()}`}
+        />
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <Kpi
+          label="Support payments (paid)"
+          value={data.billing.supportPaid.toLocaleString()}
+          hint={`Pending/other ${data.billing.supportPending}`}
+        />
+        <Kpi
+          label="Whop webhooks (7d)"
+          value={data.billing.webhooksLast7d.toLocaleString()}
+          hint="ProcessedWebhook rows. Billing page lists recent events."
+        />
+        <Kpi
+          label="Approvals waiting"
+          value={data.approvals.length.toLocaleString()}
+          hint={`${data.jobs.needsYou} jobs in needs_you`}
         />
       </div>
 
@@ -58,6 +83,70 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
           </article>
         ))}
       </div>
+
+      <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="border-b border-border px-5 py-4">
+          <h2 className="text-sm font-medium">Job failures</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Latest failed Job rows. Error text is truncated. Prompts are not shown.
+          </p>
+        </div>
+        {data.failedJobs.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-muted-foreground">No failed jobs stored.</p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {data.failedJobs.map((job) => (
+              <li key={job.id} className="px-5 py-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <span>
+                    <span className="font-medium">{job.title}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {job.workspaceName} · {job.id}
+                    </span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(job.updatedAt).toLocaleString()}
+                  </span>
+                </div>
+                {job.error ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{job.error}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="border-b border-border px-5 py-4">
+          <h2 className="text-sm font-medium">Approvals / needs you</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Jobs waiting on a human. Open the desk to approve. Client-named email still always waits.
+          </p>
+        </div>
+        {data.approvals.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-muted-foreground">No jobs waiting on you.</p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {data.approvals.map((job) => (
+              <li key={job.id} className="flex flex-wrap items-baseline justify-between gap-3 px-5 py-3">
+                <span>
+                  <span className="font-medium">{job.title}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {job.workspaceName}
+                    {job.askKind ? ` · ${job.askKind}` : ""}
+                  </span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(job.createdAt).toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-4">
