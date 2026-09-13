@@ -3,25 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  BarChart3,
-  Bot,
-  CreditCard,
-  Heart,
-  KeyRound,
-  Mail,
-  MonitorSmartphone,
-  Plug,
-  Sparkles,
-  Store,
-} from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import { InviteTeam } from "@/components/desk/invite-team";
+import { ExtensionStatusChip } from "@/components/desk/extension-status";
 import { CLIENT_ISOLATION_FACTS } from "@/lib/client-workspaces";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { jobDeskHref, settingsDeskLinks } from "@/lib/desk-settings";
+import {
+  jobDeskHref,
+  settingsDeskCategories,
+  type SettingsDeskLink,
+} from "@/lib/desk-settings";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
 import { SupporterBadge } from "@/components/support/supporter-badge";
 import { assertStrongPassword } from "@/lib/password-rules";
@@ -68,7 +62,7 @@ export function SettingsHub({
   const [clientLabel, setClientLabel] = useState(clientName);
   const [deskKind, setDeskKind] = useState<"agency" | "client">(workspaceKind);
   const [busy, setBusy] = useState<string | null>(null);
-  const links = settingsDeskLinks(workspaceId);
+  const categories = settingsDeskCategories(workspaceId);
 
   const hasPassword = user.hasPassword !== false;
 
@@ -165,24 +159,14 @@ export function SettingsHub({
     router.refresh();
   }
 
-  const featured = [
-    { href: `/desk/${workspaceId}/brand-kit`, label: "Brand Kit", icon: Sparkles },
-    { href: `/desk/${workspaceId}/marketplace?tab=plugins`, label: "Plugins", icon: Plug },
-    { href: `/desk/${workspaceId}/marketplace?tab=bots`, label: "Bots", icon: Bot },
-    { href: `/desk/${workspaceId}/marketplace`, label: "Marketplace", icon: Store },
-    { href: `/desk/${workspaceId}/on-device`, label: "On-device Chrome", icon: MonitorSmartphone },
-    { href: `/desk/${workspaceId}/billing`, label: "Plans", icon: CreditCard },
-    { href: `/support`, label: "Support", icon: Heart },
-    { href: `/desk/${workspaceId}/usage`, label: "Usage", icon: BarChart3 },
-  ];
-
   return (
     <div className="desk-page max-w-3xl">
       <p className="page-kicker">Account</p>
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Settings</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Account, workspace, Marketplace, plans, and the job list that used to sit
-        under the composer.
+        Account and workspace. Marketplace, Client desks, Calendar, Ops, Trust,
+        and On-device Chrome live here in categories — the sidebar stays on
+        Mission Control, API Console, Usage, Plans, and Support.
       </p>
 
       <section className="mt-8 rounded-2xl border border-border bg-card p-5">
@@ -268,6 +252,10 @@ export function SettingsHub({
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-medium">Workspace</h2>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Name this desk, then open Client desks, Trust & audit, or Brand Kit —
+          those left the primary sidebar.
+        </p>
         <form onSubmit={saveWorkspace} className="mt-3 grid gap-3">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
             <Field label="Workspace name">
@@ -315,47 +303,51 @@ export function SettingsHub({
           <code className="rounded bg-muted px-1 py-0.5">GEMINI_API_KEY</code>{" "}
           on the host. This desk does not accept a personal key in the browser.
         </p>
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-border bg-card p-5">
-        <h2 className="flex items-center gap-2 text-sm font-medium">
-          <Sparkles className="size-3.5 text-muted-foreground" />
-          Workspace kit
-        </h2>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Brand Kit lives here, nested under Settings — not in the main sidebar.
-          Voice, offer, and learning memory stay on this desk.
-        </p>
-        <Link
-          href={`/desk/${workspaceId}/brand-kit`}
-          className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-sm hover:bg-muted/40"
-        >
-          <span>
-            <span className="block font-medium">Brand Kit</span>
-            <span className="block text-xs text-muted-foreground">
-              Voice, facts, and memory for this workspace
-            </span>
-          </span>
-          <span className="text-xs text-muted-foreground">Open →</span>
-        </Link>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="text-sm font-medium">Apps and billing</h2>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-          {featured.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm hover:bg-muted/40"
-              >
-                <item.icon className="size-3.5 text-muted-foreground" />
-                {item.label}
-              </Link>
-            </li>
+        {categories
+          .filter((category) => category.id === "workspace")
+          .map((category) => (
+            <ul key={category.id} className="mt-4 grid gap-2">
+              {category.links.map((link) => (
+                <li key={`${category.id}-${link.href}`}>
+                  <SettingsLinkRow workspaceId={workspaceId} link={link} />
+                </li>
+              ))}
+            </ul>
           ))}
-        </ul>
       </section>
+
+      {categories
+        .filter((category) => category.id !== "workspace")
+        .map((category) => (
+        <section
+          key={category.id}
+          className="mt-6 rounded-2xl border border-border bg-card p-5"
+        >
+          <h2 className="text-sm font-medium">{category.title}</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{category.hint}</p>
+          <ul className="mt-4 grid gap-2">
+            {category.links.map((link) => (
+              <li key={`${category.id}-${link.href}`}>
+                <SettingsLinkRow workspaceId={workspaceId} link={link} />
+              </li>
+            ))}
+            {category.id === "desk-tools" ? (
+              <li>
+                <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">Chrome extension</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                      Same badge as the old sidebar pill. Install and pair Chrome so
+                      jobs can click and type on this machine.
+                    </span>
+                  </span>
+                  <ExtensionStatusChip workspaceId={workspaceId} />
+                </div>
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ))}
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center justify-between gap-2">
@@ -401,10 +393,10 @@ export function SettingsHub({
         )}
       </section>
 
-      <section className="mt-6">
-        <h2 className="text-sm font-medium">More</h2>
-        <ul className="mt-3 space-y-1">
-          {user.isAdmin === true ? (
+      {user.isAdmin === true ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-medium">More</h2>
+          <ul className="mt-3 space-y-1">
             <li>
               <Link href="/admin" className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40">
                 <span className="text-sm">Internal Admin HQ</span>
@@ -413,30 +405,9 @@ export function SettingsHub({
                 </span>
               </Link>
             </li>
-          ) : null}
-          {links.map((link) => (
-            <li key={link.href}>
-              {"external" in link && link.external ? (
-                <ConsoleNavLink
-                  workspaceId={workspaceId}
-                  className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40"
-                >
-                  <span className="text-sm">{link.label}</span>
-                  <span className="text-xs text-muted-foreground">{link.hint}</span>
-                </ConsoleNavLink>
-              ) : (
-                <Link
-                  href={link.href}
-                  className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40"
-                >
-                  <span className="text-sm">{link.label}</span>
-                  <span className="text-xs text-muted-foreground">{link.hint}</span>
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+          </ul>
+        </section>
+      ) : null}
 
       <div className="mt-8">
         <Button variant="ghost" onClick={signOut}>
@@ -444,6 +415,38 @@ export function SettingsHub({
         </Button>
       </div>
     </div>
+  );
+}
+
+function SettingsLinkRow({
+  workspaceId,
+  link,
+}: {
+  workspaceId: string;
+  link: SettingsDeskLink;
+}) {
+  const className =
+    "flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-sm hover:bg-muted/40";
+  const inner = (
+    <>
+      <span className="min-w-0">
+        <span className="block font-medium">{link.label}</span>
+        <span className="block text-xs text-muted-foreground">{link.hint}</span>
+      </span>
+      <span className="shrink-0 text-xs text-muted-foreground">Open →</span>
+    </>
+  );
+  if (link.external) {
+    return (
+      <ConsoleNavLink workspaceId={workspaceId} className={className}>
+        {inner}
+      </ConsoleNavLink>
+    );
+  }
+  return (
+    <Link href={link.href} className={className}>
+      {inner}
+    </Link>
   );
 }
 

@@ -4,21 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
-  CalendarDays,
   CreditCard,
   Heart,
   LayoutGrid,
-  ListChecks,
   LogOut,
   Menu,
-  MonitorSmartphone,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   Settings,
-  Shield,
-  Users,
-  Store,
   Terminal,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -26,7 +20,6 @@ import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
-import { ExtensionStatusChip } from "@/components/desk/extension-status";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import { useWorkspaceJobsPoll } from "@/components/desk/use-workspace-jobs-poll";
 import {
@@ -47,6 +40,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { DEFAULT_AGENT_NAME, displayAgentName } from "@/lib/constants";
+import { isSettingsFamilyPath } from "@/lib/desk-settings";
 import { SupporterBadge } from "@/components/support/supporter-badge";
 import type { AgentDTO } from "@/lib/job-types";
 import type { ProposedAgent } from "@/lib/team-launch";
@@ -301,7 +295,7 @@ function NavBody({
           )}
           {agents.length === 0 && !collapsed ? (
             <p className="px-2 pt-1 text-[11px] leading-4 text-sidebar-foreground/45">
-              None yet — New Agent, Marketplace, or Launch team.
+              None yet — New Agent, Settings → Marketplace, or Launch team.
             </p>
           ) : (
             <ul className="space-y-px">
@@ -371,63 +365,6 @@ function NavBody({
             >
               Mission Control
             </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/marketplace`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<Store className="size-3.5" />}
-            >
-              Marketplace
-            </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/clients`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<Users className="size-3.5" />}
-            >
-              Client desks
-            </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/trust`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<Shield className="size-3.5" />}
-            >
-              Trust & audit
-            </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/calendar`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<CalendarDays className="size-3.5" />}
-            >
-              Calendar
-            </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/ops`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<ListChecks className="size-3.5" />}
-            >
-              Ops board
-            </SideLink>
-            <SideLink
-              href={`/desk/${workspace.id}/on-device`}
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<MonitorSmartphone className="size-3.5" />}
-            >
-              On-device Chrome
-            </SideLink>
-            {!collapsed ? (
-              <li className="px-2 py-1">
-                <ExtensionStatusChip workspaceId={workspace.id} />
-              </li>
-            ) : (
-              <li className="flex justify-center py-1">
-                <ExtensionStatusChip workspaceId={workspace.id} compact />
-              </li>
-            )}
             <li>
               <ConsoleNavLink
                 workspaceId={workspace.id}
@@ -469,6 +406,7 @@ function NavBody({
               href={`/desk/${workspace.id}/settings`}
               pathname={pathname}
               collapsed={collapsed}
+              active={isSettingsFamilyPath(pathname, workspace.id)}
               icon={<Settings className="size-3.5" />}
             >
               Settings
@@ -508,14 +446,16 @@ function SideLink({
   icon,
   children,
   collapsed,
+  active: activeOverride,
 }: {
   href: string;
   pathname: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   collapsed: boolean;
+  active?: boolean;
 }) {
-  const active = pathname === href;
+  const active = activeOverride ?? pathname === href;
   return (
     <li>
       <Link
