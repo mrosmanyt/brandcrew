@@ -15,6 +15,7 @@ import {
   REFRESH_TOKEN_PREFIX,
   connectPath,
   desktopDeepLink,
+  googleOnlyPasswordMessage,
   isConnectSurface,
   nonceFromLoginLink,
   parseConnectNonce,
@@ -75,6 +76,14 @@ assert.match(login, /wantsNativeTokens/);
 assert.doesNotMatch(login, /localStorage/);
 console.log("ok: web cookie login still sets the session cookie; Bearer is additive");
 
+assert.equal(
+  googleOnlyPasswordMessage("web"),
+  "This account uses Google. Continue with Google.",
+);
+assert.match(googleOnlyPasswordMessage("desktop"), /Sign in with CINEM Pro in the browser/);
+assert.match(googleOnlyPasswordMessage("assistant"), /Sign in with CINEM Pro in the browser/);
+assert.match(readFileSync("docs/auth-bridge.md", "utf8"), /Same CINEM Pro account = same plan on desktop/);
+assert.match(readFileSync("src/server/api/auth/token.ts", "utf8"), /googleOnlyPasswordMessage/);
 assert.ok(existsSync("docs/auth-bridge.md"));
 assert.ok(existsSync("docs/play-store-launch.md"));
 assert.ok(existsSync("src/app/download/page.tsx"));

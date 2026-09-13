@@ -8,8 +8,15 @@ import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { Button } from "@/components/ui/button";
 import { CONNECT_SURFACES, desktopDeepLink, type ConnectSurface } from "@/lib/auth-bridge";
 import { authHrefWithNext } from "@/lib/billing-ui";
+import { planDisplayName } from "@/lib/constants";
 
-type WorkspaceRow = { id: string; name: string; kind?: string; clientName?: string };
+type WorkspaceRow = {
+  id: string;
+  name: string;
+  kind?: string;
+  clientName?: string;
+  plan?: string;
+};
 
 export function ConnectClient({
   surface,
@@ -25,6 +32,7 @@ export function ConnectClient({
   const [user, setUser] = useState<{ email: string; name: string } | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceRow[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
+  const [accountPlan, setAccountPlan] = useState("");
   const [busy, setBusy] = useState(false);
 
   const nextPath = useMemo(() => {
@@ -45,7 +53,10 @@ export function ConnectClient({
       setUser(data.user);
       const list = (data.workspaces || []) as WorkspaceRow[];
       setWorkspaces(list);
-      if (list[0]?.id) setWorkspaceId(list[0].id);
+      setAccountPlan(typeof data.planName === "string" ? data.planName : "");
+      const preferred =
+        (typeof data.workspaceId === "string" && data.workspaceId) || list[0]?.id || "";
+      if (preferred) setWorkspaceId(preferred);
 
       let activeNonce = nonceProp;
       if (!activeNonce) {
@@ -121,7 +132,10 @@ export function ConnectClient({
             <CinemLogoImage alt="CINEM" className="mb-6 size-12" priority />
             <h1 className="font-heading text-3xl tracking-tight">{title}</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Same CINEM Pro account as the website. {user ? `Signed in as ${user.email}.` : "Sign in first."}
+              Same CINEM Pro account = same plan on desktop.
+              {user
+                ? ` Signed in as ${user.email}${accountPlan ? ` · ${accountPlan}` : ""}.`
+                : " Sign in first."}
             </p>
             {status === "loading" ? (
               <p className="mt-8 text-sm text-muted-foreground">Checking your session…</p>
@@ -139,6 +153,7 @@ export function ConnectClient({
                       {workspaces.map((ws) => (
                         <option key={ws.id} value={ws.id}>
                           {ws.clientName || ws.name}
+                          {ws.plan ? ` (${planDisplayName(ws.plan)})` : ""}
                         </option>
                       ))}
                     </select>

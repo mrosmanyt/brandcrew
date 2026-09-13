@@ -65,15 +65,37 @@ export function writeSession(session: CinemSession) {
   }
 }
 
+/**
+ * Unified Electron shell: desk `userData` refresh is the same CINEM Pro
+ * account. Prefer it when local assistant tokens are missing or stale so
+ * a paid web/desk login is not stuck on a leftover Free session.
+ */
+export async function syncDesktopSession(): Promise<CinemSession | null> {
+  const local = readSession();
+  const bridge = cinemDesktopBridge();
+  const stored = bridge?.getStoredSession ? await bridge.getStoredSession() : null;
+  const shared = stored?.refreshToken?.trim() || "";
+  if (shared && shared !== local?.refreshToken) {
+    try {
+      return await refreshSession(shared);
+    } catch {
+      /* keep local if the shared token is expired */
+    }
+  }
+  if (local?.accessToken || local?.refreshToken) return local;
+  if (shared) {
+    try {
+      return await refreshSession(shared);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /** Prefer local tokens; otherwise adopt the Electron cloud-shell refresh token. */
 export async function adoptDesktopSession(): Promise<CinemSession | null> {
-  if (readSession()?.refreshToken || readSession()?.accessToken) return readSession();
-  const bridge = cinemDesktopBridge();
-  if (!bridge?.getStoredSession) return null;
-  const stored = await bridge.getStoredSession();
-  const refreshToken = stored?.refreshToken?.trim();
-  if (!refreshToken) return null;
-  return refreshSession(refreshToken);
+  return syncDesktopSession();
 }
 
 export function clearSession() {
@@ -91,7 +113,7 @@ function authHeaders(accessToken?: string, json = false): HeadersInit {
 }
 
 async function cloudFetch(path: string, init: RequestInit = {}) {
-  return fetch(`${cinemCloudOrigin()}${path}`, init);
+  return fetch(`${cinemCloudOrigin()}${path}`, { cache: "no-store", ...init });
 }
 
 export async function refreshSession(refreshToken: string): Promise<CinemSession> {
@@ -121,7 +143,9 @@ async function withFreshAccess<T>(fn: (accessToken: string) => Promise<T>): Prom
   try {
     return await fn(session.accessToken);
   } catch (error) {
-    if (!session.refreshToken) throw error;
+    const message = error instanceof Error ? error.message : "";
+    const unauthorized = /unauthorized|sign in|expired/i.test(message);
+    if (!session.refreshToken || !unauthorized) throw error;
     const refreshed = await refreshSession(session.refreshToken);
     return fn(refreshed.accessToken);
   }
@@ -244,6 +268,14 @@ export async function claimBrowserSignIn(nonce: string): Promise<CinemSession | 
     return session;
   }
   return "pending";
+}
+
+export function formatAssistantSignInError(error: unknown) {
+  const raw = error instanceof Error ? error.message : "Could not sign in.";
+  if (/uses Google/i.test(raw)) {
+    return "This account uses Google. Use Sign in with CINEM Pro in the browser instead of email and password.";
+  }
+  return raw;
 }
 
 export async function openUpgrade(upgradeUrl?: string) {

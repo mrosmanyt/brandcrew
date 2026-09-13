@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import type { CinemAiAssistantUsageResponse } from "../../usage-client";
+import {
+  shouldPromptAssistantUpgrade,
+  type CinemAiAssistantUsageResponse,
+} from "../../usage-client";
 import {
   adoptDesktopSession,
   clearSession,
@@ -7,10 +10,15 @@ import {
   fetchUsage,
   readSession,
   signOutCloud,
+  syncDesktopSession,
   type CinemSessionUser,
 } from "@/lib/cinemCloud";
 
 type CloudPhase = "checking" | "signed_out" | "ready";
+
+function upgradeOpenFor(usage: CinemAiAssistantUsageResponse | null) {
+  return shouldPromptAssistantUpgrade(usage);
+}
 
 type CloudState = {
   phase: CloudPhase;
@@ -34,18 +42,19 @@ export const useCinemCloudStore = create<CloudState>((set, get) => ({
   error: "",
 
   hydrate: async () => {
-    const session = (await adoptDesktopSession()) || readSession();
-    if (!session?.accessToken && !session?.refreshToken) {
-      set({ phase: "signed_out", user: null, usage: null, upgradeOpen: false });
-      return;
-    }
     try {
+      const session = (await syncDesktopSession()) || (await adoptDesktopSession()) || readSession();
+      if (!session?.accessToken && !session?.refreshToken) {
+        set({ phase: "signed_out", user: null, usage: null, upgradeOpen: false });
+        return;
+      }
       const usage = await fetchUsage();
+      const fresh = readSession();
       set({
         phase: "ready",
-        user: session.user,
+        user: fresh?.user ?? session.user,
         usage,
-        upgradeOpen: !usage.allowed,
+        upgradeOpen: upgradeOpenFor(usage),
         error: "",
       });
     } catch (error) {
@@ -63,7 +72,7 @@ export const useCinemCloudStore = create<CloudState>((set, get) => ({
   refreshUsage: async () => {
     try {
       const usage = await fetchUsage();
-      set({ usage, upgradeOpen: !usage.allowed });
+      set({ usage, upgradeOpen: upgradeOpenFor(usage) });
       return usage;
     } catch {
       return get().usage;
@@ -72,13 +81,18 @@ export const useCinemCloudStore = create<CloudState>((set, get) => ({
 
   consumeTurn: async () => {
     const usage = await consumeAssistantTurn();
-    set({ usage, upgradeOpen: !usage.allowed });
+    set({ usage, upgradeOpen: upgradeOpenFor(usage) });
     return usage;
   },
 
   showUpgrade: (usage) => {
+    const next = usage ?? get().usage;
+    if (!shouldPromptAssistantUpgrade(next)) {
+      set({ usage: next ?? get().usage, upgradeOpen: false });
+      return;
+    }
     set({
-      usage: usage ?? get().usage,
+      usage: next,
       upgradeOpen: true,
     });
   },

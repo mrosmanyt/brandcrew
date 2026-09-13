@@ -2,6 +2,8 @@
 
 Windows-only native assistant for CINEM Pro. This is a **feature entitlement** on the existing desk plans — not a new Whop product.
 
+**Same CINEM Pro account = same plan on desktop.** Sign into Desk or AI Assistant with the account that bought Pro / Pro Plus / Ultra on the website and that paid plan carries over — no second checkout and no false Free wall.
+
 | Plan (customer name) | Internal id | Assistant |
 | --- | --- | --- |
 | Free | `demo` | 500 chat/voice turns per UTC month |
@@ -78,7 +80,8 @@ Both return:
 - `upgradeUrl` is always an absolute `https://app.cinem.tech/…` URL (or the current origin). Open it with the **system browser** (Claude / Grok Bot style). Do not embed a card form in the app.
 - Signed-in website session on that origin starts existing desk Whop checkout for **Pro ($20)**. Signed out → login with `next=` back to `/billing`.
 - Exhausted Free: `allowed: false`, POST status `402`. The app shows an upgrade popup; **Upgrade to Pro** opens `upgradeUrl`.
-- Paid plans include the assistant. `includedWithPlan` is true. Always-approved / desk write-gate rules are unchanged.
+- Paid plans include the assistant. `includedWithPlan` is true. POST never returns `402` for `starter` / `pro` / `ultra`. Always-approved / desk write-gate rules are unchanged.
+- Usage GET/POST is `Cache-Control: no-store`. After login the Windows app always re-fetches `/api/cinem-ai-assistant/usage` (and adopts the shared Electron refresh token when it differs from a stale local session).
 
 Shared TypeScript types: `src/lib/cinem-ai-assistant.ts`. Fetch helper: `apps/cinem-ai-assistant/usage-client.ts`. Renderer wiring: `apps/cinem-ai-assistant/src/lib/cinemCloud.ts`. Electron handshake: `apps/cinem-ai-assistant/src/lib/desktop-shell.ts`.
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { googleOnlyPasswordMessage } from "@/lib/auth-bridge";
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { issueNativeSession, readCinemClient, wantsNativeTokens } from "@/lib/auth-native";
 import { honeypotFilled } from "@/lib/form-guard";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     }
     if (!user.passwordHash) {
       return NextResponse.json(
-        { error: "This account uses Google. Continue with Google." },
+        { error: googleOnlyPasswordMessage("web") },
         { status: 401 },
       );
     }

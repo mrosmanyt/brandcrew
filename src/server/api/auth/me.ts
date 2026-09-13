@@ -12,6 +12,7 @@ import { googleLoginPublicStatus } from "@/lib/google-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { isAdminEmail } from "@/lib/admin";
 import { assertPasswordAllowed } from "@/lib/password";
+import { entitlementFromWorkspaces } from "@/lib/cinem-ai-assistant";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 import { withNativeCors } from "@/lib/auth-native";
 
@@ -26,6 +27,9 @@ export async function GET() {
     select: { passwordHash: true, googleId: true, supporter: true },
   });
   const workspaces = await listUserWorkspaces(user.id);
+  const entitlement = entitlementFromWorkspaces(
+    workspaces.map((workspace) => ({ id: workspace.id, plan: workspace.plan })),
+  );
   return withNativeCors(
     jsonOk({
       user: {
@@ -36,6 +40,10 @@ export async function GET() {
         supporter: Boolean(row?.supporter),
       },
       workspaces: workspaces.map(serializeWorkspace),
+      plan: entitlement.plan,
+      planName: entitlement.planName,
+      includedWithPlan: entitlement.includedWithPlan,
+      workspaceId: entitlement.workspaceId,
       googleLogin,
     }),
   );

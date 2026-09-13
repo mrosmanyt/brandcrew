@@ -116,6 +116,26 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   return user;
 }
 
+export function readBearerToken(request: Request) {
+  const auth = request.headers.get("authorization") || "";
+  if (!auth.toLowerCase().startsWith("bearer ")) return "";
+  return auth.slice(7).trim();
+}
+
+/** Cookie / Next headers first; Bearer on the Request if context is empty. */
+export async function getUserFromRequest(request: Request): Promise<SessionUser | null> {
+  const fromContext = await getCurrentUser();
+  if (fromContext) return fromContext;
+  const token = readBearerToken(request);
+  if (!isUserAccessToken(token)) return null;
+  const userId = await readSessionUserId(token);
+  if (!userId) return null;
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true },
+  });
+}
+
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) {

@@ -2,6 +2,8 @@
 
 Web login is unchanged: email/password or Google writes the HttpOnly `brandcrew_session` cookie (HS256 JWT, 30 days). Native surfaces reuse that **same JWT** as `Authorization: Bearer` and add a **hashed refresh token**.
 
+**Same CINEM Pro account = same plan on desktop.** The website, Electron desk, and AI Assistant resolve entitlement from that login (best workspace plan). A Pro / Pro Plus / Ultra purchase on the web is not a separate Free seat on Windows.
+
 ## Tokens
 
 | Piece | Who uses it | Where it lives | Lifetime |
@@ -61,7 +63,7 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 
 ## Cinem AI Assistant (unified Electron)
 
-Same account and tokens as desktop. The primary Windows app is this Electron shell (not a second installer). Preferred: **Sign in with CINEM Pro** opens `/connect/desktop` in the system browser (`POST /api/auth/connect` + `POST /api/auth/connect/claim`). Email/password uses `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop). The assistant then calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT. When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. The Electron refresh token in `userData` is shared so desk login can unlock the assistant. Contract: `docs/cinem-ai-assistant.md`. Source: `apps/cinem-ai-assistant/` (Vite in Electron; optional Tauri-only build is advanced).
+Same account and tokens as desktop. The primary Windows app is this Electron shell (not a second installer). Preferred: **Sign in with CINEM Pro** opens `/connect/desktop` in the system browser (`POST /api/auth/connect` + `POST /api/auth/connect/claim`). Email/password uses `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop). The assistant then calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT. When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. The Electron refresh token in `userData` is shared so desk login can unlock the assistant — if those tokens differ, Assistant adopts the desk account so plan badges match. Contract: `docs/cinem-ai-assistant.md`. Source: `apps/cinem-ai-assistant/` (Vite in Electron; optional Tauri-only build is advanced).
 
 ## Android (Expo)
 

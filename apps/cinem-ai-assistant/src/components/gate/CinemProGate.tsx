@@ -1,7 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Loader2, LogIn, Mail } from "lucide-react";
 import GateShell from "@/components/license/GateShell";
-import { claimBrowserSignIn, signInWithPassword, startBrowserSignIn } from "@/lib/cinemCloud";
+import {
+  claimBrowserSignIn,
+  formatAssistantSignInError,
+  signInWithPassword,
+  startBrowserSignIn,
+} from "@/lib/cinemCloud";
 import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 
 function SignInScreen() {
@@ -45,7 +50,7 @@ function SignInScreen() {
       await signInWithPassword(email.trim(), password);
       await hydrate();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Could not sign in.");
+      setMessage(formatAssistantSignInError(err));
     } finally {
       setBusy(false);
     }
@@ -78,6 +83,10 @@ function SignInScreen() {
       <div className="mt-6 space-y-3">
         <p className="font-display text-[0.55rem] tracking-[0.2em] text-neon-dim">
           OR EMAIL + PASSWORD
+        </p>
+        <p className="text-[0.65rem] leading-relaxed text-neon-dim/80">
+          Google-only accounts: use Sign in with CINEM Pro above. Same CINEM Pro
+          account = same plan on desktop.
         </p>
         <input
           type="email"
@@ -114,10 +123,24 @@ function SignInScreen() {
 export default function CinemProGate({ children }: { children: ReactNode }) {
   const phase = useCinemCloudStore((s) => s.phase);
   const hydrate = useCinemCloudStore((s) => s.hydrate);
+  const refreshUsage = useCinemCloudStore((s) => s.refreshUsage);
 
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (phase !== "ready") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshUsage();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [phase, refreshUsage]);
 
   if (phase === "checking") {
     return (

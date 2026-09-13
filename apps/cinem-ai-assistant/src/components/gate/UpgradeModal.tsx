@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { shouldPromptAssistantUpgrade } from "../../../usage-client";
 import { openUpgrade } from "@/lib/cinemCloud";
 import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 
@@ -10,7 +11,7 @@ export default function UpgradeModal() {
   const open = useCinemCloudStore((s) => s.upgradeOpen);
   const usage = useCinemCloudStore((s) => s.usage);
   const hide = useCinemCloudStore((s) => s.hideUpgrade);
-  if (!open || !usage) return null;
+  if (!open || !usage || !shouldPromptAssistantUpgrade(usage)) return null;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-void/80 p-6 backdrop-blur-sm">

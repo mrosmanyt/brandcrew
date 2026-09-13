@@ -34,6 +34,17 @@ export function isAuthSurface(value: string): value is AuthSurface {
   return (AUTH_SURFACES as readonly string[]).includes(value);
 }
 
+/**
+ * Google-only accounts have no password. Web keeps “Continue with Google”.
+ * Desktop / Assistant / Android should use the browser connect flow.
+ */
+export function googleOnlyPasswordMessage(surface: AuthSurface | string = "web") {
+  if (surface === "desktop" || surface === "mobile" || surface === "assistant") {
+    return "This account uses Google. Use Sign in with CINEM Pro in the browser instead of email and password.";
+  }
+  return "This account uses Google. Continue with Google.";
+}
+
 export function isConnectSurface(value: string): value is ConnectSurface {
   return (CONNECT_SURFACES as readonly string[]).includes(value);
 }
