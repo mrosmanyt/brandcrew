@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { DeskChromeHeader } from "@/components/desk/desk-chrome";
 import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
+import { WindowsDownloadNudge } from "@/components/desk/windows-download-nudge";
+import { cinemAiAssistantDownloadHref } from "@/lib/cinem-ai-assistant";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
@@ -86,6 +88,10 @@ export default async function WorkspaceLayout({
       </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <SetupBanner />
+        <WindowsDownloadNudge
+          placement="desk"
+          downloadHref={cinemAiAssistantDownloadHref()}
+        />
         <DeskChromeHeader
           workspaceId={member.workspace.id}
           tokensLeft={Math.max(0, tokenBudget - member.workspace.tokenUsed)}

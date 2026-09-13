@@ -270,6 +270,9 @@ assert.match(download, /Get desktop/);
 const onDevice = readFileSync("src/components/desk/on-device-setup.tsx", "utf8");
 assert.match(onDevice, /\/download/);
 assert.match(onDevice, /DESKTOP_WIN_DOWNLOAD|Get desktop|Windows/);
+const deskLayout = readFileSync("src/app/desk/[workspaceId]/layout.tsx", "utf8");
+assert.match(deskLayout, /WindowsDownloadNudge/);
+assert.equal(pkg.scripts["test:win-nudge"], "tsx scripts/check-windows-download-nudge.ts");
 console.log("ok: download + on-device still offer Setup.exe");
 
 const ps1 = readFileSync("scripts/install-desktop.ps1", "utf8");

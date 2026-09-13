@@ -59,6 +59,7 @@
     "test:assistant-ux": "tsx scripts/check-assistant-ux.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",
+    "test:win-nudge": "tsx scripts/check-windows-download-nudge.ts",
     "installer:art": "node scripts/make-installer-art.mjs",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:cloud": "node scripts/desktop-cloud.mjs",
