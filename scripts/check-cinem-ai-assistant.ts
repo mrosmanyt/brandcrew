@@ -14,11 +14,17 @@ import {
   CINEM_AI_ASSISTANT_FREE_TURNS,
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_PATH,
+  CINEM_AI_ASSISTANT_RELEASE_TAG,
+  CINEM_AI_ASSISTANT_RELEASE_URL,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
   CINEM_AI_ASSISTANT_TURN_LIMIT,
+  CINEM_AI_ASSISTANT_DOWNLOAD_API,
   CINEM_AI_ASSISTANT_USAGE_API,
   cinemAiAssistantBillingPath,
+  cinemAiAssistantDownloadHref,
   cinemAiAssistantPeriodUtc,
+  cinemAiAssistantReleaseUrl,
+  cinemAiAssistantSetupEnvUrl,
   cinemAiAssistantTurnLimit,
   cinemAiAssistantUpgradeUrl,
   clampUsageIncrement,
@@ -103,6 +109,11 @@ assert.match(docs, /WHOP_STARTER_PLAN_ID/);
 assert.match(docs, /Do not create a Cinem AI Assistant SKU/);
 assert.match(docs, /\/api\/cinem-ai-assistant\/usage/);
 assert.match(docs, /cinem-ai-assistant-windows\.yml|workflow_dispatch/);
+assert.match(
+  docs,
+  /https:\/\/github\.com\/mrosmanyt\/brandcrew\/releases\/download\/cinem-ai-assistant-v0\.1\.0\/Cinem-AI-Assistant-Setup\.exe/,
+);
+assert.doesNotMatch(docs, /cinem-pro-releases/);
 assert.doesNotMatch(docs, /mickey|cinempro\.site/i);
 assert.ok(existsSync("apps/cinem-ai-assistant/README.md"));
 assert.ok(existsSync("apps/cinem-ai-assistant/usage-client.ts"));
@@ -122,6 +133,31 @@ assert.match(rootPostcss, /@tailwindcss\/postcss/);
 assert.ok(existsSync(".github/workflows/cinem-ai-assistant-windows.yml"));
 assert.ok(existsSync("public/downloads/Cinem-AI-Assistant-Setup.exe.placeholder"));
 assert.equal(CINEM_AI_ASSISTANT_SETUP_FILENAME, "Cinem-AI-Assistant-Setup.exe");
+assert.equal(CINEM_AI_ASSISTANT_RELEASE_TAG, "cinem-ai-assistant-v0.1.0");
+assert.equal(
+  CINEM_AI_ASSISTANT_RELEASE_URL,
+  "https://github.com/mrosmanyt/brandcrew/releases/download/cinem-ai-assistant-v0.1.0/Cinem-AI-Assistant-Setup.exe",
+);
+assert.equal(cinemAiAssistantReleaseUrl(), CINEM_AI_ASSISTANT_RELEASE_URL);
+assert.doesNotMatch(cinemAiAssistantReleaseUrl(), /cinem-pro-releases/);
+{
+  const prev = process.env.CINEM_AI_ASSISTANT_SETUP_URL;
+  const prevPublic = process.env.NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL;
+  delete process.env.CINEM_AI_ASSISTANT_SETUP_URL;
+  delete process.env.NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL;
+  assert.equal(cinemAiAssistantSetupEnvUrl(), "");
+  assert.equal(cinemAiAssistantDownloadHref(), CINEM_AI_ASSISTANT_DOWNLOAD_API);
+  process.env.CINEM_AI_ASSISTANT_SETUP_URL = "https://example.com/override.exe";
+  assert.equal(cinemAiAssistantSetupEnvUrl(), "https://example.com/override.exe");
+  assert.equal(cinemAiAssistantDownloadHref(), "https://example.com/override.exe");
+  delete process.env.CINEM_AI_ASSISTANT_SETUP_URL;
+  process.env.NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL = "https://example.com/public.exe";
+  assert.equal(cinemAiAssistantSetupEnvUrl(), "https://example.com/public.exe");
+  if (prev === undefined) delete process.env.CINEM_AI_ASSISTANT_SETUP_URL;
+  else process.env.CINEM_AI_ASSISTANT_SETUP_URL = prev;
+  if (prevPublic === undefined) delete process.env.NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL;
+  else process.env.NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL = prevPublic;
+}
 assert.equal(CINEM_AI_ASSISTANT_PATH, "/cinem-ai-assistant");
 const appReadme = readFileSync("apps/cinem-ai-assistant/README.md", "utf8");
 assert.match(appReadme, /Windows-only/);

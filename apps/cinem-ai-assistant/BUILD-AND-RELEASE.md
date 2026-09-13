@@ -28,7 +28,7 @@ git push origin cinem-ai-assistant-v0.1.0
 
 The same workflow builds NSIS, renames the installer, uploads the artifact, and attaches it to the GitHub Release for that tag.
 
-Site download resolution (`GET /api/downloads/cinem-ai-assistant`): local `public/downloads` file → env URL → `cinem-pro-releases` latest-download URL.
+Site download resolution (`GET /api/downloads/cinem-ai-assistant`): local `public/downloads` file → env URL → published brandcrew release `cinem-ai-assistant-v0.1.0` / `Cinem-AI-Assistant-Setup.exe`. Do not guess `cinem-pro-releases` for this product.
 
 ## Local Windows build
 

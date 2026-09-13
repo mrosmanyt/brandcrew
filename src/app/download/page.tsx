@@ -57,8 +57,7 @@ export default function DownloadPage() {
               Voice, agents, and vision on Windows. Free build first; when turns run out,
               Upgrade opens logged-in Pro checkout in the system browser. Installer{" "}
               <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_SETUP_FILENAME}</code>{" "}
-              — drop it in <code className="font-mono text-xs">public/downloads</code> when
-              the binary is ready.
+              is the published v0.1.0 Windows setup.
             </p>
           </div>
           <div className="mt-6 flex shrink-0 flex-col gap-2 md:mt-0">

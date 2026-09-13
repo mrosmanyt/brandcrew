@@ -45,16 +45,18 @@ export async function GET(request: Request) {
 
   if (accept.includes("application/json")) {
     const localMissing = !existsSync(localSetupPath());
+    const envUrl = cinemAiAssistantSetupEnvUrl();
     return jsonOk({
       filename: CINEM_AI_ASSISTANT_SETUP_FILENAME,
       href: resolved.href,
       publicPath: CINEM_AI_ASSISTANT_PUBLIC_PATH,
       api: CINEM_AI_ASSISTANT_DOWNLOAD_API,
-      present: !localMissing || Boolean(cinemAiAssistantSetupEnvUrl()),
+      present: true,
+      source: resolved.kind === "file" ? "local" : envUrl ? "env" : "release",
       docs: CINEM_AI_ASSISTANT_DOCS,
       note:
-        localMissing && !cinemAiAssistantSetupEnvUrl()
-          ? `Drop ${CINEM_AI_ASSISTANT_SETUP_FILENAME} in public/downloads or set CINEM_AI_ASSISTANT_SETUP_URL.`
+        localMissing && !envUrl
+          ? `Redirects to the published ${CINEM_AI_ASSISTANT_SETUP_FILENAME} on GitHub Release ${cinemAiAssistantReleaseUrl()}. Override with CINEM_AI_ASSISTANT_SETUP_URL.`
           : undefined,
     });
   }

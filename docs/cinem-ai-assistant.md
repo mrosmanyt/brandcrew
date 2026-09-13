@@ -17,7 +17,7 @@ Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/downloa
 
 Tauri + Vite + React source lives in [`apps/cinem-ai-assistant/`](../apps/cinem-ai-assistant/). Full native features are **Windows only**. Vercel / `next build` ignores this folder — Rust is never compiled on the Next.js host.
 
-Imported from the `cinem-ai-assistant-src` prerelease zip (`cinem-ai-assistant-clean.zip`). The founder may delete that prerelease tag after this import is on `main`.
+Live Windows installer: [Cinem-AI-Assistant-Setup.exe](https://github.com/mrosmanyt/brandcrew/releases/download/cinem-ai-assistant-v0.1.0/Cinem-AI-Assistant-Setup.exe) (release [cinem-ai-assistant-v0.1.0](https://github.com/mrosmanyt/brandcrew/releases/tag/cinem-ai-assistant-v0.1.0)).
 
 ### Environment
 
@@ -73,9 +73,9 @@ Shared TypeScript types: `src/lib/cinem-ai-assistant.ts`. Fetch helper: `apps/ci
 Expected filename: `Cinem-AI-Assistant-Setup.exe`.
 
 1. Place the file at `public/downloads/Cinem-AI-Assistant-Setup.exe`, **or**
-2. Set `CINEM_AI_ASSISTANT_SETUP_URL` to a hosted asset (same name on the releases repo is fine).
+2. Set `CINEM_AI_ASSISTANT_SETUP_URL` to a hosted asset (env still wins over the default release).
 
-`GET /api/downloads/cinem-ai-assistant` serves the local file, else redirects to the env URL, else the `cinem-pro-releases` latest-download URL. `Accept: application/json` returns metadata without requiring the binary.
+`GET /api/downloads/cinem-ai-assistant` serves the local file, else redirects to the env URL, else the published brandcrew release asset (`cinem-ai-assistant-v0.1.0` / `Cinem-AI-Assistant-Setup.exe`). `Accept: application/json` returns metadata without requiring the binary. This product is not hosted with the Electron Setup.exe releases.
 
 Placeholder in repo: `public/downloads/Cinem-AI-Assistant-Setup.exe.placeholder`.
 

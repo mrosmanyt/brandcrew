@@ -5,12 +5,15 @@
 
 import { planDisplayName, type CheckoutPlanId, type PlanId } from "@/lib/constants";
 import { isPaidPlan, normalizePlanId } from "@/lib/limits";
-import { PUBLIC_RELEASES_REPO, SITE_ORIGIN, siteOrigin } from "@/lib/site";
+import { GITHUB_REPO, SITE_ORIGIN, siteOrigin } from "@/lib/site";
 
 export const CINEM_AI_ASSISTANT_PRODUCT = "cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_NAME = "Cinem AI Assistant";
 export const CINEM_AI_ASSISTANT_PATH = "/cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_SETUP_FILENAME = "Cinem-AI-Assistant-Setup.exe";
+export const CINEM_AI_ASSISTANT_RELEASE_TAG = "cinem-ai-assistant-v0.1.0";
+/** Published Windows NSIS installer. Prefer this over guessing cinem-pro-releases. */
+export const CINEM_AI_ASSISTANT_RELEASE_URL = `${GITHUB_REPO}/releases/download/${CINEM_AI_ASSISTANT_RELEASE_TAG}/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
 export const CINEM_AI_ASSISTANT_PUBLIC_PATH = `/downloads/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
 export const CINEM_AI_ASSISTANT_DOWNLOAD_API = "/api/downloads/cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_USAGE_API = "/api/cinem-ai-assistant/usage";
@@ -161,7 +164,7 @@ export function cinemAiAssistantSetupEnvUrl() {
 }
 
 export function cinemAiAssistantReleaseUrl() {
-  return `${PUBLIC_RELEASES_REPO}/releases/latest/download/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
+  return CINEM_AI_ASSISTANT_RELEASE_URL;
 }
 
 /** Public download CTA. API resolves local file → env URL → releases host. */
