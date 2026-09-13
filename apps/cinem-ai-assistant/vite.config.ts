@@ -9,6 +9,14 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  // Inline PostCSS so Vite never walks to the Next.js root
+  // postcss.config.mjs (@tailwindcss/postcss). Local postcss.config.mjs
+  // is the same no-op for any other tool that searches from this folder.
+  css: {
+    postcss: {
+      plugins: [],
+    },
+  },
   // Tauri expects a fixed port; fail fast if it is taken
   clearScreen: false,
   server: {
