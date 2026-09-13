@@ -23,7 +23,11 @@ import {
   requestLooksHttps,
   securityHeaderList,
 } from "../src/lib/security-headers";
-import { CINEM_MARK_PATHS, CINEM_MARK_POLYGONS } from "../src/lib/cinem-mark";
+import {
+  CINEM_MARK_BRACKET_GAP,
+  CINEM_MARK_PATHS,
+  CINEM_MARK_POLYGONS,
+} from "../src/lib/cinem-mark";
 import { HONEYPOT_FIELD, SITE_ORIGIN, VERCEL_SITE_ORIGIN, siteOrigin } from "../src/lib/site";
 import sitemap from "../src/app/sitemap";
 import robots from "../src/app/robots";
@@ -39,6 +43,9 @@ console.log("ok: BrandMark uses the official PNG + geometric SVG, not a CP place
 
 assert.equal(CINEM_MARK_PATHS.length, 2);
 assert.equal(CINEM_MARK_POLYGONS.length, 2);
+assert.equal(CINEM_MARK_BRACKET_GAP, 2);
+assert.equal(CINEM_MARK_POLYGONS[0][0][0], 2);
+assert.equal(CINEM_MARK_POLYGONS[1][0][0], 62);
 assert.ok(existsSync("public/brand/cinem-mark.svg"));
 assert.ok(existsSync("public/brand/cinem-logo.png"));
 assert.ok(existsSync("public/og.png"));
@@ -48,22 +55,35 @@ assert.ok(existsSync("public/icon.svg"));
 assert.ok(existsSync("public/favicon.ico"));
 assert.ok(existsSync("public/icon.png"));
 assert.ok(existsSync("src/app/icon.svg"));
+const iconGen = readFileSync("scripts/make-icon.mjs", "utf8");
+assert.match(iconGen, /\[2, 32\]/);
+assert.match(iconGen, /\[62, 32\]/);
+const installerGen = readFileSync("scripts/make-installer-art.mjs", "utf8");
+assert.match(installerGen, /\[2, 32\]/);
+assert.match(installerGen, /\[62, 32\]/);
 assert.ok(existsSync("src/app/icon.png"));
 assert.ok(existsSync("src/app/apple-icon.png"));
 assert.ok(existsSync("src/app/opengraph-image.png"));
 assert.ok(existsSync("src/app/twitter-image.png"));
 assert.ok(existsSync("src/app/favicon.ico"));
 const markSvg = readFileSync("public/brand/cinem-mark.svg", "utf8");
-assert.match(markSvg, /M4 32/);
-assert.match(markSvg, /M60 32/);
+assert.match(markSvg, /M2 32/);
+assert.match(markSvg, /M62 32/);
 assert.match(markSvg, /prefers-color-scheme: dark/);
+for (const d of CINEM_MARK_PATHS) {
+  assert.match(markSvg, new RegExp(d.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+}
 const appIconSvg = readFileSync("public/icon.svg", "utf8");
 assert.match(appIconSvg, /#1a1915/);
 assert.match(appIconSvg, /#f4f3ef/);
-assert.match(appIconSvg, /M4 32/);
+assert.match(appIconSvg, /M2 32/);
+assert.match(appIconSvg, /M62 32/);
 assert.match(appIconSvg, /rx="14"/);
 assert.doesNotMatch(appIconSvg, /prefers-color-scheme/);
 assert.equal(readFileSync("src/app/icon.svg", "utf8"), appIconSvg);
+for (const d of CINEM_MARK_PATHS) {
+  assert.match(appIconSvg, new RegExp(d.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+}
 const makeIcon = readFileSync("scripts/make-icon.mjs", "utf8");
 assert.match(makeIcon, /--web-only/);
 assert.match(makeIcon, /public\/icon\.svg/);

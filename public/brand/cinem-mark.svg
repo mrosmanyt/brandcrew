@@ -5,6 +5,6 @@
       path { fill: #f4f3ef; }
     }
   </style>
-  <path d="M4 32 L18 8 H30 L20 32 L30 56 H18 Z"/>
-  <path d="M60 32 L46 8 H34 L44 32 L34 56 H46 Z"/>
+  <path d="M2 32 L16 8 H28 L18 32 L28 56 H16 Z"/>
+  <path d="M62 32 L48 8 H36 L46 32 L36 56 H46 Z"/>
 </svg>
