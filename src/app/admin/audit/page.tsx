@@ -1,4 +1,3 @@
-import { AdminForbidden } from "@/components/admin/admin-forbidden";
 import { AdminAudit } from "@/components/admin/admin-audit";
 import { getAdminAudit } from "@/lib/admin";
 import { loadAdminPage } from "@/lib/admin-page";
@@ -10,8 +9,7 @@ export default async function AdminAuditPage({
 }: {
   searchParams: Promise<{ action?: string; actor?: string; q?: string }>;
 }) {
-  const { allowed } = await loadAdminPage("/admin/audit");
-  if (!allowed) return <AdminForbidden />;
+  await loadAdminPage("/admin/audit");
   const query = await searchParams;
   const initial = await getAdminAudit({
     action: query.action,

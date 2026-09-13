@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { consoleAppHref } from "@/lib/console-site";
 
 export function ConsoleNavLink({
@@ -14,17 +11,7 @@ export function ConsoleNavLink({
   children: React.ReactNode;
   title?: string;
 }) {
-  const fallback = `/console?workspace=${encodeURIComponent(workspaceId)}`;
-  const [href, setHref] = useState(fallback);
-
-  useEffect(() => {
-    setHref(
-      consoleAppHref({
-        hostname: window.location.hostname,
-        workspaceId,
-      }),
-    );
-  }, [workspaceId]);
+  const href = consoleAppHref({ workspaceId });
 
   return (
     <a

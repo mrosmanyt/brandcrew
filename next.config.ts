@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     proxyClientMaxBodySize: "16mb",
+    authInterrupts: true,
   },
   serverExternalPackages: ["@prisma/client", "prisma", "playwright-core", "@composio/core"],
   // Static metadata PNGs live at /apple-icon.png etc. Alias the

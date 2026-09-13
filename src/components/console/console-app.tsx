@@ -8,7 +8,7 @@ import { CinemMark } from "@/components/brand/logo";
 import { DISPLAY_MODELS } from "@/lib/model-catalog";
 import { V1_ENDPOINTS } from "@/lib/api-catalog";
 import { PRODUCT_NAME } from "@/lib/constants";
-import { CONSOLE_ORIGIN } from "@/lib/console-site";
+import { CONSOLE_PATH } from "@/lib/console-site";
 import { cn } from "@/lib/utils";
 
 type WorkspaceOpt = { id: string; name: string; plan: string };
@@ -61,7 +61,7 @@ export function ConsoleApp({
           ))}
         </nav>
         <div className="border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/50">
-          <p>{CONSOLE_ORIGIN}</p>
+          <p>{CONSOLE_PATH}</p>
           <Link href={`/desk/${current.id}`} className="mt-2 block text-sidebar-foreground hover:underline">
             Open desk →
           </Link>

@@ -53,7 +53,7 @@ export function settingsDeskLinks(workspaceId: string) {
     {
       href: `/console?workspace=${workspaceId}`,
       label: "API Console",
-      hint: "Opens the developer console (console.cinem.tech, or /console if the domain is not ready).",
+      hint: "Opens the same-origin developer console at /console.",
       external: true,
     },
     {

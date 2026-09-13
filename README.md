@@ -17,7 +17,7 @@ The public site is **Replit-simple** (warm paper, generous space, one primary CT
 5. **Connect** a plugin → persisted `PluginConnection`. **Connected** only with a real API key (or documented server env) or a successful OAuth callback. Empty Connect / missing OAuth client ids stay disconnected.
 6. Give an agent a job. Watch the live activity feed: plan, `read_brand_kit`, `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_type` / `browser_extract` / `crawl_links` / `web_search` / `write_artifact`, then `ask_user`. Clarify pauses show **Yes/No** on the desk and persist `Job.askKind` + `Job.userAnswer` in Postgres. Browse events show the **tool name + URL**.
 7. Approve artifacts. Save a job as a **Skill**, then **Run skill**.
-8. Open **API Console** — sidebar opens **https://console.cinem.tech** in a new tab (same-origin `/console` until that domain is attached). Mint a workspace key, call `/api/v1` from the try panel or curl. Brand Kit is under **Settings**, not the main sidebar.
+8. Open **API Console** — sidebar opens same-origin **`/console`** in a new tab. Mint a workspace key, call `/api/v1` from the try panel or curl. Brand Kit is under **Settings**, not the main sidebar.
 9. Invite a teammate from Settings/Usage (copy the magic link — this slice does not send email). Seats follow the plan.
 10. Export artifacts as Markdown or a simple PDF. Usage shows tokens remaining, jobs, and a cost stub. Schedule “every Monday LinkedIn week” — it fires on desk load or daily cron.
 
@@ -176,7 +176,7 @@ Next.js (App Router) · TypeScript · Tailwind · **Postgres** via Prisma (Neon 
 
 ## Developer API
 
-Workspace-scoped REST at `/api/v1`. Mint keys in **API Console** (`https://console.cinem.tech` or `/console`). Secrets are shown **once**; only SHA-256 hashes are stored. Keys never include model provider secrets.
+Workspace-scoped REST at `/api/v1`. Mint keys in **API Console** (`/console`). Secrets are shown **once**; only SHA-256 hashes are stored. Keys never include model provider secrets.
 
 Auth: `Authorization: Bearer cinem_live_…` (session cookies are ignored). Errors are JSON `{ "error": "…", "code": "unauthorized" }`. Rate limit: 60 requests / minute / key.
 
