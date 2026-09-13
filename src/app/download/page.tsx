@@ -104,8 +104,7 @@ export default function DownloadPage() {
             <h2 className="mt-2 text-lg font-medium tracking-tight">Same Setup.exe</h2>
             <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
               Portable copy of the same unified app. Menu and chrome switch Desk / AI
-              Assistant. No local database or Postgres on the happy path. Build:{" "}
-              <code className="font-mono text-xs">npm run desktop:build:win</code>.
+              Assistant.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Button
@@ -202,19 +201,16 @@ export default function DownloadPage() {
         <section className="mt-14 rounded-xl border border-border px-6 py-5">
           <h2 className="text-sm font-medium">Same account</h2>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            Website login is unchanged (HttpOnly cookie). Desktop and Android
-            call <code className="font-mono text-xs">POST /api/auth/token</code> and store a
-            refresh token. Chrome opens this site, you approve the workspace, and
-            the extension claims an account-linked device token. Details:{" "}
-            <code className="font-mono text-xs">docs/auth-bridge.md</code>.
+            Use the same CINEM account on the website, desktop, Android, and
+            Chrome. Sign in once; your desk and plans follow you.
           </p>
           <p className="mt-3 text-sm leading-7 text-muted-foreground">
             Prefer the browser?{" "}
             <Link href="/signup" className="underline underline-offset-4">
               Create an account
             </Link>{" "}
-            and open Mission Control on the web. Mac .dmg is not hosted from Linux
-            CI — build with <code className="font-mono text-xs">npm run desktop:build:mac</code>.
+            and open Mission Control on the web. There is no hosted Mac installer
+            yet — use the web desk on a Mac.
             Advanced: a Tauri-only{" "}
             <a
               href={cinemAiAssistantAdvancedDownloadHref()}

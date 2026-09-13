@@ -336,13 +336,10 @@ export function DownloadSection() {
         </article>
         <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Mac</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">Build on macOS</h3>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">Use the web desk</h3>
           <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            No hosted <code className="font-mono text-xs">.dmg</code> — Linux
-            cannot produce a usable one, so this button does not invent a file.
-            With a checkout on a Mac:{" "}
-            <code className="font-mono text-xs">npm run desktop:build:mac</code>.
-            Or use the browser desk below.
+            There is no hosted Mac installer yet. Use the browser desk — same
+            account as Windows.
           </p>
           <div className="mt-6">
             <Button
@@ -537,7 +534,7 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. That one installer includes the cloud desk and Cinem AI Assistant — switch modes in the app. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. That one installer includes the cloud desk and Cinem AI Assistant — switch modes in the app. There is no hosted Mac installer yet — use the web desk.",
   },
   {
     q: "How does pricing work?",

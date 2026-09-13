@@ -8,8 +8,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Data processing addendum",
-  description:
-    "DPA template for CINEM Pro agency buyers — processors, subprocessors, and what stays on-device.",
+  description: "DPA template for CINEM Pro agency buyers. Not a signed agreement.",
 };
 
 export default function DpaPage() {
@@ -34,71 +33,32 @@ export default function DpaPage() {
         otherwise.
       </p>
 
-      <h2>2. Subject matter</h2>
+      <h2>2. What this covers</h2>
       <p>
-        Hosting of workspace content (accounts, Brand Kit, jobs, artifacts, learning
-        memory, plugin metadata) so the desk can run supervised agents. High-risk
-        sends still wait for a human approver.
+        CINEM hosts your account and the workspace content you create so you can
+        run the desk. We do not sell that content. High-risk sends still wait
+        for a person on your team.
       </p>
 
-      <h2>3. Categories of data</h2>
+      <h2>3. What we hold</h2>
       <ul>
-        <li>Account identifiers (name, email).</li>
-        <li>Workspace content the customer types or the agent drafts.</li>
-        <li>Optional connection details you authorize (stored securely).</li>
-        <li>Usage counters (tokens/credits, jobs, seats).</li>
-        <li>Audit rows (who approved what, device pairing events).</li>
+        <li>Account name and email.</li>
+        <li>Workspace content you create (and drafts you approve or reject).</li>
+        <li>Basic usage so we can apply your plan.</li>
       </ul>
 
-      <h2>4. What stays on the device</h2>
+      <h2>4. Deletion and requests</h2>
       <p>
-        When you pair a browser, page work can stay on your computer. CINEM does
-        not take your full browser profile or saved passwords. See{" "}
-        <Link href="/privacy">Privacy</Link>.
+        Account deletion is handled by contacting CINEM. We will help with
+        reasonable privacy requests about data we actually store.
       </p>
 
-      <h2>5. Subprocessors</h2>
+      <h2>5. How to execute</h2>
       <p>
-        Apps you connect receive only what you authorize. Checkout uses the
-        payment provider shown at purchase. See{" "}
-        <Link href="/privacy">Privacy</Link>. CINEM does not sell workspace content.
-      </p>
-
-      <h2>6. Customer instructions</h2>
-      <p>
-        The processor processes workspace data to provide the product: store it,
-        generate drafts, and run the tools you approve. The customer is
-        responsible for lawful outreach and for not uploading special-category
-        data unless a written addendum covers it.
-      </p>
-
-      <h2>7. Security measures</h2>
-      <ul>
-        <li>Signed-in sessions stay on the account that created them.</li>
-        <li>Connection details are stored securely and not shown back in the browser.</li>
-        <li>High-risk sends wait for a human approver.</li>
-        <li>A record of who approved what.</li>
-      </ul>
-
-      <h2>8. International transfers</h2>
-      <p>
-        Some service providers may process data outside the EEA. This template
-        does not invent transfer clauses in the product UI.
-      </p>
-
-      <h2>9. Deletion and assistance</h2>
-      <p>
-        Account deletion is handled by contacting CINEM. Backups follow the host
-        retention window. CINEM will assist with reasonable data-subject requests
-        that depend on data we actually store — we cannot invent mailbox contents
-        that never left the customer&apos;s device.
-      </p>
-
-      <h2>10. How to execute</h2>
-      <p>
-        Email CINEM with the agency legal name, billing contact, and list of client
-        workspaces in scope. Until countersigned, this page is documentation only.
-        Related: <Link href="/privacy">Privacy</Link>, <Link href="/terms">Terms</Link>.
+        Email CINEM with the agency legal name, billing contact, and list of
+        client workspaces in scope. Until countersigned, this page is
+        documentation only. Related: <Link href="/privacy">Privacy</Link>,{" "}
+        <Link href="/terms">Terms</Link>.
       </p>
     </LegalPage>
   );
