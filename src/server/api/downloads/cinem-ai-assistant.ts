@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       publicPath: CINEM_AI_ASSISTANT_PUBLIC_PATH,
       api: CINEM_AI_ASSISTANT_DOWNLOAD_API,
       present: true,
-      source: resolved.kind === "file" ? "local" : envUrl ? "env" : "release",
+      source: envUrl ? "env" : "release",
       docs: CINEM_AI_ASSISTANT_DOCS,
       note:
         localMissing && !envUrl
