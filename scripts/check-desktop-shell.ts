@@ -187,6 +187,13 @@ for (const file of [
 }
 assert.ok(pkg.build.extraResources?.some((item: { to?: string }) => item.to === "assistant"));
 assert.match(JSON.stringify(pkg.build.nsis || {}), /installer\.nsh/);
+assert.match(JSON.stringify(pkg.build.nsis || {}), /installer\/header\.bmp/);
+assert.match(JSON.stringify(pkg.build.nsis || {}), /installer\/sidebar\.bmp/);
+assert.equal((pkg.build.nsis as { oneClick?: boolean }).oneClick, false);
+assert.ok(existsSync("electron/resources/installer/header.bmp"));
+assert.ok(existsSync("electron/resources/installer/sidebar.bmp"));
+assert.ok(existsSync("electron/resources/installer/icon.ico"));
+assert.ok(existsSync("docs/windows-installer-branding.md"));
 assert.ok(existsSync("electron/chrome.html"));
 assert.ok(existsSync("electron/modes.cjs"));
 assert.ok(existsSync("electron/resources/installer.nsh"));
