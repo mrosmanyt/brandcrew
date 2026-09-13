@@ -19,10 +19,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${base}/cinem-ai-assistant`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: `${base}/download`,
       lastModified,
       changeFrequency: "weekly",
       priority: 0.8,
+    },
+    {
+      url: `${base}/billing`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.5,
     },
     {
       url: `${base}/support`,

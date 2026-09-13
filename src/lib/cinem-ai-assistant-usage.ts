@@ -1,0 +1,153 @@
+import { getCurrentUser, AuthError } from "@/lib/auth";
+import { requireDevice, readDeviceToken } from "@/lib/device-auth";
+import { DEVICE_TOKEN_PREFIX } from "@/lib/device-protocol";
+import { prisma } from "@/lib/db";
+import { originFromRequest } from "@/lib/billing";
+import { normalizePlanId } from "@/lib/limits";
+import { listUserWorkspaces } from "@/lib/workspace";
+import {
+  bestPlanId,
+  CINEM_AI_ASSISTANT_PRODUCT,
+  cinemAiAssistantPeriodUtc,
+  cinemAiAssistantTurnLimit,
+  cinemAiAssistantUpgradeUrl,
+  clampUsageIncrement,
+  usageSnapshot,
+  type CinemAiAssistantUsageSnapshot,
+} from "@/lib/cinem-ai-assistant";
+
+export type AssistantCaller = {
+  userId: string;
+  plan: ReturnType<typeof normalizePlanId>;
+  workspaceId: string | null;
+};
+
+async function planForUser(userId: string) {
+  const workspaces = await listUserWorkspaces(userId);
+  return {
+    plan: bestPlanId(workspaces.map((row) => row.plan)),
+    workspaceId: workspaces[0]?.id ?? null,
+  };
+}
+
+async function ownerUserId(workspaceId: string) {
+  const owner = await prisma.workspaceMember.findFirst({
+    where: { workspaceId, role: "owner" },
+    select: { userId: true },
+    orderBy: { id: "asc" },
+  });
+  return owner?.userId ?? null;
+}
+
+/**
+ * Same auth as desktop cloud shell: session cookie or Bearer access JWT.
+ * Device tokens (`cinem_dev_…`) count against the linked account (or desk owner).
+ */
+export async function requireCinemAssistantCaller(request: Request): Promise<AssistantCaller> {
+  const user = await getCurrentUser();
+  if (user) {
+    const { plan, workspaceId } = await planForUser(user.id);
+    return { userId: user.id, plan, workspaceId };
+  }
+
+  const token = readDeviceToken(request);
+  if (token.startsWith(DEVICE_TOKEN_PREFIX)) {
+    const device = await requireDevice(request);
+    const row = await prisma.localDevice.findUnique({
+      where: { id: device.id },
+      select: { linkedUserId: true },
+    });
+    const userId = row?.linkedUserId || (await ownerUserId(device.workspaceId));
+    if (!userId) {
+      throw new AuthError("Sign in to use Cinem AI Assistant.");
+    }
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: device.workspaceId },
+      select: { plan: true },
+    });
+    return {
+      userId,
+      plan: normalizePlanId(workspace?.plan),
+      workspaceId: device.workspaceId,
+    };
+  }
+
+  throw new AuthError("Sign in to continue.");
+}
+
+async function readUsed(userId: string, period: string) {
+  const row = await prisma.productUsage.findUnique({
+    where: {
+      userId_product_period: {
+        userId,
+        product: CINEM_AI_ASSISTANT_PRODUCT,
+        period,
+      },
+    },
+    select: { used: true },
+  });
+  return row?.used ?? 0;
+}
+
+export async function getCinemAssistantUsage(
+  request: Request,
+  caller: AssistantCaller,
+): Promise<CinemAiAssistantUsageSnapshot> {
+  const period = cinemAiAssistantPeriodUtc();
+  const used = await readUsed(caller.userId, period);
+  return usageSnapshot({
+    plan: caller.plan,
+    used,
+    period,
+    upgradeUrl: cinemAiAssistantUpgradeUrl(originFromRequest(request)),
+    workspaceId: caller.workspaceId,
+  });
+}
+
+export async function incrementCinemAssistantUsage(
+  request: Request,
+  caller: AssistantCaller,
+  turnsRaw?: unknown,
+): Promise<CinemAiAssistantUsageSnapshot> {
+  const period = cinemAiAssistantPeriodUtc();
+  const turns = clampUsageIncrement(turnsRaw);
+  const limit = cinemAiAssistantTurnLimit(caller.plan);
+  const current = await readUsed(caller.userId, period);
+  const upgradeUrl = cinemAiAssistantUpgradeUrl(originFromRequest(request));
+
+  if (current >= limit) {
+    return usageSnapshot({
+      plan: caller.plan,
+      used: current,
+      period,
+      upgradeUrl,
+      workspaceId: caller.workspaceId,
+    });
+  }
+
+  const nextUsed = Math.min(limit, current + turns);
+  await prisma.productUsage.upsert({
+    where: {
+      userId_product_period: {
+        userId: caller.userId,
+        product: CINEM_AI_ASSISTANT_PRODUCT,
+        period,
+      },
+    },
+    create: {
+      userId: caller.userId,
+      product: CINEM_AI_ASSISTANT_PRODUCT,
+      period,
+      used: nextUsed,
+    },
+    update: { used: nextUsed },
+  });
+
+  return usageSnapshot({
+    plan: caller.plan,
+    used: nextUsed,
+    period,
+    upgradeUrl,
+    workspaceId: caller.workspaceId,
+  });
+}

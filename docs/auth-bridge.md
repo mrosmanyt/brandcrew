@@ -58,6 +58,10 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 - Windows installer: `npm run desktop:build:win` → `dist/desktop/CINEM-Pro-Setup.exe`. Hosted copy: public releases repo (see `/download`). Unsigned builds: SmartScreen **More info → Run anyway** until Azure Artifact Signing is configured (`docs/windows-code-signing.md`).
 - Verify: install Setup.exe → desk loads `https://app.cinem.tech/desk` → Continue with Google or email → agents, chat, Marketplace work. Offline: toggle airplane mode and confirm Retry.
 
+## Cinem AI Assistant (Windows Tauri)
+
+Same account and tokens as desktop. The Windows app calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT (`X-Cinem-Client: assistant` is treated as desktop). When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. Contract: `docs/cinem-ai-assistant.md`.
+
 ## Android (Expo)
 
 `mobile/` is an Expo app (`tech.cinem.pro`). Email/password hits `POST /api/auth/token`, tokens go in SecureStore, then a WebView loads `/connect/session?nonce=` so Mission Control gets the web cookie. Google opens the site login. Play Store steps: `docs/play-store-launch.md`. iOS App Store is a follow-up (bundle id is reserved in `app.json` only).

@@ -8,6 +8,8 @@ import { matchBestPattern, pathToSegments } from "../src/server/api/match";
 const PATTERNS: string[][] = [
   ["api", "admin"],
   ["api", "downloads", "extension"],
+  ["api", "downloads", "cinem-ai-assistant"],
+  ["api", "cinem-ai-assistant", "usage"],
   ["api", "v1"],
   ["api", "v1", "workspace"],
   ["api", "v1", "agents", ":agentId"],
@@ -97,6 +99,8 @@ function matchPath(pathname: string) {
 const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/admin", ["api", "admin"], {}],
   ["/api/downloads/extension", ["api", "downloads", "extension"], {}],
+  ["/api/downloads/cinem-ai-assistant", ["api", "downloads", "cinem-ai-assistant"], {}],
+  ["/api/cinem-ai-assistant/usage", ["api", "cinem-ai-assistant", "usage"], {}],
   ["/api/v1", ["api", "v1"], {}],
   ["/api/v1/workspace", ["api", "v1", "workspace"], {}],
   ["/api/v1/agents", ["api", "v1", "agents"], {}],
@@ -351,8 +355,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 82);
-console.log("ok: 82 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 84);
+console.log("ok: 84 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

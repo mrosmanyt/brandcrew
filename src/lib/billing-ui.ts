@@ -1,3 +1,8 @@
+import {
+  assistantCheckoutPlanFromQuery,
+  CINEM_AI_ASSISTANT_PRODUCT,
+  isCinemAiAssistantProduct,
+} from "@/lib/cinem-ai-assistant";
 import { CHECKOUT_PLANS, type CheckoutPlanId } from "@/lib/constants";
 import { safeNextPath } from "@/lib/google-auth-shared";
 
@@ -71,6 +76,10 @@ export function checkoutPlanFromNextPath(next?: string | null): CheckoutPlanId |
   if (!path) return null;
   try {
     const url = new URL(path, "https://cinem.invalid");
+    const product = url.searchParams.get("product");
+    if (isCinemAiAssistantProduct(product) && url.pathname === "/billing") {
+      return assistantCheckoutPlanFromQuery(url.searchParams.get("plan"), product || CINEM_AI_ASSISTANT_PRODUCT);
+    }
     return checkoutPlanFromQuery(url.searchParams.get("checkout") || url.searchParams.get("plan"));
   } catch {
     return null;

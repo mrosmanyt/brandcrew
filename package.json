@@ -52,6 +52,7 @@
     "test:phase3": "tsx scripts/check-phase3.ts",
     "test:phase4": "tsx scripts/check-phase4.ts",
     "test:desktop-shell": "tsx scripts/check-desktop-shell.ts",
+    "test:cinem-ai": "tsx scripts/check-cinem-ai-assistant.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:cloud": "node scripts/desktop-cloud.mjs",

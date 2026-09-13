@@ -216,6 +216,7 @@ async function main() {
   assert.ok(urls.some((url) => url.includes("/privacy")));
   assert.ok(urls.some((url) => url.includes("/terms")));
   assert.ok(urls.some((url) => url.includes("/download")));
+  assert.ok(urls.some((url) => url.includes("/cinem-ai-assistant")));
   assert.ok(urls.some((url) => url.includes("/support")));
   assert.ok(!urls.some((url) => url.includes("/security")));
   const nextConfigSrc = readFileSync("next.config.ts", "utf8");

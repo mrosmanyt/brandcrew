@@ -28,6 +28,7 @@ model User {
   invitesSent   WorkspaceInvite[]
   refreshTokens AuthRefreshToken[]
   supports      BrandSupport[]
+  productUsage  ProductUsage[]
 
   @@index([supporter])
 }
@@ -584,6 +585,23 @@ model ProcessedWebhook {
   createdAt  DateTime @default(now())
 
   @@index([externalId])
+}
+
+/// Account-bound product meters (Cinem AI Assistant chat/voice turns).
+/// Not a Whop SKU — entitlements follow the user's best CINEM Pro plan.
+model ProductUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  product   String
+  /// UTC calendar month `YYYY-MM`.
+  period    String
+  used      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, product, period])
+  @@index([userId, product])
 }
 
 /// One-time Support (tip) payments. Does not change Workspace.plan.

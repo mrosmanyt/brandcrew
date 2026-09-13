@@ -58,7 +58,7 @@ The cloud keeps **accounts, billing, schedule, and audit**. Browser tools prefer
    ```
 5. **Try it:** open a public page → run **Prospecting scan** from a Sales agent → watch Live results (narration + sources) → approve before any write.
 
-Desktop Windows installer and Android Play path are on `/download`. Auth across web / desktop / extension / Android: `docs/auth-bridge.md`. Play Store: `docs/play-store-launch.md`. Windows SmartScreen / code signing: `docs/windows-code-signing.md`.
+Desktop Windows installer and Android Play path are on `/download`. **Cinem AI Assistant** (Windows-only native app, included with your CINEM Pro plan) is on `/cinem-ai-assistant` — contract `docs/cinem-ai-assistant.md`. Auth across web / desktop / extension / Android: `docs/auth-bridge.md`. Play Store: `docs/play-store-launch.md`. Windows SmartScreen / code signing: `docs/windows-code-signing.md`.
 
 Security baselines: page text is wrapped in `<<<CINEM_UNTRUSTED_PAGE_CONTENT>>>` (data, never instructions); writes go through the approval queue; each job has a **domain allowlist** and aborts if the agent leaves allowed hosts. Audit lines live on the On-device page and in `WorkspaceAudit`.
 
@@ -610,6 +610,7 @@ npm run test:developer-api # hashed keys, catalog, JSON 401 shape
 npm run test:limits        # plan caps, builder playbooks, 3D avatar seed, HTML preview
 npm run test:product       # $20/$79/$200 plans, onboarding, templates, schedule math, export PDF
 npm run test:billing       # Whop-first provider, webhook signature, cancel rules
+npm run test:cinem-ai      # Assistant marketing + usage/upgrade contract (existing Pro plan)
 npm run test:launch        # logo, privacy/terms, headers, rate limit, honeypot, SEO files
 npm run test:on-device     # MV3 extension, native host, allowlist, write-gate, agency playbooks
 npm run test:write-gate    # approval class, Always approved preference, Gmail OAuth testing errors
