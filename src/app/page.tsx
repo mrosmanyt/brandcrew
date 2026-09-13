@@ -1,3 +1,4 @@
+import { WindowsDownloadNudge } from "@/components/desk/windows-download-nudge";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { HeroDemo } from "@/components/marketing/hero-demo";
 import { IntegrationsShowcase } from "@/components/marketing/integrations-showcase";
@@ -22,6 +23,7 @@ export const dynamic = "force-static";
 export default function HomePage() {
   return (
     <MarketingShell>
+      <WindowsDownloadNudge placement="marketing" />
       <SiteNav />
 
       <main>
