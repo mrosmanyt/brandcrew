@@ -38,6 +38,7 @@
     "test:google-auth": "tsx scripts/check-google-auth.ts",
     "test:desk-theme": "tsx scripts/check-desk-theme.ts",
     "test:desk-modes": "tsx scripts/check-desk-modes.ts",
+    "test:desk-ux": "tsx scripts/check-desk-ux.ts",
     "test:hero-demo": "tsx scripts/check-hero-demo.ts",
     "test:build-prompt": "tsx scripts/check-build-prompt.ts",
     "test:integrations": "tsx scripts/check-integrations-showcase.ts",

@@ -103,20 +103,20 @@ export function usageSeriesMeta(input: {
     return {
       days: 0,
       source: "usage_event",
-      note: "Daily bars are summed from UsageEvent rows (credits = tokens 1:1). Remaining caps come from the workspace credit ledger.",
+      note: "Daily bars are summed from UsageEvent rows for this lookback window (credits = tokens 1:1). Remaining credits are this billing cycle, not the chart total.",
     };
   }
   if (input.jobCount > 0) {
     return {
       days: 0,
       source: "job",
-      note: "No token events in this window. The job line is counted from Job rows. Remaining credits still come from the workspace ledger — we do not invent a daily token split.",
+      note: "No credit events in this lookback window. The job line is counted from Job rows. Remaining credits are this billing cycle — we do not invent a daily split.",
     };
   }
   return {
     days: 0,
     source: "credit_ledger",
-    note: "No usage events or jobs in this window. Remaining credits are the live workspace cap (token budget 1:1).",
+    note: "No usage events or jobs in this lookback window. Remaining credits are this billing cycle (token budget 1:1).",
   };
 }
 

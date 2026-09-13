@@ -543,8 +543,12 @@ export function DeskSidebar(props: {
   agents: AgentDTO[];
   agentStatus: Record<string, string>;
   needsYou?: NeedsYouItem[];
+  creditsLine?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = usePersistedCollapsed(DESK_LEFT_PANE.collapsedKey);
   const [leftWidth, setLeftWidth] = usePersistedPaneWidth(
     DESK_LEFT_PANE.storageKey,
@@ -552,6 +556,10 @@ export function DeskSidebar(props: {
     DESK_LEFT_PANE.minWidth,
     DESK_LEFT_PANE.maxWidth,
   );
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname, search]);
 
   function toggle() {
     setCollapsed((value) => !value);
@@ -587,20 +595,32 @@ export function DeskSidebar(props: {
         />
       ) : null}
       <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 md:hidden">
-        <BrandMark />
-        <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <BrandMark />
+          {props.creditsLine ? (
+            <p className="mt-0.5 truncate text-[10px] leading-3 text-muted-foreground">
+              {props.creditsLine}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <NotificationBell
             workspaceId={props.workspace.id}
             initialItems={props.needsYou ?? []}
           />
           <DeskThemeToggle />
-          <Sheet>
-            <SheetTrigger render={<Button variant="outline" size="icon-sm" />}>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger
+              render={
+                <Button variant="outline" size="sm" aria-label="Open desk menu" />
+              }
+            >
               <Menu className="size-4" />
+              Menu
             </SheetTrigger>
             <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
               <SheetHeader className="sr-only">
-                <SheetTitle>Navigation</SheetTitle>
+                <SheetTitle>Desk menu</SheetTitle>
               </SheetHeader>
               <NavBody
                 {...props}

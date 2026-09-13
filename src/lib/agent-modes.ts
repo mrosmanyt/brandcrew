@@ -40,24 +40,24 @@ export function planModeDescription(plan?: string | null) {
   const seats = `${row.seats} seat${row.seats === 1 ? "" : "s"}`;
   const jobs = `${row.jobsPerHour} jobs/hr`;
   const concurrent = `${row.maxConcurrentJobs} concurrent`;
-  const tokens = `${row.tokenBudget.toLocaleString()} tokens`;
+  const credits = `${row.tokenBudget.toLocaleString()} credits`;
   if (id === "demo") {
-    return `Free caps. ${tokens}, ${jobs}, ${concurrent}. Labeled templates when no server keys.`;
+    return `Free caps. ${credits}, ${jobs}, ${concurrent}. Labeled templates when no server keys.`;
   }
   if (id === "starter") {
-    return `$${row.price}/mo. ${seats}, ${tokens}, ${jobs}. Best for a small desk.`;
+    return `$${row.price}/mo. ${seats}, ${credits}, ${jobs}. Best for a small desk.`;
   }
   if (id === "pro") {
-    return `$${row.price}/mo · Power. ${seats}, ${tokens}, ${jobs}, ${concurrent}.`;
+    return `$${row.price}/mo · Power. ${seats}, ${credits}, ${jobs}, ${concurrent}.`;
   }
-  return `$${row.price}/mo · Max. ${seats}, ${tokens}, ${jobs}, ${concurrent}.`;
+  return `$${row.price}/mo · Max. ${seats}, ${credits}, ${jobs}, ${concurrent}.`;
 }
 
 export function planModeCaption(plan?: string | null) {
   const id = normalizePlanId(plan);
   const row = PLANS[id];
   if (id === "demo") return "No credits charged. Caps refresh with the workspace.";
-  return `${row.tokenBudget.toLocaleString()} tokens · ${row.jobsPerHour} jobs/hr`;
+  return `${row.tokenBudget.toLocaleString()} credits · ${row.jobsPerHour} jobs/hr`;
 }
 
 export function nextAgentModePlan(plan?: string | null): PlanId {
