@@ -227,3 +227,5 @@ const icoPngs = icoSizes.map((size) => ({
 const ico = encodeIco(icoPngs);
 writeFileSync(path.join(root, "src", "app", "favicon.ico"), ico);
 console.log("Wrote favicon.ico", ico.length, "bytes");
+
+await import("./make-installer-art.mjs");

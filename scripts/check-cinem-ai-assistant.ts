@@ -151,6 +151,7 @@ assert.match(docs, /Do not create a Cinem AI Assistant SKU/);
 assert.match(docs, /\/api\/cinem-ai-assistant\/usage/);
 assert.match(docs, /Same CINEM Pro account = same plan on desktop/);
 assert.match(docs, /CINEM-Pro-Setup\.exe/);
+assert.match(docs, /windows-installer-branding/);
 assert.match(docs, /desktop-windows\.yml|CINEM Pro Windows/);
 assert.match(docs, /cinem-ai-assistant-windows\.yml|workflow_dispatch/);
 assert.doesNotMatch(docs, /mickey|cinempro\.site/i);

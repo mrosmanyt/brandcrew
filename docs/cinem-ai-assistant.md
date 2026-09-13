@@ -26,6 +26,8 @@ Users install once and can use Desk only, Assistant only, or both (mode switch +
 
 Build path: `npm run desktop:build:win` (Vite renderer + electron-builder NSIS). GitHub Actions: [`.github/workflows/desktop-windows.yml`](../.github/workflows/desktop-windows.yml) (**CINEM Pro Windows**). Everyday Vercel / `next build` does **not** compile Rust or the desktop installer.
 
+The Setup.exe wizard is CINEM-branded (dark header / sidebar, welcome + finish copy, optional fade splash). How to regenerate the bitmaps: [`docs/windows-installer-branding.md`](./windows-installer-branding.md).
+
 An optional Tauri-only `Cinem-AI-Assistant-Setup.exe` remains an advanced link (`GET /api/downloads/cinem-ai-assistant?advanced=1`). It is not the marketing CTA.
 
 ## Windows app (renderer)
