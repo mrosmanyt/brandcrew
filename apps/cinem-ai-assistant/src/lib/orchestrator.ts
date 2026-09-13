@@ -36,6 +36,7 @@ import { agentById } from "@/data/agents";
 import { detectLanguage, languageDirective } from "@/lib/language";
 import { logActivity, getDeviceUser } from "@/lib/db";
 import { reportUsage } from "@/lib/usage";
+import { shouldPromptAssistantUpgrade } from "../../usage-client";
 import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 import { useAppStore } from "@/store/useAppStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
@@ -368,11 +369,11 @@ export async function processCommand(text: string): Promise<string> {
   try {
     const usage = await cloud.consumeTurn();
     if (!usage.allowed) {
-      cloud.showUpgrade(usage);
+      if (shouldPromptAssistantUpgrade(usage)) cloud.showUpgrade(usage);
       return "";
     }
   } catch (error) {
-    cloud.showUpgrade(cloud.usage);
+    if (shouldPromptAssistantUpgrade(cloud.usage)) cloud.showUpgrade(cloud.usage);
     useAppStore.getState().addMessage({
       role: "system",
       text:

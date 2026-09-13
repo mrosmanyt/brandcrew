@@ -25,6 +25,18 @@ export function cloudOrigin(envUrl?: string) {
   return (envUrl || "https://app.cinem.tech").replace(/\/$/, "");
 }
 
+export function shouldPromptAssistantUpgrade(usage?: {
+  allowed?: boolean;
+  includedWithPlan?: boolean;
+  plan?: string;
+} | null) {
+  if (!usage) return false;
+  if (usage.includedWithPlan) return false;
+  const plan = String(usage.plan || "").toLowerCase();
+  if (plan && plan !== "demo" && plan !== "free") return false;
+  return usage.allowed === false;
+}
+
 export async function fetchAssistantUsage(input: {
   origin?: string;
   accessToken: string;
@@ -34,6 +46,7 @@ export async function fetchAssistantUsage(input: {
   const increment = typeof input.turns === "number";
   const res = await fetch(`${base}${CINEM_AI_ASSISTANT_USAGE_PATH}`, {
     method: increment ? "POST" : "GET",
+    cache: "no-store",
     headers: {
       Authorization: `Bearer ${input.accessToken}`,
       "X-Cinem-Client": "assistant",

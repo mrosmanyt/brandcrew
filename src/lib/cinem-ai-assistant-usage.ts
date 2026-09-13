@@ -1,4 +1,4 @@
-import { getCurrentUser, AuthError } from "@/lib/auth";
+import { getUserFromRequest, AuthError } from "@/lib/auth";
 import { requireDevice, readDeviceToken } from "@/lib/device-auth";
 import { DEVICE_TOKEN_PREFIX } from "@/lib/device-protocol";
 import { prisma } from "@/lib/db";
@@ -6,14 +6,15 @@ import { originFromRequest } from "@/lib/billing";
 import { normalizePlanId } from "@/lib/limits";
 import { listUserWorkspaces } from "@/lib/workspace";
 import {
-  bestPlanId,
   CINEM_AI_ASSISTANT_PRODUCT,
   cinemAiAssistantPeriodUtc,
   cinemAiAssistantTurnLimit,
   cinemAiAssistantUpgradeUrl,
   clampUsageIncrement,
+  entitlementFromWorkspaces,
   usageSnapshot,
   type CinemAiAssistantUsageSnapshot,
+  type WorkspacePlanRow,
 } from "@/lib/cinem-ai-assistant";
 
 export type AssistantCaller = {
@@ -22,12 +23,13 @@ export type AssistantCaller = {
   workspaceId: string | null;
 };
 
-async function planForUser(userId: string) {
+/** Best paid desk on this CINEM Pro account — same plan the website sold. */
+export async function planForUser(userId: string, extra: WorkspacePlanRow[] = []) {
   const workspaces = await listUserWorkspaces(userId);
-  return {
-    plan: bestPlanId(workspaces.map((row) => row.plan)),
-    workspaceId: workspaces[0]?.id ?? null,
-  };
+  return entitlementFromWorkspaces([
+    ...workspaces.map((row) => ({ id: row.id, plan: row.plan })),
+    ...extra,
+  ]);
 }
 
 async function ownerUserId(workspaceId: string) {
@@ -44,7 +46,7 @@ async function ownerUserId(workspaceId: string) {
  * Device tokens (`cinem_dev_…`) count against the linked account (or desk owner).
  */
 export async function requireCinemAssistantCaller(request: Request): Promise<AssistantCaller> {
-  const user = await getCurrentUser();
+  const user = await getUserFromRequest(request);
   if (user) {
     const { plan, workspaceId } = await planForUser(user.id);
     return { userId: user.id, plan, workspaceId };
@@ -63,12 +65,13 @@ export async function requireCinemAssistantCaller(request: Request): Promise<Ass
     }
     const workspace = await prisma.workspace.findUnique({
       where: { id: device.workspaceId },
-      select: { plan: true },
+      select: { id: true, plan: true },
     });
+    const entitlement = await planForUser(userId, workspace ? [workspace] : []);
     return {
       userId,
-      plan: normalizePlanId(workspace?.plan),
-      workspaceId: device.workspaceId,
+      plan: entitlement.plan,
+      workspaceId: entitlement.workspaceId ?? device.workspaceId,
     };
   }
 

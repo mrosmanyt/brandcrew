@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, setSessionCookie, verifyPassword } from "@/lib/auth";
-import { isAuthSurface, type AuthSurface } from "@/lib/auth-bridge";
+import { googleOnlyPasswordMessage, isAuthSurface, type AuthSurface } from "@/lib/auth-bridge";
 import {
   issueNativeSession,
   readCinemClient,
@@ -50,10 +50,7 @@ export async function POST(request: Request) {
       }
       if (!user.passwordHash) {
         return withNativeCors(
-          NextResponse.json(
-            { error: "This account uses Google. Continue with Google, then return here." },
-            { status: 401 },
-          ),
+          NextResponse.json({ error: googleOnlyPasswordMessage(surface) }, { status: 401 }),
         );
       }
       if (!(await verifyPassword(body.password, user.passwordHash))) {

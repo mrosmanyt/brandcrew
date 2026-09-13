@@ -53,11 +53,15 @@ export default function TopBar() {
             type="button"
             onClick={() => !usage.allowed && showUpgrade(usage)}
             className="tracking-[0.12em] text-neon-dim/90 hover:text-ice"
-            title={usage.includedWithPlan ? usage.planName : "Free monthly turns"}
+            title={
+              usage.includedWithPlan
+                ? `${usage.planName} — included with this CINEM Pro account`
+                : "Free monthly turns"
+            }
           >
             {usage.includedWithPlan
               ? usage.planName.toUpperCase()
-              : `${usage.remaining} TURNS LEFT`}
+              : `${usage.planName.toUpperCase()} · ${usage.remaining} TURNS`}
           </button>
         )}
       </div>

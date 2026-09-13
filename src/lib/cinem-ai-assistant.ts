@@ -121,6 +121,49 @@ export function bestPlanId(plans: Array<string | null | undefined>): PlanId {
   return best;
 }
 
+export type WorkspacePlanRow = {
+  id?: string | null;
+  plan?: string | null;
+};
+
+/**
+ * Same CINEM Pro account = same plan on desktop.
+ * Entitlement is the best workspace plan the signed-in user belongs to
+ * (Pro $20 `starter`, Pro Plus `pro`, Ultra `ultra`) — not the first desk
+ * created, and not a stale Free snapshot.
+ */
+export function entitlementFromWorkspaces(workspaces: WorkspacePlanRow[]) {
+  const plan = bestPlanId(workspaces.map((row) => row.plan));
+  const match =
+    workspaces.find((row) => row.id && normalizePlanId(row.plan) === plan) ||
+    workspaces.find((row) => row.id);
+  return {
+    plan,
+    workspaceId: match?.id ?? null,
+    planName: planDisplayName(plan),
+    includedWithPlan: isPaidPlan(plan),
+  };
+}
+
+/** Upgrade wall / HTTP 402 is Free-only. Paid desks never see a false upgrade. */
+export function shouldPromptAssistantUpgrade(snapshot: {
+  allowed: boolean;
+  includedWithPlan?: boolean;
+  plan?: string | null;
+}) {
+  if (snapshot.includedWithPlan) return false;
+  if (isPaidPlan(snapshot.plan)) return false;
+  return snapshot.allowed === false;
+}
+
+export function assistantUsageHttpStatus(snapshot: {
+  allowed: boolean;
+  includedWithPlan?: boolean;
+  plan?: string | null;
+}) {
+  return shouldPromptAssistantUpgrade(snapshot) ? 402 : 200;
+}
+
 export function isCinemAiAssistantProduct(raw?: string | null) {
   const id = String(raw || "")
     .trim()

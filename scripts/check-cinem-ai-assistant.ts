@@ -6,10 +6,14 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   assistantUpgradeUrl as clientUpgradeUrl,
   CINEM_AI_ASSISTANT_PRODUCT,
+  shouldPromptAssistantUpgrade as clientShouldPromptUpgrade,
 } from "../apps/cinem-ai-assistant/usage-client";
 import {
   assistantCheckoutPlanFromQuery as serverPlan,
+  assistantUsageHttpStatus,
   bestPlanId,
+  entitlementFromWorkspaces,
+  shouldPromptAssistantUpgrade,
   CINEM_AI_ASSISTANT_FEATURES,
   CINEM_AI_ASSISTANT_FREE_TURNS,
   CINEM_AI_ASSISTANT_NAME,
@@ -38,6 +42,33 @@ assert.ok(cinemAiAssistantTurnLimit("starter") > CINEM_AI_ASSISTANT_FREE_TURNS);
 assert.ok(CINEM_AI_ASSISTANT_TURN_LIMIT.ultra >= CINEM_AI_ASSISTANT_TURN_LIMIT.pro);
 assert.equal(bestPlanId(["demo", "starter", "pro"]), "pro");
 assert.equal(bestPlanId([]), "demo");
+
+const mockedProUser = entitlementFromWorkspaces([
+  { id: "ws_house", plan: "demo" },
+  { id: "ws_customer_pro", plan: "starter" },
+]);
+assert.equal(mockedProUser.plan, "starter");
+assert.equal(mockedProUser.workspaceId, "ws_customer_pro");
+assert.equal(mockedProUser.planName, "Pro");
+assert.equal(mockedProUser.includedWithPlan, true);
+const mockedProSnap = usageSnapshot({
+  plan: mockedProUser.plan,
+  used: 10,
+  period: "2026-09",
+  upgradeUrl: cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
+  workspaceId: mockedProUser.workspaceId,
+});
+assert.equal(mockedProSnap.allowed, true);
+assert.equal(mockedProSnap.includedWithPlan, true);
+assert.equal(mockedProSnap.planName, "Pro");
+assert.equal(mockedProSnap.plan, "starter");
+assert.equal(assistantUsageHttpStatus(mockedProSnap), 200);
+assert.equal(shouldPromptAssistantUpgrade(mockedProSnap), false);
+assert.equal(clientShouldPromptUpgrade(mockedProSnap), false);
+const mockedPlus = entitlementFromWorkspaces([{ id: "ws_plus", plan: "pro" }]);
+assert.equal(mockedPlus.planName, "Pro Plus");
+assert.equal(entitlementFromWorkspaces([{ id: "ws_ultra", plan: "ultra" }]).planName, "Ultra");
+console.log("ok: mocked Pro ($20 / starter) desktop entitlement");
 assert.equal(clampUsageIncrement(undefined), 1);
 assert.equal(clampUsageIncrement(999), 50);
 assert.match(cinemAiAssistantPeriodUtc(new Date("2026-09-13T00:00:00Z")), /^2026-09$/);
@@ -88,6 +119,18 @@ const paid = usageSnapshot({
 });
 assert.equal(paid.allowed, true);
 assert.equal(paid.includedWithPlan, true);
+assert.equal(assistantUsageHttpStatus(paid), 200);
+const paidAtCap = usageSnapshot({
+  plan: "starter",
+  used: CINEM_AI_ASSISTANT_TURN_LIMIT.starter,
+  period: "2026-09",
+  upgradeUrl: snap.upgradeUrl,
+});
+assert.equal(paidAtCap.includedWithPlan, true);
+assert.equal(assistantUsageHttpStatus(paidAtCap), 200);
+assert.equal(shouldPromptAssistantUpgrade(paidAtCap), false);
+assert.equal(assistantUsageHttpStatus(snap), 402);
+assert.equal(shouldPromptAssistantUpgrade(snap), true);
 assert.ok(CINEM_AI_ASSISTANT_FEATURES.length >= 6);
 console.log("ok: usage snapshot + feature list");
 
@@ -106,6 +149,7 @@ assert.match(docs, /VITE_CINEM_CLOUD_URL/);
 assert.match(docs, /WHOP_STARTER_PLAN_ID/);
 assert.match(docs, /Do not create a Cinem AI Assistant SKU/);
 assert.match(docs, /\/api\/cinem-ai-assistant\/usage/);
+assert.match(docs, /Same CINEM Pro account = same plan on desktop/);
 assert.match(docs, /CINEM-Pro-Setup\.exe/);
 assert.match(docs, /desktop-windows\.yml|CINEM Pro Windows/);
 assert.match(docs, /cinem-ai-assistant-windows\.yml|workflow_dispatch/);
@@ -151,6 +195,19 @@ assert.match(cloud, /CINEM_AI_ASSISTANT_USAGE_PATH|\/api\/cinem-ai-assistant\/us
 assert.match(cloud, /\/api\/auth\/connect/);
 assert.match(cloud, /openExternal/);
 assert.match(cloud, /adoptDesktopSession|cinemDesktop/);
+assert.match(cloud, /syncDesktopSession/);
+assert.match(cloud, /cache:\s*["']no-store["']/);
+assert.match(cloud, /formatAssistantSignInError|Sign in with CINEM Pro in the browser/);
+const usageRoute = readFileSync("src/server/api/cinem-ai-assistant/usage.ts", "utf8");
+assert.match(usageRoute, /assistantUsageHttpStatus/);
+assert.match(usageRoute, /no-store/);
+assert.match(readFileSync("src/lib/cinem-ai-assistant-usage.ts", "utf8"), /entitlementFromWorkspaces/);
+assert.match(readFileSync("src/lib/cinem-ai-assistant-usage.ts", "utf8"), /getUserFromRequest/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/store/useCinemCloudStore.ts", "utf8"), /shouldPromptAssistantUpgrade/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/gate/UpgradeModal.tsx", "utf8"), /shouldPromptAssistantUpgrade/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/TopBar.tsx", "utf8"), /planName\.toUpperCase/);
+assert.match(readFileSync("src/server/api/auth/me.ts", "utf8"), /entitlementFromWorkspaces/);
+assert.match(readFileSync("src/components/auth/connect-client.tsx", "utf8"), /Same CINEM Pro account = same plan on desktop/);
 const guard = readFileSync("apps/cinem-ai-assistant/src/lib/guard.ts", "utf8");
 assert.match(guard, /isCinemElectron|verifyElectronShell/);
 const vite = readFileSync("apps/cinem-ai-assistant/vite.config.ts", "utf8");
