@@ -9,8 +9,9 @@
  *      random nonce to the Rust core (`guard_sign`) and has the core verify
  *      its own signature (`guard_verify`). The secret and algorithm live in
  *      the COMPILED BINARY only — never in JS. No genuine Cinem AI Assistant core ⇒ no
- *      handshake ⇒ the UI hard-locks. Stolen assets are dead on arrival in
- *      a browser, an iframe, Electron, or a foreign Tauri app.
+ *      handshake ⇒ the UI hard-locks. Official CINEM Pro Electron
+ *      (`window.cinemDesktop`) is also accepted. Stolen assets are dead on
+ *      arrival in a browser, an iframe, or a foreign shell.
  *   2. UI HARDENING — production builds block the context menu and the
  *      devtools shortcuts; `vite build` strips console/debugger and emits
  *      no sourcemaps, so the bundle ships minified and unreadable.
@@ -21,7 +22,7 @@
  * db-server) are intentionally exempt.
  */
 
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+import { isCinemElectron, isTauriShell, verifyElectronShell } from "@/lib/desktop-shell";
 
 const isAdminRoute = (): boolean =>
   window.location.pathname.replace(/\/+$/, "") === "/admin" ||
@@ -31,7 +32,11 @@ const isAdminRoute = (): boolean =>
 export async function verifyEnvironment(): Promise<boolean> {
   if (import.meta.env.DEV) return true; // dev server — unrestricted
   if (isAdminRoute()) return true;      // admin panel runs in a browser by design
-  if (!IS_TAURI) return false;          // production UI outside Tauri = stolen copy
+  if (isCinemElectron()) {
+    const nonce = `${crypto.randomUUID()}.${Date.now().toString(36)}`;
+    return verifyElectronShell(nonce);
+  }
+  if (!isTauriShell()) return false; // production UI outside an official shell = stolen copy
 
   try {
     const { invoke } = await import("@tauri-apps/api/core");

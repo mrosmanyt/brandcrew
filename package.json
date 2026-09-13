@@ -56,6 +56,8 @@
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:cloud": "node scripts/desktop-cloud.mjs",
+    "desktop:assistant": "node scripts/make-icon.mjs && node scripts/build-assistant-renderer.mjs && electron electron/main.cjs --mode=assistant",
+    "desktop:build:assistant": "node scripts/build-assistant-renderer.mjs",
     "desktop:build": "node scripts/desktop-build.mjs",
     "desktop:build:win": "node scripts/desktop-build.mjs --win",
     "desktop:build:mac": "node scripts/desktop-build.mjs --mac"
@@ -115,7 +117,13 @@
       "electron/main.cjs",
       "electron/preload.cjs",
       "electron/desk-shell.cjs",
+      "electron/modes.cjs",
+      "electron/chrome.html",
+      "electron/chrome-preload.cjs",
+      "electron/assistant-preload.cjs",
+      "electron/assistant-missing.html",
       "electron/offline.html",
+      "electron/installer.nsh",
       "package.json",
       "!**/node_modules/**"
     ],
@@ -125,6 +133,10 @@
       {
         "from": ".next/standalone",
         "to": "standalone"
+      },
+      {
+        "from": "apps/cinem-ai-assistant/dist",
+        "to": "assistant"
       },
       {
         "from": "electron/resources",
@@ -172,6 +184,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "CINEM Pro",
       "uninstallDisplayName": "CINEM Pro",
+      "include": "electron/installer.nsh",
       "artifactName": "CINEM-Pro-Setup.${ext}"
     },
     "portable": {

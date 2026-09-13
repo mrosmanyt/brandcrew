@@ -13,24 +13,38 @@ Checkout reuses `WHOP_STARTER_PLAN_ID` / `WHOP_STARTER_PRODUCT_ID` for Pro, and 
 
 Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/download`](/download). Upgrade deep link: [`/billing?plan=pro&product=cinem-ai-assistant`](/billing?plan=pro&product=cinem-ai-assistant).
 
-## Windows app
+## Unified Windows installer
 
-Tauri + Vite + React source lives in [`apps/cinem-ai-assistant/`](../apps/cinem-ai-assistant/). Full native features are **Windows only**. Vercel / `next build` ignores this folder — Rust is never compiled on the Next.js host.
+The **primary** download is **`CINEM-Pro-Setup.exe`** — one Electron app with:
 
-Imported from the `cinem-ai-assistant-src` prerelease zip (`cinem-ai-assistant-clean.zip`). The founder may delete that prerelease tag after this import is on `main`.
+- **Desk** — cloud shell at `https://app.cinem.tech` (dashboard, agents, connectors, workflows)
+- **AI Assistant** — Vite renderer from `apps/cinem-ai-assistant` (voice, usage meter, Sign in with CINEM Pro)
+
+Users install once and can use Desk only, Assistant only, or both (mode switch + **Open both**). Start Menu also has **Cinem AI Assistant** (`CINEM-Pro.exe --mode=assistant`).
+
+Build path: `npm run desktop:build:win` (Vite renderer + electron-builder NSIS). GitHub Actions: [`.github/workflows/desktop-windows.yml`](../.github/workflows/desktop-windows.yml) (**CINEM Pro Windows**). Everyday Vercel / `next build` does **not** compile Rust or the desktop installer.
+
+An optional Tauri-only `Cinem-AI-Assistant-Setup.exe` remains an advanced link (`GET /api/downloads/cinem-ai-assistant?advanced=1`). It is not the marketing CTA.
+
+## Windows app (renderer)
+
+Tauri + Vite + React source still lives in [`apps/cinem-ai-assistant/`](../apps/cinem-ai-assistant/). Production **Setup.exe** embeds the Vite build inside Electron — no second runtime in the primary installer. Whisper / Piper stay Tauri-only; Electron uses Web Speech + cloud APIs first.
+
+Vercel / `next build` ignores this folder — Rust is never compiled on the Next.js host.
 
 ### Environment
 
 | Variable | Where | Purpose |
 | --- | --- | --- |
-| `VITE_CINEM_CLOUD_URL` | Tauri renderer | Cloud origin, default `https://app.cinem.tech` |
-| `VITE_CINEM_UPGRADE_URL` | Tauri renderer | Optional override; default is `/billing?plan=pro&product=cinem-ai-assistant` |
-| `CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro server | Optional absolute URL for the installer |
-| `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro (public) | Same, if the marketing CTA should skip `/api/downloads/cinem-ai-assistant` |
+| `VITE_CINEM_CLOUD_URL` | Assistant renderer | Cloud origin, default `https://app.cinem.tech` |
+| `VITE_CINEM_UPGRADE_URL` | Assistant renderer | Optional override; default is `/billing?plan=pro&product=cinem-ai-assistant` |
+| `CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro server | Optional absolute URL for the **unified** installer |
+| `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro (public) | Same, if the marketing CTA should skip the releases host |
+| `CINEM_START_MODE` | Electron | `desk` (default), `assistant`, or `both` |
 
 Auth matches desktop cloud shell (`docs/auth-bridge.md`):
 
-1. **Sign in with CINEM Pro** (preferred): `POST /api/auth/connect` `{ surface: "desktop", deviceName: "Cinem AI Assistant" }`, open `approveUrl` (`/connect/desktop?nonce=`) in the **system browser**, poll `POST /api/auth/connect/claim`, store `accessToken` + `refreshToken`.
+1. **Sign in with CINEM Pro** (preferred): `POST /api/auth/connect` `{ surface: "desktop", deviceName: "Cinem AI Assistant" }`, open `approveUrl` (`/connect/desktop?nonce=`) in the **system browser**, poll `POST /api/auth/connect/claim`, store `accessToken` + `refreshToken`. The unified Electron app also shares the desk refresh token in `userData`.
 2. Or email/password: `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop) → `accessToken` + `refreshToken`.
 3. Call APIs with `Authorization: Bearer <accessToken>`. Refresh via `POST /api/auth/refresh`.
 4. Device tokens (`cinem_dev_…`) also work on the usage route; usage is billed to the linked user or desk owner.
@@ -66,35 +80,33 @@ Both return:
 - Exhausted Free: `allowed: false`, POST status `402`. The app shows an upgrade popup; **Upgrade to Pro** opens `upgradeUrl`.
 - Paid plans include the assistant. `includedWithPlan` is true. Always-approved / desk write-gate rules are unchanged.
 
-Shared TypeScript types: `src/lib/cinem-ai-assistant.ts`. Fetch helper: `apps/cinem-ai-assistant/usage-client.ts`. Renderer wiring: `apps/cinem-ai-assistant/src/lib/cinemCloud.ts`.
+Shared TypeScript types: `src/lib/cinem-ai-assistant.ts`. Fetch helper: `apps/cinem-ai-assistant/usage-client.ts`. Renderer wiring: `apps/cinem-ai-assistant/src/lib/cinemCloud.ts`. Electron handshake: `apps/cinem-ai-assistant/src/lib/desktop-shell.ts`.
 
 ### Installer drop path
 
-Expected filename: `Cinem-AI-Assistant-Setup.exe`.
+Primary filename: `CINEM-Pro-Setup.exe`.
 
-1. Place the file at `public/downloads/Cinem-AI-Assistant-Setup.exe`, **or**
-2. Set `CINEM_AI_ASSISTANT_SETUP_URL` to a hosted asset (same name on the releases repo is fine).
+1. Publish via **Actions → CINEM Pro Windows**, or `npm run desktop:build:win` on Windows, **or**
+2. Set `CINEM_AI_ASSISTANT_SETUP_URL` to a hosted `CINEM-Pro-Setup.exe`.
 
-`GET /api/downloads/cinem-ai-assistant` serves the local file, else redirects to the env URL, else the `cinem-pro-releases` latest-download URL. `Accept: application/json` returns metadata without requiring the binary.
+`GET /api/downloads/cinem-ai-assistant` redirects to the unified Setup (env URL, local `public/downloads/CINEM-Pro-Setup.exe`, else `cinem-pro-releases` latest). `?advanced=1` is the optional Tauri-only exe. `Accept: application/json` returns metadata.
 
-Placeholder in repo: `public/downloads/Cinem-AI-Assistant-Setup.exe.placeholder`.
+### How to produce `CINEM-Pro-Setup.exe`
 
-### How to produce `Cinem-AI-Assistant-Setup.exe`
+1. **Actions → CINEM Pro Windows → Run workflow**, or push tag `v*` / `cinem-pro-v*`.
+2. Download the workflow artifact (or the GitHub Release asset).
+3. Host it on `cinem-pro-releases` (marketing buttons already use that latest-download URL).
 
-GitHub Actions workflow: [`.github/workflows/cinem-ai-assistant-windows.yml`](../.github/workflows/cinem-ai-assistant-windows.yml).
+Local Windows: `npm run desktop:build:win`. That runs the assistant Vite build (`scripts/build-assistant-renderer.mjs`, no Rust) then electron-builder NSIS.
 
-1. **Actions → Cinem AI Assistant Windows → Run workflow**, or push tag `cinem-ai-assistant-v*`.
-2. Download the workflow artifact (or the GitHub Release asset on a version tag).
-3. Attach it for `/download` using the drop path above.
+Optional Tauri-only: [`.github/workflows/cinem-ai-assistant-windows.yml`](../.github/workflows/cinem-ai-assistant-windows.yml) (`workflow_dispatch` or tag `cinem-ai-assistant-v*`).
 
-Local Windows: `cd apps/cinem-ai-assistant && npm install && npm run icon && npx tauri build --bundles nsis && npm run package`.
-
-Everyday Vercel CI does not run this job (Rust/Tauri is too slow and is Windows-only).
+Everyday Vercel CI does not run these jobs.
 
 ## Out of scope
 
-- Building the `.exe` inside a Linux cloud agent
+- Building the `.exe` inside a Linux cloud agent (Wine NSIS is best-effort)
 - A second marketing site
 - New Whop products or plan ids
-- Changing Electron cloud-shell (`CINEM-Pro-Setup.exe`) or the Chrome extension
-- Mac / Linux desktop targets
+- Changing the Chrome extension
+- Mac / Linux native assistant targets

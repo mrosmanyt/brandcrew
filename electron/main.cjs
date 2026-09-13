@@ -1,9 +1,10 @@
 /**
  * CINEM Pro desktop shell.
- * Packaged default: cloud desk at https://app.cinem.tech (same as the website).
+ * Packaged default: cloud desk at https://app.cinem.tech (same as the website)
+ * plus Cinem AI Assistant from the bundled Vite renderer.
  * Local Next + Postgres only when CINEM_DESK_MODE=local (or unpackaged desktop:dev).
  */
-const { app, BrowserWindow, Menu, shell, dialog, session, ipcMain } = require("electron");
+const { app, BrowserWindow, BrowserView, Menu, shell, dialog, session, ipcMain } = require("electron");
 const { spawn, fork } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -22,6 +23,17 @@ const {
   deskPath,
   fetchWithTimeout,
 } = require("./desk-shell.cjs");
+const {
+  CHROME_HEIGHT,
+  ASSISTANT_PING,
+  normalizeMode,
+  parseStartMode,
+  modeFromProtocolUrl,
+  assistantDevOrigin,
+  assistantIndexPath,
+  isHttpUrl,
+  verifyShellNonce,
+} = require("./modes.cjs");
 
 const HOST = "127.0.0.1";
 
@@ -61,8 +73,8 @@ if (process.platform === "linux") {
 let serverChild = null;
 let nativeChild = null;
 let spawnedServer = false;
-let mainWindow = null;
-let showingOffline = false;
+/** @type {Map<number, { win: import('electron').BrowserWindow, view: import('electron').BrowserView, mode: string, showingOffline: boolean }>} */
+const shells = new Map();
 
 function projectRoot() {
   return path.join(__dirname, "..");
@@ -70,6 +82,20 @@ function projectRoot() {
 
 function offlinePagePath() {
   return path.join(__dirname, "offline.html");
+}
+
+function chromePagePath() {
+  return path.join(__dirname, "chrome.html");
+}
+
+function assistantMissingPath() {
+  return path.join(__dirname, "assistant-missing.html");
+}
+
+function iconPath() {
+  return packaged()
+    ? path.join(process.resourcesPath, "brandcrew", "icon.png")
+    : path.join(projectRoot(), "electron", "resources", "icon.png");
 }
 
 const LOCAL_POSTGRES =
@@ -242,7 +268,11 @@ function startPackagedServer() {
 }
 
 function navigationOpts() {
-  return { deskOrigin: deskOrigin(), localOrigin: localLoopbackOrigin() };
+  return {
+    deskOrigin: deskOrigin(),
+    localOrigin: localLoopbackOrigin(),
+    assistantOrigin: assistantDevOrigin(process.env),
+  };
 }
 
 function handleExternalOrAllow(url) {
@@ -267,45 +297,176 @@ function attachNavigationGuards(contents) {
   });
 }
 
-function showOfflinePage() {
-  if (!mainWindow || mainWindow.isDestroyed() || showingOffline) return;
-  const file = offlinePagePath();
-  if (!fs.existsSync(file)) return;
-  showingOffline = true;
-  void mainWindow.loadFile(file);
-}
-
-function loadDesk(pathName = "/desk") {
-  if (!mainWindow || mainWindow.isDestroyed()) return Promise.resolve();
-  showingOffline = false;
-  const url = `${deskOrigin()}${deskPath(pathName)}`;
-  return mainWindow.loadURL(url).catch((error) => {
-    const code = error && (error.errno ?? error.code);
-    if (isIgnorableLoadError(code) || code === "ERR_ABORTED") return;
-    console.error("CINEM desktop desk load failed", error);
-    showOfflinePage();
+function layoutView(win, view) {
+  if (!win || win.isDestroyed() || !view) return;
+  const [width, height] = win.getContentSize();
+  view.setBounds({
+    x: 0,
+    y: CHROME_HEIGHT,
+    width,
+    height: Math.max(120, height - CHROME_HEIGHT),
   });
 }
 
-function createWindow() {
-  const icon = packaged()
-    ? path.join(process.resourcesPath, "brandcrew", "icon.png")
-    : path.join(projectRoot(), "electron", "resources", "icon.png");
+function shellFromContents(contents) {
+  for (const entry of shells.values()) {
+    if (entry.win.webContents === contents || entry.view.webContents === contents) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+function findShellByMode(mode) {
+  for (const entry of shells.values()) {
+    if (entry.mode === mode && !entry.win.isDestroyed()) return entry;
+  }
+  return null;
+}
+
+function firstShell() {
+  for (const entry of shells.values()) {
+    if (!entry.win.isDestroyed()) return entry;
+  }
+  return null;
+}
+
+function showOfflinePage(entry) {
+  if (!entry || !entry.view || entry.showingOffline) return;
+  const file = offlinePagePath();
+  if (!fs.existsSync(file)) return;
+  entry.showingOffline = true;
+  void entry.view.webContents.loadFile(file);
+}
+
+function loadDesk(pathName = "/desk", entry = firstShell()) {
+  if (!entry || !entry.view || entry.view.webContents.isDestroyed()) return Promise.resolve();
+  entry.showingOffline = false;
+  const url = `${deskOrigin()}${deskPath(pathName)}`;
+  return entry.view.webContents.loadURL(url).catch((error) => {
+    const code = error && (error.errno ?? error.code);
+    if (isIgnorableLoadError(code) || code === "ERR_ABORTED") return;
+    console.error("CINEM desktop desk load failed", error);
+    showOfflinePage(entry);
+  });
+}
+
+function loadAssistant(entry) {
+  if (!entry || !entry.view || entry.view.webContents.isDestroyed()) return Promise.resolve();
+  entry.showingOffline = false;
+  const index = assistantIndexPath({
+    packaged: packaged(),
+    resourcesPath: process.resourcesPath,
+    projectRoot: projectRoot(),
+  });
+  if (fs.existsSync(index)) {
+    return entry.view.webContents.loadFile(index).catch((error) => {
+      console.error("CINEM assistant load failed", error);
+    });
+  }
+  if (!packaged()) {
+    return entry.view.webContents.loadURL(assistantDevOrigin(process.env)).catch(() => {
+      if (fs.existsSync(assistantMissingPath())) {
+        return entry.view.webContents.loadFile(assistantMissingPath());
+      }
+    });
+  }
+  if (fs.existsSync(assistantMissingPath())) {
+    return entry.view.webContents.loadFile(assistantMissingPath());
+  }
+  return Promise.resolve();
+}
+
+function attachViewEvents(entry) {
+  entry.view.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (entry.mode !== "desk") return;
+      if (!isMainFrame || isIgnorableLoadError(errorCode)) return;
+      if (validatedURL && String(validatedURL).startsWith("file:")) return;
+      console.error("CINEM desktop did-fail-load", errorCode, errorDescription);
+      showOfflinePage(entry);
+    },
+  );
+  entry.view.webContents.on("render-process-gone", (_event, details) => {
+    if (details.reason === "clean-exit") return;
+    console.error("CINEM desktop renderer gone", details.reason);
+    if (entry.mode === "desk") showOfflinePage(entry);
+  });
+}
+
+function createContentView(mode) {
+  const ua = chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent());
+  return new BrowserView({
+    webPreferences: {
+      preload:
+        mode === "assistant"
+          ? path.join(__dirname, "assistant-preload.cjs")
+          : path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      userAgent: ua,
+    },
+  });
+}
+
+async function applyMode(entry, mode, deskPathName = "/desk") {
+  const next = normalizeMode(mode);
+  if (next === "both") return;
+  const needsNewView = !entry.view || entry.mode !== next;
+  if (needsNewView) {
+    if (entry.view) {
+      try {
+        entry.win.removeBrowserView(entry.view);
+      } catch {
+        /* already detached */
+      }
+    }
+    entry.view = createContentView(next);
+    entry.win.setBrowserView(entry.view);
+    attachViewEvents(entry);
+    layoutView(entry.win, entry.view);
+  } else {
+    entry.win.setBrowserView(entry.view);
+    layoutView(entry.win, entry.view);
+  }
+  entry.mode = next;
+  entry.win.setTitle(next === "assistant" ? "Cinem AI Assistant" : "CINEM Pro");
+  if (!entry.win.webContents.isDestroyed()) {
+    entry.win.webContents.send("cinem:mode", next);
+  }
+  if (next === "assistant") {
+    await loadAssistant(entry);
+  } else {
+    await loadDesk(deskPathName, entry);
+  }
+}
+
+function createShellWindow(mode = "desk") {
+  const startMode = normalizeMode(mode) === "both" ? "desk" : normalizeMode(mode);
+  const existing = findShellByMode(startMode);
+  if (existing) {
+    if (existing.win.isMinimized()) existing.win.restore();
+    existing.win.focus();
+    return existing;
+  }
 
   const ua = chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent());
+  const icon = iconPath();
 
-  mainWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1440,
     height: 920,
     minWidth: 960,
     minHeight: 640,
-    title: "CINEM Pro",
+    title: startMode === "assistant" ? "Cinem AI Assistant" : "CINEM Pro",
     backgroundColor: "#09090b",
     autoHideMenuBar: true,
     show: false,
     icon: fs.existsSync(icon) ? icon : undefined,
     webPreferences: {
-      preload: path.join(__dirname, "preload.cjs"),
+      preload: path.join(__dirname, "chrome-preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -313,31 +474,64 @@ function createWindow() {
     },
   });
 
-  mainWindow.once("ready-to-show", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+  const entry = {
+    win,
+    view: null,
+    mode: startMode,
+    showingOffline: false,
+  };
+  shells.set(win.id, entry);
+
+  win.on("resize", () => layoutView(win, entry.view));
+  win.on("closed", () => {
+    shells.delete(win.id);
+  });
+  win.once("ready-to-show", () => {
+    if (!win.isDestroyed()) win.show();
   });
 
-  mainWindow.webContents.on(
-    "did-fail-load",
-    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      if (!isMainFrame || isIgnorableLoadError(errorCode)) return;
-      if (validatedURL && String(validatedURL).startsWith("file:")) return;
-      console.error("CINEM desktop did-fail-load", errorCode, errorDescription);
-      showOfflinePage();
-    },
-  );
-
-  mainWindow.webContents.on("render-process-gone", (_event, details) => {
-    if (details.reason === "clean-exit") return;
-    console.error("CINEM desktop renderer gone", details.reason);
-    showOfflinePage();
+  void win.loadFile(chromePagePath(), { query: { mode: startMode } }).then(() => {
+    void applyMode(entry, startMode);
   });
 
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+  return entry;
+}
 
-  return mainWindow;
+async function showMode(mode, deskPathName = "/desk") {
+  const next = normalizeMode(mode);
+  if (next === "both") {
+    await openBoth();
+    return;
+  }
+  const existing = findShellByMode(next);
+  if (existing) {
+    if (existing.win.isMinimized()) existing.win.restore();
+    existing.win.focus();
+    if (next === "desk" && deskPathName && deskPathName !== "/desk") {
+      await loadDesk(deskPathName, existing);
+    }
+    return;
+  }
+  const focused = BrowserWindow.getFocusedWindow();
+  const focusedShell = focused ? shells.get(focused.id) : null;
+  if (focusedShell && shells.size === 1) {
+    await applyMode(focusedShell, next, deskPathName);
+    return;
+  }
+  const created = createShellWindow(next);
+  if (next === "desk" && deskPathName && deskPathName !== "/desk") {
+    await loadDesk(deskPathName, created);
+  }
+}
+
+async function openBoth() {
+  if (!findShellByMode("desk")) createShellWindow("desk");
+  if (!findShellByMode("assistant")) createShellWindow("assistant");
+  const assistant = findShellByMode("assistant");
+  const desk = findShellByMode("desk");
+  if (desk && desk.win.isMinimized()) desk.win.restore();
+  if (assistant && assistant.win.isMinimized()) assistant.win.restore();
+  if (assistant) assistant.win.focus();
 }
 
 function refreshTokenPath() {
@@ -422,7 +616,7 @@ async function finishConnect(origin, nonce) {
   if (data.refreshToken) writeStoredRefresh(data.refreshToken);
   await setSessionCookieOnOrigin(base, data.accessToken);
   const pathName = data.workspaceId ? `/desk/${data.workspaceId}` : "/desk";
-  await loadDesk(pathName);
+  await showMode("desk", pathName);
 }
 
 function handleProtocolUrl(raw) {
@@ -434,8 +628,13 @@ function handleProtocolUrl(raw) {
       void finishConnect(url.searchParams.get("origin") || deskOrigin(), url.searchParams.get("nonce"));
       return;
     }
-    if (action === "open") {
-      void loadDesk(url.searchParams.get("path") || "/desk");
+    const mode = modeFromProtocolUrl(raw);
+    if (mode === "assistant" || mode === "both") {
+      void showMode(mode);
+      return;
+    }
+    if (action === "open" || action === "desk") {
+      void showMode("desk", url.searchParams.get("path") || "/desk");
     }
   } catch (error) {
     console.error("CINEM desktop deep link failed", error);
@@ -468,9 +667,14 @@ async function boot() {
     console.error("CINEM local agent did not start", error);
   }
 
-  createWindow();
   await restoreCloudSession();
-  await loadDesk("/desk");
+  const startMode = parseStartMode(process.argv, process.env);
+  if (startMode === "both") {
+    createShellWindow("desk");
+    createShellWindow("assistant");
+  } else {
+    createShellWindow(startMode);
+  }
 }
 
 const gotLock = app.requestSingleInstanceLock();
@@ -480,9 +684,14 @@ if (!gotLock) {
   app.on("second-instance", (_event, argv) => {
     const proto = argv.find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}:`));
     if (proto) handleProtocolUrl(proto);
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+    const mode = parseStartMode(argv, {});
+    if (mode === "assistant" || mode === "both") {
+      void showMode(mode);
+    }
+    const focused = firstShell();
+    if (focused) {
+      if (focused.win.isMinimized()) focused.win.restore();
+      focused.win.focus();
     }
   });
 
@@ -493,16 +702,38 @@ function installAppMenu() {
       label: "CINEM Pro",
       submenu: [
         {
+          label: "Desk",
+          accelerator: "CmdOrCtrl+1",
+          click: () => {
+            void showMode("desk");
+          },
+        },
+        {
+          label: "AI Assistant",
+          accelerator: "CmdOrCtrl+2",
+          click: () => {
+            void showMode("assistant");
+          },
+        },
+        {
+          label: "Open both",
+          accelerator: "CmdOrCtrl+Shift+B",
+          click: () => {
+            void openBoth();
+          },
+        },
+        { type: "separator" },
+        {
           label: "Settings",
           accelerator: "CmdOrCtrl+,",
           click: () => {
-            void loadDesk("/desk");
+            void showMode("desk", "/desk");
           },
         },
         {
           label: "Sign in with CINEM",
           click: () => {
-            void loadDesk("/connect/desktop");
+            void showMode("desk", "/connect/desktop");
           },
         },
         {
@@ -523,13 +754,13 @@ function installAppMenu() {
         {
           label: "Privacy",
           click: () => {
-            void loadDesk("/privacy");
+            void showMode("desk", "/privacy");
           },
         },
         {
           label: "DPA template",
           click: () => {
-            void loadDesk("/dpa");
+            void showMode("desk", "/dpa");
           },
         },
       ],
@@ -548,6 +779,9 @@ function installAppMenu() {
     if (process.platform === "win32") {
       app.setAppUserModelId("com.brandcrew.desktop");
     }
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+      callback(permission === "media" || permission === "mediaKeySystem" || permission === "clipboard-sanitized-write");
+    });
     if (process.defaultApp) {
       if (process.argv.length >= 2) {
         app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
@@ -556,11 +790,43 @@ function installAppMenu() {
       app.setAsDefaultProtocolClient(PROTOCOL);
     }
     installAppMenu();
-    ipcMain.on("cinem:retry-desk", () => {
-      void loadDesk("/desk");
+    ipcMain.on("cinem:retry-desk", (event) => {
+      const entry = shellFromContents(event.sender) || firstShell();
+      void applyMode(entry, "desk");
     });
     ipcMain.on("cinem:open-desk-external", () => {
       void shell.openExternal(`${deskOrigin()}/desk`);
+    });
+    ipcMain.on("cinem:set-mode", (event, mode) => {
+      const entry = shellFromContents(event.sender);
+      const next = normalizeMode(mode);
+      if (next === "both") {
+        void openBoth();
+        return;
+      }
+      if (entry) {
+        void applyMode(entry, next);
+        return;
+      }
+      void showMode(next);
+    });
+    ipcMain.on("cinem:open-both", () => {
+      void openBoth();
+    });
+    ipcMain.handle("cinem:open-external", async (_event, url) => {
+      if (!isHttpUrl(url)) return false;
+      await shell.openExternal(String(url));
+      return true;
+    });
+    ipcMain.handle("cinem:verify-shell", (_event, nonce) => verifyShellNonce(nonce));
+    ipcMain.handle("cinem:ping", () => ASSISTANT_PING);
+    ipcMain.handle("cinem:get-session", () => ({
+      refreshToken: readStoredRefresh(),
+    }));
+    ipcMain.handle("cinem:store-session", (_event, payload) => {
+      const token = payload && typeof payload.refreshToken === "string" ? payload.refreshToken.trim() : "";
+      if (token) writeStoredRefresh(token);
+      return { ok: true };
     });
     const guardedContents = new WeakSet();
     app.on("web-contents-created", (_event, contents) => {
@@ -577,9 +843,10 @@ function installAppMenu() {
     return boot().catch((error) => {
       console.error(error);
       if (useCloudDesk()) {
-        if (!mainWindow) createWindow();
-        showOfflinePage();
-        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+        if (shells.size === 0) createShellWindow("desk");
+        const entry = firstShell();
+        if (entry) showOfflinePage(entry);
+        if (entry && !entry.win.isDestroyed()) entry.win.show();
         return;
       }
       dialog.showErrorBox("CINEM Pro", error instanceof Error ? error.message : String(error));
@@ -589,8 +856,7 @@ function installAppMenu() {
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-      void loadDesk("/desk");
+      createShellWindow("desk");
     }
   });
 }

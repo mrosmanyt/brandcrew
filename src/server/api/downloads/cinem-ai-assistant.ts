@@ -2,34 +2,69 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
 import {
+  CINEM_AI_ASSISTANT_ADVANCED_PUBLIC_PATH,
   CINEM_AI_ASSISTANT_DOCS,
   CINEM_AI_ASSISTANT_DOWNLOAD_API,
   CINEM_AI_ASSISTANT_PUBLIC_PATH,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
+  cinemAiAssistantAdvancedReleaseUrl,
   cinemAiAssistantReleaseUrl,
   cinemAiAssistantSetupEnvUrl,
 } from "@/lib/cinem-ai-assistant";
 import { jsonOk } from "@/lib/http";
 
-function localSetupPath() {
-  return join(process.cwd(), "public/downloads", CINEM_AI_ASSISTANT_SETUP_FILENAME);
+function localPath(filename: string) {
+  return join(process.cwd(), "public/downloads", filename);
 }
 
-export function resolveCinemAiAssistantDownload() {
-  const local = localSetupPath();
-  if (existsSync(local)) {
-    return { kind: "file" as const, path: local, href: CINEM_AI_ASSISTANT_PUBLIC_PATH };
-  }
+export function resolveCinemAiAssistantDownload(advanced = false) {
   const envUrl = cinemAiAssistantSetupEnvUrl();
-  if (envUrl) {
-    return { kind: "redirect" as const, href: envUrl };
+  if (!advanced && envUrl) {
+    return { kind: "redirect" as const, href: envUrl, filename: CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME };
   }
-  return { kind: "redirect" as const, href: cinemAiAssistantReleaseUrl() };
+
+  const unifiedLocal = localPath(CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME);
+  if (!advanced && existsSync(unifiedLocal)) {
+    return {
+      kind: "file" as const,
+      path: unifiedLocal,
+      href: CINEM_AI_ASSISTANT_PUBLIC_PATH,
+      filename: CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
+    };
+  }
+
+  if (!advanced) {
+    return {
+      kind: "redirect" as const,
+      href: cinemAiAssistantReleaseUrl(),
+      filename: CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
+    };
+  }
+
+  const advancedLocal = localPath(CINEM_AI_ASSISTANT_SETUP_FILENAME);
+  if (existsSync(advancedLocal)) {
+    return {
+      kind: "file" as const,
+      path: advancedLocal,
+      href: CINEM_AI_ASSISTANT_ADVANCED_PUBLIC_PATH,
+      filename: CINEM_AI_ASSISTANT_SETUP_FILENAME,
+    };
+  }
+  if (envUrl) {
+    return { kind: "redirect" as const, href: envUrl, filename: CINEM_AI_ASSISTANT_SETUP_FILENAME };
+  }
+  return {
+    kind: "redirect" as const,
+    href: cinemAiAssistantAdvancedReleaseUrl(),
+    filename: CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  };
 }
 
 export async function GET(request: Request) {
   const accept = request.headers.get("accept") || "";
-  const resolved = resolveCinemAiAssistantDownload();
+  const advanced = new URL(request.url).searchParams.get("advanced") === "1";
+  const resolved = resolveCinemAiAssistantDownload(advanced);
 
   if (resolved.kind === "file") {
     const bytes = readFileSync(resolved.path);
@@ -37,25 +72,24 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${CINEM_AI_ASSISTANT_SETUP_FILENAME}"`,
+        "Content-Disposition": `attachment; filename="${resolved.filename}"`,
         "Cache-Control": "public, max-age=3600",
       },
     });
   }
 
   if (accept.includes("application/json")) {
-    const localMissing = !existsSync(localSetupPath());
     return jsonOk({
-      filename: CINEM_AI_ASSISTANT_SETUP_FILENAME,
+      filename: resolved.filename,
       href: resolved.href,
-      publicPath: CINEM_AI_ASSISTANT_PUBLIC_PATH,
+      publicPath: advanced ? CINEM_AI_ASSISTANT_ADVANCED_PUBLIC_PATH : CINEM_AI_ASSISTANT_PUBLIC_PATH,
       api: CINEM_AI_ASSISTANT_DOWNLOAD_API,
-      present: !localMissing || Boolean(cinemAiAssistantSetupEnvUrl()),
+      unified: !advanced,
+      present: true,
       docs: CINEM_AI_ASSISTANT_DOCS,
-      note:
-        localMissing && !cinemAiAssistantSetupEnvUrl()
-          ? `Drop ${CINEM_AI_ASSISTANT_SETUP_FILENAME} in public/downloads or set CINEM_AI_ASSISTANT_SETUP_URL.`
-          : undefined,
+      note: advanced
+        ? `Optional Tauri-only installer. The primary download is ${CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}.`
+        : `Unified Windows installer (${CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}) includes Desk and AI Assistant.`,
     });
   }
 

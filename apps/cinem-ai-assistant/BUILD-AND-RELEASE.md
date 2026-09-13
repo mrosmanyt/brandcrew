@@ -1,36 +1,33 @@
 # Cinem AI Assistant — Windows installer
 
-Windows-only NSIS installer. Filename: **`Cinem-AI-Assistant-Setup.exe`**.
+**Primary download:** `CINEM-Pro-Setup.exe` (unified Electron: Desk + AI Assistant).
 
-Do not build this on Linux (including the cloud agent VM). Use the GitHub Actions Windows runner or a Windows machine.
+Build that from the repo root — not this folder:
 
-## Founder: trigger a release build
+```powershell
+npm run desktop:build:win
+```
 
-### Option A — workflow_dispatch (no tag)
+GitHub Actions: **CINEM Pro Windows** (`.github/workflows/desktop-windows.yml`). Vite only — no Rust.
 
-1. Open the repo on GitHub → **Actions**.
-2. Select **Cinem AI Assistant Windows**.
-3. **Run workflow** on `main` (or this feature branch).
-4. When it finishes, download the artifact **Cinem-AI-Assistant-Setup**.
-5. Publish the file:
+## Optional: Tauri-only `Cinem-AI-Assistant-Setup.exe`
 
-   - Drop `Cinem-AI-Assistant-Setup.exe` in `public/downloads/` and redeploy the site, **or**
-   - Upload it to a GitHub Release and set `CINEM_AI_ASSISTANT_SETUP_URL` (and optionally `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL`) on Vercel.
+Advanced / not the marketing CTA. Do not build this on Linux. Use the **Cinem AI Assistant Windows** workflow or a Windows machine.
 
-Everyday CI (Vercel / Next tests) does **not** run this job.
+### workflow_dispatch
 
-### Option B — version tag
+1. GitHub → **Actions** → **Cinem AI Assistant Windows** → **Run workflow**.
+2. Download artifact **Cinem-AI-Assistant-Setup**.
+3. Expose via `GET /api/downloads/cinem-ai-assistant?advanced=1` (local `public/downloads` file or env URL).
+
+### Version tag
 
 ```bash
 git tag cinem-ai-assistant-v0.1.0
 git push origin cinem-ai-assistant-v0.1.0
 ```
 
-The same workflow builds NSIS, renames the installer, uploads the artifact, and attaches it to the GitHub Release for that tag.
-
-Site download resolution (`GET /api/downloads/cinem-ai-assistant`): local `public/downloads` file → env URL → `cinem-pro-releases` latest-download URL.
-
-## Local Windows build
+### Local Windows (Tauri)
 
 ```powershell
 cd apps/cinem-ai-assistant
@@ -40,14 +37,12 @@ npx tauri build --bundles nsis
 npm run package
 ```
 
-`npm run package` copies the freshest NSIS exe to `release/Cinem-AI-Assistant-Setup.exe`.
-
 ## Unsigned SmartScreen
 
-Unsigned builds show **Windows protected your PC** → **More info → Run anyway**. Same as `CINEM-Pro-Setup.exe` until Azure Artifact Signing is configured (`docs/windows-code-signing.md`). This workflow does not sign.
+Unsigned builds show **Windows protected your PC** → **More info → Run anyway**. Same as unified `CINEM-Pro-Setup.exe` until Azure Artifact Signing is configured (`docs/windows-code-signing.md`).
 
 ## Out of scope
 
 - Mac / Linux desktop targets
-- Electron cloud-shell (`CINEM-Pro-Setup.exe`)
 - A second marketing site or new Whop SKU
+- Compiling Rust on Vercel / Next CI

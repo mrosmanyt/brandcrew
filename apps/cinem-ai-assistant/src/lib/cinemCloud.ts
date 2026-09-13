@@ -8,7 +8,7 @@ import {
   cloudOrigin,
   type CinemAiAssistantUsageResponse,
 } from "../../usage-client";
-import { openExternal } from "@/lib/quickActions";
+import { cinemDesktopBridge, openExternal } from "@/lib/desktop-shell";
 
 export const CINEM_CLIENT = "assistant";
 export const DEVICE_NAME = "Cinem AI Assistant";
@@ -59,6 +59,21 @@ export function writeSession(session: CinemSession) {
   localStorage.setItem(REFRESH_KEY, session.refreshToken);
   if (session.user) localStorage.setItem(USER_KEY, JSON.stringify(session.user));
   else localStorage.removeItem(USER_KEY);
+  const bridge = cinemDesktopBridge();
+  if (bridge?.storeSession && session.refreshToken) {
+    void bridge.storeSession({ refreshToken: session.refreshToken });
+  }
+}
+
+/** Prefer local tokens; otherwise adopt the Electron cloud-shell refresh token. */
+export async function adoptDesktopSession(): Promise<CinemSession | null> {
+  if (readSession()?.refreshToken || readSession()?.accessToken) return readSession();
+  const bridge = cinemDesktopBridge();
+  if (!bridge?.getStoredSession) return null;
+  const stored = await bridge.getStoredSession();
+  const refreshToken = stored?.refreshToken?.trim();
+  if (!refreshToken) return null;
+  return refreshSession(refreshToken);
 }
 
 export function clearSession() {

@@ -179,7 +179,7 @@ gh release upload v0.1.0 \
   --clobber
 ```
 
-Or cut a new tagged release if you bump the app version. Marketing buttons hit `…/releases/latest/download/CINEM-Pro-Setup.exe`.
+Or cut a new tagged release if you bump the app version. Marketing buttons hit `…/releases/latest/download/CINEM-Pro-Setup.exe` (unified Desk + AI Assistant).
 
 Do not upload `.pfx`, client secrets, or `.env` to GitHub.
 

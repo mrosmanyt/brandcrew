@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { CinemAiAssistantUsageResponse } from "../../usage-client";
 import {
+  adoptDesktopSession,
   clearSession,
   consumeAssistantTurn,
   fetchUsage,
@@ -33,7 +34,7 @@ export const useCinemCloudStore = create<CloudState>((set, get) => ({
   error: "",
 
   hydrate: async () => {
-    const session = readSession();
+    const session = (await adoptDesktopSession()) || readSession();
     if (!session?.accessToken && !session?.refreshToken) {
       set({ phase: "signed_out", user: null, usage: null, upgradeOpen: false });
       return;

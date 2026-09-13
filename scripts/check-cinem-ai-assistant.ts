@@ -15,7 +15,9 @@ import {
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_PATH,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
   CINEM_AI_ASSISTANT_TURN_LIMIT,
+  cinemAiAssistantReleaseUrl,
   CINEM_AI_ASSISTANT_USAGE_API,
   cinemAiAssistantBillingPath,
   cinemAiAssistantPeriodUtc,
@@ -26,6 +28,7 @@ import {
 } from "../src/lib/cinem-ai-assistant";
 import { checkoutPlanFromNextPath, marketingPlanCtaHref } from "../src/lib/billing-ui";
 import { PLANS } from "../src/lib/constants";
+import { DESKTOP_WIN_DOWNLOAD } from "../src/lib/site";
 
 assert.equal(CINEM_AI_ASSISTANT_PRODUCT, "cinem-ai-assistant");
 assert.equal(CINEM_AI_ASSISTANT_NAME, "Cinem AI Assistant");
@@ -92,8 +95,9 @@ const page = readFileSync("src/app/cinem-ai-assistant/page.tsx", "utf8");
 assert.match(page, /Included with the desk|Included with your CINEM Pro plan/);
 assert.doesNotMatch(page, /mickey|cinempro\.site|OpenAI|Claude|Gemini|Google/i);
 const download = readFileSync("src/app/download/page.tsx", "utf8");
+assert.match(download, /CINEM-Pro-Setup\.exe|CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME|WIN_SETUP_FILENAME/);
+assert.match(download, /Get CINEM Pro|Get desktop/);
 assert.match(download, /Cinem-AI-Assistant-Setup\.exe|CINEM_AI_ASSISTANT_SETUP_FILENAME/);
-assert.match(download, /Get desktop/);
 const billingPage = readFileSync("src/app/billing/page.tsx", "utf8");
 assert.match(billingPage, /cinem-ai-assistant/);
 assert.match(billingPage, /workspaceBillingHref/);
@@ -102,11 +106,14 @@ assert.match(docs, /VITE_CINEM_CLOUD_URL/);
 assert.match(docs, /WHOP_STARTER_PLAN_ID/);
 assert.match(docs, /Do not create a Cinem AI Assistant SKU/);
 assert.match(docs, /\/api\/cinem-ai-assistant\/usage/);
+assert.match(docs, /CINEM-Pro-Setup\.exe/);
+assert.match(docs, /desktop-windows\.yml|CINEM Pro Windows/);
 assert.match(docs, /cinem-ai-assistant-windows\.yml|workflow_dispatch/);
 assert.doesNotMatch(docs, /mickey|cinempro\.site/i);
 assert.ok(existsSync("apps/cinem-ai-assistant/README.md"));
 assert.ok(existsSync("apps/cinem-ai-assistant/usage-client.ts"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/lib/cinemCloud.ts"));
+assert.ok(existsSync("apps/cinem-ai-assistant/src/lib/desktop-shell.ts"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/components/gate/CinemProGate.tsx"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/components/gate/UpgradeModal.tsx"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src-tauri/tauri.conf.json"));
@@ -120,11 +127,19 @@ assert.match(assistantVite, /css:\s*\{[\s\S]*postcss:\s*\{[\s\S]*plugins:\s*\[\s
 const rootPostcss = readFileSync("postcss.config.mjs", "utf8");
 assert.match(rootPostcss, /@tailwindcss\/postcss/);
 assert.ok(existsSync(".github/workflows/cinem-ai-assistant-windows.yml"));
+assert.ok(existsSync(".github/workflows/desktop-windows.yml"));
+const unifiedWorkflow = readFileSync(".github/workflows/desktop-windows.yml", "utf8");
+assert.match(unifiedWorkflow, /desktop:build:win/);
+assert.match(unifiedWorkflow, /CINEM-Pro-Setup\.exe/);
+assert.doesNotMatch(unifiedWorkflow, /rust-toolchain|tauri build/);
 assert.ok(existsSync("public/downloads/Cinem-AI-Assistant-Setup.exe.placeholder"));
 assert.equal(CINEM_AI_ASSISTANT_SETUP_FILENAME, "Cinem-AI-Assistant-Setup.exe");
+assert.equal(CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME, "CINEM-Pro-Setup.exe");
+assert.equal(cinemAiAssistantReleaseUrl(), DESKTOP_WIN_DOWNLOAD);
 assert.equal(CINEM_AI_ASSISTANT_PATH, "/cinem-ai-assistant");
 const appReadme = readFileSync("apps/cinem-ai-assistant/README.md", "utf8");
 assert.match(appReadme, /Windows-only/);
+assert.match(appReadme, /CINEM-Pro-Setup\.exe|unified Electron/);
 assert.match(appReadme, /\/api\/cinem-ai-assistant\/usage/);
 assert.doesNotMatch(appReadme, /mickey|cinempro\.site/i);
 const tauriConf = readFileSync("apps/cinem-ai-assistant/src-tauri/tauri.conf.json", "utf8");
@@ -135,6 +150,11 @@ const cloud = readFileSync("apps/cinem-ai-assistant/src/lib/cinemCloud.ts", "utf
 assert.match(cloud, /CINEM_AI_ASSISTANT_USAGE_PATH|\/api\/cinem-ai-assistant\/usage/);
 assert.match(cloud, /\/api\/auth\/connect/);
 assert.match(cloud, /openExternal/);
+assert.match(cloud, /adoptDesktopSession|cinemDesktop/);
+const guard = readFileSync("apps/cinem-ai-assistant/src/lib/guard.ts", "utf8");
+assert.match(guard, /isCinemElectron|verifyElectronShell/);
+const vite = readFileSync("apps/cinem-ai-assistant/vite.config.ts", "utf8");
+assert.match(vite, /CINEM_ELECTRON_ASSISTANT/);
 const orchestrator = readFileSync("apps/cinem-ai-assistant/src/lib/orchestrator.ts", "utf8");
 assert.match(orchestrator, /consumeTurn/);
 assert.match(orchestrator, /showUpgrade/);

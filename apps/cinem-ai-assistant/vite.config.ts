@@ -17,6 +17,8 @@ export default defineConfig({
       plugins: [],
     },
   },
+  // Electron loadFile needs relative asset URLs. Tauri keeps "/".
+  base: process.env.CINEM_ELECTRON_ASSISTANT === "1" ? "./" : "/",
   // Tauri expects a fixed port; fail fast if it is taken
   clearScreen: false,
   server: {

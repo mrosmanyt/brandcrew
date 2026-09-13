@@ -12,6 +12,8 @@ import {
 import {
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
+  cinemAiAssistantAdvancedDownloadHref,
 } from "@/lib/cinem-ai-assistant";
 
 export const dynamic = "force-static";
@@ -45,9 +47,12 @@ export default function CinemAiAssistantPage() {
             <AssistantHeroCtas />
           </div>
           <p className="mt-5 text-sm leading-6 text-muted-foreground">
-            Installer: <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_SETUP_FILENAME}</code>.
-            Not published yet? The download button still resolves once that file is dropped in{" "}
-            <code className="font-mono text-xs">public/downloads</code>. See{" "}
+            One installer: <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}</code>.
+            Open Desk, AI Assistant, or both. Advanced Tauri-only{" "}
+            <a href={cinemAiAssistantAdvancedDownloadHref()} className="underline underline-offset-4">
+              {CINEM_AI_ASSISTANT_SETUP_FILENAME}
+            </a>{" "}
+            is optional. See{" "}
             <Link href="/download" className="underline underline-offset-4">
               all downloads
             </Link>

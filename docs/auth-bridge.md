@@ -55,12 +55,13 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 - **Dev** (`npm run desktop:dev`): still boots local Next on `http://127.0.0.1:43180`. `npm run desktop:cloud` opens the production desk without Docker.
 - `CINEM_DESK_MODE=local` keeps the old bundled Next + Postgres path (power users only).
 - Deep link `cinem-pro://connect?nonce=…&origin=…` claims a desktop ticket and writes the session cookie into Electron.
-- Windows installer: `npm run desktop:build:win` → `dist/desktop/CINEM-Pro-Setup.exe`. Hosted copy: public releases repo (see `/download`). Unsigned builds: SmartScreen **More info → Run anyway** until Azure Artifact Signing is configured (`docs/windows-code-signing.md`).
-- Verify: install Setup.exe → desk loads `https://app.cinem.tech/desk` → Continue with Google or email → agents, chat, Marketplace work. Offline: toggle airplane mode and confirm Retry.
+- Windows installer: `npm run desktop:build:win` → `dist/desktop/CINEM-Pro-Setup.exe` (cloud desk **and** Cinem AI Assistant). Hosted copy: public releases repo (see `/download`). Unsigned builds: SmartScreen **More info → Run anyway** until Azure Artifact Signing is configured (`docs/windows-code-signing.md`).
+- Mode switch: menu **Desk** / **AI Assistant** / **Open both**, or Start Menu **Cinem AI Assistant** (`--mode=assistant`). Deep links `cinem-pro://assistant` and `cinem-pro://desk`.
+- Verify: install Setup.exe → desk loads `https://app.cinem.tech/desk` → switch to AI Assistant → Continue with Google or email → agents, chat, Marketplace work. Offline: toggle airplane mode and confirm Retry.
 
-## Cinem AI Assistant (Windows Tauri)
+## Cinem AI Assistant (unified Electron)
 
-Same account and tokens as desktop. Preferred: **Sign in with CINEM Pro** opens `/connect/desktop` in the system browser (`POST /api/auth/connect` + `POST /api/auth/connect/claim`). Email/password uses `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop). The Windows app then calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT. When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. Contract: `docs/cinem-ai-assistant.md`. Source: `apps/cinem-ai-assistant/`.
+Same account and tokens as desktop. The primary Windows app is this Electron shell (not a second installer). Preferred: **Sign in with CINEM Pro** opens `/connect/desktop` in the system browser (`POST /api/auth/connect` + `POST /api/auth/connect/claim`). Email/password uses `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop). The assistant then calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT. When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. The Electron refresh token in `userData` is shared so desk login can unlock the assistant. Contract: `docs/cinem-ai-assistant.md`. Source: `apps/cinem-ai-assistant/` (Vite in Electron; optional Tauri-only build is advanced).
 
 ## Android (Expo)
 

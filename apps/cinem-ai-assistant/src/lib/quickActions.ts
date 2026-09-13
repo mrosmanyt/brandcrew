@@ -4,17 +4,7 @@
  * so commands like "open google" or "search latest news" always work even
  * with no Gemini key and no Ollama running.
  */
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
-/** Opens a URL in the user's default browser (or new tab in plain-web dev). */
-export async function openExternal(url: string): Promise<void> {
-  if (IS_TAURI) {
-    const { open } = await import("@tauri-apps/plugin-shell");
-    await open(url);
-  } else {
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-}
+export { openExternal } from "@/lib/desktop-shell";
 
 /** Known sites/apps → URL. Keys are matched as words inside the command. */
 const SITES: { keys: string[]; url: string; label: string }[] = [
