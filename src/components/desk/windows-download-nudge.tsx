@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cinemAiAssistantDownloadHref } from "@/lib/cinem-ai-assistant";
 import { WIN_SETUP_FILENAME } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import {
@@ -51,8 +50,10 @@ function WindowsMark({ className }: { className?: string }) {
  */
 export function WindowsDownloadNudge({
   placement = "desk",
+  downloadHref,
 }: {
   placement?: "desk" | "marketing";
+  downloadHref: string;
 }) {
   const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
@@ -81,8 +82,6 @@ export function WindowsDownloadNudge({
   }
 
   if (!open) return null;
-
-  const href = cinemAiAssistantDownloadHref();
 
   return (
     <aside
@@ -121,7 +120,7 @@ export function WindowsDownloadNudge({
             nativeButton={false}
             render={
               <a
-                href={href}
+                href={downloadHref}
                 download={WIN_SETUP_FILENAME}
                 onClick={dismiss}
               />

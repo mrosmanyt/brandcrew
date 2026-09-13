@@ -1,5 +1,6 @@
 import { WindowsDownloadNudge } from "@/components/desk/windows-download-nudge";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { cinemAiAssistantDownloadHref } from "@/lib/cinem-ai-assistant";
 import { HeroDemo } from "@/components/marketing/hero-demo";
 import { IntegrationsShowcase } from "@/components/marketing/integrations-showcase";
 import { Reveal } from "@/components/marketing/reveal";
@@ -23,7 +24,10 @@ export const dynamic = "force-static";
 export default function HomePage() {
   return (
     <MarketingShell>
-      <WindowsDownloadNudge placement="marketing" />
+      <WindowsDownloadNudge
+        placement="marketing"
+        downloadHref={cinemAiAssistantDownloadHref()}
+      />
       <SiteNav />
 
       <main>

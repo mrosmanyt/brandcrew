@@ -118,8 +118,9 @@ const ui = readFileSync("src/components/desk/windows-download-nudge.tsx", "utf8"
 assert.match(ui, /"use client"/);
 assert.match(ui, /sessionStorage/);
 assert.match(ui, /WIN_DOWNLOAD_NUDGE_SESSION_KEY/);
-assert.match(ui, /cinemAiAssistantDownloadHref/);
+assert.match(ui, /downloadHref/);
 assert.match(ui, /WIN_SETUP_FILENAME/);
+assert.doesNotMatch(ui, /from ["']@\/lib\/cinem-ai-assistant["']/);
 assert.match(ui, /Get CINEM Pro for Windows/);
 assert.match(ui, /Desk \+ AI Assistant in one Setup\.exe/);
 assert.match(ui, /Not now/);
@@ -133,8 +134,10 @@ const visibleCopy = ui.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")
 assert.doesNotMatch(visibleCopy, /Grok/i);
 const deskLayout = readFileSync("src/app/desk/[workspaceId]/layout.tsx", "utf8");
 assert.match(deskLayout, /WindowsDownloadNudge/);
+assert.match(deskLayout, /cinemAiAssistantDownloadHref\(\)/);
 const home = readFileSync("src/app/page.tsx", "utf8");
 assert.match(home, /WindowsDownloadNudge/);
+assert.match(home, /cinemAiAssistantDownloadHref\(\)/);
 assert.equal(pkg.scripts?.["test:win-nudge"], "tsx scripts/check-windows-download-nudge.ts");
 console.log("ok: desk shell + home mount; no per-message hooks; CINEM Pro copy only");
 
