@@ -85,8 +85,8 @@ assert.ok(existsSync("electron/resources/installer/preview-install.png"));
 console.log("ok: NSIS bitmaps are 24-bit at MUI sizes");
 
 const art = readFileSync("scripts/make-installer-art.mjs", "utf8");
-assert.match(art, /\[4, 32\]/);
-assert.match(art, /\[60, 32\]/);
+assert.match(art, /\[2, 32\]/);
+assert.match(art, /\[62, 32\]/);
 assert.match(art, /150/);
 assert.match(art, /164/);
 assert.match(art, /cinem-mark/);
