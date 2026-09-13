@@ -311,9 +311,7 @@ async function main() {
   assert.match(nextConfig, /\/brand\/:path\*/);
   assert.match(nextConfig, /\/og\.png/);
   const vercel = readFileSync("vercel.json", "utf8");
-  assert.match(vercel, /Strict-Transport-Security/);
-  assert.match(vercel, /x-forwarded-proto/);
-  assert.match(vercel, /includeSubDomains/);
+  assert.doesNotMatch(vercel, /Strict-Transport-Security/);
   const router = readFileSync("src/server/api/router.ts", "utf8");
   assert.match(router, /enforceSensitiveRateLimit/);
   console.log("ok: headers wired in next.config + proxy; API dispatch rate-limits sensitive routes");

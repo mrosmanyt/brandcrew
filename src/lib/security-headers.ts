@@ -7,8 +7,8 @@ import { WHOP_PIXEL_ORIGIN } from "./whop-pixel";
  * and `src/proxy.ts` (request-time copy on matched routes).
  * HSTS is skipped on local HTTP (`next dev` / Electron) so http://127.0.0.1
  * is not pinned to HTTPS. Vercel production sends it from next.config
- * (`VERCEL=1`) plus proxy when `x-forwarded-proto` is https. vercel.json
- * repeats HSTS only when that proto header is https.
+ * (`VERCEL=1`) plus proxy when `x-forwarded-proto` is https. Keep HSTS
+ * out of vercel.json so local HTTP (`vercel dev` / `next dev`) is not pinned.
  *
  * COOP is `same-origin-allow-popups`: OAuth is a top-level redirect, and
  * artifact print uses window.open to a same-origin document.
