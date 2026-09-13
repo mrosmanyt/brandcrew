@@ -31,7 +31,7 @@ import {
   redactSecrets,
   REDACTED,
 } from "../src/lib/admin-backup";
-import { ForbiddenError } from "../src/lib/auth";
+import { AuthError, ForbiddenError } from "../src/lib/auth";
 import { prisma } from "../src/lib/db";
 import { jsonError } from "../src/lib/http";
 
@@ -123,7 +123,11 @@ async function main() {
   const body = (await forbidden.json()) as { code?: string; error?: string };
   assert.equal(body.code, "forbidden");
   assert.match(String(body.error), /admin/i);
-  console.log("ok: ForbiddenError serializes as HTTP 403");
+  const unauth = jsonError(new AuthError("Sign in to continue."));
+  assert.equal(unauth.status, 401);
+  const unauthBody = (await unauth.json()) as { code?: string };
+  assert.equal(unauthBody.code, "unauthorized");
+  console.log("ok: unauthenticated admin API is 401; non-staff is HTTP 403");
 
   const secretFixture = {
     users: [
@@ -177,14 +181,26 @@ async function main() {
     return acc;
   }
   for (const page of walkPages("src/app/admin")) {
-    assert.match(readFileSync(page, "utf8"), /loadAdminPage/, page);
+    const src = readFileSync(page, "utf8");
+    assert.match(src, /loadAdminPage/, page);
+    assert.doesNotMatch(src, /if \(!allowed\)/, `${page} must not render after a failed gate`);
+    assert.doesNotMatch(src, /AdminForbidden/, `${page} must not 200 a forbidden UI`);
   }
+  const adminPageGate = readFileSync("src/lib/admin-page.ts", "utf8");
+  assert.match(adminPageGate, /forbidden\(\)/);
+  assert.match(adminPageGate, /isAdminEmail/);
+  const adminLayout = readFileSync("src/app/admin/layout.tsx", "utf8");
+  assert.match(adminLayout, /forbidden\(\)/);
+  assert.match(adminLayout, /isAdminEmail/);
+  const settingsHub = readFileSync("src/components/desk/settings-hub.tsx", "utf8");
+  assert.match(settingsHub, /user\.isAdmin === true/);
   const opsDoc = readFileSync("docs/admin-ops.md", "utf8");
   assert.match(opsDoc, /ADMIN_EMAILS/);
   assert.match(opsDoc, /mrosmanyt@gmail.com/);
   assert.match(opsDoc, /\/api\/admin\/backup/);
   assert.match(opsDoc, /Point-in-time copy|not a restore|Live truth/i);
   assert.match(opsDoc, /app\.cinem\.tech/);
+  assert.match(opsDoc, /forbidden\(\)/);
   console.log("ok: every /admin page and /api/admin method is server-gated");
   console.log("ok: docs/admin-ops.md covers allow-list and local backup copy");
 

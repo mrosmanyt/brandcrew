@@ -260,7 +260,18 @@ async function main() {
   assert.match(pixelLib, /https:\/\/t\.whop\.tw/);
   assert.match(pixelLib, /whop\.setScope\("biz_VrtL8S4duREQg4"\)/);
   assert.match(pixelLib, /whop\.track\("page"\)/);
+  assert.match(pixelLib, /__scope:c\}\]\)\)\}\}\}\}/);
   assert.doesNotMatch(pixelLib, /WHOP_API_KEY|WHOP_WEBHOOK_SECRET/);
+  const {
+    WHOP_PIXEL_SNIPPET,
+    assertWhopPixelParses,
+    whopPixelParensBalanced,
+  } = await import("../src/lib/whop-pixel");
+  assert.equal(whopPixelParensBalanced(), true);
+  assertWhopPixelParses();
+  const opens = [...WHOP_PIXEL_SNIPPET].filter((ch) => ch === "(").length;
+  const closes = [...WHOP_PIXEL_SNIPPET].filter((ch) => ch === ")").length;
+  assert.equal(opens, closes, `Whop pixel parens ${opens} open vs ${closes} close`);
   const storeDoc = readFileSync("docs/chrome-extension-store.md", "utf8");
   assert.match(storeDoc, /app\.cinem\.tech\/downloads\/cinem-pro-chrome\.zip/);
   assert.match(storeDoc, /brandcrew\.vercel\.app\/downloads\/cinem-pro-chrome\.zip/);
@@ -414,10 +425,17 @@ async function main() {
   const adminLayout = readFileSync("src/app/admin/layout.tsx", "utf8");
   assert.match(adminLayout, /isAdminEmail/);
   assert.match(adminLayout, /getCurrentUser/);
+  assert.match(adminLayout, /forbidden\(\)/);
+  const adminPageGate = readFileSync("src/lib/admin-page.ts", "utf8");
+  assert.match(adminPageGate, /forbidden\(\)/);
+  assert.match(adminPageGate, /isAdminEmail/);
+  assert.doesNotMatch(adminPageGate, /allowed: boolean/);
+  const forbiddenPage = readFileSync("src/app/forbidden.tsx", "utf8");
+  assert.match(forbiddenPage, /AdminForbidden/);
   const settingsHub = readFileSync("src/components/desk/settings-hub.tsx", "utf8");
-  assert.match(settingsHub, /user\.isAdmin \?/);
+  assert.match(settingsHub, /user\.isAdmin === true/);
   assert.doesNotMatch(settingsHub, /\/api\/admin/);
-  console.log("ok: /admin and /api/admin stay server-gated via ADMIN_EMAILS; UI only hides the link");
+  console.log("ok: /admin and /api/admin stay server-gated via ADMIN_EMAILS; Settings hides the staff link");
 
   console.log("Launch + security checks passed.");
 }

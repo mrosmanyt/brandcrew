@@ -6,7 +6,7 @@ The product stays **cloud-live** at [app.cinem.tech](https://app.cinem.tech). Fo
 
 1. Sign in at `https://app.cinem.tech` with a Google or email account whose address is on the allow-list.
 2. Open `https://app.cinem.tech/admin`.
-3. Non-admins get **403**. Hiding the Settings link is not the gate — every `/admin` page calls `loadAdminPage`, and every `/api/admin` method calls `requireAdmin()`.
+3. Non-admins get **HTTP 403** (`forbidden()` → `src/app/forbidden.tsx`). Hiding the Settings link is not the gate — `loadAdminPage` calls `forbidden()` before any dashboard query, the `/admin` layout also calls `forbidden()`, and every `/api/admin` method calls `requireAdmin()`. Unauthenticated `/admin` redirects to login. Unauthenticated `/api/admin` is **401**.
 
 Local: `http://127.0.0.1:43180/admin` after `npm run dev`.
 

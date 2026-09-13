@@ -1,4 +1,4 @@
-/** Developer console origin. Desk sidebar opens this in a new tab. */
+/** Optional custom host. Customer nav uses same-origin `/console`, not this origin. */
 
 export const CONSOLE_HOST = "console.cinem.tech";
 export const CONSOLE_ORIGIN = `https://${CONSOLE_HOST}`;
@@ -33,10 +33,9 @@ export function isPreviewHostname(host: string | null | undefined) {
 }
 
 /**
- * Prefer https://console.cinem.tech once the custom domain (or env) is ready.
- * Same-origin `/console` is the fallback for local, Vercel previews, and
- * production until NEXT_PUBLIC_CONSOLE_URL is set or the desk is already on
- * *.cinem.tech.
+ * DNS/Vercel readiness for the optional console.cinem.tech host.
+ * Customer nav must not use this — that domain is not live; desk links
+ * stay on same-origin `/console` (see consoleAppHref).
  */
 export function consoleDomainReady(host: string | null | undefined) {
   const override = process.env.NEXT_PUBLIC_CONSOLE_URL?.replace(/\/$/, "");
@@ -52,6 +51,11 @@ export function consoleOrigin() {
   return override || CONSOLE_ORIGIN;
 }
 
+/**
+ * Customer-facing console URL. Always same-origin `/console` unless the
+ * request is already on the console host (proxy rewrite). Do not send
+ * desk/settings/sidebar traffic to console.cinem.tech — that host fails.
+ */
 export function consoleAppHref(input: {
   hostname?: string | null;
   workspaceId?: string | null;
@@ -63,10 +67,6 @@ export function consoleAppHref(input: {
 
   if (isConsoleHostname(hostname)) {
     return query ? `/${query}` : "/";
-  }
-
-  if (consoleDomainReady(hostname)) {
-    return `${consoleOrigin()}${query}`;
   }
 
   return `${CONSOLE_PATH}${query}`;

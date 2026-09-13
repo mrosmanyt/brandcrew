@@ -404,12 +404,12 @@ export function SettingsHub({
       <section className="mt-6">
         <h2 className="text-sm font-medium">More</h2>
         <ul className="mt-3 space-y-1">
-          {user.isAdmin ? (
+          {user.isAdmin === true ? (
             <li>
               <Link href="/admin" className="flex flex-col rounded-lg px-2 py-2 hover:bg-muted/40">
                 <span className="text-sm">Internal Admin HQ</span>
                 <span className="text-xs text-muted-foreground">
-                  Ops console for CINEM staff. Not shown to customers.
+                  CINEM staff only. Server-gated by ADMIN_EMAILS — not a customer page.
                 </span>
               </Link>
             </li>
