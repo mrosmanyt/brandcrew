@@ -1,6 +1,6 @@
 {
   "name": "brandcrew",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "private": true,
   "description": "CINEM Pro — AI employee desk. Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
   "author": "CINEM",
@@ -52,6 +52,7 @@
     "test:phase3": "tsx scripts/check-phase3.ts",
     "test:phase4": "tsx scripts/check-phase4.ts",
     "test:desktop-shell": "tsx scripts/check-desktop-shell.ts",
+    "test:desktop-updater": "tsx scripts/check-desktop-updater.ts",
     "test:cinem-ai": "tsx scripts/check-cinem-ai-assistant.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",
@@ -75,6 +76,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "electron-updater": "^6.8.9",
     "jose": "^6.2.12",
     "lucide-react": "^1.41.0",
     "next": "16.3.4",
@@ -125,9 +127,20 @@
       "electron/assistant-preload.cjs",
       "electron/assistant-missing.html",
       "electron/offline.html",
+      "electron/updater.cjs",
+      "electron/updates.html",
+      "electron/updates-preload.cjs",
       "electron/installer.nsh",
       "package.json",
       "!**/node_modules/**"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "mrosmanyt",
+        "repo": "cinem-pro-releases",
+        "releaseType": "release"
+      }
     ],
     "asar": true,
     "npmRebuild": false,

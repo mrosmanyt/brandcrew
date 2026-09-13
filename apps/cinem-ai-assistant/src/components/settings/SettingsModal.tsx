@@ -6,7 +6,7 @@ import {
   Palette, Check, Smartphone, Send, MessageCircle, Copy, Unlink,
   DownloadCloud, RotateCw, RefreshCcw,
 } from "lucide-react";
-import { useUpdateStore, checkForUpdate, downloadAndInstall, relaunchApp } from "@/lib/updater";
+import { useUpdateStore, checkForUpdate, downloadAndInstall, relaunchApp, setAutoUpdateEnabled, subscribeToUpdates } from "@/lib/updater";
 import { THEMES, applyTheme, themeById, type Theme as UITheme } from "@/lib/themes";
 import { startTelegram, stopTelegram } from "@/lib/telegram";
 import { startWhatsApp, stopWhatsAppHard } from "@/lib/whatsapp";
@@ -1032,21 +1032,23 @@ function VisionControls() {
   );
 }
 
-/** Updates card — check, download, install, restart + auto-update toggle. */
+/** Updates card — check, download, install, restart + Auto Update toggle. */
 function UpdatesCard() {
   const s = useSettingsStore();
   const u = useUpdateStore();
   const busy = u.status === "checking" || u.status === "downloading";
 
+  useEffect(() => subscribeToUpdates(), []);
+
   const statusLine = (() => {
     switch (u.status) {
-      case "checking": return "Checking for updates…";
-      case "none": return `You're on the latest version${u.currentVersion ? ` (v${u.currentVersion})` : ""}. ✓`;
-      case "available": return `Cinem AI Assistant v${u.version} is available${u.currentVersion ? ` (current: v${u.currentVersion})` : ""}.`;
-      case "downloading": return `Downloading v${u.version}… ${Math.round(u.progress * 100)}%`;
-      case "ready": return `v${u.version} installed — restart Cinem AI Assistant to finish.`;
-      case "error": return u.error;
-      default: return u.currentVersion ? `Current version: v${u.currentVersion}` : "Updates are checked automatically on startup.";
+      case "checking": return "Checking";
+      case "none": return `Up to date${u.currentVersion ? ` (CINEM Pro ${u.currentVersion})` : ""}`;
+      case "available": return `Update available${u.version ? ` — CINEM Pro ${u.version}` : ""}${u.currentVersion ? ` (current ${u.currentVersion})` : ""}`;
+      case "downloading": return `Downloading${u.version ? ` ${u.version}` : ""}… ${Math.round(u.progress * 100)}%`;
+      case "ready": return "Ready to restart";
+      case "error": return u.error || "Error";
+      default: return u.currentVersion ? `Current version ${u.currentVersion}` : "Auto Update checks on startup in the installed CINEM Pro app.";
     }
   })();
 
@@ -1074,7 +1076,7 @@ function UpdatesCard() {
             onClick={() => void relaunchApp()}
             className="flex shrink-0 items-center gap-2 border border-emerald-400/50 bg-emerald-400/15 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/25"
           >
-            <RotateCw className="size-3.5" /> Restart Now
+            <RotateCw className="size-3.5" /> Restart
           </button>
         ) : (
           <button
@@ -1083,7 +1085,7 @@ function UpdatesCard() {
             className="flex shrink-0 items-center gap-2 border border-neon/40 px-3 py-1.5 text-xs font-semibold text-neon hover:bg-neon/10 disabled:opacity-50"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCcw className="size-3.5" />}
-            Check for Updates
+            Check now
           </button>
         )}
       </div>
@@ -1106,10 +1108,13 @@ function UpdatesCard() {
       )}
 
       <div className="mt-3 flex items-center justify-between border-t border-neon/[0.08] pt-2.5">
-        <p className="text-xs text-neon-dim">
-          Auto-Update — download new versions automatically (restart stays manual).
-        </p>
-        <Switch checked={s.autoUpdate} onChange={(v) => s.update({ autoUpdate: v })} />
+        <div>
+          <p className="text-sm font-semibold text-ice/90">Auto Update</p>
+          <p className="text-xs text-neon-dim">
+            Download new versions automatically (restart stays manual). Portable builds cannot update in place.
+          </p>
+        </div>
+        <Switch checked={s.autoUpdate} onChange={(v) => void setAutoUpdateEnabled(v)} />
       </div>
     </div>
   );

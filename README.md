@@ -272,10 +272,11 @@ Or: `powershell -File scripts/install-desktop.ps1`. Dev checkout: `$env:CINEM_IN
 
 ### Installers (.exe / .dmg)
 
-Hosted Windows builds (public repo `cinem-pro-releases`, GitHub Release `v0.2.0` and `latest`):
+Hosted Windows builds (public repo `cinem-pro-releases`, GitHub Release `latest`):
 
 - NSIS setup: https://github.com/mrosmanyt/cinem-pro-releases/releases/latest/download/CINEM-Pro-Setup.exe
 - Portable: https://github.com/mrosmanyt/cinem-pro-releases/releases/latest/download/CINEM-Pro-Portable.exe
+- Updater feed: `latest.yml` + `*.blockmap` on the same release ([desktop-auto-update.md](docs/desktop-auto-update.md))
 
 The marketing Download buttons use those exact asset URLs — not README anchors. Installers are public, so anonymous visitors get a real file without GitHub login. There is no hosted Mac `.dmg` (Linux cannot produce a usable one).
 
@@ -288,11 +289,13 @@ npm run desktop:build       # current platform (Linux → AppImage)
 Artifacts land in `dist/desktop/`. Publish:
 
 ```bash
-gh release create v0.2.0 \
+gh release create cinem-pro-v0.3.1 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
-  --title "CINEM Pro 0.2.0" \
-  --notes "Windows installer — cloud desk + Cinem AI Assistant."
+  dist/desktop/latest.yml \
+  --repo mrosmanyt/cinem-pro-releases \
+  --title "CINEM Pro 0.3.1" \
+  --notes "Windows installer — cloud desk + Cinem AI Assistant. First electron-updater baseline."
 ```
 
 **Where keys live**

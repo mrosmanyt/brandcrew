@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Updates — CINEM Pro</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #09090b;
+        --panel: #111113;
+        --line: #27272a;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --neon: #67e8f9;
+        --neon-dim: #22d3ee;
+        --danger: #fda4af;
+        --ok: #6ee7b7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        padding: 22px 22px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 650;
+        letter-spacing: 0.02em;
+      }
+      .lede {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .card {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .label {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      .hint {
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .status {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .status.error {
+        color: var(--danger);
+      }
+      .status.ready,
+      .status.none {
+        color: var(--ok);
+      }
+      .version {
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid #3f3f46;
+        background: #18181b;
+        color: var(--text);
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 8px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        border-color: #52525b;
+        background: #1f1f23;
+      }
+      button.primary {
+        border-color: rgba(103, 232, 249, 0.5);
+        background: rgba(34, 211, 238, 0.14);
+        color: var(--neon);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .bar {
+        margin-top: 12px;
+        height: 6px;
+        background: #18181b;
+        border-radius: 99px;
+        overflow: hidden;
+        display: none;
+      }
+      .bar.on {
+        display: block;
+      }
+      .bar > span {
+        display: block;
+        height: 100%;
+        width: 4%;
+        background: var(--neon-dim);
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.55);
+        transition: width 0.25s ease;
+      }
+      .notes {
+        margin: 10px 0 0;
+        max-height: 88px;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-size: 12px;
+        line-height: 1.45;
+        color: #d4d4d8;
+        display: none;
+      }
+      .notes.on {
+        display: block;
+      }
+      .switch {
+        position: relative;
+        width: 42px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .switch span {
+        position: absolute;
+        inset: 0;
+        background: #3f3f46;
+        border-radius: 99px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+      .switch span::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fafafa;
+        transition: transform 0.15s ease;
+      }
+      .switch input:checked + span {
+        background: #0891b2;
+      }
+      .switch input:checked + span::after {
+        transform: translateX(18px);
+      }
+      .caveat {
+        font-size: 11px;
+        color: #71717a;
+        line-height: 1.45;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Updates</h1>
+        <p class="lede">CINEM Pro checks the public releases feed on launch when Auto Update is on.</p>
+      </header>
+
+      <section class="card">
+        <div class="row">
+          <div>
+            <p class="label">Auto Update</p>
+            <p class="hint">Download new versions in the background. Restart stays manual.</p>
+          </div>
+          <label class="switch">
+            <input id="auto" type="checkbox" checked />
+            <span></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <p id="status" class="status">Checking</p>
+        <p id="version" class="version"></p>
+        <div id="bar" class="bar"><span id="fill"></span></div>
+        <p id="notes" class="notes"></p>
+        <div class="actions">
+          <button id="check" type="button">Check now</button>
+          <button id="download" type="button" class="primary" hidden>Download &amp; Install</button>
+          <button id="restart" type="button" class="primary" hidden>Restart</button>
+        </div>
+      </section>
+
+      <p class="caveat">
+        Auto-update applies to the installed app (CINEM-Pro-Setup.exe). Portable builds cannot update in place.
+        Current builds are unsigned — Windows SmartScreen may still ask you to Run anyway when the installer starts.
+        That is a publisher-reputation prompt, not a CINEM Pro detection. Code signing is not claimed here.
+      </p>
+    </main>
+    <script>
+      const api = window.cinemUpdates;
+      const statusEl = document.getElementById("status");
+      const versionEl = document.getElementById("version");
+      const autoEl = document.getElementById("auto");
+      const checkBtn = document.getElementById("check");
+      const downloadBtn = document.getElementById("download");
+      const restartBtn = document.getElementById("restart");
+      const bar = document.getElementById("bar");
+      const fill = document.getElementById("fill");
+      const notes = document.getElementById("notes");
+
+      function statusLine(state) {
+        switch (state.status) {
+          case "checking":
+            return "Checking";
+          case "none":
+            return "Up to date";
+          case "available":
+            return state.version ? `Update available — CINEM Pro ${state.version}` : "Update available";
+          case "downloading":
+            return `Downloading${state.version ? ` ${state.version}` : ""}… ${Math.round((state.progress || 0) * 100)}%`;
+          case "ready":
+            return "Ready to restart";
+          case "error":
+            return state.error || "Error";
+          default:
+            return "Auto Update is on. CINEM Pro checks for updates on startup.";
+        }
+      }
+
+      function paint(state) {
+        if (!state) return;
+        statusEl.textContent = statusLine(state);
+        statusEl.className = `status ${state.status || "idle"}`;
+        const bits = [];
+        if (state.currentVersion) bits.push(`Current version ${state.currentVersion}`);
+        if (state.channel === "portable") bits.push("Portable build");
+        if (state.channel === "dev") bits.push("Development build");
+        versionEl.textContent = bits.join(" · ");
+        autoEl.checked = state.autoUpdate !== false;
+        const busy = state.status === "checking" || state.status === "downloading";
+        checkBtn.hidden = state.status === "available" || state.status === "ready";
+        checkBtn.disabled = busy;
+        downloadBtn.hidden = state.status !== "available";
+        restartBtn.hidden = state.status !== "ready";
+        bar.classList.toggle("on", state.status === "downloading");
+        fill.style.width = `${Math.max(4, Math.round((state.progress || 0) * 100))}%`;
+        notes.textContent = state.notes || "";
+        notes.classList.toggle("on", Boolean(state.status === "available" && state.notes));
+      }
+
+      checkBtn.addEventListener("click", () => {
+        api && api.check();
+      });
+      downloadBtn.addEventListener("click", () => {
+        api && api.download();
+      });
+      restartBtn.addEventListener("click", () => {
+        api && api.install();
+      });
+      autoEl.addEventListener("change", () => {
+        api && api.setAutoUpdate(autoEl.checked);
+      });
+
+      if (api) {
+        api.onStatus(paint);
+        api.getState().then(paint);
+      } else {
+        statusEl.textContent = "Error";
+        statusEl.className = "status error";
+      }
+    </script>
+  </body>
+</html>

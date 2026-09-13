@@ -159,7 +159,7 @@ npm ci
 npm run desktop:build:win
 ```
 
-Confirm the log line `Windows signing ON (Azure Artifact Signing / Trusted Signing).` Artifacts: `dist/desktop/CINEM-Pro-Setup.exe` and `CINEM-Pro-Portable.exe`.
+Confirm the log line `Windows signing ON (Azure Artifact Signing / Trusted Signing).` Artifacts: `dist/desktop/CINEM-Pro-Setup.exe`, `CINEM-Pro-Portable.exe`, plus updater metadata `latest.yml` and `*.blockmap` (see [desktop-auto-update.md](./desktop-auto-update.md)).
 
 Check the signature (PowerShell):
 
@@ -175,6 +175,8 @@ Publish to the public releases repo (same asset names `/download` already uses):
 gh release upload v0.1.0 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
+  dist/desktop/latest.yml \
+  dist/desktop/CINEM-Pro-Setup.exe.blockmap \
   --repo mrosmanyt/cinem-pro-releases \
   --clobber
 ```
