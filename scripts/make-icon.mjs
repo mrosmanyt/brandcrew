@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Rasterize the official CINEM hex-bracket mark (same polygons as src/lib/cinem-mark.ts).
+ * Brackets sit 2 viewBox units farther apart than the original split (4 units extra gap).
  * Writes public brand assets, App Router metadata images, electron icon, and favicon.ico.
  * Web tab icons use the SaaS tile in public/icon.svg (night #1a1915 + cream #f4f3ef).
  * Pass --web-only to regenerate favicons without touching Electron/installer art.
@@ -15,20 +16,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const webOnly = process.argv.includes("--web-only");
 
 const LEFT = [
-  [4, 32],
-  [18, 8],
-  [30, 8],
-  [20, 32],
-  [30, 56],
-  [18, 56],
+  [2, 32],
+  [16, 8],
+  [28, 8],
+  [18, 32],
+  [28, 56],
+  [16, 56],
 ];
 const RIGHT = [
-  [60, 32],
-  [46, 8],
-  [34, 8],
-  [44, 32],
-  [34, 56],
-  [46, 56],
+  [62, 32],
+  [48, 8],
+  [36, 8],
+  [46, 32],
+  [36, 56],
+  [48, 56],
 ];
 
 function pointInPoly(x, y, poly) {
@@ -179,8 +180,8 @@ const WEB_ICON_SVG = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CINEM Pro">
   <rect width="64" height="64" rx="14" fill="#1a1915"/>
   <g transform="translate(7.68 7.68) scale(0.76)">
-    <path fill="#f4f3ef" d="M4 32 L18 8 H30 L20 32 L30 56 H18 Z"/>
-    <path fill="#f4f3ef" d="M60 32 L46 8 H34 L44 32 L34 56 H46 Z"/>
+    <path fill="#f4f3ef" d="M2 32 L16 8 H28 L18 32 L28 56 H16 Z"/>
+    <path fill="#f4f3ef" d="M62 32 L48 8 H36 L46 32 L36 56 H46 Z"/>
   </g>
 </svg>
 `;

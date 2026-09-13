@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Rasterize official CINEM hex-bracket mark into NSIS installer bitmaps.
- * Geometry matches src/lib/cinem-mark.ts and scripts/make-icon.mjs.
+ * Geometry matches src/lib/cinem-mark.ts and scripts/make-icon.mjs
+ * (2 viewBox units extra outward per bracket).
  * No extra deps — raw BMP / PNG / ICO via zlib.
  *
  *   node scripts/make-installer-art.mjs
@@ -18,20 +19,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "electron", "resources", "installer");
 
 const LEFT = [
-  [4, 32],
-  [18, 8],
-  [30, 8],
-  [20, 32],
-  [30, 56],
-  [18, 56],
+  [2, 32],
+  [16, 8],
+  [28, 8],
+  [18, 32],
+  [28, 56],
+  [16, 56],
 ];
 const RIGHT = [
-  [60, 32],
-  [46, 8],
-  [34, 8],
-  [44, 32],
-  [34, 56],
-  [46, 56],
+  [62, 32],
+  [48, 8],
+  [36, 8],
+  [46, 32],
+  [36, 56],
+  [48, 56],
 ];
 
 /** 5×7 caps. Pixel-tech look on the 150px header / 164px sidebar. */

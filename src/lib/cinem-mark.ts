@@ -1,6 +1,8 @@
 /**
  * Official CINEM mark: two mirrored hex-brackets with a vertical diamond void.
  * Geometry is a flat-top hexagon split down the middle (viewBox 0 0 64 64).
+ * Each bracket is translated 2 viewBox units outward (4 units extra gap)
+ * so the pair reads as `< >` at 16–32px without a wide split.
  * Raster: `public/brand/cinem-logo.png` (black mark, transparent ground).
  */
 export const CINEM_LOGO_SRC = "/brand/cinem-logo.png";
@@ -15,28 +17,31 @@ export const CINEM_APPLE_TOUCH_SRC = "/apple-touch-icon.png";
 export const CINEM_FAVICON_VERSION = "20260913";
 export const CINEM_MARK_VIEWBOX = "0 0 64 64";
 
+/** Extra outward shift per bracket, in viewBox units. */
+export const CINEM_MARK_BRACKET_GAP = 2;
+
 /** Left then right closed polygons (SVG path `d`). */
 export const CINEM_MARK_PATHS = [
-  "M4 32 L18 8 H30 L20 32 L30 56 H18 Z",
-  "M60 32 L46 8 H34 L44 32 L34 56 H46 Z",
+  "M2 32 L16 8 H28 L18 32 L28 56 H16 Z",
+  "M62 32 L48 8 H36 L46 32 L36 56 H46 Z",
 ] as const;
 
 export const CINEM_MARK_POLYGONS: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
   [
-    [4, 32],
-    [18, 8],
-    [30, 8],
-    [20, 32],
-    [30, 56],
-    [18, 56],
+    [2, 32],
+    [16, 8],
+    [28, 8],
+    [18, 32],
+    [28, 56],
+    [16, 56],
   ],
   [
-    [60, 32],
-    [46, 8],
-    [34, 8],
-    [44, 32],
-    [34, 56],
-    [46, 56],
+    [62, 32],
+    [48, 8],
+    [36, 8],
+    [46, 32],
+    [36, 56],
+    [48, 56],
   ],
 ];
 
