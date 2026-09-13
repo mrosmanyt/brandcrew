@@ -21,7 +21,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
       uninstallDisplayName?: string;
       artifactName?: string;
     };
-    win: { target: Array<{ target: string }> };
+    win: { target: Array<{ target: string }>; icon?: string };
   };
 };
 
@@ -35,6 +35,7 @@ assert.equal(pkg.build.nsis.uninstallerSidebar, "installer/sidebar.bmp");
 assert.match(pkg.build.nsis.uninstallDisplayName ?? "", /Desk \+ AI Assistant/);
 assert.equal(pkg.build.nsis.artifactName, "CINEM-Pro-Setup.${ext}");
 assert.ok(pkg.build.win.target.some((t) => t.target === "nsis"));
+assert.match(pkg.build.win.icon ?? "", /icon\.ico$/);
 assert.equal(pkg.scripts["installer:art"], "node scripts/make-installer-art.mjs");
 assert.equal(pkg.scripts["test:installer-branding"], "tsx scripts/check-installer-branding.ts");
 assert.match(pkg.scripts["desktop:build:win"] ?? "", /desktop-build\.mjs --win/);

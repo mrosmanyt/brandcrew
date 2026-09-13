@@ -1,6 +1,6 @@
 {
   "name": "brandcrew",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "CINEM Pro — AI employee desk. Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
   "author": "CINEM",
@@ -54,6 +54,7 @@
     "test:desktop-shell": "tsx scripts/check-desktop-shell.ts",
     "test:desktop-updater": "tsx scripts/check-desktop-updater.ts",
     "test:cinem-ai": "tsx scripts/check-cinem-ai-assistant.ts",
+    "test:assistant-ux": "tsx scripts/check-assistant-ux.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",
     "installer:art": "node scripts/make-installer-art.mjs",
@@ -143,6 +144,10 @@
       }
     ],
     "asar": true,
+    "asarUnpack": [
+      "**/node_modules/electron-updater/**/*",
+      "**/node_modules/builder-util-runtime/**/*"
+    ],
     "npmRebuild": false,
     "extraResources": [
       {
@@ -158,6 +163,8 @@
         "to": "brandcrew",
         "filter": [
           "icon.png",
+          "icon.ico",
+          "installer/icon.ico",
           "env.example"
         ]
       }
@@ -174,7 +181,7 @@
       "identity": null
     },
     "win": {
-      "icon": "electron/resources/icon.png",
+      "icon": "electron/resources/icon.ico",
       "executableName": "CINEM-Pro",
       "signAndEditExecutable": false,
       "target": [

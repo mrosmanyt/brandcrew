@@ -213,6 +213,8 @@ const guard = readFileSync("apps/cinem-ai-assistant/src/lib/guard.ts", "utf8");
 assert.match(guard, /isCinemElectron|verifyElectronShell/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/updater.ts", "utf8"), /cinemDesktopBridge/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/updater.ts", "utf8"), /electron-updater/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/world-monitor.ts", "utf8"), /WORLD_MONITOR_DIGEST_URL/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/right/ChatPanel.tsx", "utf8"), /toggleVoiceCommand/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/components/settings/SettingsModal.tsx", "utf8"), /Auto Update/);
 assert.match(docs, /desktop-auto-update/);
 const vite = readFileSync("apps/cinem-ai-assistant/vite.config.ts", "utf8");

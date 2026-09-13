@@ -43,8 +43,8 @@ Feed the installed app reads: GitHub provider `owner=mrosmanyt` / `repo=cinem-pr
 | Build | Role |
 | --- | --- |
 | `0.3.0` and earlier | No electron-updater. Users must install this PR’s Setup.exe once. |
-| `0.3.1` (this work) | First updater-enabled baseline. Future tags above `0.3.1` roll out silently. |
-| Next ship | Bump to `0.3.2` (or later) **before** tagging. A 0.3.1 install will not offer an update if `latest.yml` still says `0.3.1`. |
+| `0.3.1` | First updater-enabled baseline. 0.3.1 Check now could show “not initialized” if the module loaded late — fixed in 0.3.2. |
+| `0.3.2` (this work) | Lazy-init + retry on Check now. Tag **cinem-pro-v0.3.2** and publish `latest.yml` so 0.3.1 installs can pick this up. |
 
 ## Unsigned builds / SmartScreen
 

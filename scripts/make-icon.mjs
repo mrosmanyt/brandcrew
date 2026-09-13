@@ -228,4 +228,16 @@ const ico = encodeIco(icoPngs);
 writeFileSync(path.join(root, "src", "app", "favicon.ico"), ico);
 console.log("Wrote favicon.ico", ico.length, "bytes");
 
+const appIcoSizes = [16, 24, 32, 48, 64, 128, 256];
+const appIcoPngs = appIcoSizes.map((size) => ({
+  size,
+  buf: encodePng(size, size, 4, (x, y, w) => {
+    const t = markSample(x, y, paddedBox(w, 0.12), size >= 64 ? 4 : 3);
+    return blend(paperA, nightA, t);
+  }),
+}));
+const appIco = encodeIco(appIcoPngs);
+writeFileSync(path.join(electronDir, "icon.ico"), appIco);
+console.log("Wrote", path.join(electronDir, "icon.ico"), appIco.length, "bytes");
+
 await import("./make-installer-art.mjs");

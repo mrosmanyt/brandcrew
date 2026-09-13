@@ -19,6 +19,8 @@ export interface Settings {
    *  "" = auto (use the cost-optimized mapping). */
   advancedModel: string;
   youtubeKey: string;
+  /** World Monitor digest key (`wm_…`). Optional — public headlines still work. */
+  worldMonitorKey: string;
   /* Voice */
   whisperModel: "tiny" | "base" | "small" | "medium" | "large-v3";
   ttsEngine: "elevenlabs" | "piper";
@@ -76,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   advancedModel: "",
   // Enter your own YouTube Data API key in Settings → API (Cinem AI Assistant Player).
   youtubeKey: "",
+  worldMonitorKey: "",
   whisperModel: "base",
   ttsEngine: "elevenlabs",
   // Enter your own ElevenLabs key in Settings → API (voice).
@@ -182,6 +185,7 @@ const pickSettings = (s: SettingsState): Settings => ({
   defaultModel: s.defaultModel,
   advancedModel: s.advancedModel,
   youtubeKey: s.youtubeKey,
+  worldMonitorKey: s.worldMonitorKey,
   whisperModel: s.whisperModel,
   ttsEngine: s.ttsEngine,
   elevenKey: s.elevenKey,

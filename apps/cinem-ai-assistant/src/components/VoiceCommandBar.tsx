@@ -2,11 +2,8 @@ import { useEffect, useRef } from "react";
 import { Mic, Square, Loader2, AudioLines, Languages } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/store/useAppStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { notify } from "@/store/useToastStore";
 import { voice } from "@/lib/voice";
-import { speakQueued } from "@/lib/announcer";
-import { processCommand } from "@/lib/orchestrator";
+import { toggleVoiceCommand } from "@/lib/voice-command";
 import { glowRGB } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
@@ -82,48 +79,10 @@ const STATUS_LABEL = {
  */
 export default function VoiceCommandBar() {
   const status = useAppStore((s) => s.voiceStatus);
-  const setStatus = useAppStore((s) => s.setVoiceStatus);
   const language = useAppStore((s) => s.language);
 
-  const onMicClick = async () => {
-    const settings = useSettingsStore.getState();
-
-    if (status === "idle") {
-      try {
-        await voice.startListening();
-        setStatus("listening");
-      } catch (e) {
-        notify("error", `Microphone unavailable: ${e instanceof Error ? e.message : e}`);
-      }
-      return;
-    }
-
-    if (status === "listening") {
-      setStatus("transcribing");
-      try {
-        const text = await voice.stopListening(settings.whisperModel);
-        if (!text) {
-          notify("info", "No speech detected.");
-          setStatus("idle");
-          return;
-        }
-        // Full pipeline: orchestrator routes → agents → reply, then speak it
-        const reply = await processCommand(text);
-        setStatus("speaking");
-        // Queued so it plays AFTER any agent activation announcements finish.
-        await speakQueued(reply);
-      } catch (e) {
-        notify("error", `Voice error: ${e instanceof Error ? e.message : e}`);
-      } finally {
-        setStatus("idle");
-      }
-      return;
-    }
-
-    if (status === "speaking") {
-      voice.stopSpeaking();
-      setStatus("idle");
-    }
+  const onMicClick = () => {
+    void toggleVoiceCommand();
   };
 
   const busy = status === "transcribing";

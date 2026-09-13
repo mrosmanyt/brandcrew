@@ -43,6 +43,14 @@ for (const glob of updaterModuleGlobs()) {
 }
 config.files = files;
 
+if (!Array.isArray(config.asarUnpack) || !config.asarUnpack.some((g) => String(g).includes("electron-updater"))) {
+  config.asarUnpack = [
+    ...(Array.isArray(config.asarUnpack) ? config.asarUnpack : []),
+    "**/node_modules/electron-updater/**/*",
+    "**/node_modules/builder-util-runtime/**/*",
+  ];
+}
+
 if (!config.publish) {
   config.publish = {
     provider: "github",

@@ -25,6 +25,10 @@ export type CinemDesktopBridge = {
   setMode?: (mode: string) => void;
   openDesk?: () => void;
   openUpdates?: () => void;
+  httpGet?: (
+    url: string,
+    opts?: { worldMonitorKey?: string },
+  ) => Promise<{ ok: boolean; status: number; text: string }>;
   updates?: {
     getState: () => Promise<CinemUpdatePayload>;
     check: (opts?: { auto?: boolean; silent?: boolean }) => Promise<CinemUpdatePayload>;
@@ -34,12 +38,6 @@ export type CinemDesktopBridge = {
     onStatus: (handler: (payload: CinemUpdatePayload) => void) => () => void;
   };
 };
-
-declare global {
-  interface Window {
-    cinemDesktop?: CinemDesktopBridge;
-  }
-}
 
 export const ELECTRON_SHELL_PING = "CINEM Pro core online";
 
@@ -81,4 +79,18 @@ export async function verifyElectronShell(nonce: string): Promise<boolean> {
   const ok = await bridge.verifyShell(nonce);
   const pong = await bridge.ping();
   return ok === true && pong === ELECTRON_SHELL_PING;
+}
+
+export async function desktopHttpGet(
+  url: string,
+  opts?: { worldMonitorKey?: string },
+): Promise<{ ok: boolean; status: number; text: string }> {
+  const bridge = cinemDesktopBridge();
+  if (bridge?.httpGet) {
+    return bridge.httpGet(url, opts);
+  }
+  const headers: Record<string, string> = { Accept: "application/json, text/xml, */*" };
+  if (opts?.worldMonitorKey) headers["X-WorldMonitor-Key"] = opts.worldMonitorKey;
+  const res = await fetch(url, { headers });
+  return { ok: res.ok, status: res.status, text: await res.text() };
 }

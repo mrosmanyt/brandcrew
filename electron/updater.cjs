@@ -52,13 +52,41 @@ let periodicTimer = null;
 let checking = false;
 
 function isPortableBuild() {
-  return Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
+  if (process.env.PORTABLE_EXECUTABLE_DIR) return true;
+  try {
+    const exe = path.basename(app.getPath("exe") || process.execPath || "").toLowerCase();
+    return exe.includes("portable");
+  } catch {
+    return false;
+  }
 }
 
 function resolveChannel() {
   if (!app.isPackaged) return "dev";
   if (isPortableBuild()) return "portable";
   return "nsis";
+}
+
+function nsisLoadHint() {
+  return "Could not load the updater in this install. Reinstall with CINEM-Pro-Setup.exe (not the portable build).";
+}
+
+function ensureAutoUpdater() {
+  const channel = resolveChannel();
+  state.channel = channel;
+  if (channel !== "nsis") return null;
+  if (autoUpdater) return autoUpdater;
+  const instance = loadAutoUpdater();
+  if (!instance) return null;
+  try {
+    bindAutoUpdater(instance);
+    autoUpdater = instance;
+    return autoUpdater;
+  } catch (error) {
+    console.error("CINEM Pro updater bind failed", error);
+    autoUpdater = null;
+    return null;
+  }
 }
 
 function prefsPath() {
@@ -197,8 +225,14 @@ async function checkForUpdates(opts = {}) {
     }
     return snapshot();
   }
-  if (!autoUpdater) {
-    setState({ status: "error", error: "Updater is not initialized.", channel });
+  const instance = ensureAutoUpdater();
+  if (!instance) {
+    const error = channel === "nsis" ? nsisLoadHint() : channelMessage(channel) || nsisLoadHint();
+    if (opts.silent) {
+      setState({ status: "idle", error: "", channel });
+    } else {
+      setState({ status: "error", error, channel });
+    }
     return snapshot();
   }
   if (checking || state.status === "downloading") {
@@ -207,8 +241,8 @@ async function checkForUpdates(opts = {}) {
   checking = true;
   setState({ status: "checking", error: "", channel });
   try {
-    autoUpdater.autoDownload = state.autoUpdate && opts.auto !== false;
-    await autoUpdater.checkForUpdates();
+    instance.autoDownload = state.autoUpdate && opts.auto !== false;
+    await instance.checkForUpdates();
   } catch (error) {
     checking = false;
     if (opts.silent) {
@@ -330,16 +364,20 @@ function startAutoUpdates(opts = {}) {
   state.channel = resolveChannel();
   registerUpdateIpc();
 
+  try {
+    ensureAutoUpdater();
+  } catch (error) {
+    console.error("CINEM Pro updater init failed", error);
+  }
+
   if (state.channel !== "nsis") {
     return;
   }
 
-  autoUpdater = loadAutoUpdater();
   if (!autoUpdater) {
-    setState({ status: "error", error: "Updater module is not available in this build." });
-    return;
+    // Stay idle — Check now / launch timer retries ensureAutoUpdater().
+    setState({ status: "idle", error: "", channel: "nsis" });
   }
-  bindAutoUpdater(autoUpdater);
 
   setTimeout(() => {
     void checkForUpdates({ silent: true, auto: true });
@@ -365,4 +403,6 @@ module.exports = {
   openUpdatesWindow,
   checkForUpdates,
   setAutoUpdate,
+  ensureAutoUpdater,
+  resolveChannel,
 };
