@@ -17,7 +17,12 @@ import { assertStrongPassword } from "../src/lib/password-rules";
 import { hibpRangeContainsSuffix, assertPasswordNotPwned } from "../src/lib/password";
 import { googleEmailIsVerified } from "../src/lib/google-auth-shared";
 import { SESSION_COOKIE } from "../src/lib/constants";
-import { securityHeaderList } from "../src/lib/security-headers";
+import {
+  applySecurityHeaders,
+  HSTS_VALUE,
+  requestLooksHttps,
+  securityHeaderList,
+} from "../src/lib/security-headers";
 import { CINEM_MARK_PATHS, CINEM_MARK_POLYGONS } from "../src/lib/cinem-mark";
 import { HONEYPOT_FIELD, SITE_ORIGIN, VERCEL_SITE_ORIGIN, siteOrigin } from "../src/lib/site";
 import sitemap from "../src/app/sitemap";
@@ -95,6 +100,7 @@ const keys = headers.map((row) => row.key);
 for (const need of [
   "Content-Security-Policy",
   "Strict-Transport-Security",
+  "Cross-Origin-Opener-Policy",
   "X-Frame-Options",
   "X-Content-Type-Options",
   "Referrer-Policy",
@@ -110,9 +116,24 @@ assert.match(csp, /https:\/\/t\.whop\.tw/);
 assert.match(csp, /script-src[^;]*https:\/\/t\.whop\.tw/);
 assert.match(csp, /connect-src[^;]*https:\/\/t\.whop\.tw/);
 const hsts = headers.find((row) => row.key === "Strict-Transport-Security")?.value || "";
+assert.equal(hsts, HSTS_VALUE);
 assert.match(hsts, /max-age=/);
+assert.match(hsts, /includeSubDomains/);
 assert.doesNotMatch(hsts, /preload/);
-console.log("ok: security headers include CSP, HSTS, frame, nosniff, referrer, permissions");
+const coop = headers.find((row) => row.key === "Cross-Origin-Opener-Policy")?.value || "";
+assert.equal(coop, "same-origin-allow-popups");
+assert.equal(requestLooksHttps({ protoHeader: "https", protocol: "http:" }), true);
+assert.equal(requestLooksHttps({ protoHeader: "http", protocol: "https:" }), false);
+assert.equal(requestLooksHttps({ protocol: "https:" }), true);
+assert.equal(requestLooksHttps({ protoHeader: "https, http" }), true);
+const httpsHeaders = new Headers();
+applySecurityHeaders(httpsHeaders, { https: true });
+assert.equal(httpsHeaders.get("Strict-Transport-Security"), HSTS_VALUE);
+const httpHeaders = new Headers();
+applySecurityHeaders(httpHeaders, { https: false });
+assert.equal(httpHeaders.get("Strict-Transport-Security"), null);
+assert.ok(httpHeaders.get("Content-Security-Policy"));
+console.log("ok: security headers include CSP, HSTS, COOP, frame, nosniff, referrer, permissions");
 
 resetRateLimitStore();
 assert.equal(takeToken("t", 2, 60_000).ok, true);
@@ -292,11 +313,16 @@ async function main() {
 
   const proxy = readFileSync("src/proxy.ts", "utf8");
   assert.match(proxy, /applySecurityHeaders/);
+  assert.match(proxy, /requestLooksHttps/);
   const nextConfig = readFileSync("next.config.ts", "utf8");
   assert.match(nextConfig, /securityHeaderList/);
+  assert.match(nextConfig, /VERCEL === "1"/);
+  assert.match(nextConfig, /Strict-Transport-Security/);
   assert.match(nextConfig, /poweredByHeader: false/);
   assert.match(nextConfig, /\/brand\/:path\*/);
   assert.match(nextConfig, /\/og\.png/);
+  const vercel = readFileSync("vercel.json", "utf8");
+  assert.doesNotMatch(vercel, /Strict-Transport-Security/);
   const router = readFileSync("src/server/api/router.ts", "utf8");
   assert.match(router, /enforceSensitiveRateLimit/);
   console.log("ok: headers wired in next.config + proxy; API dispatch rate-limits sensitive routes");

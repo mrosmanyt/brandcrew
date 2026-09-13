@@ -33,6 +33,14 @@ import {
 } from "../src/lib/budget-caps";
 import { decideDeskQa } from "../src/lib/desk-qa-pure";
 import { usesSeparateChatBudget } from "../src/lib/limits";
+import {
+  DESK_DEVICE_POLL_MS,
+  DESK_JOB_POLL_ACTIVE_MS,
+  DESK_JOB_POLL_IDLE_MS,
+  deskDevicePollIntervalMs,
+  deskJobPollIntervalMs,
+  workspaceJobsAreLive,
+} from "../src/lib/desk-poll";
 
 const brief = weeklyClientBriefPlaybook("https://example.com");
 const firstPass = scoreCachedReplay(brief.steps, []);
@@ -351,5 +359,42 @@ assert.match(readFileSync("src/server/api/workspaces/routines.ts", "utf8"), /sav
 assert.match(readFileSync("src/server/api/cron/jobs.ts", "utf8"), /runDueEventTriggers/);
 assert.match(readFileSync("src/lib/schedules.ts", "utf8"), /skillId/);
 console.log("ok: cron + desk load fire schedules and email triggers");
+
+assert.equal(workspaceJobsAreLive([]), false);
+assert.equal(workspaceJobsAreLive([{ status: "done" }, { status: "failed" }]), false);
+assert.equal(workspaceJobsAreLive([{ status: "queued" }]), true);
+assert.equal(workspaceJobsAreLive([{ status: "running" }]), true);
+assert.equal(workspaceJobsAreLive([{ status: "needs_you" }]), true);
+assert.equal(deskJobPollIntervalMs({ hasLiveJobs: true, visible: false }), null);
+assert.equal(
+  deskJobPollIntervalMs({ hasLiveJobs: false, visible: true }),
+  DESK_JOB_POLL_IDLE_MS,
+);
+assert.equal(
+  deskJobPollIntervalMs({ hasLiveJobs: true, visible: true }),
+  DESK_JOB_POLL_ACTIVE_MS,
+);
+assert.ok(DESK_JOB_POLL_IDLE_MS >= 10_000);
+assert.ok(DESK_JOB_POLL_IDLE_MS <= 30_000);
+assert.ok(DESK_JOB_POLL_ACTIVE_MS >= 3_000);
+assert.equal(deskDevicePollIntervalMs({ visible: false }), null);
+assert.equal(deskDevicePollIntervalMs({ visible: true }), DESK_DEVICE_POLL_MS);
+assert.ok(DESK_DEVICE_POLL_MS >= 20_000);
+const sidebar = readFileSync("src/components/desk/sidebar.tsx", "utf8");
+assert.match(sidebar, /prefetch=\{false\}/);
+assert.match(sidebar, /useWorkspaceJobsPoll/);
+assert.doesNotMatch(sidebar, /1600/);
+assert.doesNotMatch(sidebar, /setInterval/);
+const mission = readFileSync("src/components/desk/mission-control.tsx", "utf8");
+assert.match(mission, /useWorkspaceJobsPoll/);
+assert.doesNotMatch(mission, /1100/);
+assert.match(mission, /DESK_JOB_POLL_ACTIVE_MS/);
+const bell = readFileSync("src/components/desk/notification-bell.tsx", "utf8");
+assert.match(bell, /useWorkspaceJobsPoll/);
+assert.doesNotMatch(bell, /8000/);
+const hub = readFileSync("src/components/desk/use-workspace-jobs-poll.ts", "utf8");
+assert.match(hub, /hubs = new Map/);
+assert.match(hub, /listeners\.size === 1/);
+console.log("ok: desk job poll is idle-slow, deduped, and sidebar Links skip prefetch");
 
 console.log("Cost-control checks passed.");

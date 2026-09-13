@@ -21,13 +21,14 @@ import {
   Store,
   Terminal,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
 import { ExtensionStatusChip } from "@/components/desk/extension-status";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
+import { useWorkspaceJobsPoll } from "@/components/desk/use-workspace-jobs-poll";
 import {
   ResizeHandle,
   usePersistedCollapsed,
@@ -99,24 +100,11 @@ function NavBody({
   const [launchBusy, setLaunchBusy] = useState(false);
   const selectedAgentId = searchParams.get("agentId");
   const onMission = pathname === `/desk/${workspace.id}`;
-  useEffect(() => {
-    let cancelled = false;
-    async function pull() {
-      const res = await fetch(`/api/workspaces/${workspace.id}/jobs`);
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      if (data.employeeStatus && typeof data.employeeStatus === "object") {
-        setPolledStatus(data.employeeStatus as Record<string, string>);
-      }
+  useWorkspaceJobsPoll(workspace.id, (data) => {
+    if (data.employeeStatus && typeof data.employeeStatus === "object") {
+      setPolledStatus(data.employeeStatus);
     }
-    const timer = setInterval(() => {
-      void pull();
-    }, 1600);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [workspace.id]);
+  });
 
   async function createWorkspace() {
     const trimmed = name.trim();
@@ -330,6 +318,7 @@ function NavBody({
                   <li key={agent.id}>
                     <Link
                       href={href}
+                      prefetch={false}
                       title={`${displayAgentName(agent.name)}${agent.role ? ` · ${agent.role}` : ""}`}
                       className={cn(
                         "flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] transition-colors",
@@ -531,6 +520,7 @@ function SideLink({
     <li>
       <Link
         href={href}
+        prefetch={false}
         title={typeof children === "string" ? children : undefined}
         className={cn(
           "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",

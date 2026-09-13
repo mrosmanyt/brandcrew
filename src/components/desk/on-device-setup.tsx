@@ -34,8 +34,15 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
 
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => void load(), 10_000);
-    return () => window.clearInterval(timer);
+    const tick = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const timer = window.setInterval(tick, 10_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [workspaceId]);
 
   async function pair() {
