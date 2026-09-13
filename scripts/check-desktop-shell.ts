@@ -264,7 +264,7 @@ const download = readFileSync("src/app/download/page.tsx", "utf8");
 assert.match(download, /CINEM-Pro-Setup\.exe|WIN_SETUP_FILENAME/);
 assert.match(download, /SmartScreen/);
 assert.match(download, /app\.cinem\.tech/);
-assert.match(download, /local database|Postgres/i);
+assert.match(download, /Portable copy of the same unified app/);
 assert.match(download, /Cinem AI Assistant|CINEM_AI_ASSISTANT/);
 assert.match(download, /Get desktop/);
 const onDevice = readFileSync("src/components/desk/on-device-setup.tsx", "utf8");

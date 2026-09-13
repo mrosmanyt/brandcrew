@@ -142,7 +142,7 @@ export function heroDemoToolLines(phase: HeroDemoPhase): HeroToolLine[] {
     lines.push({
       id: "browse",
       label: phase === "browse" ? "Opening URL…" : "Opened northline.example.",
-      detail: "browser_navigate · northline.example",
+      detail: "northline.example",
       tone: phase === "browse" ? "working" : "success",
     });
   }
@@ -150,7 +150,7 @@ export function heroDemoToolLines(phase: HeroDemoPhase): HeroToolLine[] {
     lines.push({
       id: "write",
       label: phase === "write" ? "Writing draft…" : "Wrote draft.",
-      detail: "write_artifact · 5 LinkedIn posts",
+      detail: "5 LinkedIn posts",
       tone: phase === "write" ? "working" : "success",
     });
   }
@@ -158,7 +158,7 @@ export function heroDemoToolLines(phase: HeroDemoPhase): HeroToolLine[] {
     lines.push({
       id: "ask",
       label: "Waiting for your approval…",
-      detail: "ask_user · nothing is published",
+      detail: "Nothing is published",
       tone: "wait",
     });
   }
@@ -182,25 +182,25 @@ export function heroDemoNowHeadline(phase: HeroDemoPhase): {
     case "plan":
       return {
         headline: "Planning the week…",
-        detail: "linkedin_week · Writer",
+        detail: "Writer · a week of posts",
         tone: "working",
       };
     case "kit":
       return {
         headline: "Now reading Brand Kit…",
-        detail: "read_brand_kit",
+        detail: "Brand Kit",
         tone: "working",
       };
     case "browse":
       return {
         headline: "Opening northline.example…",
-        detail: "browser_navigate",
+        detail: "Opening the site",
         tone: "working",
       };
     case "write":
       return {
         headline: "Writing draft…",
-        detail: "write_artifact",
+        detail: "Writing the draft",
         tone: "working",
       };
     case "artifacts":
@@ -214,7 +214,7 @@ export function heroDemoNowHeadline(phase: HeroDemoPhase): {
     case "hold":
       return {
         headline: "Waiting for your approval…",
-        detail: "ask_user · nothing leaves until you approve",
+        detail: "Nothing leaves until you approve",
         tone: "wait",
       };
   }

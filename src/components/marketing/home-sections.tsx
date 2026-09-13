@@ -73,11 +73,11 @@ const FEATURES = [
   },
   {
     title: "Mission Control jobs",
-    body: "Give a job. It plans, uses tools, writes an artifact, then pauses at ask_user. You approve what leaves.",
+    body: "Give a job. It plans, uses tools, writes a draft, then waits for you. You approve what leaves.",
   },
   {
-    title: "Multi-model",
-    body: "OpenAI, Claude, and Gemini stay on the server. The desk routes drafts and finals — you never paste a provider key.",
+    title: "Drafts you can inspect",
+    body: "Agents write drafts and finals in the desk. You review the work and approve what goes out.",
   },
   {
     title: "Brand Kit",
@@ -85,7 +85,7 @@ const FEATURES = [
   },
   {
     title: "API Console / Developer API",
-    body: "Mint a workspace key in the desk and call /api/v1. Bearer tokens never include model secrets. Jobs still wait for you.",
+    body: "Mint a workspace key in the desk and call /api/v1. Jobs still wait for you.",
   },
   {
     title: "Gmail & Slack, real OAuth",
@@ -177,7 +177,7 @@ const STEPS = [
   {
     n: "2",
     title: "Connect plugins",
-    body: "Web Search needs a real Tavily key. Gmail and Slack stay disconnected until OAuth finishes. Empty Connect never fakes Connected.",
+    body: "Gmail and Slack stay disconnected until you finish connecting. Empty Connect never fakes Connected.",
   },
   {
     n: "3",
@@ -187,12 +187,12 @@ const STEPS = [
   {
     n: "4",
     title: "Tools run",
-    body: "Browse, search, read the kit, write an artifact. Live activity shows the tool name and URL. No canned tasting-menu copy when keys exist.",
+    body: "Browse, search, read the kit, write an artifact. Live activity shows the tool name and URL.",
   },
   {
     n: "5",
     title: "You approve",
-    body: "Jobs pause at ask_user. Drafts stay drafts. Gmail does not send. Slack posts only after that approval step is done.",
+    body: "Jobs wait for you. Drafts stay drafts. Gmail does not send. Slack posts only after you approve.",
   },
 ] as const;
 
@@ -220,7 +220,7 @@ export function HowItWorksSection() {
 const USE_CASES = [
   {
     title: "Founders",
-    body: "One desk for research, a week of posts, and outbound your agents run. Brand Kit holds the offer so every job sounds like your company — not a generic model.",
+    body: "One desk for research, a week of posts, and outbound your agents run. Brand Kit holds the offer so every job sounds like your company.",
   },
   {
     title: "Agencies",
@@ -336,13 +336,10 @@ export function DownloadSection() {
         </article>
         <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted-foreground">Mac</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">Build on macOS</h3>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">Use the web desk</h3>
           <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            No hosted <code className="font-mono text-xs">.dmg</code> — Linux
-            cannot produce a usable one, so this button does not invent a file.
-            With a checkout on a Mac:{" "}
-            <code className="font-mono text-xs">npm run desktop:build:mac</code>.
-            Or use the browser desk below.
+            There is no hosted Mac installer yet. Use the browser desk — same
+            account as Windows.
           </p>
           <div className="mt-6">
             <Button
@@ -466,7 +463,7 @@ export function DeveloperApiSection() {
       id="developers"
       kicker="Developer API"
       title="Call the same desk over HTTPS"
-      lead="Mint a workspace key in API Console. Secrets show once; only SHA-256 hashes are stored. Session cookies are ignored — send a Bearer token."
+      lead="Mint a workspace key in API Console. Secrets show once. Session cookies are ignored — send a Bearer token."
     >
       <div className="product-frame overflow-hidden rounded-xl">
         <div className="border-b border-border px-5 py-3 text-xs text-muted-foreground">
@@ -481,8 +478,7 @@ export function DeveloperApiSection() {
       </div>
       <p className="mt-6 max-w-2xl text-sm leading-7 text-muted-foreground">
         List agents, queue jobs, read artifacts. Jobs do not auto-publish. Slack
-        still needs an approved <code className="font-mono text-xs">ask_user</code>{" "}
-        in the desk. Rate limit: 60 requests / minute / key. Open the Console
+        still needs your approval in the desk. Rate limit: 60 requests / minute / key. Open the Console
         after signup at <span className="text-foreground">/console</span>
         {" "}(same origin as the desk).
       </p>
@@ -496,12 +492,8 @@ const TRUST = [
     body: "CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients.",
   },
   {
-    title: "Keys stay server-side",
-    body: "LLM keys live in server env. Users never paste them. Plugin secrets are encrypted with SESSION_SECRET and never returned to the client.",
-  },
-  {
     title: "Approve before send",
-    body: "Gmail can create a draft. Slack chat.postMessage runs only after ask_user is done. Ads never buy media. WhatsApp never sends.",
+    body: "Gmail can create a draft. Slack posts only after you approve. Ads never buy media. WhatsApp never sends.",
   },
 ] as const;
 
@@ -514,7 +506,7 @@ export function TrustSection() {
       title="A registered company, trusted by 5,000+ clients"
       lead="CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients. Agents email, post, and work the browser — you approve what goes out."
     >
-      <ul className="grid gap-10 md:grid-cols-3">
+      <ul className="grid gap-10 md:grid-cols-2">
         {TRUST.map((item) => (
           <li key={item.title}>
             <h3 className="text-lg font-medium tracking-tight">{item.title}</h3>
@@ -541,7 +533,7 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. That one installer includes the cloud desk and Cinem AI Assistant — switch modes in the app. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. That one installer includes the cloud desk and Cinem AI Assistant — switch modes in the app. There is no hosted Mac installer yet — use the web desk.",
   },
   {
     q: "How does pricing work?",

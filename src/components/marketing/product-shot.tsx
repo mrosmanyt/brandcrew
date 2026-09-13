@@ -30,7 +30,7 @@ export function ProductShot() {
               Competitor scan of the Brand Kit site. Pause for approval.
             </div>
             <div className="mr-6 rounded-2xl border border-border px-3.5 py-2.5 text-sm leading-6 text-muted-foreground">
-              Plan ready. browse → write_artifact → ask_user.
+              Plan ready. Research, write a draft, then wait for your approval.
             </div>
           </div>
           <div className="border-t border-border px-5 py-3">

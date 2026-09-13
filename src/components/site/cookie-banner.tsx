@@ -49,9 +49,8 @@ export function CookieBanner() {
       <div className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-6 text-foreground">
           CINEM Pro uses an essential session cookie to keep you signed in.
-          A Whop checkout pixel loads on every page for membership attribution.
-          Optional analytics load only if you accept and an analytics id is
-          configured.{" "}
+          A checkout pixel may load for membership attribution. Optional
+          analytics load only if you accept.{" "}
           <Link href="/privacy" className="underline underline-offset-4">
             Privacy
           </Link>
