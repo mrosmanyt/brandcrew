@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
   async storeSession(session) {
     return ipcRenderer.invoke("cinem:store-session", session || {});
   },
+  onSession(handler) {
+    if (typeof handler !== "function") return () => undefined;
+    const listen = (_event, payload) => handler(payload);
+    ipcRenderer.on("cinem:session", listen);
+    return () => ipcRenderer.removeListener("cinem:session", listen);
+  },
   async httpGet(url, opts) {
     return ipcRenderer.invoke("cinem:http-get", {
       url,

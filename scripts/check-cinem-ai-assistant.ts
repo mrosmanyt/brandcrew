@@ -199,6 +199,8 @@ assert.match(cloud, /\/api\/auth\/connect/);
 assert.match(cloud, /openExternal/);
 assert.match(cloud, /adoptDesktopSession|cinemDesktop/);
 assert.match(cloud, /syncDesktopSession/);
+assert.match(cloud, /accessToken: session.accessToken/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/gate/CinemProGate.tsx", "utf8"), /onSession/);
 assert.match(cloud, /cache:\s*["']no-store["']/);
 assert.match(cloud, /formatAssistantSignInError|Sign in with CINEM Pro in the browser/);
 const usageRoute = readFileSync("src/server/api/cinem-ai-assistant/usage.ts", "utf8");

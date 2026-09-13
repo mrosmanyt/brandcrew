@@ -13,7 +13,7 @@ This is **electron-updater**, not the leftover Tauri updater. The first build th
 
 ## How to ship an update
 
-1. Bump **`package.json` `version`** and `electron/desk-shell.cjs` `DESKTOP_SHELL_VERSION` to the same semver (example: `0.3.3`). electron-updater compares these strings to `latest.yml`.
+1. Bump **`package.json` `version`** and `electron/desk-shell.cjs` `DESKTOP_SHELL_VERSION` to the same semver (example: `0.3.4`). electron-updater compares these strings to `latest.yml`.
 2. Commit, then tag **`cinem-pro-vX.Y.Z`** (or `vX.Y.Z`) matching that version and push the tag.
 3. **Actions → CINEM Pro Windows** builds NSIS + portable. The job uploads:
    - `CINEM-Pro-Setup.exe`
@@ -24,13 +24,13 @@ This is **electron-updater**, not the leftover Tauri updater. The first build th
 
 ```bash
 # After Actions (or npm run desktop:build:win on Windows):
-gh release create cinem-pro-v0.3.3 \
+gh release create cinem-pro-v0.3.4 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
   dist/desktop/latest.yml \
   dist/desktop/CINEM-Pro-Setup.exe.blockmap \
   --repo mrosmanyt/cinem-pro-releases \
-  --title "CINEM Pro 0.3.3" \
+  --title "CINEM Pro 0.3.4" \
   --notes "Unified Desk + AI Assistant."
 ```
 
@@ -46,6 +46,7 @@ Feed the installed app reads: GitHub provider `owner=mrosmanyt` / `repo=cinem-pr
 | `0.3.1` | First updater-enabled baseline. 0.3.1 Check now could show “not initialized” if the module loaded late — fixed in 0.3.2. |
 | `0.3.2` | Lazy-init + retry on Check now. Tag **cinem-pro-v0.3.2** and publish `latest.yml` so 0.3.1 installs can pick this up. |
 | `0.3.3` | Frameless dark caption (no white Windows strip) + sweet multi-language character voices / optional Fish Audio. |
+| `0.3.4` | Desk Google sign-in uses Sign in with CINEM Pro (system browser + connect claim). One account for Desk and AI Assistant. |
 
 ## Unsigned builds / SmartScreen
 

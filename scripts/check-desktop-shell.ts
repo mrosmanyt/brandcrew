@@ -21,6 +21,11 @@ const shell = require("../electron/desk-shell.cjs") as {
     opts?: { deskOrigin?: string; localOrigin?: string; assistantOrigin?: string },
   ) => boolean;
   isPaymentExternal: (url: string) => boolean;
+  isGoogleUserLoginUrl: (url: string) => boolean;
+  classifyDesktopNavigation: (
+    url: string,
+    opts?: { deskOrigin?: string; localOrigin?: string; assistantOrigin?: string },
+  ) => string;
   chromeUserAgent: (raw: string) => string;
   isIgnorableLoadError: (code: number) => boolean;
   deskPath: (pathName?: string) => string;
@@ -101,7 +106,37 @@ assert.equal(shell.isPaymentExternal("https://whop.com/checkout/xxx"), true);
 assert.equal(stay("https://checkout.stripe.com/c/pay/cs_test"), false);
 assert.equal(stay("https://whop.com/checkout/xxx"), false);
 assert.equal(stay("https://evil.example/phish"), false);
+const navOpts = {
+  deskOrigin: desk,
+  localOrigin: local,
+  assistantOrigin: "http://127.0.0.1:1420",
+};
+assert.equal(
+  shell.classifyDesktopNavigation("https://app.cinem.tech/api/auth/google?intent=login", navOpts),
+  "google-user-login",
+);
+assert.equal(
+  shell.classifyDesktopNavigation("https://app.cinem.tech/api/auth/google?format=json", navOpts),
+  "allow",
+);
+assert.equal(
+  shell.isGoogleUserLoginUrl(
+    "https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=" +
+      encodeURIComponent("https://app.cinem.tech/api/auth/google/callback"),
+  ),
+  true,
+);
+assert.equal(
+  shell.classifyDesktopNavigation(
+    "https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=" +
+      encodeURIComponent("https://app.cinem.tech/api/oauth/callback"),
+    navOpts,
+  ),
+  "allow",
+);
+assert.equal(shell.classifyDesktopNavigation("https://checkout.stripe.com/c/pay/cs_test", navOpts), "payment");
 console.log("ok: in-window OAuth vs external payments");
+console.log("ok: Desk Google user login is connect-flow, plugin OAuth stays in-window");
 
 const ua = shell.chromeUserAgent(
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.251 Electron/37.10.3 Safari/537.36",
@@ -141,7 +176,14 @@ assert.match(main, /Never apply userData APP_URL/);
 assert.match(main, /if \(useCloudDesk\(\)\)/);
 assert.match(main, /showOfflinePage/);
 assert.match(main, /showingOffline/);
+assert.match(main, /startDesktopConnect/);
+assert.match(main, /cinem:start-sign-in/);
+assert.match(main, /classifyDesktopNavigation/);
+assert.match(main, /UserAgentClientHint/);
 assert.match(main, /startsWith\("file:"\)/);
+assert.ok(existsSync("electron/sign-in.html"));
+assert.match(readFileSync("electron/sign-in.html", "utf8"), /Sign in with CINEM Pro/);
+assert.match(readFileSync("electron/preload.cjs", "utf8"), /startCinemSignIn/);
 assert.ok(existsSync("electron/offline.html"));
 assert.ok(existsSync("electron/desk-shell.cjs"));
 assert.ok(existsSync("electron/preload.cjs"));
@@ -192,6 +234,7 @@ for (const file of [
   "electron/chrome-preload.cjs",
   "electron/assistant-preload.cjs",
   "electron/offline.html",
+  "electron/sign-in.html",
   "electron/updater.cjs",
   "electron/updates.html",
   "electron/updates-preload.cjs",
@@ -245,6 +288,8 @@ assert.match(docs, /packaged/i);
 assert.match(docs, /app\.cinem\.tech/);
 assert.match(docs, /CINEM_DESK_MODE=local/);
 assert.match(docs, /disallowed_useragent|Chrome-like user agent|user agent/i);
+assert.match(docs, /Sign in with CINEM Pro/);
+assert.match(docs, /connect\/claim|connect\/desktop/);
 console.log("ok: auth-bridge documents cloud default + Google UA");
 
 console.log("Desktop shell checks passed.");

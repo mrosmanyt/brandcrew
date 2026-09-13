@@ -16,8 +16,7 @@ const {
   useCloudDesk: useCloudDeskFor,
   localOrigin: localOriginFor,
   resolveDeskOrigin,
-  isAllowedNavigation,
-  isPaymentExternal,
+  classifyDesktopNavigation,
   chromeUserAgent,
   isIgnorableLoadError,
   deskPath,
@@ -68,6 +67,9 @@ const ORIGIN = `http://${HOST}:${PORT}`;
 if (process.env.ELECTRON_DISABLE_SANDBOX === "1") {
   app.commandLine.appendSwitch("no-sandbox");
 }
+// Client Hints still advertise Electron after UA stripping; drop them so
+// in-window Marketplace Google OAuth is not blocked as an embedded WebView.
+app.commandLine.appendSwitch("disable-features", "UserAgentClientHint");
 if (process.platform === "linux") {
   app.disableHardwareAcceleration();
 }
@@ -88,6 +90,10 @@ function offlinePagePath() {
 
 function chromePagePath() {
   return path.join(__dirname, "chrome.html");
+}
+
+function signInPagePath() {
+  return path.join(__dirname, "sign-in.html");
 }
 
 function assistantMissingPath() {
@@ -290,24 +296,37 @@ function navigationOpts() {
   };
 }
 
-function handleExternalOrAllow(url) {
-  if (isAllowedNavigation(url, navigationOpts()) && !isPaymentExternal(url)) {
-    return { action: "allow" };
+function handleDesktopNavigation(url) {
+  const kind = classifyDesktopNavigation(url, navigationOpts());
+  if (kind === "google-user-login") {
+    void startDesktopConnect();
+    return { action: "deny" };
   }
+  if (kind === "allow") return { action: "allow" };
   void shell.openExternal(url);
   return { action: "deny" };
 }
 
 function attachNavigationGuards(contents) {
-  contents.setWindowOpenHandler(({ url }) => handleExternalOrAllow(url));
+  contents.setWindowOpenHandler(({ url }) => handleDesktopNavigation(url));
   contents.on("will-navigate", (event, url) => {
-    if (isAllowedNavigation(url, navigationOpts()) && !isPaymentExternal(url)) return;
+    const kind = classifyDesktopNavigation(url, navigationOpts());
+    if (kind === "allow") return;
     event.preventDefault();
+    if (kind === "google-user-login") {
+      void startDesktopConnect();
+      return;
+    }
     void shell.openExternal(url);
   });
   contents.on("will-redirect", (event, url) => {
-    if (isAllowedNavigation(url, navigationOpts()) && !isPaymentExternal(url)) return;
+    const kind = classifyDesktopNavigation(url, navigationOpts());
+    if (kind === "allow") return;
     event.preventDefault();
+    if (kind === "google-user-login") {
+      void startDesktopConnect();
+      return;
+    }
     void shell.openExternal(url);
   });
 }
@@ -351,6 +370,14 @@ function showOfflinePage(entry) {
   const file = offlinePagePath();
   if (!fs.existsSync(file)) return;
   entry.showingOffline = true;
+  void entry.view.webContents.loadFile(file);
+}
+
+function showSignInWaiting(entry) {
+  if (!entry || !entry.view || entry.view.webContents.isDestroyed()) return;
+  const file = signInPagePath();
+  if (!fs.existsSync(file)) return;
+  entry.showingOffline = false;
   void entry.view.webContents.loadFile(file);
 }
 
@@ -454,6 +481,7 @@ async function applyMode(entry, mode, deskPathName = "/desk") {
   if (next === "assistant") {
     await loadAssistant(entry);
   } else {
+    await restoreCloudSession({ forceRotate: false });
     await loadDesk(deskPathName, entry);
   }
 }
@@ -540,8 +568,15 @@ async function showMode(mode, deskPathName = "/desk") {
   if (existing) {
     if (existing.win.isMinimized()) existing.win.restore();
     existing.win.focus();
-    if (next === "desk" && deskPathName && deskPathName !== "/desk") {
-      await loadDesk(deskPathName, existing);
+    if (next === "desk") {
+      const hadCookie = await hasDeskSessionCookie();
+      await restoreCloudSession({ forceRotate: false });
+      const hasCookie = await hasDeskSessionCookie();
+      if (deskPathName && deskPathName !== "/desk") {
+        await loadDesk(deskPathName, existing);
+      } else if (!hadCookie && hasCookie) {
+        await loadDesk("/desk", existing);
+      }
     }
     return;
   }
@@ -606,10 +641,52 @@ async function setSessionCookieOnOrigin(origin, accessToken) {
   }
 }
 
-async function restoreCloudSession() {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function broadcastSession() {
+  const payload = { refreshToken: readStoredRefresh() };
+  for (const entry of shells.values()) {
+    if (entry.win && !entry.win.isDestroyed() && !entry.win.webContents.isDestroyed()) {
+      entry.win.webContents.send("cinem:session", payload);
+    }
+    if (entry.view && entry.view.webContents && !entry.view.webContents.isDestroyed()) {
+      entry.view.webContents.send("cinem:session", payload);
+    }
+  }
+}
+
+async function hasDeskSessionCookie() {
+  try {
+    const cookies = await session.defaultSession.cookies.get({
+      url: deskOrigin(),
+      name: SESSION_COOKIE,
+    });
+    return Boolean(cookies && cookies[0] && cookies[0].value);
+  } catch {
+    return false;
+  }
+}
+
+async function applyNativeSession({ accessToken, refreshToken, workspaceId, reloadDesk = true }) {
+  const origin = deskOrigin();
+  if (refreshToken) writeStoredRefresh(refreshToken);
+  if (accessToken) await setSessionCookieOnOrigin(origin, accessToken);
+  broadcastSession();
+  if (!reloadDesk) return;
+  const pathName = workspaceId ? `/desk/${workspaceId}` : "/desk";
+  const desk = findShellByMode("desk");
+  if (desk && desk.mode === "desk") {
+    await loadDesk(pathName, desk);
+  }
+}
+
+async function restoreCloudSession({ forceRotate = false } = {}) {
   const origin = deskOrigin();
   const refresh = readStoredRefresh();
-  if (!refresh) return;
+  if (!refresh) return false;
+  if (!forceRotate && (await hasDeskSessionCookie())) return true;
   try {
     const res = await fetchWithTimeout(
       `${origin}/api/auth/refresh`,
@@ -621,35 +698,143 @@ async function restoreCloudSession() {
       8000,
     );
     const data = await res.json();
-    if (!res.ok || !data.accessToken) return;
+    if (!res.ok || !data.accessToken) return false;
     if (data.refreshToken) writeStoredRefresh(data.refreshToken);
     await setSessionCookieOnOrigin(origin, data.accessToken);
+    broadcastSession();
+    return true;
   } catch (error) {
     console.error("CINEM desktop session restore failed", error);
+    return false;
   }
+}
+
+async function mintRefreshFromAccess(accessToken) {
+  if (!accessToken || readStoredRefresh()) return;
+  try {
+    const res = await fetchWithTimeout(
+      `${deskOrigin()}/api/auth/token`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-cinem-client": "desktop",
+          authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          tokens: true,
+          surface: "desktop",
+          deviceName: "CINEM Pro Desk",
+        }),
+      },
+      8000,
+    );
+    const data = await res.json();
+    if (!res.ok || !data.refreshToken) return;
+    writeStoredRefresh(data.refreshToken);
+    broadcastSession();
+  } catch (error) {
+    console.error("CINEM desktop token mint failed", error);
+  }
+}
+
+async function pollConnectClaim(nonce, origin) {
+  const base = String(origin || deskOrigin()).replace(/\/$/, "");
+  const deadline = Date.now() + 14 * 60 * 1000;
+  while (Date.now() < deadline) {
+    const res = await fetchWithTimeout(
+      `${base}/api/auth/connect/claim`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-cinem-client": "desktop" },
+        body: JSON.stringify({ nonce }),
+      },
+      8000,
+    );
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 410 || res.status === 409) {
+      throw new Error(data.error || "That sign-in link expired. Try again.");
+    }
+    if (data && data.accessToken) return data;
+    await sleep(2000);
+  }
+  throw new Error("That sign-in link expired. Try again.");
+}
+
+/** @type {Promise<{ ok: boolean, error?: string }> | null} */
+let connectInFlight = null;
+
+async function startDesktopConnect() {
+  if (connectInFlight) return connectInFlight;
+  connectInFlight = (async () => {
+    const origin = deskOrigin();
+    const desk = findShellByMode("desk") || firstShell();
+    if (desk && desk.mode === "desk") showSignInWaiting(desk);
+    try {
+      const res = await fetchWithTimeout(
+        `${origin}/api/auth/connect`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-cinem-client": "desktop" },
+          body: JSON.stringify({
+            surface: "desktop",
+            deviceName: "CINEM Pro Desk",
+            origin,
+          }),
+        },
+        8000,
+      );
+      const data = await res.json();
+      if (!res.ok || !data.nonce || !data.approveUrl) {
+        throw new Error(data.error || "Could not start CINEM Pro sign-in.");
+      }
+      await shell.openExternal(data.approveUrl);
+      const claimed = await pollConnectClaim(data.nonce, origin);
+      await applyNativeSession({
+        accessToken: claimed.accessToken,
+        refreshToken: claimed.refreshToken,
+        workspaceId: claimed.workspaceId,
+      });
+      return { ok: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("CINEM desktop connect failed", error);
+      return { ok: false, error: message };
+    } finally {
+      connectInFlight = null;
+    }
+  })();
+  return connectInFlight;
 }
 
 async function finishConnect(origin, nonce) {
   if (!nonce) return;
   const base = String(origin || deskOrigin()).replace(/\/$/, "");
-  const res = await fetchWithTimeout(
-    `${base}/api/auth/connect/claim`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-cinem-client": "desktop" },
-      body: JSON.stringify({ nonce }),
-    },
-    8000,
-  );
-  const data = await res.json();
-  if (!res.ok || !data.accessToken) {
-    console.error("CINEM desktop connect claim failed", data.error || res.status);
-    return;
+  try {
+    const res = await fetchWithTimeout(
+      `${base}/api/auth/connect/claim`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-cinem-client": "desktop" },
+        body: JSON.stringify({ nonce }),
+      },
+      8000,
+    );
+    const data = await res.json();
+    if (!res.ok || !data.accessToken) {
+      console.error("CINEM desktop connect claim failed", data.error || res.status);
+      return;
+    }
+    await applyNativeSession({
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      workspaceId: data.workspaceId,
+    });
+    const pathName = data.workspaceId ? `/desk/${data.workspaceId}` : "/desk";
+    await showMode("desk", pathName);
+  } catch (error) {
+    console.error("CINEM desktop connect claim failed", error);
   }
-  if (data.refreshToken) writeStoredRefresh(data.refreshToken);
-  await setSessionCookieOnOrigin(base, data.accessToken);
-  const pathName = data.workspaceId ? `/desk/${data.workspaceId}` : "/desk";
-  await showMode("desk", pathName);
 }
 
 function handleProtocolUrl(raw) {
@@ -770,9 +955,9 @@ function installAppMenu() {
           },
         },
         {
-          label: "Sign in with CINEM",
+          label: "Sign in with CINEM Pro",
           click: () => {
-            void showMode("desk", "/connect/desktop");
+            void startDesktopConnect();
           },
         },
         {
@@ -831,6 +1016,17 @@ function installAppMenu() {
     }
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
       callback(permission === "media" || permission === "mediaKeySystem" || permission === "clipboard-sanitized-write");
+    });
+    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      const headers = { ...details.requestHeaders };
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase().startsWith("sec-ch-ua")) delete headers[key];
+      }
+      callback({ requestHeaders: headers });
+    });
+    session.defaultSession.cookies.on("changed", (_event, cookie, _cause, removed) => {
+      if (!cookie || cookie.name !== SESSION_COOKIE || removed) return;
+      void mintRefreshFromAccess(cookie.value);
     });
     if (process.defaultApp) {
       if (process.argv.length >= 2) {
@@ -926,7 +1122,7 @@ function installAppMenu() {
         Accept: "application/json, text/xml, */*",
         "User-Agent":
           chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent()) ||
-          "CINEMPro/0.3.3",
+          "CINEMPro/0.3.4",
       };
       const sentKey =
         payload && typeof payload.worldMonitorKey === "string" ? payload.worldMonitorKey.trim() : "";
@@ -958,9 +1154,27 @@ function installAppMenu() {
     ipcMain.handle("cinem:get-session", () => ({
       refreshToken: readStoredRefresh(),
     }));
-    ipcMain.handle("cinem:store-session", (_event, payload) => {
-      const token = payload && typeof payload.refreshToken === "string" ? payload.refreshToken.trim() : "";
-      if (token) writeStoredRefresh(token);
+    ipcMain.handle("cinem:start-sign-in", () => startDesktopConnect());
+    ipcMain.handle("cinem:store-session", async (_event, payload) => {
+      const refresh =
+        payload && typeof payload.refreshToken === "string" ? payload.refreshToken.trim() : "";
+      const access =
+        payload && typeof payload.accessToken === "string" ? payload.accessToken.trim() : "";
+      if (refresh) writeStoredRefresh(refresh);
+      if (access) {
+        await setSessionCookieOnOrigin(deskOrigin(), access);
+        broadcastSession();
+        const desk = findShellByMode("desk");
+        if (desk && desk.mode === "desk") await loadDesk("/desk", desk);
+        return { ok: true };
+      }
+      if (refresh) {
+        const ok = await restoreCloudSession({ forceRotate: false });
+        if (ok) {
+          const desk = findShellByMode("desk");
+          if (desk && desk.mode === "desk") await loadDesk("/desk", desk);
+        }
+      }
       return { ok: true };
     });
     const guardedContents = new WeakSet();

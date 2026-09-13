@@ -137,6 +137,12 @@ assert.match(electron, /\/desk/);
 assert.match(electron, /setAsDefaultProtocolClient/);
 assert.match(electron, /did-fail-load/);
 assert.match(electron, /chromeUserAgent/);
+assert.match(electron, /startDesktopConnect/);
+assert.match(electron, /cinem:start-sign-in/);
+assert.match(deskShell, /isGoogleUserLoginUrl|google-user-login/);
+assert.match(readFileSync("src/components/auth/google-continue.tsx", "utf8"), /Sign in with CINEM Pro/);
+assert.match(readFileSync("src/components/auth/google-continue.tsx", "utf8"), /brandcrewDesktop/);
+assert.match(readFileSync("docs/auth-bridge.md", "utf8"), /Windows Desk sign-in/);
 assert.match(readFileSync("package.json", "utf8"), /"schemes": \[\s*"cinem-pro"/);
 console.log("ok: Electron cloud desk + protocol handler");
 

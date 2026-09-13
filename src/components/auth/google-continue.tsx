@@ -8,6 +8,63 @@ import {
   type GoogleLoginIntent,
 } from "@/lib/google-auth-shared";
 
+declare global {
+  interface Window {
+    brandcrewDesktop?: {
+      desktop?: boolean;
+      startCinemSignIn?: () => Promise<{ ok?: boolean; error?: string }>;
+    };
+  }
+}
+
+function isCinemDesktopShell() {
+  return Boolean(typeof window !== "undefined" && window.brandcrewDesktop?.desktop);
+}
+
+function DesktopCinemSignIn() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function start() {
+    const startSignIn = window.brandcrewDesktop?.startCinemSignIn;
+    if (!startSignIn) {
+      setError("Desktop sign-in is unavailable. Update CINEM Pro and try again.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await startSignIn();
+      if (result && result.ok === false) {
+        setError(result.error || "Could not start CINEM Pro sign-in.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start CINEM Pro sign-in.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-10 w-full gap-2 border-border bg-card text-foreground hover:bg-muted"
+        disabled={busy}
+        onClick={() => void start()}
+      >
+        {busy ? "Waiting for browser…" : "Sign in with CINEM Pro"}
+      </Button>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Opens your browser so Google can finish. Same account as AI Assistant — one
+        sign-in unlocks both.
+      </p>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
 function GoogleMark() {
   return (
     <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
@@ -46,8 +103,14 @@ export function GoogleContinueButton({
   invite?: string | null;
 }) {
   const [status, setStatus] = useState<GoogleStatus | null>(null);
+  const [desktop, setDesktop] = useState(false);
 
   useEffect(() => {
+    setDesktop(isCinemDesktopShell());
+  }, []);
+
+  useEffect(() => {
+    if (desktop) return;
     let cancelled = false;
     fetch("/api/auth/google?format=json")
       .then((res) => res.json())
@@ -71,7 +134,9 @@ export function GoogleContinueButton({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [desktop]);
+
+  if (desktop) return <DesktopCinemSignIn />;
 
   const href = googleLoginStartHref({ intent, next, invite });
 

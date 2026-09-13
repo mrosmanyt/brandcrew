@@ -7,7 +7,8 @@ interface CinemDesktopBridge {
   verifyShell?: (nonce: string) => Promise<boolean>;
   ping?: () => Promise<string>;
   getStoredSession?: () => Promise<{ refreshToken?: string } | null>;
-  storeSession?: (session: { refreshToken?: string }) => Promise<unknown>;
+  storeSession?: (session: { refreshToken?: string; accessToken?: string }) => Promise<unknown>;
+  onSession?: (handler: (payload: { refreshToken?: string }) => void) => () => void;
   setMode?: (mode: string) => void;
   openDesk?: () => void;
   openUpdates?: () => void;

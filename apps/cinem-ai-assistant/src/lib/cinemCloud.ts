@@ -61,7 +61,10 @@ export function writeSession(session: CinemSession) {
   else localStorage.removeItem(USER_KEY);
   const bridge = cinemDesktopBridge();
   if (bridge?.storeSession && session.refreshToken) {
-    void bridge.storeSession({ refreshToken: session.refreshToken });
+    void bridge.storeSession({
+      refreshToken: session.refreshToken,
+      accessToken: session.accessToken,
+    });
   }
 }
 
