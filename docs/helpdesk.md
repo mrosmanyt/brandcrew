@@ -4,7 +4,7 @@ Product helpdesk — not the `/support` Whop tip page.
 
 ## For customers
 
-The compact **Help** robot sits in the lower-right corner on the website desk, marketing pages, and the Windows Electron cloud desk (`app.cinem.tech`). It is hidden on `/admin`.
+The compact **CINEM Help** mark (night disc + cream brackets) sits in the lower-right corner on the website desk, marketing pages, and the Windows Electron cloud desk (`app.cinem.tech`). It is hidden on `/admin`.
 
 1. Open Help and describe the issue (“I’m seeing this when…”).
 2. CINEM Help acknowledges in English and forwards the thread to the team.
@@ -27,6 +27,6 @@ Sidebar **Support** and Settings → Support remain the one-time tip checkout. T
 
 - Prisma: `SupportThread`, `SupportMessage`, `SupportStaffPresence`
 - Migration: `prisma/migrations/20260913180000_helpdesk`
-- AI ack uses cheap `kind: "classify"` routing. If no model keys are live, a short English template is stored instead. User-facing copy never names third-party providers.
+- AI ack uses cheap `kind: "classify"` routing on the first message only, with a short timeout so the write always returns. Follow-up customer messages are stored without another LLM call. If no model keys are live or the ack budget expires, a short English template is stored instead. User-facing copy never names third-party providers.
 
 Apply the migration with the usual `prisma migrate deploy` / `vercel-build` path. No new env vars.

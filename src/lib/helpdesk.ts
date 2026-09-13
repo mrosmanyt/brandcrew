@@ -4,6 +4,7 @@ import { ClientError } from "@/lib/http";
 import { prisma } from "@/lib/db";
 import { llm } from "@/lib/llm";
 import {
+  HELPDESK_ACK_BUDGET_MS,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_MESSAGE_MAX,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/helpdesk-pure";
 
 export {
+  HELPDESK_ACK_BUDGET_MS,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_LIVE_AVAILABLE_ACK,
@@ -36,8 +38,10 @@ export {
   HELPDESK_MESSAGE_MAX,
   founderIsAvailable,
   helpdeskAckForLiveRequest,
+  helpdeskNetworkErrorMessage,
   helpdeskPreview,
   isHelpdeskAdminHiddenPath,
+  isHelpdeskRetryableNetworkError,
   isValidHelpdeskEmail,
   normalizeHelpdeskPageUrl,
   parseHelpdeskStatus,
@@ -170,26 +174,44 @@ export async function composeHelpdeskAck(input: {
     return { text: template, source: "template" };
   }
   try {
-    const result = await llm.complete({
-      mode: "draft",
-      kind: "classify",
-      messages: [
-        { role: "system", content: helpdeskAckSystemPrompt() },
-        {
-          role: "user",
-          content: helpdeskAckUserPrompt(input.message, {
-            founderAvailable: input.founderAvailable,
-            liveRequested: input.liveRequested,
-            pageUrl: input.pageUrl,
-          }),
-        },
-      ],
-    });
+    const result = await withAckBudget(
+      llm.complete({
+        mode: "draft",
+        kind: "classify",
+        messages: [
+          { role: "system", content: helpdeskAckSystemPrompt() },
+          {
+            role: "user",
+            content: helpdeskAckUserPrompt(input.message, {
+              founderAvailable: input.founderAvailable,
+              liveRequested: input.liveRequested,
+              pageUrl: input.pageUrl,
+            }),
+          },
+        ],
+      }),
+    );
     const text = sanitizeHelpdeskAck(result.text);
     return { text, source: "llm" };
   } catch {
     return { text: template, source: "template" };
   }
+}
+
+function withAckBudget<T>(promise: Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("HELPDESK_ACK_TIMEOUT")), HELPDESK_ACK_BUDGET_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 function assertMessageBody(raw: string): string {
@@ -228,7 +250,7 @@ export async function listViewerThreads(input: {
     orderBy: { lastMessageAt: "desc" },
     take: 20,
   });
-  return rows.map((row) => serializeThread(row));
+  return rows.map((row) => serializeThread(row, { includeGuestKey: Boolean(guestKey) }));
 }
 
 export async function getViewerThread(input: {
@@ -246,7 +268,7 @@ export async function getViewerThread(input: {
     (input.user && row.userId === input.user.id) ||
     (guestKey && row.guestKey && row.guestKey === guestKey);
   if (!owns) throw new ClientError("Help thread not found.", 404, "not_found");
-  return serializeThread(row);
+  return serializeThread(row, { includeGuestKey: Boolean(guestKey) });
 }
 
 export async function createHelpdeskThread(input: {
@@ -367,6 +389,7 @@ export async function appendViewerMessage(input: {
     shouldAutoAckUserMessage({
       liveActive: existing.liveActive,
       status: existing.status,
+      followUp: true,
     });
   if (shouldAck) {
     const ack = await composeHelpdeskAck({
@@ -408,7 +431,9 @@ export async function appendViewerMessage(input: {
     },
     include: { messages: { orderBy: { createdAt: "asc" } } },
   });
-  return serializeThread(updated);
+  return serializeThread(updated, {
+    includeGuestKey: Boolean(existing.guestKey) && !input.user,
+  });
 }
 
 export async function getHelpdeskInbox(input?: {

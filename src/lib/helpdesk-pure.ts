@@ -16,6 +16,8 @@ export const HELPDESK_ACK_MAX = 600;
 export const HELPDESK_PRESENCE_WINDOW_MS = 90_000;
 export const HELPDESK_PRESENCE_ID = "founder";
 export const HELPDESK_GUEST_STORAGE_KEY = "cinem_helpdesk_guest";
+/** Cap the first-message LLM ack so POST /api/support always returns. */
+export const HELPDESK_ACK_BUDGET_MS = 3500;
 
 export const HELPDESK_FALLBACK_ACK =
   "Thanks — I've forwarded this to the CINEM team. Someone will follow up in this thread. If you need a live conversation, tap Request live chat.";
@@ -82,10 +84,29 @@ export function founderIsAvailable(lastSeenAt?: Date | string | null, now = Date
 export function shouldAutoAckUserMessage(input: {
   liveActive: boolean;
   status: string;
+  /** Follow-ups already have an opening ack — do not block the write on another LLM call. */
+  followUp?: boolean;
 }): boolean {
+  if (input.followUp) return false;
   if (input.liveActive) return false;
   if (parseHelpdeskStatus(input.status) === "live") return false;
   return true;
+}
+
+export function helpdeskNetworkErrorMessage(error: unknown): string {
+  if (isHelpdeskRetryableNetworkError(error)) {
+    return "Could not reach CINEM Help. Check your connection and try again.";
+  }
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return "Could not send that.";
+}
+
+export function isHelpdeskRetryableNetworkError(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  return (
+    error instanceof Error &&
+    /failed to fetch|networkerror|load failed|network request failed/i.test(error.message)
+  );
 }
 
 export function nextStatusAfterUserMessage(input: {

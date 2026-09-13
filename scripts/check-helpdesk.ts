@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  HELPDESK_ACK_BUDGET_MS,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_LIVE_AVAILABLE_ACK,
@@ -22,11 +23,14 @@ import {
   parseHelpdeskStatus,
   sanitizeHelpdeskAck,
   shouldAutoAckUserMessage,
+  helpdeskNetworkErrorMessage,
+  isHelpdeskRetryableNetworkError,
 } from "../src/lib/helpdesk-pure";
 import { honeypotFilled } from "../src/lib/form-guard";
 import { HONEYPOT_FIELD } from "../src/lib/site";
 import { sensitiveRateLimit } from "../src/lib/rate-limit";
 
+assert.equal(HELPDESK_ACK_BUDGET_MS, 3500);
 assert.deepEqual([...HELPDESK_STATUSES], ["open", "live", "replied", "closed"]);
 assert.equal(parseHelpdeskStatus("replied"), "replied");
 assert.equal(parseHelpdeskStatus("nope"), "open");
@@ -45,6 +49,13 @@ assert.equal(founderIsAvailable(null), false);
 assert.equal(shouldAutoAckUserMessage({ liveActive: false, status: "open" }), true);
 assert.equal(shouldAutoAckUserMessage({ liveActive: true, status: "live" }), false);
 assert.equal(shouldAutoAckUserMessage({ liveActive: false, status: "live" }), false);
+assert.equal(shouldAutoAckUserMessage({ liveActive: false, status: "open", followUp: true }), false);
+assert.equal(
+  helpdeskNetworkErrorMessage(new TypeError("Failed to fetch")),
+  "Could not reach CINEM Help. Check your connection and try again.",
+);
+assert.equal(isHelpdeskRetryableNetworkError(new TypeError("Failed to fetch")), true);
+assert.equal(isHelpdeskRetryableNetworkError(new Error("Help thread not found.")), false);
 assert.equal(
   nextStatusAfterUserMessage({
     liveActive: false,
@@ -115,10 +126,25 @@ console.log("ok: /api/support and /api/admin/support are wired");
 const widget = readFileSync("src/components/help/help-widget.tsx", "utf8");
 assert.match(widget, /HelpWidgetHost/);
 assert.match(widget, /CINEM Help/);
+assert.match(widget, /CinemHelpMark/);
+assert.match(widget, /Open CINEM Help/);
+assert.match(widget, /credentials: "same-origin"/);
+assert.match(widget, /helpdeskNetworkErrorMessage/);
 assert.match(widget, /Request live chat/);
 assert.match(widget, /Support tip page/);
 assert.match(widget, /fixed right-4 bottom-5 z-40/);
 assert.doesNotMatch(widget, /OpenAI|Anthropic|Gemini|Claude/);
+assert.doesNotMatch(widget, /\bBot\b/);
+assert.doesNotMatch(widget, /from "lucide-react".*Bot/);
+const mark = readFileSync("src/components/help/help-mark.tsx", "utf8");
+assert.match(mark, /CINEM_NIGHT/);
+assert.match(mark, /CINEM_PAPER/);
+assert.match(mark, /CINEM_MARK_PATHS/);
+assert.match(mark, /data-cinem-help-mark/);
+const helpdesk = readFileSync("src/lib/helpdesk.ts", "utf8");
+assert.match(helpdesk, /HELPDESK_ACK_BUDGET_MS/);
+assert.match(helpdesk, /followUp: true/);
+assert.match(helpdesk, /HELPDESK_ACK_TIMEOUT/);
 const layout = readFileSync("src/app/layout.tsx", "utf8");
 assert.match(layout, /HelpWidgetHost/);
 const adminPage = readFileSync("src/app/admin/support/page.tsx", "utf8");
