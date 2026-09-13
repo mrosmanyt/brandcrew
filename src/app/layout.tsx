@@ -8,8 +8,11 @@ import { CookieBanner } from "@/components/site/cookie-banner";
 import { DESK_THEME_STORAGE_KEY } from "@/lib/desk-theme";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/constants";
 import {
-  CINEM_LOGO_SRC,
-  CINEM_MARK_SRC,
+  CINEM_APPLE_TOUCH_SRC,
+  CINEM_APP_ICON_SRC,
+  CINEM_FAVICON_ICO_SRC,
+  CINEM_FAVICON_PNG_SRC,
+  CINEM_FAVICON_VERSION,
   CINEM_OG_SRC,
 } from "@/lib/cinem-mark";
 import { COMPANY_SITE, siteOrigin } from "@/lib/site";
@@ -65,12 +68,24 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
   icons: {
     icon: [
-      { url: CINEM_MARK_SRC, type: "image/svg+xml" },
-      { url: CINEM_LOGO_SRC, type: "image/png", sizes: "1024x1024" },
-      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon.ico", sizes: "any" },
+      {
+        url: `${CINEM_APP_ICON_SRC}?v=${CINEM_FAVICON_VERSION}`,
+        type: "image/svg+xml",
+      },
+      {
+        url: `${CINEM_FAVICON_PNG_SRC}?v=${CINEM_FAVICON_VERSION}`,
+        type: "image/png",
+        sizes: "32x32",
+      },
+      { url: `${CINEM_FAVICON_ICO_SRC}?v=${CINEM_FAVICON_VERSION}`, sizes: "any" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [
+      {
+        url: `${CINEM_APPLE_TOUCH_SRC}?v=${CINEM_FAVICON_VERSION}`,
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
   },
 };
 
