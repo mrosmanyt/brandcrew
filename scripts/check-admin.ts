@@ -170,8 +170,13 @@ async function main() {
   assert.match(backupApi, /await requireAdmin\(\)/);
   assert.match(backupApi, /buildAdminBackup/);
   assert.match(backupApi, /Content-Disposition/);
+  const helpdeskAdmin = readFileSync("src/server/api/admin/support.ts", "utf8");
+  assert.ok([...helpdeskAdmin.matchAll(/await requireAdmin\(\)/g)].length >= 2);
+  const helpdeskThreadAdmin = readFileSync("src/server/api/admin/support-thread.ts", "utf8");
+  assert.ok([...helpdeskThreadAdmin.matchAll(/await requireAdmin\(\)/g)].length >= 2);
   const router = readFileSync("src/server/api/router.ts", "utf8");
   assert.match(router, /\["api", "admin", "backup"\]/);
+  assert.match(router, /\["api", "admin", "support"\]/);
   function walkPages(dir: string, acc: string[] = []): string[] {
     for (const name of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, name.name);
@@ -198,6 +203,7 @@ async function main() {
   assert.match(opsDoc, /ADMIN_EMAILS/);
   assert.match(opsDoc, /mrosmanyt@gmail.com/);
   assert.match(opsDoc, /\/api\/admin\/backup/);
+  assert.match(opsDoc, /SupportThread|helpdesk|Help widget/);
   assert.match(opsDoc, /Point-in-time copy|not a restore|Live truth/i);
   assert.match(opsDoc, /app\.cinem\.tech/);
   assert.match(opsDoc, /forbidden\(\)/);
@@ -222,6 +228,8 @@ async function smokeSections() {
     assert.ok(Array.isArray(overview.approvals));
     assert.equal(typeof overview.billing.supportPaid, "number");
     assert.equal(typeof overview.billing.webhooksLast7d, "number");
+    assert.equal(typeof overview.helpdesk.open, "number");
+    assert.equal(typeof overview.helpdesk.live, "number");
 
     const customers = await getAdminCustomers({ q: "nobody-at-cinem.invalid" });
     assert.equal(customers.section, "customers");

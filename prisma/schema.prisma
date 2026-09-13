@@ -29,6 +29,7 @@ model User {
   refreshTokens AuthRefreshToken[]
   supports      BrandSupport[]
   productUsage  ProductUsage[]
+  helpThreads   SupportThread[]
 
   @@index([supporter])
 }
@@ -81,6 +82,7 @@ model Workspace {
   sessionReplays     SessionReplay[]
   memories           WorkspaceMemory[]
   supports           BrandSupport[]
+  helpThreads        SupportThread[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -623,4 +625,51 @@ model BrandSupport {
   @@index([userId])
   @@index([workspaceId])
   @@index([status])
+}
+
+/// Product helpdesk thread (Help widget → Admin HQ). Not Whop / BrandSupport tips.
+model SupportThread {
+  id            String           @id @default(cuid())
+  userId        String?
+  email         String           @default("")
+  name          String           @default("")
+  workspaceId   String?
+  pageUrl       String           @default("")
+  preview       String           @default("")
+  /// open | live | replied | closed
+  status        String           @default("open")
+  liveRequested Boolean          @default(false)
+  liveActive    Boolean          @default(false)
+  /// Opaque key for anonymous marketing-page threads. Empty when signed-in.
+  guestKey      String           @default("")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  lastMessageAt DateTime         @default(now())
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace     Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  messages      SupportMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([status, lastMessageAt])
+  @@index([email])
+  @@index([guestKey])
+}
+
+model SupportMessage {
+  id          String        @id @default(cuid())
+  threadId    String
+  role        String
+  body        String
+  authorEmail String        @default("")
+  createdAt   DateTime      @default(now())
+  thread      SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+}
+
+/// Singleton row (`id = founder`) — Admin HQ heartbeat for live-chat availability.
+model SupportStaffPresence {
+  id         String   @id
+  lastSeenAt DateTime @default(now())
+  actorEmail String   @default("")
 }

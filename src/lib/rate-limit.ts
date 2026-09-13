@@ -104,6 +104,15 @@ export function sensitiveRateLimit(
   if (path === "api/billing/support" && verb === "POST") {
     return { key: "support", limit: 8, windowMs: 10 * 60 * 1000 };
   }
+  if (path === "api/support" && verb === "POST") {
+    return { key: "helpdesk-create", limit: 8, windowMs: 10 * 60 * 1000 };
+  }
+  if (path.startsWith("api/support/") && verb === "POST") {
+    return { key: "helpdesk-write", limit: 20, windowMs: 10 * 60 * 1000 };
+  }
+  if (path === "api/support" || path.startsWith("api/support/")) {
+    return { key: "helpdesk", limit: 60, windowMs: 60 * 1000 };
+  }
   if (path === "api/cinem-ai-assistant/usage") {
     return { key: "assistant-usage", limit: 60, windowMs: 60 * 1000 };
   }

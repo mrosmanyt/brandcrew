@@ -5,6 +5,11 @@ import { isNativeCorsPath, nativeCorsPreflight, withNativeCors } from "@/lib/aut
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
 import * as adminRoot from "./admin/root";
 import * as adminBackup from "./admin/backup";
+import * as adminSupport from "./admin/support";
+import * as adminSupportThread from "./admin/support-thread";
+import * as supportRoot from "./support/root";
+import * as supportPresence from "./support/presence";
+import * as supportThread from "./support/thread";
 import * as authGoogle from "./auth/google";
 import * as authGoogleCallback from "./auth/google-callback";
 import * as authLogin from "./auth/login";
@@ -118,6 +123,14 @@ function asHandlers(mod: object): HandlerModule {
 export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "admin"], handlers: asHandlers(adminRoot) },
   { pattern: ["api", "admin", "backup"], handlers: asHandlers(adminBackup) },
+  { pattern: ["api", "admin", "support"], handlers: asHandlers(adminSupport) },
+  {
+    pattern: ["api", "admin", "support", ":threadId"],
+    handlers: asHandlers(adminSupportThread),
+  },
+  { pattern: ["api", "support"], handlers: asHandlers(supportRoot) },
+  { pattern: ["api", "support", "presence"], handlers: asHandlers(supportPresence) },
+  { pattern: ["api", "support", ":threadId"], handlers: asHandlers(supportThread) },
   { pattern: ["api", "downloads", "extension"], handlers: asHandlers(downloadsExtension) },
   {
     pattern: ["api", "downloads", "cinem-ai-assistant"],
