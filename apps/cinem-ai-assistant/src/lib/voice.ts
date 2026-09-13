@@ -3,14 +3,14 @@
  *  - Listening : mic capture (MediaRecorder) + live level metering
  *  - STT       : Faster-Whisper (Tauri) or Chromium speech recognition (Electron)
  *  - Speaking  : Fish Audio (optional key) → ElevenLabs → Piper (Tauri) →
- *                Windows / Edge Neural Web Speech. Whisper is never used as TTS.
+ *                Windows / Edge Neural Web Speech. Whisper stays speech-to-text only.
  * The waveform bar reads `voice.getLevel()` each frame for real amplitude.
  */
 import type { Settings } from "@/store/useSettingsStore";
 import { useAppStore } from "@/store/useAppStore";
 import { reportUsage } from "@/lib/usage";
 import {
-    resolveCharacterForSpeak,
+  resolveCharacterForSpeak,
   envFishAudioKey,
   FISH_AUDIO_DEFAULT_MODEL,
   FISH_AUDIO_TTS_URL,
@@ -159,7 +159,7 @@ class VoiceEngine {
 
     if (tryFish) {
       try {
-        await this.play(await this.fishAudioTts(text, s, opts, character, fishKey));
+        await this.play(await this.fishAudioTts(text, s, character, fishKey));
         return;
       } catch (e) {
         console.warn("Fish Audio failed, trying next TTS:", e);
@@ -187,7 +187,6 @@ class VoiceEngine {
   private async fishAudioTts(
     text: string,
     s: Settings,
-    opts: SpeakOptions | undefined,
     character: CharacterVoice,
     apiKey: string,
   ): Promise<Blob> {

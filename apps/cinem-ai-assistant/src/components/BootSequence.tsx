@@ -11,9 +11,8 @@ import { sfx } from "@/lib/sfx";
 const BOOT_KEY = "cinem-ai-assistant-booted"; // once per app session
 
 /**
- * Cinem AI Assistant OS boot sequence — 3 seconds of pure JARVIS.
- * Scanline sweep, all 15 agents registering one-by-one with ticks,
- * progress readout, then "All systems nominal." in SAM's voice.
+ * Cinem AI Assistant boot sequence — short register sweep, then a sweet
+ * welcome in the user's language (English default).
  */
 export default function BootSequence() {
   const [show, setShow] = useState(() => !sessionStorage.getItem(BOOT_KEY));
@@ -110,7 +109,7 @@ export default function BootSequence() {
           <p className="mt-2 font-display text-[0.55rem] tracking-[0.3em] text-neon-dim">
             {progress < 100
               ? `REGISTERING AGENTS… ${registered}/${AGENTS.length}`
-              : "ALL SYSTEMS NOMINAL"}
+              : "READY WHEN YOU ARE"}
           </p>
         </motion.div>
       )}

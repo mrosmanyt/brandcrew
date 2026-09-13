@@ -221,8 +221,7 @@ export function envFishAudioKey(): string {
     if (fromBridge && fromBridge.trim()) return fromBridge.trim();
   }
   try {
-    const env = (import.meta as { env?: Record<string, string | undefined> }).env;
-    return String(env?.VITE_FISH_AUDIO_API_KEY || env?.VITE_FISH_API_KEY || "").trim();
+    return String(import.meta.env.VITE_FISH_AUDIO_API_KEY || import.meta.env.VITE_FISH_API_KEY || "").trim();
   } catch {
     return "";
   }

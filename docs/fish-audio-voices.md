@@ -1,6 +1,6 @@
 # Fish Audio voices (Cinem AI Assistant)
 
-CINEM Pro can speak with **Fish Audio** when you paste an API key. No key is shipped in the app. Do **not** invent keys or commit them.
+CINEM Pro can speak with **Fish Audio** when you paste an API key. No key is shipped in the app. Do not invent keys or commit them.
 
 Without a key, the assistant uses **Windows / Edge Neural** voices (Microsoft Aria Online, Jenny, …) — a sweet, clear English default. The old harsh “all systems nominal / our system is online” clip is gone.
 

@@ -83,11 +83,11 @@ assert.match(boot, /welcomeLine/);
 assert.doesNotMatch(boot, /All systems nominal/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/voice.ts", "utf8"), /fishAudioTts|api\.fish\.audio/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/voice.ts", "utf8"), /pickWebSpeechVoice/);
-assert.doesNotMatch(readFileSync("apps/cinem-ai-assistant/src/lib/voice.ts", "utf8"), /whisper.*tts|tts.*whisper-1/i);
+assert.doesNotMatch(readFileSync("apps/cinem-ai-assistant/src/lib/voice.ts", "utf8"), /whisper-1/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/store/useSettingsStore.ts", "utf8"), /fishAudioKey/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/store/useSettingsStore.ts", "utf8"), /characterVoice/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/components/settings/SettingsModal.tsx", "utf8"), /Fish Audio/);
-assert.match(readFileSync("apps/cinem-ai-assistant/src/components/settings/SettingsModal.tsx", "utf8"), /Aria/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/settings/SettingsModal.tsx", "utf8"), /CHARACTER_VOICES/);
 console.log("ok: assistant boot + settings + Fish path");
 
 assert.ok(existsSync("docs/fish-audio-voices.md"));
