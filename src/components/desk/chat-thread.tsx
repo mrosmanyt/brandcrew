@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { ArtifactExportButtons } from "@/components/desk/artifact-export";
 import { MarkdownBody } from "@/components/desk/markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -172,7 +173,38 @@ export function ThreadDraftCard({
           <Button size="xs" variant="outline" onClick={onRegenerate} disabled={busy}>
             Regenerate
           </Button>
+          <ArtifactExportButtons artifact={artifact} size="xs" />
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function ChromeStepCard({
+  prompt,
+  busy,
+  onApprove,
+  canApprove = true,
+}: {
+  prompt?: string;
+  busy?: boolean;
+  onApprove: () => void;
+  canApprove?: boolean;
+}) {
+  return (
+    <div className="flex justify-start pl-8">
+      <div className="w-full max-w-[min(40rem,86%)] rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2.5">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Needs you</p>
+        <p className="mt-1 text-sm leading-5">
+          {prompt || "Approve this Chrome step to continue."}
+        </p>
+        {canApprove ? (
+          <Button className="mt-2" size="xs" disabled={busy} onClick={onApprove}>
+            Approve this Chrome step
+          </Button>
+        ) : (
+          <p className="mt-2 text-[11px] text-muted-foreground">{APPROVER_REQUIRED_HINT}</p>
+        )}
       </div>
     </div>
   );

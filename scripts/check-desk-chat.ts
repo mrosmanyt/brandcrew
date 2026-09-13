@@ -414,7 +414,16 @@ assert.match(avatarUi, /defaultAgentAvatarKind/);
 assert.doesNotMatch(avatarUi, /case "cloud"/);
 const chatUi = readFileSync("src/components/desk/chat-thread.tsx", "utf8");
 assert.match(chatUi, /AgentAvatar/);
+assert.match(chatUi, /ArtifactExportButtons/);
+assert.match(chatUi, /ChromeStepCard/);
 assert.doesNotMatch(chatUi, /Cloud/);
+const missionUi = readFileSync("src/components/desk/mission-control.tsx", "utf8");
+assert.doesNotMatch(missionUi, /LiveResults/);
+assert.doesNotMatch(missionUi, /Resize live results/);
+assert.match(missionUi, /ThreadDraftCard/);
+assert.match(missionUi, /ChromeStepCard/);
+assert.match(missionUi, /max-w-4xl/);
+console.log("ok: Mission Control chat owns artifacts and Chrome steps; no live-results rail");
 for (const file of [
   "src/components/desk/sidebar.tsx",
   "src/components/desk/companion-gallery.tsx",

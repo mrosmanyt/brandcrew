@@ -20,6 +20,7 @@ import { ChatComposer } from "@/components/desk/chat-composer";
 import { JobStartingStatus } from "@/components/desk/job-starting-status";
 import {
   ChatBubble,
+  ChromeStepCard,
   ClarificationCard,
   ProgressCard,
   ThreadDraftCard,
@@ -30,18 +31,11 @@ import {
   useWorkspaceJobsPoll,
 } from "@/components/desk/use-workspace-jobs-poll";
 import { DESK_JOB_POLL_ACTIVE_MS, workspaceJobsAreLive } from "@/lib/desk-poll";
-import { LiveResults } from "@/components/desk/live-results";
-import {
-  ResizeHandle,
-  usePersistedCollapsed,
-  usePersistedPaneWidth,
-} from "@/components/desk/resize-handle";
 import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deskChatGlowClass, deskChatIsEmpty, planModeName } from "@/lib/agent-modes";
 import { formatComposerUsageLine } from "@/lib/credits";
-import { DESK_RIGHT_PANE } from "@/lib/desk-layout";
 import {
   normalizeModelRouting,
   type LlmRoutingPreference,
@@ -150,15 +144,6 @@ export function MissionControl({
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
-  const [rightWidth, setRightWidth] = usePersistedPaneWidth(
-    DESK_RIGHT_PANE.storageKey,
-    DESK_RIGHT_PANE.defaultWidth,
-    DESK_RIGHT_PANE.minWidth,
-    DESK_RIGHT_PANE.maxWidth,
-  );
-  const [rightCollapsed, setRightCollapsed] = usePersistedCollapsed(
-    DESK_RIGHT_PANE.collapsedKey,
-  );
   const urlAgentId = searchParams.get("agentId") || initialAgentId;
   const agentRosterKey = initialAgents.map((agent) => agent.id).join(",");
 
@@ -663,8 +648,7 @@ export function MissionControl({
           }}
         />
       ) : null}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-b border-border lg:min-w-[18rem] lg:border-b-0">
+      <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             aria-hidden
             className={cn(
@@ -744,7 +728,7 @@ export function MissionControl({
           <div ref={chatRef} className="relative z-10 min-h-0 flex-1 overflow-y-auto">
             <div
               className={cn(
-                "mx-auto flex min-h-full w-full max-w-3xl flex-col gap-2.5 px-4 py-3",
+                "mx-auto flex min-h-full w-full max-w-4xl flex-col gap-2.5 px-4 py-3",
                 thread.length || latestDraft ? "justify-end" : "justify-center",
               )}
             >
@@ -800,16 +784,17 @@ export function MissionControl({
                   <ProgressCard key={item.id} line={item.line} />
                 ),
               )}
-              {latestDraft ? (
+              {artifacts.map((artifact) => (
                 <ThreadDraftCard
-                  artifact={latestDraft}
+                  key={artifact.id}
+                  artifact={artifact}
                   busy={busy}
                   canApprove={canApprove}
-                  onApprove={() => approve(latestDraft.id)}
-                  onReject={() => reject(latestDraft.id)}
+                  onApprove={() => approve(artifact.id)}
+                  onReject={() => reject(artifact.id)}
                   onRegenerate={() => startJob("regenerate")}
                 />
-              ) : null}
+              ))}
               {selectedJob?.status === "needs_you" &&
               selectedJob.askKind === "clarify" &&
               !selectedJob.userAnswer ? (
@@ -818,6 +803,19 @@ export function MissionControl({
                   choices={selectedJob.askChoices}
                   busy={busy}
                   onAnswer={(answer) => void answerClarification(selectedJob.id, answer)}
+                />
+              ) : null}
+              {selectedJob?.status === "needs_you" &&
+              selectedJob.askKind !== "clarify" &&
+              !selectedJob.userAnswer &&
+              artifacts.every(
+                (artifact) => artifact.status === "approved" || artifact.status === "rejected",
+              ) ? (
+                <ChromeStepCard
+                  prompt={selectedJob.askPrompt}
+                  busy={busy}
+                  canApprove={canApprove}
+                  onApprove={() => void answerClarification(selectedJob.id, "Yes")}
                 />
               ) : null}
               {workingStatus ? (
@@ -879,38 +877,7 @@ export function MissionControl({
             onAutoApproveSafeApplied={(next) => setAutoApproveSafe(next)}
           />
           </div>
-        </section>
-
-        <ResizeHandle
-          label="Resize live results"
-          className="hidden lg:flex"
-          onDelta={(dx) => {
-            if (rightCollapsed) {
-              setRightCollapsed(false);
-              return;
-            }
-            setRightWidth((width) => width + dx);
-          }}
-          onDoubleClick={() => setRightCollapsed((value) => !value)}
-        />
-        <LiveResults
-          job={selectedJob}
-          artifacts={artifacts}
-          busy={busy}
-          onApprove={approve}
-          onReject={reject}
-          onReply={
-            selectedJob
-              ? (answer) => void answerClarification(selectedJob.id, answer)
-              : undefined
-          }
-          width={rightWidth}
-          collapsed={rightCollapsed}
-          onExpand={() => setRightCollapsed(false)}
-          onCollapse={() => setRightCollapsed(true)}
-          canApprove={canApprove}
-        />
-      </div>
+      </section>
 
       <BudgetStopDialog
         open={budgetOpen}
