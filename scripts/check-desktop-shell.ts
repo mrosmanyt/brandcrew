@@ -189,6 +189,7 @@ assert.ok(pkg.build.extraResources?.some((item: { to?: string }) => item.to === 
 assert.match(JSON.stringify(pkg.build.nsis || {}), /installer\.nsh/);
 assert.ok(existsSync("electron/chrome.html"));
 assert.ok(existsSync("electron/modes.cjs"));
+assert.ok(existsSync("electron/resources/installer.nsh"));
 assert.ok(existsSync("scripts/build-assistant-renderer.mjs"));
 assert.ok(existsSync(".github/workflows/desktop-windows.yml"));
 assert.equal(pkg.version, shell.DESKTOP_SHELL_VERSION);

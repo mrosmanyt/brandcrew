@@ -184,7 +184,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "CINEM Pro",
       "uninstallDisplayName": "CINEM Pro",
-      "include": "electron/installer.nsh",
+      "include": "installer.nsh",
       "artifactName": "CINEM-Pro-Setup.${ext}"
     },
     "portable": {
