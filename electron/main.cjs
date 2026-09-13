@@ -94,6 +94,19 @@ function assistantMissingPath() {
 }
 
 function iconPath() {
+  const names =
+    process.platform === "win32"
+      ? ["icon.ico", "installer/icon.ico", "icon.png"]
+      : ["icon.png", "icon.ico"];
+  const roots = packaged()
+    ? [path.join(process.resourcesPath, "brandcrew"), path.join(process.resourcesPath, "brandcrew", "installer")]
+    : [path.join(projectRoot(), "electron", "resources"), path.join(projectRoot(), "electron", "resources", "installer")];
+  for (const root of roots) {
+    for (const name of names) {
+      const candidate = path.join(root, name);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
   return packaged()
     ? path.join(process.resourcesPath, "brandcrew", "icon.png")
     : path.join(projectRoot(), "electron", "resources", "icon.png");
@@ -474,6 +487,13 @@ function createShellWindow(mode = "desk") {
       userAgent: ua,
     },
   });
+  if (fs.existsSync(icon) && typeof win.setIcon === "function") {
+    try {
+      win.setIcon(icon);
+    } catch {
+      /* older Electron / non-Windows */
+    }
+  }
 
   const entry = {
     win,
@@ -808,17 +828,21 @@ function installAppMenu() {
       app.setAsDefaultProtocolClient(PROTOCOL);
     }
     installAppMenu();
-    startAutoUpdates({
-      extraContents() {
-        const list = [];
-        for (const entry of shells.values()) {
-          if (entry.view && entry.view.webContents && !entry.view.webContents.isDestroyed()) {
-            list.push(entry.view.webContents);
+    try {
+      startAutoUpdates({
+        extraContents() {
+          const list = [];
+          for (const entry of shells.values()) {
+            if (entry.view && entry.view.webContents && !entry.view.webContents.isDestroyed()) {
+              list.push(entry.view.webContents);
+            }
           }
-        }
-        return list;
-      },
-    });
+          return list;
+        },
+      });
+    } catch (error) {
+      console.error("CINEM Pro auto-update bootstrap failed", error);
+    }
     ipcMain.on("cinem:retry-desk", (event) => {
       const entry = shellFromContents(event.sender) || firstShell();
       void applyMode(entry, "desk");
@@ -846,6 +870,54 @@ function installAppMenu() {
       if (!isHttpUrl(url)) return false;
       await shell.openExternal(String(url));
       return true;
+    });
+    ipcMain.handle("cinem:http-get", async (_event, payload) => {
+      const raw = payload && typeof payload.url === "string" ? payload.url : "";
+      if (!isHttpUrl(raw)) return { ok: false, status: 0, text: "blocked" };
+      let parsed;
+      try {
+        parsed = new URL(raw);
+      } catch {
+        return { ok: false, status: 0, text: "blocked" };
+      }
+      const host = parsed.hostname.toLowerCase();
+      const allowed =
+        host === "api.worldmonitor.app" ||
+        host === "www.worldmonitor.app" ||
+        host === "worldmonitor.app" ||
+        host === "news.google.com" ||
+        host === "hn.algolia.com";
+      if (!allowed) return { ok: false, status: 0, text: "blocked host" };
+      const headers = {
+        Accept: "application/json, text/xml, */*",
+        "User-Agent":
+          chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent()) ||
+          "CINEMPro/0.3.2",
+      };
+      const sentKey =
+        payload && typeof payload.worldMonitorKey === "string" ? payload.worldMonitorKey.trim() : "";
+      const envKey = String(
+        process.env.WORLD_MONITOR_API_KEY || process.env.WORLDMONITOR_API_KEY || "",
+      ).trim();
+      const key = sentKey || envKey;
+      if (key && host.endsWith("worldmonitor.app")) {
+        headers["X-WorldMonitor-Key"] = key;
+      }
+      try {
+        const res = await fetchWithTimeout(
+          raw,
+          { method: "GET", headers },
+          12_000,
+        );
+        const text = await res.text();
+        return { ok: res.ok, status: res.status, text };
+      } catch (error) {
+        return {
+          ok: false,
+          status: 0,
+          text: error instanceof Error ? error.message : String(error),
+        };
+      }
     });
     ipcMain.handle("cinem:verify-shell", (_event, nonce) => verifyShellNonce(nonce));
     ipcMain.handle("cinem:ping", () => ASSISTANT_PING);

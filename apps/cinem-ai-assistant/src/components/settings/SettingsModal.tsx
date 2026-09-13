@@ -112,6 +112,7 @@ function ApiTab() {
       geminiKey: gemini.trim(),
       ollamaUrl: ollama.trim(),
       ollamaModel: ollamaModel.trim() || "llama3.2",
+      worldMonitorKey: s.worldMonitorKey.trim(),
     });
     notify("success", "API configuration saved.");
   };
@@ -143,6 +144,18 @@ function ApiTab() {
           value={s.youtubeKey}
           onChange={(e) => void s.update({ youtubeKey: e.target.value.trim() })}
           placeholder="AIza…"
+        />
+      </Field>
+
+      <Field
+        label="World Monitor API Key"
+        hint="Optional wm_… key from worldmonitor.app (Settings / API on their site). Official digest for Today Headlines + World Monitor — Live. Without it, CINEM Pro still shows a public news feed."
+      >
+        <TextInput
+          type="password"
+          value={s.worldMonitorKey}
+          onChange={(e) => void s.update({ worldMonitorKey: e.target.value.trim() })}
+          placeholder="wm_…"
         />
       </Field>
 
@@ -467,6 +480,14 @@ function VoiceTab() {
 
   return (
     <div className="space-y-4">
+      <div className="border border-neon/15 bg-neon/[0.04] px-3 py-2.5">
+        <p className="text-sm font-semibold text-ice/90">Microphone</p>
+        <p className="mt-1 text-xs leading-relaxed text-neon-dim">
+          Tap the mic in Chat (or the bar below) to talk. Windows will ask for microphone access
+          the first time — allow it for CINEM Pro. Speech uses this device’s built-in recognition
+          in the unified app; no extra install.
+        </p>
+      </div>
       <Field label="STT — Faster-Whisper Model" hint="Larger models = better accuracy, slower. Requires `pip install faster-whisper`.">
         <Select
           value={s.whisperModel}

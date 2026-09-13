@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
   async storeSession(session) {
     return ipcRenderer.invoke("cinem:store-session", session || {});
   },
+  async httpGet(url, opts) {
+    return ipcRenderer.invoke("cinem:http-get", {
+      url,
+      worldMonitorKey: opts && opts.worldMonitorKey ? String(opts.worldMonitorKey) : "",
+    });
+  },
   setMode(mode) {
     ipcRenderer.send("cinem:set-mode", mode);
   },

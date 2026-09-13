@@ -92,6 +92,7 @@ assert.equal(stay("https://console.cinem.tech/"), true);
 assert.equal(stay("https://slack.com/oauth/v2/authorize"), true);
 assert.equal(stay("https://www.notion.so/"), true);
 assert.equal(stay("https://app.composio.dev/connect"), true);
+assert.equal(stay("https://www.worldmonitor.app/"), true);
 assert.equal(stay("http://127.0.0.1:43180/desk"), true);
 assert.equal(stay("http://127.0.0.1:1420/"), true);
 assert.equal(stay("about:blank"), true);
@@ -176,6 +177,8 @@ assert.equal(pkg.scripts["test:desktop-shell"], "tsx scripts/check-desktop-shell
 assert.equal(pkg.scripts["test:desktop-updater"], "tsx scripts/check-desktop-updater.ts");
 assert.match(main, /startAutoUpdates/);
 assert.match(main, /openUpdatesWindow/);
+assert.match(main, /icon\.ico/);
+assert.match(main, /cinem:http-get/);
 for (const file of [
   "electron/main.cjs",
   "electron/preload.cjs",

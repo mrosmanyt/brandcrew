@@ -11,6 +11,10 @@ interface CinemDesktopBridge {
   setMode?: (mode: string) => void;
   openDesk?: () => void;
   openUpdates?: () => void;
+  httpGet?: (
+    url: string,
+    opts?: { worldMonitorKey?: string },
+  ) => Promise<{ ok: boolean; status: number; text: string }>;
   updates?: {
     getState: () => Promise<Record<string, unknown>>;
     check: (opts?: { auto?: boolean; silent?: boolean }) => Promise<Record<string, unknown>>;

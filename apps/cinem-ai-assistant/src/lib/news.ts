@@ -1,13 +1,17 @@
 /**
- * Live news for the "Today Headlines" sidebar.
+ * Live news for Today Headlines + World Monitor — Live.
  *
- * Primary : Google News RSS (real, current, worldwide headlines).
- * Fallback: Hacker News Algolia API (CORS-friendly — keeps plain-browser
- *           `npm run dev` working, where Google RSS is blocked by CORS).
+ * Primary : World Monitor digest (when a wm_… key is set — Settings or
+ *           WORLD_MONITOR_API_KEY). Official geopolitics/OSINT feed.
+ * Secondary: Google News RSS.
+ * Fallback : Hacker News Algolia (CORS-friendly for plain `npm run dev`).
  *
- * In the desktop build, tauri-plugin-http bypasses CORS entirely (the news
- * domains are allow-listed in src-tauri/capabilities/default.json).
+ * In the Electron shell, fetches go through main-process IPC (no renderer CORS).
  */
+import { desktopHttpGet, isCinemElectron } from "@/lib/desktop-shell";
+import { useSettingsStore } from "@/store/useSettingsStore";
+import { parseWorldMonitorDigest, worldMonitorTag, WORLD_MONITOR_DIGEST_URL } from "@/lib/world-monitor";
+
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export interface Headline {
@@ -16,11 +20,32 @@ export interface Headline {
   url: string;
   publishedAt: number; // epoch ms
   tag: string;         // FINANCE / TECH / WORLD / SCIENCE …
+  via?: "worldmonitor" | "google" | "hn";
 }
 
-async function doFetch(url: string): Promise<Response> {
-  const f = IS_TAURI ? (await import("@tauri-apps/plugin-http")).fetch : window.fetch.bind(window);
-  return f(url);
+export type HeadlineSource = "worldmonitor" | "google" | "hn" | "none";
+
+export interface HeadlineResult {
+  items: Headline[];
+  source: HeadlineSource;
+  setupHint?: string;
+}
+
+function worldMonitorKey(): string {
+  return String(useSettingsStore.getState().worldMonitorKey || "").trim();
+}
+
+async function doFetch(url: string, opts?: { worldMonitorKey?: string }): Promise<Response> {
+  if (isCinemElectron()) {
+    const r = await desktopHttpGet(url, opts);
+    return new Response(r.text, { status: r.status || (r.ok ? 200 : 502) });
+  }
+  if (IS_TAURI) {
+    return (await import("@tauri-apps/plugin-http")).fetch(url);
+  }
+  const headers: Record<string, string> = {};
+  if (opts?.worldMonitorKey) headers["X-WorldMonitor-Key"] = opts.worldMonitorKey;
+  return window.fetch(url, { headers });
 }
 
 /** Rough topic classifier so each headline gets a category chip. */
@@ -31,6 +56,24 @@ function classify(title: string): string {
   if (/\b(study|science|space|nasa|quantum|climate|research|vaccine|health)\b/.test(t)) return "SCIENCE";
   if (/\b(cup|league|match|olympic|tournament|champion)\b/.test(t)) return "SPORT";
   return "WORLD";
+}
+
+async function fromWorldMonitor(limit: number): Promise<Headline[]> {
+  const key = worldMonitorKey();
+  const res = await doFetch(WORLD_MONITOR_DIGEST_URL, { worldMonitorKey: key });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(body.slice(0, 180) || `World Monitor ${res.status}`);
+  }
+  const parsed = parseWorldMonitorDigest(JSON.parse(await res.text()));
+  return parsed.slice(0, limit).map((item) => ({
+    title: item.title,
+    source: item.source,
+    url: item.link || WORLD_MONITOR_DIGEST_URL,
+    publishedAt: item.publishedAt,
+    tag: worldMonitorTag(item.category) || classify(item.title),
+    via: "worldmonitor",
+  }));
 }
 
 /** Google News RSS → Headline[] (title format: "Headline - Source"). */
@@ -55,6 +98,7 @@ async function fromGoogleNews(limit: number): Promise<Headline[]> {
       url: item.querySelector("link")?.textContent ?? "",
       publishedAt: pub ? Date.parse(pub) : Date.now(),
       tag: classify(title),
+      via: "google" as const,
     };
   });
 }
@@ -80,20 +124,50 @@ async function fromHackerNews(limit: number): Promise<Headline[]> {
       url,
       publishedAt: Date.parse(h.created_at),
       tag: classify(h.title),
+      via: "hn" as const,
     };
   });
 }
 
-/** Fetches real, current headlines (Google News → HN fallback). */
-export async function fetchHeadlines(limit = 5): Promise<Headline[]> {
+export async function fetchHeadlineResult(limit = 5): Promise<HeadlineResult> {
+  const key = worldMonitorKey();
+  // Electron main also attaches WORLD_MONITOR_API_KEY from the process env.
+  if (key || isCinemElectron()) {
+    try {
+      const items = await fromWorldMonitor(limit);
+      if (items.length) return { items, source: "worldmonitor" };
+    } catch (e) {
+      console.warn("[news] World Monitor digest unavailable:", e);
+      if (key) {
+        // Key was set but rejected — keep going with public feeds + setup hint.
+        const fallback = await fetchPublicHeadlines(limit);
+        return {
+          ...fallback,
+          setupHint:
+            "World Monitor key was refused. Check Settings → API, or generate a new wm_… key on worldmonitor.app.",
+        };
+      }
+    }
+  }
+  return fetchPublicHeadlines(limit);
+}
+
+async function fetchPublicHeadlines(limit: number): Promise<HeadlineResult> {
   try {
     const items = await fromGoogleNews(limit);
-    if (items.length) return items;
+    if (items.length) return { items, source: "google" };
     throw new Error("empty feed");
   } catch (e) {
     console.warn("[news] Google News unavailable, falling back to Hacker News:", e);
-    return fromHackerNews(limit);
+    const items = await fromHackerNews(limit);
+    return { items, source: items.length ? "hn" : "none" };
   }
+}
+
+/** Fetches real, current headlines (World Monitor → Google News → HN). */
+export async function fetchHeadlines(limit = 5): Promise<Headline[]> {
+  const result = await fetchHeadlineResult(limit);
+  return result.items;
 }
 
 /** "3h ago" style relative time. */

@@ -83,8 +83,12 @@ const loadHistory = (): PlayerVideo[] => {
 };
 
 const bootMessages = (): ChatMessage[] => [
-  { id: uid(), role: "system", text: "Cinem AI Assistant core initialized.", time: now() },
-  { id: uid(), role: "assistant", text: "All 15 sub-agents registered. Awaiting your command.", time: now() },
+  {
+    id: uid(),
+    role: "assistant",
+    text: "Cinem AI Assistant is ready. Type a message or tap the microphone.",
+    time: now(),
+  },
 ];
 
 export const useAppStore = create<AppState>((set) => ({

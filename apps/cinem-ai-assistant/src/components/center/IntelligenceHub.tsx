@@ -50,11 +50,13 @@ export default function IntelligenceHub() {
 
     /* Orb: particle shell + wireframe network + bright core + glow sprite */
     const shellGeo = new THREE.SphereGeometry(1.9, 48, 48);
+    const shellPos = shellGeo.getAttribute("position") as THREE.BufferAttribute;
+    const shellOrig = new Float32Array(shellPos.array as Float32Array);
     const shell = new THREE.Points(
       shellGeo,
       new THREE.PointsMaterial({
         color: new THREE.Color(neonHex()),
-        size: 0.02,
+        size: 0.028,
         transparent: true,
         opacity: 0.7,
         depthWrite: false,
@@ -103,6 +105,23 @@ export default function IntelligenceHub() {
     ring.rotation.x = 0.45;
 
     scene.add(shell, network, core, glow, ring);
+
+    const pointer = { x: 0, y: 0, active: false };
+    const attract = new THREE.Vector3();
+    const vertex = new THREE.Vector3();
+    const ndc = new THREE.Vector3();
+    const onPointerMove = (event: PointerEvent) => {
+      const rect = mount.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      pointer.active = true;
+    };
+    const onPointerLeave = () => {
+      pointer.active = false;
+    };
+    mount.addEventListener("pointermove", onPointerMove);
+    mount.addEventListener("pointerleave", onPointerLeave);
 
     /* ── LIVING ORB animation loop ─────────────────────────────────
        The orb is Cinem AI Assistant's face. It reacts to real state every frame:
@@ -170,6 +189,34 @@ export default function IntelligenceHub() {
       glow.scale.setScalar(3.6 * pulse * (voiceStatus === "speaking" ? 1 + smoothed * 0.35 : 1));
       shellMat.opacity = 0.55 + amp * 1.6;
 
+      if (pointer.active) {
+        ndc.set(pointer.x, pointer.y, 0.45);
+        ndc.unproject(camera);
+        attract.copy(ndc);
+      }
+      const arr = shellPos.array as Float32Array;
+      for (let i = 0; i < arr.length; i += 3) {
+        const ox = shellOrig[i];
+        const oy = shellOrig[i + 1];
+        const oz = shellOrig[i + 2];
+        if (pointer.active) {
+          vertex.set(ox, oy, oz);
+          const dist = vertex.distanceTo(attract);
+          const pull = Math.max(0, 1 - dist / 2.35);
+          if (pull > 0) {
+            const k = pull * pull * 0.55;
+            arr[i] = ox + (attract.x - ox) * k;
+            arr[i + 1] = oy + (attract.y - oy) * k;
+            arr[i + 2] = oz + (attract.z - oz) * k;
+            continue;
+          }
+        }
+        arr[i] += (ox - arr[i]) * 0.12;
+        arr[i + 1] += (oy - arr[i + 1]) * 0.12;
+        arr[i + 2] += (oz - arr[i + 2]) * 0.12;
+      }
+      shellPos.needsUpdate = true;
+
       renderer.render(scene, camera);
       raf = requestAnimationFrame(animate);
     };
@@ -188,6 +235,8 @@ export default function IntelligenceHub() {
     /* Cleanup */
     return () => {
       window.removeEventListener(THEME_EVENT, onTheme);
+      mount.removeEventListener("pointermove", onPointerMove);
+      mount.removeEventListener("pointerleave", onPointerLeave);
       cancelAnimationFrame(raf);
       ro.disconnect();
       renderer.dispose();
@@ -218,7 +267,7 @@ export default function IntelligenceHub() {
       <div className="pointer-events-none absolute inset-x-6 bottom-3 z-10 flex justify-between font-display text-[0.6rem] tracking-[0.25em] text-neon-dim">
         <span>CORE&nbsp;SYNC&nbsp;:&nbsp;98.4%</span>
         <span>LATENCY&nbsp;:&nbsp;12MS</span>
-        <span>MODE&nbsp;:&nbsp;GEMINI&nbsp;/&nbsp;OLLAMA</span>
+        <span>MODE&nbsp;:&nbsp;CINEM&nbsp;/&nbsp;LOCAL</span>
       </div>
     </GlassPanel>
   );

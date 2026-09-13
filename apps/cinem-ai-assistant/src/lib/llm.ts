@@ -195,7 +195,7 @@ export async function chatLLM(prompt: string, s: Settings, opts?: LlmOptions): P
   }
   throw new Error(
     `All models failed. Last error: ${lastErr instanceof Error ? lastErr.message : lastErr}. ` +
-      `Add a Claude or Gemini API key in Settings → API, or start Ollama locally.`,
+      `Add an AI model key in Settings → API, or start a local model.`,
   );
 }
 
@@ -260,8 +260,8 @@ export async function chatVision(prompt: string, imageB64: string, s: Settings):
   } catch (e) {
     throw new Error(
       preferGemini
-        ? `Vision failed on both Gemini and Ollama. ${e instanceof Error ? e.message : e}`
-        : `Vision needs a model. Add a Gemini key in Settings, or run Ollama with a vision model (\`ollama pull llava\`). ${e instanceof Error ? e.message : e}`,
+        ? `Vision failed on cloud and local models. ${e instanceof Error ? e.message : e}`
+        : `Vision needs a model. Add a model key in Settings → API, or run a local vision model. ${e instanceof Error ? e.message : e}`,
     );
   }
 }

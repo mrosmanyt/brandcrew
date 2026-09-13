@@ -4,7 +4,8 @@
  * so commands like "open google" or "search latest news" always work even
  * with no Gemini key and no Ollama running.
  */
-export { openExternal } from "@/lib/desktop-shell";
+import { openExternal } from "@/lib/desktop-shell";
+export { openExternal };
 
 /** Known sites/apps → URL. Keys are matched as words inside the command. */
 const SITES: { keys: string[]; url: string; label: string }[] = [

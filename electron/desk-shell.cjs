@@ -6,7 +6,7 @@ const PRODUCTION_DESK_ORIGIN = "https://app.cinem.tech";
 const VERCEL_DESK_ORIGIN = "https://brandcrew.vercel.app";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 43180;
-const DESKTOP_SHELL_VERSION = "0.3.1";
+const DESKTOP_SHELL_VERSION = "0.3.2";
 const SESSION_COOKIE = "brandcrew_session";
 const PROTOCOL = "cinem-pro";
 
@@ -29,6 +29,7 @@ const IN_WINDOW_HOST_SUFFIXES = [
   ".notion.so",
   ".notion.com",
   ".composio.dev",
+  ".worldmonitor.app",
 ];
 
 const IN_WINDOW_HOSTS = new Set([
@@ -45,6 +46,9 @@ const IN_WINDOW_HOSTS = new Set([
   "api.notion.com",
   "composio.dev",
   "brandcrew.vercel.app",
+  "worldmonitor.app",
+  "www.worldmonitor.app",
+  "api.worldmonitor.app",
 ]);
 
 function stripTrailingSlash(value) {
