@@ -378,7 +378,7 @@ export function ChatComposer({
         }
       }}
     >
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-4xl">
         {showHero !== false ? (
           <div className="mb-4 px-1 text-center">
             <h2 className="font-heading text-[1.65rem] leading-tight tracking-tight text-foreground sm:text-3xl">
@@ -457,9 +457,9 @@ export function ChatComposer({
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            rows={3}
+            rows={4}
             disabled={busy || disabled}
-            className="min-h-[4.5rem] resize-none border-0 bg-transparent px-4 pt-3.5 pb-1 text-[15px] text-composer-foreground shadow-none placeholder:text-composer-muted focus-visible:ring-0 dark:bg-transparent"
+            className="min-h-[6.5rem] resize-none border-0 bg-transparent px-4 pt-3.5 pb-1 text-[15px] text-composer-foreground shadow-none placeholder:text-composer-muted focus-visible:ring-0 dark:bg-transparent"
             placeholder={placeholder}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

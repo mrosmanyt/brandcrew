@@ -1,5 +1,7 @@
 "use client";
 
+/** Live results / artifacts / activity rail. Kept for reuse; Mission Control no longer mounts it. */
+
 import { useState } from "react";
 import {
   Check,
