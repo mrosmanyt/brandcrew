@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+.env.local
+src-tauri/target
+src-tauri/gen/schemas
+release
+*.local
+.DS_Store
+
+# Installers and archives — produced by GH Actions / tauri build
+*.zip
+*.7z
+*.rar
+*.dmg
+*.exe
+*.msi

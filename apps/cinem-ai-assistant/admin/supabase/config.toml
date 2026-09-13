@@ -1,0 +1,14 @@
+# Supabase CLI config for the Cinem AI Assistant project.
+# Deploy edge functions from the `admin` directory so this file is picked up:
+#     cd D:\Cinem AI Assistant\admin
+#     supabase functions deploy admin-create-user
+#
+# verify_jwt = false is REQUIRED here: the function authenticates the caller
+# itself (validates the admin's JWT + role inside the code). Leaving the
+# platform JWT gate ON makes the browser CORS preflight fail with
+# "Failed to send a request to the Edge Function".
+
+project_id = "gevhtxmsamqvdiypiwbb"
+
+[functions.admin-create-user]
+verify_jwt = false

@@ -64,6 +64,13 @@ prisma/*.db-journal
 /mobile/android
 /mobile/ios
 
+# Cinem AI Assistant (Tauri — Windows CI only, never a Vercel compile)
+/apps/cinem-ai-assistant/node_modules
+/apps/cinem-ai-assistant/dist
+/apps/cinem-ai-assistant/src-tauri/target
+/apps/cinem-ai-assistant/release
+
+
 
 # OS
 Thumbs.db

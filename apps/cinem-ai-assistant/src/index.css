@@ -1,0 +1,335 @@
+@import "tailwindcss";
+
+/* ── Cinem AI Assistant design tokens ─────────────────────────────────────────── */
+@theme {
+  --color-void: #04070a; /* app background          */
+  --color-abyss: #070d12; /* deep panel base         */
+  --color-panel: #0a141a; /* glass panel tint        */
+  --color-neon: #59f0ea; /* primary cyan accent     */
+  --color-neon-dim: #2ea8a3; /* muted cyan              */
+  --color-ice: #c9f6f4; /* bright text on cyan     */
+
+  --font-display: "Orbitron", ui-sans-serif, sans-serif;
+  --font-body: "Rajdhani", ui-sans-serif, sans-serif;
+}
+
+/* Theme glow triplet (r, g, b) + intensity — overridden at runtime by the
+   Theme Engine (src/lib/themes.ts) together with the color tokens above. */
+:root {
+  --glow: 89, 240, 234;
+  --glow-strength: 1; /* global glow multiplier (per-theme personality) */
+}
+
+/* ── Theme switch crossfade — added by applyTheme(theme, true) for ~0.65s.
+      CSS vars don't interpolate, but every property consuming them does. ── */
+html.theme-fade,
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition:
+    background-color 0.55s ease,
+    border-color 0.55s ease,
+    color 0.55s ease,
+    box-shadow 0.55s ease,
+    text-shadow 0.55s ease,
+    fill 0.55s ease,
+    stroke 0.55s ease,
+    background-image 0.55s ease !important;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--color-void);
+  color: color-mix(in srgb, var(--color-ice) 82%, transparent);
+  font-family: var(--font-body);
+  /* Default backdrop: holographic floor grid (data-backdrop="grid") */
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(var(--glow), 0.05), transparent 70%),
+    linear-gradient(rgba(var(--glow), 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--glow), 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 56px 56px, 56px 56px;
+}
+
+/* ── Backdrop personalities (html[data-backdrop="…"], set per theme) ── */
+
+/* CRT scanlines — Neon Tokyo / Matrix Terminal */
+html[data-backdrop="scanlines"] body {
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(var(--glow), 0.06), transparent 70%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(var(--glow), 0.035) 0px,
+      rgba(var(--glow), 0.035) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  background-size: 100% 100%, 100% 4px;
+}
+
+/* Aurora — soft drifting color washes (Arctic Glass) */
+html[data-backdrop="aurora"] body {
+  background-image:
+    radial-gradient(ellipse 55% 45% at 18% 8%, rgba(var(--glow), 0.1), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 18%, rgba(var(--glow), 0.06), transparent 70%),
+    radial-gradient(ellipse 75% 55% at 50% 110%, rgba(var(--glow), 0.08), transparent 70%);
+  background-size: 100% 100%;
+}
+
+/* Retro horizon — glowing floor + perspective grid (Synthwave) */
+html[data-backdrop="horizon"] body {
+  background-image:
+    radial-gradient(ellipse 90% 45% at 50% 108%, rgba(var(--glow), 0.16), transparent 70%),
+    linear-gradient(rgba(var(--glow), 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--glow), 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, transparent 55%, rgba(var(--glow), 0.03));
+  background-size: 100% 100%, 100% 72px, 72px 100%, 100% 100%;
+}
+
+/* Clean — pure depth, no pattern (Royal Gold / Obsidian / Ghost) */
+html[data-backdrop="clean"] body {
+  background-image: radial-gradient(
+    ellipse 80% 60% at 50% 30%,
+    rgba(var(--glow), 0.04),
+    transparent 70%
+  );
+  background-size: 100% 100%;
+}
+
+::selection {
+  background: rgba(var(--glow), 0.3);
+}
+
+/* ── Glassmorphism panel with sci-fi corner cuts ──────────────────── */
+.glass {
+  position: relative;
+  background: linear-gradient(160deg, rgba(13, 26, 32, 0.78), rgba(6, 12, 16, 0.6));
+  border: 1px solid rgba(var(--glow), 0.16);
+  backdrop-filter: blur(14px);
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  box-shadow:
+    inset 0 0 28px rgba(var(--glow), calc(0.045 * var(--glow-strength))),
+    inset 0 1px 0 rgba(var(--glow), calc(0.08 * var(--glow-strength)));
+}
+
+/* Bracket corner accents (top-left / bottom-right) */
+.glass::before,
+.glass::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.glass::before {
+  top: 0;
+  left: 0;
+  border-top: 2px solid var(--color-neon);
+  border-left: 2px solid var(--color-neon);
+  clip-path: polygon(0 100%, 0 14px, 14px 0, 100% 0, 100% 2px, 15px 2px, 2px 15px, 2px 100%);
+}
+.glass::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid var(--color-neon);
+  border-right: 2px solid var(--color-neon);
+  clip-path: polygon(100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 calc(100% - 2px), calc(100% - 15px) calc(100% - 2px), calc(100% - 2px) calc(100% - 15px), calc(100% - 2px) 0);
+}
+
+/* ── Panel geometry personalities (html[data-shape="…"], set per theme) ──
+   "hud" (default) = corner-cut clip-path + bracket accents above.       */
+
+/* Rounded luxury — Royal Gold / Obsidian / Arctic / Ghost */
+html[data-shape="rounded"] .glass {
+  clip-path: none;
+  border-radius: 14px;
+}
+html[data-shape="rounded"] .glass::before,
+html[data-shape="rounded"] .glass::after {
+  display: none;
+}
+
+/* Sharp terminal — Matrix: square edges, thin corner ticks */
+html[data-shape="sharp"] .glass {
+  clip-path: none;
+  border-radius: 0;
+}
+html[data-shape="sharp"] .glass::before,
+html[data-shape="sharp"] .glass::after {
+  width: 10px;
+  height: 10px;
+  border-width: 1px;
+  clip-path: none;
+  opacity: 0.9;
+}
+
+/* ── Neon text helpers ────────────────────────────────────────────── */
+.neon-text {
+  color: var(--color-ice);
+  text-shadow:
+    0 0 8px rgba(var(--glow), calc(0.9 * var(--glow-strength))),
+    0 0 24px rgba(var(--glow), calc(0.45 * var(--glow-strength)));
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ice);
+}
+
+/* ── Thin neon scrollbars ─────────────────────────────────────────── */
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(var(--glow), 0.25);
+  border-radius: 99px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--glow), 0.5);
+}
+
+/* ── Markdown (assistant deliverables) ────────────────────────────── */
+.md-content {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #cfe6e4;
+  word-break: break-word;
+}
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 {
+  font-family: var(--font-display);
+  color: #e6fbfa;
+  letter-spacing: 0.02em;
+  margin: 0.9em 0 0.4em;
+  line-height: 1.25;
+}
+.md-content h1 { font-size: 1.05rem; }
+.md-content h2 { font-size: 0.96rem; color: var(--color-neon); }
+.md-content h3 { font-size: 0.9rem; }
+.md-content p { margin: 0.5em 0; }
+.md-content strong { color: #eafbfa; font-weight: 700; }
+.md-content em { color: #bfe9e6; }
+.md-content a { color: var(--color-neon); text-decoration: underline; text-underline-offset: 2px; }
+.md-content ul,
+.md-content ol { margin: 0.4em 0 0.6em; padding-left: 1.2em; }
+.md-content ul { list-style: disc; }
+.md-content ol { list-style: decimal; }
+.md-content li { margin: 0.2em 0; }
+.md-content li::marker { color: var(--color-neon-dim); }
+.md-content blockquote {
+  border-left: 2px solid rgba(var(--glow), 0.4);
+  padding-left: 0.8em;
+  margin: 0.6em 0;
+  color: #a9cfcc;
+}
+.md-content hr { border: none; border-top: 1px solid rgba(var(--glow), 0.15); margin: 0.9em 0; }
+.md-content code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+  background: rgba(var(--glow), 0.1);
+  border: 1px solid rgba(var(--glow), 0.15);
+  border-radius: 3px;
+  padding: 0.05em 0.35em;
+  color: #9ffaf6;
+}
+.md-content pre {
+  background: #060d11;
+  border: 1px solid rgba(var(--glow), 0.18);
+  border-radius: 4px;
+  padding: 0.7em 0.9em;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+.md-content pre code { background: none; border: none; padding: 0; color: #cfe6e4; }
+.md-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.7em 0;
+  font-size: 0.82rem;
+}
+.md-content th,
+.md-content td {
+  border: 1px solid rgba(var(--glow), 0.18);
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+.md-content th {
+  background: rgba(var(--glow), 0.08);
+  color: #e6fbfa;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+.md-content tr:nth-child(even) td { background: rgba(var(--glow), 0.03); }
+
+/* ── Pulsing status dot ───────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--glow), 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(var(--glow), 0);
+  }
+}
+.dot-active {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ── Task window indeterminate progress shimmer ───────────────────── */
+@keyframes task-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.task-shimmer {
+  animation: task-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ── Multi-language: RTL + Urdu Nastaliq rendering ────────────────── */
+/* Applied to chat bubbles whose text is dominantly RTL (Urdu/Arabic).
+   "Urdu Typesetting" ships with Windows and renders proper Nastaliq;
+   Noto Nastaliq Urdu is used when installed. Nastaliq needs extra line
+   height to avoid clipped diacritics. */
+.rtl-text {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+  font-family: "Noto Nastaliq Urdu", "Urdu Typesetting", "Jameel Noori Nastaleeq",
+    "Nafees Nastaleeq", "Segoe UI", sans-serif;
+  line-height: 2.1;
+  font-size: 1.05em;
+}
+.rtl-text .md-content { direction: rtl; text-align: right; }
+.rtl-text .md-content ul,
+.rtl-text .md-content ol { padding-left: 0; padding-right: 1.2em; }
+.rtl-text .md-content blockquote {
+  border-left: none;
+  border-right: 2px solid rgba(var(--glow), 0.4);
+  padding-left: 0;
+  padding-right: 0.8em;
+}

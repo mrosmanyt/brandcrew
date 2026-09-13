@@ -60,7 +60,7 @@ Fallback: paste a login link from On-device Chrome → **Create login link**, or
 
 ## Cinem AI Assistant (Windows Tauri)
 
-Same account and tokens as desktop. The Windows app calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT (`X-Cinem-Client: assistant` is treated as desktop). When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. Contract: `docs/cinem-ai-assistant.md`.
+Same account and tokens as desktop. Preferred: **Sign in with CINEM Pro** opens `/connect/desktop` in the system browser (`POST /api/auth/connect` + `POST /api/auth/connect/claim`). Email/password uses `POST /api/auth/token` with `X-Cinem-Client: assistant` (treated as desktop). The Windows app then calls `GET`/`POST /api/cinem-ai-assistant/usage` with the access JWT. When Free turns are exhausted, open `upgradeUrl` in the **system browser** (`/billing?plan=pro&product=cinem-ai-assistant`) — existing Pro checkout, not a new Whop SKU. Contract: `docs/cinem-ai-assistant.md`. Source: `apps/cinem-ai-assistant/`.
 
 ## Android (Expo)
 

@@ -1,25 +1,50 @@
-# Cinem AI Assistant (Windows Tauri)
+# Cinem AI Assistant (Windows-only)
 
-Windows-only native assistant for CINEM Pro. **This folder is a stub.**
+Native Tauri + Vite + React desktop assistant for **CINEM Pro**. This is a feature on the existing Free / Pro / Pro Plus / Ultra plans — not a new Whop product.
 
-The founder-owned Tauri app (formerly an internal rebrand) will be imported here in a follow-up. Do not invent a second marketing site or a new Whop SKU.
+Full native features ship for **Windows only**. Mac and Linux use the web desk at [app.cinem.tech](https://app.cinem.tech).
 
-## What lives here later
+## Cloud contract
 
-- Tauri + Vite Windows project (build: NSIS `Cinem-AI-Assistant-Setup.exe`)
-- Renderer env `VITE_CINEM_CLOUD_URL` (default `https://app.cinem.tech`)
-- Usage client against CINEM Pro:
-  - `GET /api/cinem-ai-assistant/usage`
-  - `POST /api/cinem-ai-assistant/usage`
-- Upgrade: open `upgradeUrl` in the **system browser** (existing Pro checkout)
-
-## What already exists in this monorepo
-
-| Piece | Path |
+| Piece | Value |
 | --- | --- |
-| Contract + types | `src/lib/cinem-ai-assistant.ts` |
-| Fetch helper (copy or import) | `apps/cinem-ai-assistant/usage-client.ts` |
-| Website face | `/cinem-ai-assistant` |
-| Docs | `docs/cinem-ai-assistant.md` |
+| Origin | `VITE_CINEM_CLOUD_URL` (default `https://app.cinem.tech`) |
+| Usage | `GET` / `POST /api/cinem-ai-assistant/usage` |
+| Auth | Sign in with CINEM Pro (`POST /api/auth/connect` + `/connect/desktop`, or email/password via `POST /api/auth/token`) |
+| Upgrade | System browser → `upgradeUrl` (`/billing?plan=pro&product=cinem-ai-assistant`) |
 
-Full native features are Windows only. Mac / Linux users stay on the web desk.
+Shared fetch helper: [`usage-client.ts`](./usage-client.ts). Website contract: [`docs/cinem-ai-assistant.md`](../../docs/cinem-ai-assistant.md).
+
+## Local development (Windows)
+
+```powershell
+cd apps/cinem-ai-assistant
+npm install
+npm run icon          # once — generates src-tauri/icons
+npm run tauri dev
+```
+
+Prerequisites: Node 20+, Rust stable, Visual Studio C++ build tools, WebView2.
+
+## Production installer
+
+Do **not** build the `.exe` on Linux. Use the Windows GitHub Actions workflow:
+
+1. GitHub → Actions → **Cinem AI Assistant Windows** → **Run workflow**
+2. Or push a tag: `cinem-ai-assistant-v0.1.0`
+3. Download the artifact `Cinem-AI-Assistant-Setup.exe`
+4. Drop it in `public/downloads/` **or** set `CINEM_AI_ASSISTANT_SETUP_URL` to the hosted file (GitHub Release on this repo or `cinem-pro-releases`)
+
+See [`docs/cinem-ai-assistant.md`](../../docs/cinem-ai-assistant.md) for the founder release checklist.
+
+## Layout
+
+```
+apps/cinem-ai-assistant/
+├── usage-client.ts           # shared usage/upgrade helper
+├── src/lib/cinemCloud.ts     # CINEM Pro session + usage
+├── src/components/gate/      # Sign in + upgrade popup
+└── src-tauri/                # Tauri 2, NSIS only
+```
+
+Vercel / `next build` does not compile this folder.
