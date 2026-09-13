@@ -415,6 +415,7 @@ export function MissionControl({
     action: GenerateAction = "default",
     message?: string,
     playbookKey?: string,
+    attachments?: import("@/lib/composer").ComposerAttachment[],
   ) {
     if (!selected) {
       toast.error("Create or select an agent first.");
@@ -422,7 +423,7 @@ export function MissionControl({
     }
     const text =
       (message ?? input).trim() || JOB_ACTION_MESSAGES[action] || "";
-    if (!text && action === "default") return;
+    if (!text && action === "default" && !attachments?.length) return;
     setBusy(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
       method: "POST",
@@ -432,6 +433,7 @@ export function MissionControl({
         message: text || undefined,
         action,
         playbookKey,
+        attachments: attachments?.length ? attachments : undefined,
       }),
     });
     const data = await res.json();
@@ -802,8 +804,8 @@ export function MissionControl({
             workspaceId={workspaceId}
             value={input}
             onChange={setInput}
-            onSubmit={(message, intent) =>
-              startJob(intent.action, message, intent.playbookKey)
+            onSubmit={(message, intent, attachments) =>
+              startJob(intent.action, message, intent.playbookKey, attachments)
             }
             busy={busy}
             messageCount={messages.length}

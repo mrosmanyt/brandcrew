@@ -12,11 +12,14 @@ import { memoryBriefForWorkspace } from "@/lib/learning-memory";
 import { serializeMessage } from "@/lib/job-serialize";
 import type { MessageDTO } from "@/lib/types";
 import { assertLlmCallBudget, recordUsage, rethrowIfBudget } from "@/lib/usage";
+import type { ComposerAttachment } from "@/lib/composer";
+import { offlineMediaNote } from "@/lib/composer-media";
 import {
   deskQaSystemPrompt,
   isCapabilityQuestion,
   offlineCapabilityAnswer,
 } from "@/lib/desk-qa-pure";
+import { prepareComposerMedia, withTranscriptPreface } from "@/lib/media-analyze";
 import { persistLegacyHospitalityDemoBrandKit } from "@/lib/workspace";
 
 export {
@@ -28,14 +31,22 @@ export {
   type DeskQaDecision,
 } from "@/lib/desk-qa-pure";
 
-function offlineAnswer(kitBrief: string, question: string) {
+function offlineAnswer(
+  kitBrief: string,
+  question: string,
+  attachments?: ComposerAttachment[],
+) {
+  const media = offlineMediaNote(attachments);
   return [
     "I can answer from the Brand Kit without starting a job.",
     "",
     kitBrief,
+    media ? `\n${media}` : "",
     "",
     `(No live model key on the server — this is Brand Kit context, not a generated playbook. You asked: “${question.slice(0, 180)}”)`,
-  ].join("\n");
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
 }
 
 export type DeskQaResult = {
@@ -50,6 +61,7 @@ export async function answerDeskQuestion(input: {
   workspaceId: string;
   agentId: string;
   message: string;
+  attachments?: ComposerAttachment[];
 }): Promise<DeskQaResult> {
   await assertLlmCallBudget(input.workspaceId, "chat");
 
@@ -104,6 +116,12 @@ export async function answerDeskQuestion(input: {
       ? String((workspace as { modelRouting?: string | null }).modelRouting ?? "")
       : "";
 
+  const prepared = await prepareComposerMedia({
+    message: input.message,
+    attachments: input.attachments,
+  });
+  const storedUserMessage = prepared.displayMessage || input.message;
+
   let text = "";
   let tokens = 0;
   let model = "demo";
@@ -133,7 +151,7 @@ export async function answerDeskQuestion(input: {
                 }),
               },
               ...history.filter((row) => row.role === "user" || row.role === "assistant"),
-              { role: "user", content: input.message },
+              { role: "user", content: prepared.content },
             ],
           }),
       );
@@ -148,12 +166,14 @@ export async function answerDeskQuestion(input: {
   }
 
   if (!text) {
-    text = isCapabilityQuestion(input.message)
-      ? offlineCapabilityAnswer(input.message)
-      : offlineAnswer(kitBrief, input.message);
+    text = isCapabilityQuestion(storedUserMessage)
+      ? offlineCapabilityAnswer(storedUserMessage)
+      : offlineAnswer(kitBrief, storedUserMessage, prepared.attachments);
     demo = true;
     model = "demo";
     tokens = 0;
+  } else {
+    text = withTranscriptPreface(text, prepared.transcripts);
   }
 
   if (tokens > 0) {
@@ -171,7 +191,7 @@ export async function answerDeskQuestion(input: {
     data: {
       conversationId: conversation.id,
       role: "user",
-      content: input.message,
+      content: storedUserMessage,
     },
   });
   const assistantMessage = await prisma.message.create({

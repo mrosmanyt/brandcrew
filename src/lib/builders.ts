@@ -1,4 +1,5 @@
 import { brandKitBrief, brandLabel, type BrandKit } from "@/lib/brand-kit";
+import { mergeTextAndAttachments } from "@/lib/composer-media";
 import { displayAgentName } from "@/lib/constants";
 import { demoAppHtml, demoDeckHtml, demoWebsiteHtml } from "@/lib/demo";
 import { replitHookConfigured } from "@/lib/html-preview";
@@ -64,6 +65,7 @@ export async function generateBuilderArtifact(input: {
   prompt: string;
   agentName?: string;
   agentInstructions?: string;
+  attachments?: import("@/lib/composer").ComposerAttachment[];
 }): Promise<BuilderArtifact> {
   const live = llm.isLiveFor(builderKind(input.kind));
   const canned = fallback(input.kind, input.kit);
@@ -105,13 +107,15 @@ Respond as JSON:
       },
       {
         role: "user",
-        content:
+        content: mergeTextAndAttachments(
           input.prompt ||
-          (input.kind === "app"
-            ? "Build a small branded web app the user can preview in the desk."
-            : input.kind === "deck"
-              ? "Build a short branded pitch deck the user can preview in the desk."
-              : "Build a one-page branded website the user can preview in the desk."),
+            (input.kind === "app"
+              ? "Build a small branded web app the user can preview in the desk."
+              : input.kind === "deck"
+                ? "Build a short branded pitch deck the user can preview in the desk."
+                : "Build a one-page branded website the user can preview in the desk."),
+          input.attachments,
+        ),
       },
     ],
   });

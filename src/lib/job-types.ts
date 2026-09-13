@@ -123,6 +123,16 @@ export type JobContext = {
   clientName?: string;
   composio?: { toolkit: string; tool: string; ok: boolean; text: string };
   maxPages?: number;
+  attachments?: {
+    name: string;
+    size: number;
+    kind?: "text" | "image" | "audio" | "video";
+    mime?: string;
+    data?: string;
+    text?: string;
+    transcript?: string;
+  }[];
+  attachmentNotes?: string;
 };
 
 export type JobEventDTO = {

@@ -6,6 +6,7 @@ import {
   AppWindow,
   ArrowUp,
   FileText,
+  Image as ImageIcon,
   Layers,
   LayoutGrid,
   Loader2,
@@ -41,13 +42,18 @@ import {
 import { ConnectorLogo } from "@/components/desk/connector-logo";
 import {
   clipComposerText,
-  composeJobMessage,
   COMPOSER_PLUS_ITEMS,
   connectorStatusLabel,
   focusComposer,
   isComposerTextFile,
   type ComposerAttachment,
 } from "@/lib/composer";
+import {
+  COMPOSER_ACCEPT,
+  formatByteSize,
+  toWireAttachments,
+  validateComposerAttachment,
+} from "@/lib/composer-media";
 import { modelRoutingLabel, nextModelRouting } from "@/lib/agent-modes";
 import {
   ALWAYS_APPROVED_HINT,
@@ -114,7 +120,11 @@ export function ChatComposer({
   workspaceId: string;
   value: string;
   onChange: (value: string) => void;
-  onSubmit: (message: string, intent: BuildPromptIntent) => void;
+  onSubmit: (
+    message: string,
+    intent: BuildPromptIntent,
+    attachments?: ComposerAttachment[],
+  ) => void;
   busy?: boolean;
   disabled?: boolean;
   showHero?: boolean;
@@ -143,6 +153,9 @@ export function ChatComposer({
   const prevBusy = useRef(busy);
   const prevMessageCount = useRef(messageCount);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordChunksRef = useRef<Blob[]>([]);
   const [connectors, setConnectors] = useState<ConnectorRow[]>(
     MARKETPLACE_PLUGINS.map((plugin) => ({
       id: plugin.id,
@@ -224,38 +237,100 @@ export function ChatComposer({
     );
   }
 
+  function revokePreview(file: ComposerAttachment) {
+    if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+  }
+
+  async function readFileAsAttachment(file: File): Promise<ComposerAttachment | null> {
+    const check = validateComposerAttachment(file);
+    if (!check.ok) {
+      toast.error(check.error);
+      return null;
+    }
+    if (check.kind === "text" || isComposerTextFile(file)) {
+      return {
+        name: file.name,
+        size: file.size,
+        kind: "text",
+        mime: check.mime,
+        text: clipComposerText(await file.text()),
+      };
+    }
+    const data = await fileToBase64(file);
+    return {
+      name: file.name,
+      size: file.size,
+      kind: check.kind,
+      mime: check.mime,
+      data,
+      previewUrl: check.kind === "image" ? URL.createObjectURL(file) : undefined,
+    };
+  }
+
   async function addFiles(list: FileList | File[] | null) {
     if (!list?.length) return;
     const next: ComposerAttachment[] = [];
     for (const file of Array.from(list)) {
-      if (isComposerTextFile(file)) {
-        next.push({
-          name: file.name,
-          size: file.size,
-          text: clipComposerText(await file.text()),
-        });
-      } else {
-        next.push({ name: file.name, size: file.size });
-      }
+      const row = await readFileAsAttachment(file);
+      if (row) next.push(row);
     }
     setAttachments((prev) => [...prev, ...next]);
   }
 
+  async function toggleVoiceNote() {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Voice notes are not available in this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) recordChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        setRecording(false);
+        mediaRecorderRef.current = null;
+        const blob = new Blob(recordChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const file = new File([blob], `voice-note-${Date.now()}.webm`, {
+          type: blob.type || "audio/webm",
+        });
+        void addFiles([file]);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      toast.error("Could not start a voice note. Check microphone permission.");
+    }
+  }
+
   const placeholder = composerPlaceholder({ disabled });
-  const readyMessage = composeJobMessage(value, attachments);
-  const canSend = Boolean(readyMessage);
+  const readyAttachments = attachments.filter((file) => !file.error);
+  const canSend = Boolean(value.trim() || readyAttachments.length);
+
+  function clearAttachments() {
+    attachments.forEach(revokePreview);
+    setAttachments([]);
+  }
 
   function send() {
     if (disabled || busy || !canSend) return;
-    onSubmit(readyMessage, { action: "default" });
-    setAttachments([]);
+    onSubmit(value.trim(), { action: "default" }, toWireAttachments(readyAttachments));
+    clearAttachments();
     refocusComposer();
   }
 
   function runBuildIntent(intent: BuildPromptIntent, fill?: string) {
     if (disabled || busy) return;
-    onSubmit(composeJobMessage(value || fill || "", attachments), intent);
-    setAttachments([]);
+    onSubmit(value.trim() || fill || "", intent, toWireAttachments(readyAttachments));
+    clearAttachments();
   }
 
   function runCategory(category: BuildPromptCategory) {
@@ -323,19 +398,57 @@ export function ChatComposer({
               {attachments.map((file, index) => (
                 <li
                   key={`${file.name}-${index}`}
-                  className="flex items-center gap-1 rounded-full bg-composer-control px-2 py-0.5 text-[11px] text-composer-foreground"
+                  className={
+                    file.kind === "image" && file.previewUrl
+                      ? "relative overflow-hidden rounded-xl bg-composer-control"
+                      : "flex items-center gap-1 rounded-full bg-composer-control px-2 py-0.5 text-[11px] text-composer-foreground"
+                  }
                 >
-                  <span className="max-w-[10rem] truncate">{file.name}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${file.name}`}
-                    className="rounded-full p-0.5 text-composer-muted hover:text-composer-foreground"
-                    onClick={() =>
-                      setAttachments((prev) => prev.filter((_, i) => i !== index))
-                    }
-                  >
-                    <X className="size-3" />
-                  </button>
+                  {file.kind === "image" && file.previewUrl ? (
+                    <>
+                      <img
+                        src={file.previewUrl}
+                        alt={file.name}
+                        className="h-14 w-14 object-cover"
+                      />
+                      <button
+                        type="button"
+                        aria-label={`Remove ${file.name}`}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                        onClick={() => {
+                          revokePreview(file);
+                          setAttachments((prev) => prev.filter((_, i) => i !== index));
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {file.kind === "audio" ? (
+                        <Mic className="size-3" />
+                      ) : file.kind === "video" ? (
+                        <Video className="size-3" />
+                      ) : file.kind === "image" ? (
+                        <ImageIcon className="size-3" />
+                      ) : (
+                        <FileText className="size-3" />
+                      )}
+                      <span className="max-w-[10rem] truncate">{file.name}</span>
+                      <span className="text-composer-muted">{formatByteSize(file.size)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${file.name}`}
+                        className="rounded-full p-0.5 text-composer-muted hover:text-composer-foreground"
+                        onClick={() => {
+                          revokePreview(file);
+                          setAttachments((prev) => prev.filter((_, i) => i !== index));
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -525,12 +638,13 @@ export function ChatComposer({
               />
               <button
                 type="button"
-                className="grid size-8 place-items-center rounded-full bg-composer-control text-composer-foreground hover:opacity-80"
-                aria-label="Voice input (not available yet)"
-                title="Voice input is not wired yet"
-                onClick={() =>
-                  toast.message("Voice input is not available in this build.")
-                }
+                className={cn(
+                  "grid size-8 place-items-center rounded-full text-composer-foreground hover:opacity-80",
+                  recording ? "bg-red-500/90 text-white" : "bg-composer-control",
+                )}
+                aria-label={recording ? "Stop voice note" : "Record a voice note"}
+                title={recording ? "Stop voice note" : "Record a voice note"}
+                onClick={() => void toggleVoiceNote()}
               >
                 <Mic className="size-4" />
               </button>
@@ -558,7 +672,7 @@ export function ChatComposer({
         type="file"
         hidden
         multiple
-        accept="image/*,.pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts"
+        accept={COMPOSER_ACCEPT}
         onChange={(e) => {
           void addFiles(e.target.files);
           e.target.value = "";
@@ -566,4 +680,17 @@ export function ChatComposer({
       />
     </form>
   );
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 }

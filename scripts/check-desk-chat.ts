@@ -221,6 +221,27 @@ assert.equal(decideDeskQa({ message: "WHAT IS THE CAPITAL CITY OF PAKISTAN" }).q
 assert.equal(decideDeskQa({ message: "اردو میں بات کرو" }).qa, true);
 assert.equal(decideDeskQa({ message: "tum kia kia kr sakte ho" }).qa, true);
 assert.equal(decideDeskQa({ message: "what can you do" }).qa, true);
+assert.equal(
+  decideDeskQa({
+    message: "",
+    attachments: [{ kind: "image", data: "abcd" }],
+  }).qa,
+  true,
+);
+assert.equal(
+  decideDeskQa({
+    message: "what is in this photo?",
+    attachments: [{ kind: "image", data: "abcd" }],
+  }).qa,
+  true,
+);
+assert.equal(
+  decideDeskQa({
+    message: "Write a LinkedIn week about this image",
+    attachments: [{ kind: "image", data: "abcd" }],
+  }).qa,
+  false,
+);
 assert.equal(isCapabilityQuestion("tum kia kia kr sakte ho"), true);
 assert.equal(isCapabilityQuestion("Tum kya kar sakte ho?"), true);
 assert.equal(isCapabilityQuestion("what can you do"), true);
@@ -265,6 +286,8 @@ assert.match(LANGUAGE_AND_SCOPE_RULE, /Urdu/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Roman/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Never refuse to speak a language/);
 assert.match(LANGUAGE_AND_SCOPE_RULE, /Never claim you operate in English only/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Default language is English when the user's language is unclear/);
+assert.match(LANGUAGE_AND_SCOPE_RULE, /Never lock replies to English/);
 assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /I operate in English only/);
 assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /then offer to help with brand/);
 assert.doesNotMatch(LANGUAGE_AND_SCOPE_RULE, /then offer brand or desk work/);
@@ -278,6 +301,8 @@ const qaPrompt = deskQaSystemPrompt({
 assert.match(qaPrompt, /Urdu/);
 assert.match(qaPrompt, /capital of a country/);
 assert.match(qaPrompt, /Never claim you operate in English only/);
+assert.match(qaPrompt, /Default answers in English when the user's language is unclear/);
+assert.match(qaPrompt, /If they attached a picture/);
 assert.match(qaPrompt, /CINEM Pro's AI/);
 assert.match(qaPrompt, /Never name Google, OpenAI, Anthropic, Gemini, GPT, Claude, xAI/);
 assert.equal(qaPrompt.startsWith("Identity (non-negotiable):"), true);

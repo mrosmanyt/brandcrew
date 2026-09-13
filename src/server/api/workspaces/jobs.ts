@@ -4,6 +4,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { GENERATE_ACTIONS, JOB_ACTION_MESSAGES } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
+import { composerAttachmentsSchema } from "@/lib/composer-media";
 import { isLightweightDeskQuestion, answerDeskQuestion } from "@/lib/desk-qa";
 import { createJobFromChat, kickQueuedJobs } from "@/lib/job-runtime";
 import { runDueSchedules } from "@/lib/schedules";
@@ -19,6 +20,7 @@ const postSchema = z.object({
   playbookKey: z.string().max(80).optional(),
   skillId: z.string().optional(),
   action: z.enum(GENERATE_ACTIONS).optional(),
+  attachments: composerAttachmentsSchema,
 });
 
 export async function GET(
@@ -69,6 +71,7 @@ export async function POST(
     const { workspaceId } = await context.params;
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
+    const attachments = body.attachments || [];
     let message = body.message?.trim() || "";
     if (!message && body.action && body.action !== "default") {
       message = JOB_ACTION_MESSAGES[body.action] || "";
@@ -84,7 +87,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    if (!message && !body.skillId) {
+    if (!message && !body.skillId && !attachments.length) {
       return NextResponse.json({ error: "Write a short job for this agent." }, { status: 400 });
     }
 
@@ -95,12 +98,14 @@ export async function POST(
         action: body.action ?? "default",
         playbookKey: body.playbookKey,
         skillId: body.skillId,
+        attachments,
       })
     ) {
       const qa = await answerDeskQuestion({
         workspaceId,
         agentId: body.agentId,
         message,
+        attachments,
       });
       const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
       const limits = serializeLimits(await getWorkspaceLimits(workspaceId));
@@ -122,6 +127,7 @@ export async function POST(
       playbookKey: body.playbookKey,
       skillId: body.skillId,
       action: body.action ?? "default",
+      attachments,
     });
 
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });

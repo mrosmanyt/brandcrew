@@ -2,6 +2,7 @@
  * Playbook / fetch-url / browse / live-output guards. No database, no paid LLM calls.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   assertPublicHttpUrl,
   htmlToText,
@@ -328,5 +329,11 @@ assert.equal(prospect.steps.at(-1)?.tool, "write_artifact");
 assert.equal(outreachDraftPackPlaybook().steps.some((step) => step.args.kind === "outreach_pack"), true);
 assert.equal(weeklyClientBriefPlaybook().steps.some((step) => step.args.kind === "weekly_client_brief"), true);
 console.log("ok: native tools, write-gate, allowlist, page delimiters, agency playbooks");
+
+const jobRuntimeSrc = readFileSync("src/lib/job-runtime.ts", "utf8");
+assert.match(jobRuntimeSrc, /attachments\?: ComposerAttachment\[\]/);
+assert.match(jobRuntimeSrc, /prepareComposerMedia/);
+assert.match(jobRuntimeSrc, /jobUserContent/);
+console.log("ok: jobs receive composer attachments in the payload");
 
 console.log("Job runtime checks passed.");

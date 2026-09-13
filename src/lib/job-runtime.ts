@@ -1,5 +1,8 @@
 import { after } from "next/server";
+import type { ComposerAttachment } from "@/lib/composer";
+import { mergeTextAndAttachments, type LlmMessageContent } from "@/lib/composer-media";
 import { prisma } from "@/lib/db";
+import { prepareComposerMedia } from "@/lib/media-analyze";
 import {
   AGENT_ROLES,
   conversationKeyForAgent,
@@ -199,6 +202,10 @@ function assistantIntro(agentName: string, title: string) {
   return `${agentName} started **${title}**. I’ll plan, use tools, and pause when something needs you.`;
 }
 
+function jobUserContent(text: string, context?: JobContext): LlmMessageContent {
+  return mergeTextAndAttachments(text, context?.attachments as ComposerAttachment[] | undefined);
+}
+
 export async function createJobFromChat(input: {
   workspaceId: string;
   agentId: string;
@@ -207,6 +214,7 @@ export async function createJobFromChat(input: {
   skillId?: string;
   routineId?: string;
   action?: GenerateAction;
+  attachments?: ComposerAttachment[];
 }): Promise<CreateJobResult> {
   await assertWorkspaceBudget(input.workspaceId);
   const workspace = await prisma.workspace.findUniqueOrThrow({
@@ -223,6 +231,12 @@ export async function createJobFromChat(input: {
   });
   if (!agent) throw new Error("Choose an agent first.");
 
+  const prepared = await prepareComposerMedia({
+    message: input.message,
+    attachments: input.attachments,
+  });
+  const message = prepared.displayMessage || input.message;
+
   const agentName = displayAgentName(agent.name);
   const hintRole = playbookHintFromRole(agent.role);
 
@@ -238,11 +252,11 @@ export async function createJobFromChat(input: {
   const playbookKey =
     input.playbookKey ||
     playbook?.key ||
-    inferPlaybookKey(hintRole, input.message, input.action);
+    inferPlaybookKey(hintRole, message, input.action);
 
   if (!playbook) {
     const gmail = await getConnectedPlugin(input.workspaceId, "gmail");
-    playbook = playbookFromKey(playbookKey, hintRole, input.message, kit.website, {
+    playbook = playbookFromKey(playbookKey, hintRole, message, kit.website, {
       gmailConnected: Boolean(gmail),
     });
   } else {
@@ -251,7 +265,7 @@ export async function createJobFromChat(input: {
 
   const cached = await applyWorkspaceCacheToSteps({
     workspaceId: input.workspaceId,
-    url: extractUrls(input.message)[0] || kit.website || "",
+    url: extractUrls(message)[0] || kit.website || "",
     steps: playbook.steps,
   });
   playbook = { ...playbook, steps: cached.steps };
@@ -273,18 +287,18 @@ export async function createJobFromChat(input: {
   });
 
   const context: JobContext = {
-    userUrl: extractUrls(input.message)[0] || kit.website || "",
+    userUrl: extractUrls(message)[0] || kit.website || "",
     competitorUrls: MULTI_TAB_PLAYBOOKS.has(playbook.key)
-      ? researchUrlsFromMessage(input.message, kit.website)
-      : defaultCompetitorUrls(input.message, kit.website),
+      ? researchUrlsFromMessage(message, kit.website)
+      : defaultCompetitorUrls(message, kit.website),
     pages: [],
     pageCount: 0,
     allowedDomains: allowlistFromUrls([
-      extractUrls(input.message)[0],
+      extractUrls(message)[0],
       kit.website,
       ...(MULTI_TAB_PLAYBOOKS.has(playbook.key)
-        ? researchUrlsFromMessage(input.message, kit.website)
-        : defaultCompetitorUrls(input.message, kit.website)),
+        ? researchUrlsFromMessage(message, kit.website)
+        : defaultCompetitorUrls(message, kit.website)),
     ]),
     cost: {
       ...emptyCostStats(),
@@ -300,6 +314,8 @@ export async function createJobFromChat(input: {
         : "",
     memoryBrief: await memoryBriefForWorkspace(input.workspaceId),
     maxPages: tabCapForPlaybook(playbook.key),
+    attachments: prepared.attachments.filter((file) => !file.error && (file.data || file.text)),
+    attachmentNotes: prepared.displayMessage,
   };
 
   const job = await prisma.job.create({
@@ -308,7 +324,7 @@ export async function createJobFromChat(input: {
       agentId: agent.id,
       agentRole: agent.role || hintRole,
       title: playbook.title,
-      prompt: input.message,
+      prompt: message,
       status: "queued",
       plan: JSON.stringify(playbook.steps),
       context: JSON.stringify(context),
@@ -325,7 +341,7 @@ export async function createJobFromChat(input: {
     data: {
       conversationId: conversation.id,
       role: "user",
-      content: input.message,
+      content: message,
     },
   });
   const assistantMessage = await prisma.message.create({
@@ -436,6 +452,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
             agentInstructions: agent?.instructions || "",
             agentRoleLabel: agent?.role || job.agentRole,
             allowedTools: parseAllowedTools(agent?.allowedTools),
+            attachments: parseJobContext(job.context).attachments,
           }),
       );
       await savePlan(jobId, steps);
@@ -635,6 +652,7 @@ async function planSteps(input: {
   agentInstructions: string;
   agentRoleLabel: string;
   allowedTools?: string[];
+  attachments?: JobContext["attachments"];
 }): Promise<JobStep[]> {
   const fallback = playbookFromKey(
     inferPlaybookKey(input.role, input.prompt),
@@ -663,7 +681,10 @@ async function planSteps(input: {
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\nUser request:\n${input.prompt}`,
+          content: jobUserContent(
+            `Brand Kit:\n${brandKitBrief(input.kit)}\n\nUser request:\n${input.prompt}`,
+            { attachments: input.attachments },
+          ),
         },
       ],
     });
@@ -1901,6 +1922,7 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
       prompt: pageAwarePrompt(input.prompt, context),
       agentName: input.agentName,
       agentInstructions: input.agentInstructions,
+      attachments: context.attachments as ComposerAttachment[] | undefined,
     });
     title = pack.title;
     content = pack.content;
@@ -2035,6 +2057,7 @@ TODO: QuickBooks write is not wired in this slice. CINEM Pro listed mail only. E
       role: input.agentRole,
       kit: input.kit,
       userMessage: pageAwarePrompt(input.prompt, context),
+      attachments: context.attachments as ComposerAttachment[] | undefined,
       history: [],
       action:
         kind === "sales_pack"
@@ -2200,7 +2223,10 @@ Return JSON: { "posts": [{ "title": string, "body": string }] }`,
       },
       {
         role: "user",
-        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+        content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
       },
     ],
   });
@@ -2275,7 +2301,10 @@ Return JSON: { "title": string, "content": string } Markdown with Source, What t
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
         },
       ],
     });
@@ -2353,7 +2382,10 @@ Return JSON: { "title": string, "content": string } Markdown with one section pe
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
         },
       ],
     });
@@ -2423,11 +2455,14 @@ Return JSON: { "title": string, "content": string } Markdown with ## LinkedIn DM
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nResearch artifact:\n${
-            input.context.priorArtifact
-              ? `${input.context.priorArtifact.title}\n${input.context.priorArtifact.content}`
-              : "(none)"
-          }\n\nRequest:\n${input.prompt}`,
+          content: jobUserContent(
+            `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nResearch artifact:\n${
+              input.context.priorArtifact
+                ? `${input.context.priorArtifact.title}\n${input.context.priorArtifact.content}`
+                : "(none)"
+            }\n\nRequest:\n${input.prompt}`,
+            input.context,
+          ),
         },
       ],
     });
@@ -2502,7 +2537,10 @@ Return JSON: { "title": string, "content": string }.`,
         },
         {
           role: "user",
-          content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
         },
       ],
     });
@@ -2569,7 +2607,10 @@ Return JSON: { "title": string, "content": string }.`,
       },
       {
         role: "user",
-        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\nInbox:\n${inboxNote}\n\nRequest:\n${input.prompt}`,
+        content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\nInbox:\n${inboxNote}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
       },
     ],
   });
@@ -2630,7 +2671,10 @@ Return JSON: { "title": string, "content": string }.`,
       },
       {
         role: "user",
-        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+        content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\n${pageContextBlock(input.context)}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
       },
     ],
   });
@@ -2676,7 +2720,10 @@ Return JSON: { "title": string, "content": string }.`,
       },
       {
         role: "user",
-        content: `Brand Kit:\n${brandKitBrief(input.kit)}\n\nRequest:\n${input.prompt}`,
+        content: jobUserContent(
+          `Brand Kit:\n${brandKitBrief(input.kit)}\n\nRequest:\n${input.prompt}`,
+          input.context,
+        ),
       },
     ],
   });

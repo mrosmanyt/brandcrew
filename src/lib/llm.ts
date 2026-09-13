@@ -3,6 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { normalizePlanId, planForcesCheapBackends } from "@/lib/limits";
+import {
+  contentHasMedia,
+  contentHasNonImageMedia,
+  textOfContent,
+  type LlmMessageContent,
+} from "@/lib/composer-media";
 import { messagesWithLanguagePolicy } from "@/lib/language-policy";
 import {
   displayModelById,
@@ -120,6 +126,11 @@ export type LlmCompleteResult = {
   provider: LlmProviderName;
   demo: boolean;
   promptCached?: boolean;
+};
+
+export type LlmChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: LlmMessageContent;
 };
 
 export function openaiKey() {
@@ -440,6 +451,95 @@ function textFromAnthropic(content: Anthropic.ContentBlock[]) {
     .trim();
 }
 
+function skippedMediaNote(content: LlmMessageContent): string {
+  if (typeof content === "string") return "";
+  const kinds = content
+    .filter((part) => part.type === "audio" || part.type === "video")
+    .map((part) => (part.type === "audio" ? "voice note" : "short video clip"));
+  if (!kinds.length) return "";
+  return `\n\n(Attached ${[...new Set(kinds)].join(" and ")} — analyze from the transcript or caption above. This backend cannot play the raw bytes.)`;
+}
+
+function openaiChatMessage(message: LlmChatMessage): OpenAI.Chat.ChatCompletionMessageParam {
+  if (typeof message.content === "string") {
+    return { role: message.role, content: message.content } as OpenAI.Chat.ChatCompletionMessageParam;
+  }
+  const blocks: Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string } }
+  > = [];
+  for (const part of message.content) {
+    if (part.type === "text") {
+      blocks.push({ type: "text", text: part.text });
+    } else if (part.type === "image") {
+      blocks.push({
+        type: "image_url",
+        image_url: { url: `data:${part.mime};base64,${part.data}` },
+      });
+    }
+  }
+  const note = skippedMediaNote(message.content);
+  if (note) {
+    blocks.push({ type: "text", text: note.trim() });
+  }
+  if (!blocks.length) {
+    return {
+      role: message.role,
+      content: textOfContent(message.content),
+    } as OpenAI.Chat.ChatCompletionMessageParam;
+  }
+  return { role: message.role, content: blocks } as OpenAI.Chat.ChatCompletionMessageParam;
+}
+
+function anthropicMessageContent(
+  content: LlmMessageContent,
+): string | Anthropic.MessageCreateParams["messages"][number]["content"] {
+  if (typeof content === "string") return content;
+  const blocks: Anthropic.ContentBlockParam[] = [];
+  for (const part of content) {
+    if (part.type === "text") {
+      blocks.push({ type: "text", text: part.text });
+    } else if (part.type === "image") {
+      const mediaType = part.mime === "image/jpg" ? "image/jpeg" : part.mime;
+      if (
+        mediaType === "image/jpeg" ||
+        mediaType === "image/png" ||
+        mediaType === "image/gif" ||
+        mediaType === "image/webp"
+      ) {
+        blocks.push({
+          type: "image",
+          source: { type: "base64", media_type: mediaType, data: part.data },
+        });
+      }
+    }
+  }
+  const note = skippedMediaNote(content);
+  if (note) blocks.push({ type: "text", text: note.trim() });
+  return blocks.length ? blocks : textOfContent(content);
+}
+
+function geminiParts(content: LlmMessageContent): Array<
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } }
+> {
+  if (typeof content === "string") {
+    return [{ text: content }];
+  }
+  const parts: Array<
+    | { text: string }
+    | { inlineData: { mimeType: string; data: string } }
+  > = [];
+  for (const part of content) {
+    if (part.type === "text") {
+      parts.push({ text: part.text });
+    } else {
+      parts.push({ inlineData: { mimeType: part.mime, data: part.data } });
+    }
+  }
+  return parts.length ? parts : [{ text: textOfContent(content) }];
+}
+
 export class LLMProvider {
   status() {
     return getLlmStatus();
@@ -456,7 +556,7 @@ export class LLMProvider {
   async complete(input: {
     mode: TaskMode;
     kind?: LlmJobKind;
-    messages: { role: "system" | "user" | "assistant"; content: string }[];
+    messages: LlmChatMessage[];
     json?: boolean;
   }): Promise<LlmCompleteResult> {
     const workspaceId = currentRoutingWorkspaceId();
@@ -467,11 +567,24 @@ export class LLMProvider {
     const kind = input.kind ?? "general";
     const payload = {
       ...input,
-      messages: messagesWithLanguagePolicy(input.messages, kind),
+      messages: messagesWithLanguagePolicy(input.messages, kind) as LlmChatMessage[],
     };
-    const candidates = completeRouteCandidates(input.mode, kind, currentRoutingPreference(), {
+    const media = payload.messages.some((row) => contentHasMedia(row.content));
+    const needsNativeMedia = payload.messages.some((row) =>
+      contentHasNonImageMedia(row.content),
+    );
+    let candidates = completeRouteCandidates(input.mode, kind, currentRoutingPreference(), {
       json: input.json,
     });
+    if (media) {
+      const flash = geminiFlashRoute();
+      if (flash) {
+        const key = routeKey(flash);
+        candidates = [flash, ...candidates.filter((row) => routeKey(row) !== key)];
+      } else if (needsNativeMedia) {
+        // Audio/video stay on Gemini when keyed; otherwise providers get a text note.
+      }
+    }
     if (!candidates.length) {
       throw new Error("NO_LLM_KEYS");
     }
@@ -492,7 +605,7 @@ export class LLMProvider {
     route: LlmRoute,
     input: {
       mode: TaskMode;
-      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      messages: LlmChatMessage[];
       json?: boolean;
     },
   ): Promise<LlmCompleteResult> {
@@ -512,14 +625,14 @@ export class LLMProvider {
     route: LlmRoute,
     input: {
       mode: TaskMode;
-      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      messages: LlmChatMessage[];
       json?: boolean;
     },
   ): Promise<LlmCompleteResult> {
     const client = createOpenAIClient(route.apiKey);
     const completion = await client.chat.completions.create({
       model: route.model,
-      messages: input.messages,
+      messages: input.messages.map((message) => openaiChatMessage(message)),
       temperature: input.mode === "final" ? 0.4 : 0.7,
       ...(input.json ? { response_format: { type: "json_object" as const } } : {}),
     });
@@ -544,14 +657,14 @@ export class LLMProvider {
     route: LlmRoute,
     input: {
       mode: TaskMode;
-      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      messages: LlmChatMessage[];
       json?: boolean;
     },
   ): Promise<LlmCompleteResult> {
     const client = createAnthropicClient(route.apiKey);
     const system = input.messages
       .filter((message) => message.role === "system")
-      .map((message) => message.content)
+      .map((message) => textOfContent(message.content))
       .join("\n\n");
     const jsonHint = input.json
       ? "\n\nRespond with a single JSON object only. No markdown fence."
@@ -561,7 +674,7 @@ export class LLMProvider {
       .filter((message) => message.role !== "system")
       .map((message) => ({
         role: message.role as "user" | "assistant",
-        content: message.content,
+        content: anthropicMessageContent(message.content),
       }));
 
     const systemText = `${system}${jsonHint}`.trim();
@@ -592,14 +705,14 @@ export class LLMProvider {
     route: LlmRoute,
     input: {
       mode: TaskMode;
-      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      messages: LlmChatMessage[];
       json?: boolean;
     },
   ): Promise<LlmCompleteResult> {
     const client = createGeminiClient(route.apiKey);
     const system = input.messages
       .filter((message) => message.role === "system")
-      .map((message) => message.content)
+      .map((message) => textOfContent(message.content))
       .join("\n\n");
     const jsonHint = input.json
       ? "\n\nRespond with a single JSON object only. No markdown fence."
@@ -609,7 +722,7 @@ export class LLMProvider {
       .filter((message) => message.role !== "system")
       .map((message) => ({
         role: message.role === "assistant" ? "model" : "user",
-        parts: [{ text: message.content }],
+        parts: geminiParts(message.content),
       }));
 
     const response = await client.models.generateContent({
@@ -642,14 +755,14 @@ export class LLMProvider {
     route: LlmRoute,
     input: {
       mode: TaskMode;
-      messages: { role: "system" | "user" | "assistant"; content: string }[];
+      messages: LlmChatMessage[];
       json?: boolean;
     },
   ): Promise<LlmCompleteResult> {
     const client = createXaiClient(route.apiKey);
     const completion = await client.chat.completions.create({
       model: route.model,
-      messages: input.messages,
+      messages: input.messages.map((message) => openaiChatMessage(message)),
       temperature: input.mode === "final" ? 0.4 : 0.7,
       ...(input.json ? { response_format: { type: "json_object" as const } } : {}),
     });

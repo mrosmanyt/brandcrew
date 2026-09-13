@@ -15,6 +15,7 @@ import {
   demoWebsiteHtml,
 } from "@/lib/demo";
 import { generateBuilderArtifact } from "@/lib/builders";
+import { mergeTextAndAttachments } from "@/lib/composer-media";
 import { withLanguagePolicy } from "@/lib/language-policy";
 import { llm, type LlmJobKind, type TaskMode } from "@/lib/llm";
 import { resolveRunOutput } from "@/lib/live-output";
@@ -213,6 +214,7 @@ export async function generateAgentArtifact(input: {
   action?: GenerateAction;
   agentName?: string;
   agentInstructions?: string;
+  attachments?: import("@/lib/composer").ComposerAttachment[];
 }): Promise<{
   artifact: GeneratedArtifact;
   assistantText: string;
@@ -233,6 +235,7 @@ export async function generateAgentArtifact(input: {
       prompt: input.userMessage,
       agentName: input.agentName,
       agentInstructions: input.agentInstructions,
+      attachments: input.attachments,
     });
     return {
       artifact: {
@@ -283,7 +286,7 @@ export async function generateAgentArtifact(input: {
         role: m.role,
         content: m.content,
       })),
-      { role: "user", content: input.userMessage },
+      { role: "user", content: mergeTextAndAttachments(input.userMessage, input.attachments) },
     ],
   });
   const artifact = parseLiveArtifact(result.text, input.role, action);

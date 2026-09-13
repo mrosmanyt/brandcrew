@@ -4,6 +4,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { GENERATE_ACTIONS } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
+import { composerAttachmentsSchema } from "@/lib/composer-media";
 import { isLightweightDeskQuestion, answerDeskQuestion } from "@/lib/desk-qa";
 import { createJobFromChat } from "@/lib/job-runtime";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
@@ -14,6 +15,7 @@ const postSchema = z.object({
   agentId: z.string().min(1),
   message: z.string().max(4000).optional(),
   action: z.enum(GENERATE_ACTIONS).optional(),
+  attachments: composerAttachmentsSchema,
 });
 
 export async function GET(
@@ -53,7 +55,10 @@ export async function POST(
     await requireWorkspaceMember(workspaceId);
     const body = postSchema.parse(await request.json());
     const action = body.action ?? "default";
-    const message = body.message?.trim() || "Give this agent a job from the Brand Kit.";
+    const attachments = body.attachments || [];
+    const message =
+      body.message?.trim() ||
+      (attachments.length ? "" : "Give this agent a job from the Brand Kit.");
     if (isTeamLaunchIntent(message)) {
       return jsonOk({ teamLaunch: true });
     }
@@ -64,12 +69,14 @@ export async function POST(
         action,
         playbookKey: undefined,
         skillId: undefined,
+        attachments,
       })
     ) {
       const qa = await answerDeskQuestion({
         workspaceId,
         agentId: body.agentId,
         message,
+        attachments,
       });
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
@@ -91,6 +98,7 @@ export async function POST(
       agentId: body.agentId,
       message,
       action,
+      attachments,
     });
 
     const workspace = await prisma.workspace.findUnique({

@@ -8,10 +8,19 @@ export const COMPOSER_PLUS_ITEMS = [
   { id: "plugins", label: "Add plugins" },
 ] as const;
 
+export type ComposerAttachmentKind = "text" | "image" | "audio" | "video";
+
 export type ComposerAttachment = {
   name: string;
   size: number;
+  kind?: ComposerAttachmentKind;
+  mime?: string;
   text?: string;
+  /** Raw base64 (no data: prefix). Required for image/audio/video analysis. */
+  data?: string;
+  transcript?: string;
+  previewUrl?: string;
+  error?: string;
 };
 
 const TEXT_NAME = /\.(md|txt|csv|json|html|css|js|ts|tsx|jsx)$/i;
@@ -25,6 +34,18 @@ export function formatAttachedFiles(files: ComposerAttachment[]) {
   if (!files.length) return "";
   return files
     .map((file) => {
+      if (file.kind === "image") {
+        return `Attached image: ${file.name}. Analyze the picture — do not ignore it.`;
+      }
+      if (file.kind === "audio") {
+        const transcript = file.transcript?.trim()
+          ? `\nTranscript: ${file.transcript.trim()}`
+          : "";
+        return `Attached voice note: ${file.name}. Transcribe and answer.${transcript}`;
+      }
+      if (file.kind === "video") {
+        return `Attached video clip: ${file.name}. Analyze this short clip / first frames — do not ignore it.`;
+      }
       if (file.text?.trim()) {
         return `Attached file ${file.name}:\n${file.text.trim()}`;
       }
