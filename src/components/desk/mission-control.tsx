@@ -268,7 +268,7 @@ export function MissionControl({
           jobsPerHour: data.limits?.jobsPerHour ?? prev.jobsPerHour,
           concurrentJobs: data.limits?.concurrentJobs ?? prev.concurrentJobs,
           maxConcurrentJobs: data.limits?.maxConcurrentJobs ?? prev.maxConcurrentJobs,
-          plan: data.limits?.plan ?? prev.plan,
+          plan: normalizePlanId(data.limits?.plan ?? prev.plan),
         }));
       }
     },
