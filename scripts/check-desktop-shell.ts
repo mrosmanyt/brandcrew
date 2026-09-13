@@ -18,7 +18,7 @@ const shell = require("../electron/desk-shell.cjs") as {
   isPublicHttpsOrigin: (raw: string) => boolean;
   isAllowedNavigation: (
     url: string,
-    opts?: { deskOrigin?: string; localOrigin?: string },
+    opts?: { deskOrigin?: string; localOrigin?: string; assistantOrigin?: string },
   ) => boolean;
   isPaymentExternal: (url: string) => boolean;
   chromeUserAgent: (raw: string) => string;
@@ -76,7 +76,12 @@ console.log("ok: packaged cloud desk ignores localhost APP_URL");
 
 const desk = "https://app.cinem.tech";
 const local = "http://127.0.0.1:43180";
-const stay = (url: string) => shell.isAllowedNavigation(url, { deskOrigin: desk, localOrigin: local });
+const stay = (url: string) =>
+  shell.isAllowedNavigation(url, {
+    deskOrigin: desk,
+    localOrigin: local,
+    assistantOrigin: "http://127.0.0.1:1420",
+  });
 assert.equal(stay("https://app.cinem.tech/desk"), true);
 assert.equal(stay("https://app.cinem.tech/login"), true);
 assert.equal(stay("https://accounts.google.com/o/oauth2/v2/auth"), true);
@@ -88,6 +93,7 @@ assert.equal(stay("https://slack.com/oauth/v2/authorize"), true);
 assert.equal(stay("https://www.notion.so/"), true);
 assert.equal(stay("https://app.composio.dev/connect"), true);
 assert.equal(stay("http://127.0.0.1:43180/desk"), true);
+assert.equal(stay("http://127.0.0.1:1420/"), true);
 assert.equal(stay("about:blank"), true);
 assert.equal(shell.isPaymentExternal("https://checkout.stripe.com/c/pay/cs_test"), true);
 assert.equal(shell.isPaymentExternal("https://whop.com/checkout/xxx"), true);
@@ -119,6 +125,10 @@ assert.match(deskSrc, /brandcrew\.vercel\.app/);
 assert.match(deskSrc, /cinem-pro/);
 assert.match(main, /setAsDefaultProtocolClient/);
 assert.match(main, /installAppMenu/);
+assert.match(main, /AI Assistant/);
+assert.match(main, /Open both/);
+assert.match(main, /chrome\.html/);
+assert.match(main, /assistant-preload/);
 assert.match(main, /\/privacy/);
 assert.match(main, /native-host/);
 assert.match(main, /host\.mjs/);
@@ -140,18 +150,48 @@ console.log("ok: main process shows retry UI instead of quitting");
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
   version: string;
   scripts: Record<string, string>;
-  build: { files: string[] };
+  build: { files: string[]; extraResources?: Array<{ to?: string }>; nsis?: unknown };
 };
+
+const modes = require("../electron/modes.cjs") as {
+  normalizeMode: (raw: string) => string;
+  parseStartMode: (argv?: string[], env?: NodeJS.ProcessEnv) => string;
+  modeFromProtocolUrl: (raw: string) => string | null;
+  assistantDevOrigin: (env?: NodeJS.ProcessEnv) => string;
+  verifyShellNonce: (nonce: string) => boolean;
+  ASSISTANT_PING: string;
+};
+assert.equal(modes.normalizeMode("ai"), "assistant");
+assert.equal(modes.parseStartMode(["--mode=assistant"], {}), "assistant");
+assert.equal(modes.parseStartMode([], { CINEM_START_MODE: "both" }), "both");
+assert.equal(modes.modeFromProtocolUrl("cinem-pro://assistant"), "assistant");
+assert.equal(modes.modeFromProtocolUrl("cinem-pro://desk"), "desk");
+assert.equal(modes.assistantDevOrigin({}), "http://127.0.0.1:1420");
+assert.equal(modes.verifyShellNonce("abc.12345678"), true);
+assert.equal(modes.ASSISTANT_PING, "CINEM Pro core online");
+console.log("ok: unified desktop modes");
 assert.equal(pkg.scripts["desktop:cloud"], "node scripts/desktop-cloud.mjs");
+assert.match(pkg.scripts["desktop:assistant"] ?? "", /--mode=assistant/);
 assert.equal(pkg.scripts["test:desktop-shell"], "tsx scripts/check-desktop-shell.ts");
 for (const file of [
   "electron/main.cjs",
   "electron/preload.cjs",
   "electron/desk-shell.cjs",
+  "electron/modes.cjs",
+  "electron/chrome.html",
+  "electron/chrome-preload.cjs",
+  "electron/assistant-preload.cjs",
   "electron/offline.html",
 ]) {
   assert.ok(pkg.build.files.includes(file), `package.json build.files missing ${file}`);
 }
+assert.ok(pkg.build.extraResources?.some((item: { to?: string }) => item.to === "assistant"));
+assert.match(JSON.stringify(pkg.build.nsis || {}), /installer\.nsh/);
+assert.ok(existsSync("electron/chrome.html"));
+assert.ok(existsSync("electron/modes.cjs"));
+assert.ok(existsSync("electron/resources/installer.nsh"));
+assert.ok(existsSync("scripts/build-assistant-renderer.mjs"));
+assert.ok(existsSync(".github/workflows/desktop-windows.yml"));
 assert.equal(pkg.version, shell.DESKTOP_SHELL_VERSION);
 console.log("ok: packaged files include shell + offline page");
 

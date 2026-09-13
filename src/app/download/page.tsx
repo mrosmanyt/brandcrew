@@ -8,6 +8,8 @@ import {
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_PATH,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
+  cinemAiAssistantAdvancedDownloadHref,
   cinemAiAssistantBillingPath,
   cinemAiAssistantDownloadHref,
 } from "@/lib/cinem-ai-assistant";
@@ -49,16 +51,16 @@ export default function DownloadPage() {
 
         <article className="mkt-card-hover mt-12 flex flex-col rounded-xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between md:gap-8">
           <div className="max-w-xl">
-            <p className="text-sm text-muted-foreground">Windows · {CINEM_AI_ASSISTANT_NAME}</p>
+            <p className="text-sm text-muted-foreground">Windows · one installer</p>
             <h2 className="mt-2 text-lg font-medium tracking-tight">
-              Native assistant — included with your CINEM Pro plan
+              CINEM Pro desk + {CINEM_AI_ASSISTANT_NAME}
             </h2>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
-              Voice, agents, and vision on Windows. Free build first; when turns run out,
-              Upgrade opens logged-in Pro checkout in the system browser. Installer{" "}
-              <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_SETUP_FILENAME}</code>{" "}
-              — drop it in <code className="font-mono text-xs">public/downloads</code> when
-              the binary is ready.
+              Install once. Open Desk (cloud at{" "}
+              <code className="font-mono text-xs">app.cinem.tech</code>), AI Assistant, or
+              both. Same CINEM Pro login and plans. Installer{" "}
+              <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}</code>.
+              Unsigned builds: SmartScreen → More info → Run anyway.
             </p>
           </div>
           <div className="mt-6 flex shrink-0 flex-col gap-2 md:mt-0">
@@ -69,11 +71,11 @@ export default function DownloadPage() {
               render={
                 <a
                   href={cinemAiAssistantDownloadHref()}
-                  download={CINEM_AI_ASSISTANT_SETUP_FILENAME}
+                  download={WIN_SETUP_FILENAME}
                 />
               }
             >
-              Get {CINEM_AI_ASSISTANT_NAME}
+              Get CINEM Pro
             </Button>
             <Button
               size="lg"
@@ -82,7 +84,7 @@ export default function DownloadPage() {
               nativeButton={false}
               render={<Link href={CINEM_AI_ASSISTANT_PATH} />}
             >
-              Product page
+              Assistant product page
             </Button>
             <Button
               size="lg"
@@ -99,14 +101,11 @@ export default function DownloadPage() {
         <div className="mt-8 grid gap-6 md:grid-cols-3">
           <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
             <p className="text-sm text-muted-foreground">Windows</p>
-            <h2 className="mt-2 text-lg font-medium tracking-tight">Desktop app</h2>
+            <h2 className="mt-2 text-lg font-medium tracking-tight">Same Setup.exe</h2>
             <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-              NSIS installer <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
-              The packaged app is a shell for{" "}
-              <code className="font-mono text-xs">https://app.cinem.tech</code> — same
-              desk and login as this site. No local database or Postgres. Build:{" "}
+              Portable copy of the same unified app. Menu and chrome switch Desk / AI
+              Assistant. No local database or Postgres on the happy path. Build:{" "}
               <code className="font-mono text-xs">npm run desktop:build:win</code>.
-              Unsigned builds: SmartScreen → More info → Run anyway.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Button
@@ -216,6 +215,14 @@ export default function DownloadPage() {
             </Link>{" "}
             and open Mission Control on the web. Mac .dmg is not hosted from Linux
             CI — build with <code className="font-mono text-xs">npm run desktop:build:mac</code>.
+            Advanced: a Tauri-only{" "}
+            <a
+              href={cinemAiAssistantAdvancedDownloadHref()}
+              className="underline underline-offset-4"
+            >
+              {CINEM_AI_ASSISTANT_SETUP_FILENAME}
+            </a>{" "}
+            is optional — not the primary download.
           </p>
         </section>
       </main>

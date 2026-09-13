@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import {
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_PATH,
-  CINEM_AI_ASSISTANT_SETUP_FILENAME,
   cinemAiAssistantDownloadHref,
 } from "@/lib/cinem-ai-assistant";
 import { PLANS } from "@/lib/constants";
@@ -274,14 +273,13 @@ export function DownloadSection() {
       </div>
       <article className="mkt-card-hover mb-6 flex flex-col rounded-xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between md:gap-8">
         <div className="max-w-xl">
-          <p className="text-sm text-muted-foreground">Windows · {CINEM_AI_ASSISTANT_NAME}</p>
+          <p className="text-sm text-muted-foreground">Windows · one installer</p>
           <h3 className="mt-2 text-lg font-medium tracking-tight">
-            Native assistant — included with your CINEM Pro plan
+            Desk + {CINEM_AI_ASSISTANT_NAME} — included with your plan
           </h3>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            Voice Jarvis, agents, and vision. Free Windows build, then the same Pro checkout
-            as the desk. Installer{" "}
-            <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_SETUP_FILENAME}</code>.
+            Voice Jarvis, agents, and the cloud desk in one app. Installer{" "}
+            <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
           </p>
         </div>
         <div className="mt-6 flex shrink-0 flex-wrap gap-3 md:mt-0">
@@ -289,9 +287,9 @@ export function DownloadSection() {
             size="lg"
             className="mkt-cta-pulse h-11 px-5"
             nativeButton={false}
-            render={<a href={cinemAiAssistantDownloadHref()} />}
+            render={<a href={cinemAiAssistantDownloadHref()} download={WIN_SETUP_FILENAME} />}
           >
-            Get {CINEM_AI_ASSISTANT_NAME}
+            Get CINEM Pro
           </Button>
         </div>
       </article>
@@ -543,7 +541,7 @@ const FAQS = [
   },
   {
     q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. Cinem AI Assistant is a separate Windows installer (Cinem-AI-Assistant-Setup.exe) on /cinem-ai-assistant — included with your CINEM Pro plan. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
+    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. That one installer includes the cloud desk and Cinem AI Assistant — switch modes in the app. There is no hosted Mac .dmg — build on macOS with npm run desktop:build:mac, or use the web desk.",
   },
   {
     q: "How does pricing work?",

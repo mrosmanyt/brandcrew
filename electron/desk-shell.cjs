@@ -130,14 +130,16 @@ function isInternalScheme(url) {
   );
 }
 
-function isAllowedNavigation(url, { deskOrigin, localOrigin: local } = {}) {
+function isAllowedNavigation(url, { deskOrigin, localOrigin: local, assistantOrigin } = {}) {
   if (isInternalScheme(url)) return true;
   const parsed = parseOrigin(url);
   if (!parsed) return false;
   const desk = stripTrailingSlash(deskOrigin || "");
   const loopback = stripTrailingSlash(local || localOrigin());
+  const assistant = stripTrailingSlash(assistantOrigin || "");
   if (desk && url.startsWith(desk)) return true;
   if (loopback && url.startsWith(loopback)) return true;
+  if (assistant && url.startsWith(assistant)) return true;
   if (isPaymentExternal(url)) return false;
   const host = parsed.hostname.toLowerCase();
   return hostMatches(host, IN_WINDOW_HOSTS);

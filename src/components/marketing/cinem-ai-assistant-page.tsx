@@ -4,7 +4,7 @@ import {
   CINEM_AI_ASSISTANT_FEATURES,
   CINEM_AI_ASSISTANT_FREE_TURNS,
   CINEM_AI_ASSISTANT_NAME,
-  CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
   cinemAiAssistantBillingPath,
   cinemAiAssistantDownloadHref,
 } from "@/lib/cinem-ai-assistant";
@@ -20,11 +20,11 @@ export function AssistantHeroCtas() {
         render={
           <a
             href={cinemAiAssistantDownloadHref()}
-            download={CINEM_AI_ASSISTANT_SETUP_FILENAME}
+            download={CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}
           />
         }
       >
-        Download for Windows
+        Download CINEM Pro
       </Button>
       <Button
         size="lg"
@@ -122,7 +122,7 @@ export function AssistantPricing() {
           nativeButton={false}
           render={<a href={cinemAiAssistantDownloadHref()} />}
         >
-          Get the free Windows build
+          Get the free Windows app
         </Button>
       </article>
       <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">

@@ -1,8 +1,10 @@
 # Cinem AI Assistant (Windows-only)
 
-Native Tauri + Vite + React desktop assistant for **CINEM Pro**. This is a feature on the existing Free / Pro / Pro Plus / Ultra plans — not a new Whop product.
+Vite + React assistant UI for **CINEM Pro**. This is a feature on the existing Free / Pro / Pro Plus / Ultra plans — not a new Whop product.
 
-Full native features ship for **Windows only**. Mac and Linux use the web desk at [app.cinem.tech](https://app.cinem.tech).
+**Production path:** the renderer is bundled inside the unified Electron app (`CINEM-Pro-Setup.exe`). Users switch **Desk** and **AI Assistant** in one install.
+
+Full native extras (Whisper / Piper sidecars) remain available in the optional Tauri build. Mac and Linux use the web desk at [app.cinem.tech](https://app.cinem.tech).
 
 ## Cloud contract
 
@@ -13,38 +15,31 @@ Full native features ship for **Windows only**. Mac and Linux use the web desk a
 | Auth | Sign in with CINEM Pro (`POST /api/auth/connect` + `/connect/desktop`, or email/password via `POST /api/auth/token`) |
 | Upgrade | System browser → `upgradeUrl` (`/billing?plan=pro&product=cinem-ai-assistant`) |
 
-Shared fetch helper: [`usage-client.ts`](./usage-client.ts). Website contract: [`docs/cinem-ai-assistant.md`](../../docs/cinem-ai-assistant.md).
+Shared fetch helper: [`usage-client.ts`](./usage-client.ts). Electron bridge: [`src/lib/desktop-shell.ts`](./src/lib/desktop-shell.ts). Website contract: [`docs/cinem-ai-assistant.md`](../../docs/cinem-ai-assistant.md).
 
-## Local development (Windows)
+## Local development
+
+Renderer only (then open in Electron):
+
+```bash
+npm install
+npx vite
+# repo root:
+npm run desktop:cloud
+# or: electron electron/main.cjs --mode=assistant
+```
+
+Optional Tauri (Windows, Rust required):
 
 ```powershell
-cd apps/cinem-ai-assistant
-npm install
-npm run icon          # once — generates src-tauri/icons
+npm run icon
 npm run tauri dev
 ```
 
-Prerequisites: Node 20+, Rust stable, Visual Studio C++ build tools, WebView2.
-
 ## Production installer
 
-Do **not** build the `.exe` on Linux. Use the Windows GitHub Actions workflow:
+Primary: repo root `npm run desktop:build:win` or Actions → **CINEM Pro Windows**.
 
-1. GitHub → Actions → **Cinem AI Assistant Windows** → **Run workflow**
-2. Or push a tag: `cinem-ai-assistant-v0.1.0`
-3. Download the artifact `Cinem-AI-Assistant-Setup.exe`
-4. Drop it in `public/downloads/` **or** set `CINEM_AI_ASSISTANT_SETUP_URL` to the hosted file (GitHub Release on this repo or `cinem-pro-releases`)
-
-See [`docs/cinem-ai-assistant.md`](../../docs/cinem-ai-assistant.md) for the founder release checklist.
-
-## Layout
-
-```
-apps/cinem-ai-assistant/
-├── usage-client.ts           # shared usage/upgrade helper
-├── src/lib/cinemCloud.ts     # CINEM Pro session + usage
-├── src/components/gate/      # Sign in + upgrade popup
-└── src-tauri/                # Tauri 2, NSIS only
-```
+Advanced Tauri-only: Actions → **Cinem AI Assistant Windows**, or tag `cinem-ai-assistant-v*`.
 
 Vercel / `next build` does not compile this folder.

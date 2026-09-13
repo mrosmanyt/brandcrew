@@ -101,6 +101,14 @@ function ensureFriendlyWinNames() {
 console.log("Generating placeholder icon…");
 run(process.execPath, [path.join(root, "scripts/make-icon.mjs")]);
 
+console.log("Building Cinem AI Assistant renderer (Vite, no Rust)…");
+run(process.execPath, [path.join(root, "scripts/build-assistant-renderer.mjs")]);
+const assistantDist = path.join(root, "apps", "cinem-ai-assistant", "dist", "index.html");
+if (!existsSync(assistantDist)) {
+  console.error("Missing apps/cinem-ai-assistant/dist/index.html — unified Setup.exe needs the assistant renderer.");
+  process.exit(1);
+}
+
 console.log("Building Next.js standalone (DESKTOP=1)…");
 run(process.execPath, [path.join(root, "scripts/prisma-generate.mjs")]);
 npx(["next", "build"], { DESKTOP: "1" });

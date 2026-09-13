@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld("brandcrewDesktop", {
   openDeskInBrowser() {
     ipcRenderer.send("cinem:open-desk-external");
   },
+  openAssistant() {
+    ipcRenderer.send("cinem:set-mode", "assistant");
+  },
 });

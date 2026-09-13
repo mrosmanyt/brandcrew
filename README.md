@@ -262,7 +262,7 @@ Or: `bash scripts/install-desktop.sh` from a clone. Override checkout with `BRAN
 
 ### Windows PowerShell
 
-Downloads `CINEM-Pro-Setup.exe` (cloud desk). SmartScreen: **More info → Run anyway**.
+Downloads `CINEM-Pro-Setup.exe` (cloud desk + Cinem AI Assistant). SmartScreen: **More info → Run anyway**.
 
 ```powershell
 irm https://raw.githubusercontent.com/mrosmanyt/brandcrew/main/scripts/install-desktop.ps1 | iex
@@ -292,7 +292,7 @@ gh release create v0.2.0 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
   --title "CINEM Pro 0.2.0" \
-  --notes "Windows installer — cloud desk at app.cinem.tech."
+  --notes "Windows installer — cloud desk + Cinem AI Assistant."
 ```
 
 **Where keys live**
@@ -310,7 +310,7 @@ Cloud-mode Google login uses the production redirect `https://app.cinem.tech/api
 
 - **Mac `.dmg`:** run `desktop:build:mac` on **macOS**. Linux cannot produce a usable signed/stapled dmg (electron-builder will skip or fail; that is expected).
 - **Windows `.exe`:** `desktop:build:win` on Windows is the straightforward path. On Linux, **wine32** (i386) is required for a complete NSIS `CINEM-Pro-Setup.exe` — `wine64` alone leaves a tiny stub. Portable `.exe` still builds without wine32. `package.json` keeps `signAndEditExecutable: false` so unsigned local builds always work. `desktop:build:win` turns signing **on** only when Azure Artifact Signing or CSC_LINK credentials are complete — see `docs/windows-code-signing.md`. Unsigned Setup.exe shows SmartScreen until a signed build is published to `cinem-pro-releases`.
-- CI is optional — there is no GitHub Actions workflow in this slice. Do not expect a Mac dmg from a Linux agent.
+- CI: **CINEM Pro Windows** (`.github/workflows/desktop-windows.yml`) builds the unified NSIS on `windows-latest`. Vercel / Next CI does not. Do not expect a Mac dmg from a Linux agent.
 
 ### First account + first job
 

@@ -44,6 +44,8 @@ class VoiceEngine {
   private recorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
   private player: HTMLAudioElement | null = null;
+  private webSpeech: { stop: () => void } | null = null;
+  private webSpeechText = "";
 
   /* ── Level metering (0..1) for the waveform canvas ── */
   getLevel(): number {
@@ -87,6 +89,7 @@ class VoiceEngine {
       : new MediaRecorder(this.stream);
     this.recorder.ondataavailable = (e) => e.data.size && this.chunks.push(e.data);
     this.recorder.start(250);
+    if (!IS_TAURI) this.startWebSpeechLive();
   }
 
   /** Stops recording and returns the transcribed text. */
@@ -104,11 +107,16 @@ class VoiceEngine {
     this.stream = null;
     this.recorder = null;
     this.analyser = null;
+    this.webSpeech?.stop();
+    this.webSpeech = null;
+    const liveText = this.webSpeechText.trim();
+    this.webSpeechText = "";
 
-    if (blob.size < 1000) return ""; // nothing captured
+    if (blob.size < 1000 && !liveText) return ""; // nothing captured
 
     if (!IS_TAURI) {
-      throw new Error("STT requires the desktop build (npm run tauri dev).");
+      if (liveText) return liveText;
+      throw new Error("Voice typing needs Chromium speech recognition, or the Tauri Whisper build.");
     }
     const { invoke } = await import("@tauri-apps/api/core");
     const audioB64 = await blobToBase64(blob);
@@ -183,6 +191,48 @@ class VoiceEngine {
       voiceModel: opts?.piperVoice || s.piperVoicePath,
     });
     return b64ToBlob(wavB64, "audio/wav");
+  }
+
+  /** Chromium / Electron live STT — Whisper stays Tauri-only for now. */
+  private startWebSpeechLive() {
+    const host = window as unknown as {
+      SpeechRecognition?: new () => {
+        lang: string;
+        interimResults: boolean;
+        continuous: boolean;
+        onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript?: string }>> }) => void) | null;
+        onerror: (() => void) | null;
+        start: () => void;
+        stop: () => void;
+      };
+      webkitSpeechRecognition?: new () => {
+        lang: string;
+        interimResults: boolean;
+        continuous: boolean;
+        onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript?: string }>> }) => void) | null;
+        onerror: (() => void) | null;
+        start: () => void;
+        stop: () => void;
+      };
+    };
+    const Ctor = host.SpeechRecognition || host.webkitSpeechRecognition;
+    if (!Ctor) return;
+    const rec = new Ctor();
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.continuous = true;
+    rec.onresult = (event) => {
+      const last = event.results[event.results.length - 1];
+      const text = last?.[0]?.transcript || "";
+      if (text.trim()) this.webSpeechText = text.trim();
+    };
+    rec.onerror = () => undefined;
+    try {
+      rec.start();
+      this.webSpeech = rec;
+    } catch {
+      this.webSpeech = null;
+    }
   }
 
   /** Browser-native TTS — zero-dependency last resort. */

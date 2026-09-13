@@ -2,17 +2,13 @@ import { useState } from "react";
 import { Globe2, ExternalLink, Loader2 } from "lucide-react";
 import GlassPanel from "@/components/GlassPanel";
 
+import { openExternal as openSystemBrowser } from "@/lib/desktop-shell";
+
 const URL = "https://www.worldmonitor.app/";
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 /** Opens World Monitor in the system browser (fallback if embedding is blocked). */
 async function openExternal() {
-  if (IS_TAURI) {
-    const { open } = await import("@tauri-apps/plugin-shell");
-    await open(URL);
-  } else {
-    window.open(URL, "_blank");
-  }
+  await openSystemBrowser(URL);
 }
 
 /**

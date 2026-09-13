@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CINEM Pro</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 44px;
+        overflow: hidden;
+        background: #09090b;
+        color: #fafafa;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        user-select: none;
+        -webkit-app-region: drag;
+      }
+      header {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px 0 14px;
+        border-bottom: 1px solid #27272a;
+      }
+      .mark {
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+        color: #fafafa;
+        white-space: nowrap;
+      }
+      .modes {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        -webkit-app-region: no-drag;
+      }
+      button {
+        -webkit-app-region: no-drag;
+        appearance: none;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #a1a1aa;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 7px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      button:hover {
+        color: #fafafa;
+        background: #18181b;
+      }
+      button[aria-pressed="true"] {
+        color: #fafafa;
+        background: #18181b;
+        border-color: #3f3f46;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .both {
+        color: #d4d4d8;
+        border-color: #27272a;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="mark">CINEM Pro</span>
+      <nav class="modes" aria-label="App mode">
+        <button type="button" id="desk" aria-pressed="true">Desk</button>
+        <button type="button" id="assistant" aria-pressed="false">AI Assistant</button>
+      </nav>
+      <span class="spacer"></span>
+      <button type="button" id="both" class="both">Open both</button>
+    </header>
+    <script>
+      const api = window.cinemChrome;
+      const params = new URLSearchParams(location.search);
+      const initial = params.get("mode") === "assistant" ? "assistant" : "desk";
+
+      function paint(mode) {
+        document.getElementById("desk").setAttribute("aria-pressed", mode === "desk" ? "true" : "false");
+        document.getElementById("assistant").setAttribute("aria-pressed", mode === "assistant" ? "true" : "false");
+        document.title = mode === "assistant" ? "Cinem AI Assistant" : "CINEM Pro";
+      }
+
+      paint(initial);
+      document.getElementById("desk").addEventListener("click", () => {
+        paint("desk");
+        api && api.setMode("desk");
+      });
+      document.getElementById("assistant").addEventListener("click", () => {
+        paint("assistant");
+        api && api.setMode("assistant");
+      });
+      document.getElementById("both").addEventListener("click", () => {
+        api && api.openBoth();
+      });
+      if (api && api.onMode) {
+        api.onMode((mode) => paint(mode === "assistant" ? "assistant" : "desk"));
+      }
+    </script>
+  </body>
+</html>

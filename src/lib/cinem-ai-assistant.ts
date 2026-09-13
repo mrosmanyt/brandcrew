@@ -5,13 +5,22 @@
 
 import { planDisplayName, type CheckoutPlanId, type PlanId } from "@/lib/constants";
 import { isPaidPlan, normalizePlanId } from "@/lib/limits";
-import { PUBLIC_RELEASES_REPO, SITE_ORIGIN, siteOrigin } from "@/lib/site";
+import {
+  DESKTOP_WIN_DOWNLOAD,
+  PUBLIC_RELEASES_REPO,
+  SITE_ORIGIN,
+  WIN_SETUP_FILENAME,
+  siteOrigin,
+} from "@/lib/site";
 
 export const CINEM_AI_ASSISTANT_PRODUCT = "cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_NAME = "Cinem AI Assistant";
 export const CINEM_AI_ASSISTANT_PATH = "/cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_SETUP_FILENAME = "Cinem-AI-Assistant-Setup.exe";
-export const CINEM_AI_ASSISTANT_PUBLIC_PATH = `/downloads/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
+/** Primary Windows installer — Desk + AI Assistant in one NSIS Setup.exe. */
+export const CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME = WIN_SETUP_FILENAME;
+export const CINEM_AI_ASSISTANT_PUBLIC_PATH = `/downloads/${CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}`;
+export const CINEM_AI_ASSISTANT_ADVANCED_PUBLIC_PATH = `/downloads/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
 export const CINEM_AI_ASSISTANT_DOWNLOAD_API = "/api/downloads/cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_USAGE_API = "/api/cinem-ai-assistant/usage";
 export const CINEM_AI_ASSISTANT_DOCS = "docs/cinem-ai-assistant.md";
@@ -84,7 +93,7 @@ export const CINEM_AI_ASSISTANT_FEATURES: CinemAiAssistantFeature[] = [
   {
     id: "windows",
     title: "Windows native",
-    body: "Full native features ship for Windows only. Mac and Linux use the web desk.",
+    body: "One Windows installer (CINEM-Pro-Setup.exe) opens Desk and AI Assistant. Mac and Linux use the web desk.",
   },
   {
     id: "upgrade",
@@ -161,12 +170,20 @@ export function cinemAiAssistantSetupEnvUrl() {
 }
 
 export function cinemAiAssistantReleaseUrl() {
+  return DESKTOP_WIN_DOWNLOAD;
+}
+
+export function cinemAiAssistantAdvancedReleaseUrl() {
   return `${PUBLIC_RELEASES_REPO}/releases/latest/download/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
 }
 
-/** Public download CTA. API resolves local file → env URL → releases host. */
+/** Public download CTA. Env override, else the unified CINEM-Pro-Setup.exe. */
 export function cinemAiAssistantDownloadHref() {
-  return cinemAiAssistantSetupEnvUrl() || CINEM_AI_ASSISTANT_DOWNLOAD_API;
+  return cinemAiAssistantSetupEnvUrl() || DESKTOP_WIN_DOWNLOAD;
+}
+
+export function cinemAiAssistantAdvancedDownloadHref() {
+  return `${CINEM_AI_ASSISTANT_DOWNLOAD_API}?advanced=1`;
 }
 
 export function usageSnapshot(input: {

@@ -1,0 +1,56 @@
+# Unified Windows NSIS: CINEM-Pro-Setup.exe (cloud desk + Cinem AI Assistant).
+# Vite renderer only — does not compile Rust / Tauri. Not part of Vercel / Next CI.
+name: CINEM Pro Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+      - "cinem-pro-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-nsis:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Build unified Windows installer
+        run: npm run desktop:build:win
+        env:
+          VITE_CINEM_CLOUD_URL: https://app.cinem.tech
+          VITE_CINEM_UPGRADE_URL: https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant
+          CINEM_ELECTRON_ASSISTANT: "1"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CINEM-Pro-Setup
+          path: |
+            dist/desktop/CINEM-Pro-Setup.exe
+            dist/desktop/CINEM-Pro-Portable.exe
+          if-no-files-found: error
+
+      - name: Attach installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/desktop/CINEM-Pro-Setup.exe
+            dist/desktop/CINEM-Pro-Portable.exe
