@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms & conditions" updated="8 September 2026">
+    <LegalPage title="Terms & conditions" updated="13 September 2026">
       <p>
         These terms are the agreement between you and <strong>CINEM</strong> for{" "}
         <strong>CINEM Pro</strong> ({" "}
@@ -56,13 +56,12 @@ export default function TermsPage() {
       <p>
         You keep rights to the Brand Kit, jobs, and artifacts you create. You
         grant CINEM a limited license to host and process that content so the
-        product can function (including sending job text to model providers
-        when server keys are configured).
+        product can function.
       </p>
 
       <h2>Availability and liability</h2>
       <p>
-        The service is provided as-is. Model output can be wrong. CINEM is not
+        The service is provided as-is. Drafts can be wrong. CINEM is not
         liable for lost profits, indirect damages, or decisions you make from
         drafts. Direct damages are limited to fees you paid for CINEM Pro in
         the three months before the claim.

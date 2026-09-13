@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function DpaPage() {
   return (
-    <LegalPage title="Data processing addendum (template)" updated="10 September 2026">
+    <LegalPage title="Data processing addendum (template)" updated="13 September 2026">
       <p>
         This page is a <strong>starting template</strong> for agency buyers who need a DPA
         under GDPR. It is <strong>not a signed agreement</strong> and not legal advice.{" "}
@@ -45,51 +45,45 @@ export default function DpaPage() {
       <ul>
         <li>Account identifiers (name, email).</li>
         <li>Workspace content the customer types or the agent drafts.</li>
-        <li>Optional plugin tokens (encrypted) and Composio connected-account ids.</li>
+        <li>Optional connection details you authorize (stored securely).</li>
         <li>Usage counters (tokens/credits, jobs, seats).</li>
         <li>Audit rows (who approved what, device pairing events).</li>
       </ul>
 
       <h2>4. What stays on the device</h2>
       <p>
-        When <strong>On-device Chrome</strong> is paired, page interaction (CDP click /
-        type / snapshot) runs on the customer machine. The server receives tool
-        results the job needs — not a full browser profile or password store. Cloud
-        browse is a fallback for public allowlisted URLs when no device is paired.
-        See the processing table on{" "}
+        When you pair a browser, page work can stay on your computer. CINEM does
+        not take your full browser profile or saved passwords. See{" "}
         <Link href="/privacy">Privacy</Link>.
       </p>
 
       <h2>5. Subprocessors</h2>
       <p>
-        Hosting is on Vercel. Postgres stores accounts and workspace rows. Optional
-        LLM providers, Composio, and OAuth apps you connect receive only what you
-        authorize. Billing may use Whop or Stripe. See{" "}
+        Apps you connect receive only what you authorize. Checkout uses the
+        payment provider shown at purchase. See{" "}
         <Link href="/privacy">Privacy</Link>. CINEM does not sell workspace content.
       </p>
 
       <h2>6. Customer instructions</h2>
       <p>
         The processor processes workspace data to provide the product: store it,
-        generate drafts via configured model providers, and execute tools the
-        customer approves. The customer is responsible for lawful outreach and for
-        not uploading special-category data unless a written addendum covers it.
+        generate drafts, and run the tools you approve. The customer is
+        responsible for lawful outreach and for not uploading special-category
+        data unless a written addendum covers it.
       </p>
 
       <h2>7. Security measures</h2>
       <ul>
-        <li>HttpOnly session cookie; workspace membership and RBAC.</li>
-        <li>Encrypted plugin secrets; env-only <code>COMPOSIO_API_KEY</code>.</li>
-        <li>Write-gate and role-based approvals; client-named email always gated.</li>
-        <li>Untrusted page wrap and domain allowlist.</li>
-        <li>Append-only audit of who approved what.</li>
+        <li>Signed-in sessions stay on the account that created them.</li>
+        <li>Connection details are stored securely and not shown back in the browser.</li>
+        <li>High-risk sends wait for a human approver.</li>
+        <li>A record of who approved what.</li>
       </ul>
 
       <h2>8. International transfers</h2>
       <p>
-        Hosting and model providers may process data outside the EEA. Customers
-        should review those providers&apos; transfer mechanisms. This template does
-        not invent SCCs in the product UI.
+        Some service providers may process data outside the EEA. This template
+        does not invent transfer clauses in the product UI.
       </p>
 
       <h2>9. Deletion and assistance</h2>

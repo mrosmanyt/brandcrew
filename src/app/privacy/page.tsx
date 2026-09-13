@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="10 September 2026">
+    <LegalPage title="Privacy policy" updated="13 September 2026">
       <p>
         This policy describes how <strong>CINEM</strong> (“we”) handles information when you
         use <strong>CINEM Pro</strong> at{" "}
@@ -43,35 +43,27 @@ export default function PrivacyPage() {
           marketplace connections.
         </li>
         <li>
-          Plugin secrets you paste (API keys, OAuth tokens). Those are encrypted
-          with the server session secret and are not returned to the browser.
+          Connection details you add for apps you connect. Those are stored
+          securely and are not shown back in the browser.
         </li>
         <li>Usage counters used to enforce plan limits (tokens, jobs, seats).</li>
       </ul>
 
       <h2>Cookies</h2>
       <p>
-        The <code>brandcrew_session</code> cookie is essential. It is httpOnly,
-        SameSite=Lax, and Secure in production (and on Vercel). It keeps you
-        signed in. The session JWT is never written to localStorage or
-        sessionStorage. We do not use advertising cookies. A Whop tracking pixel
-        loads in the document head on every page (t.whop.tw, CINEM Tech business{" "}
-        <code>biz_VrtL8S4duREQg4</code>) so membership checkout can attribute
-        visits — that is billing, not ads, and it is not gated by the cookie
-        banner. Optional analytics scripts load only when an analytics
-        environment variable is set <em>and</em> you accept them in the cookie
-        banner. Your banner choice (and desk pane width) may be stored in
-        localStorage on this device — that is not a login token.
+        The <code>brandcrew_session</code> cookie is essential. It keeps you
+        signed in. We do not use advertising cookies. A checkout pixel may load
+        so membership checkout can attribute visits — that is billing, not ads.
+        Optional analytics load only if you accept them in the cookie banner.
+        Your banner choice may be stored on this device — that is not a login
+        token.
       </p>
 
       <h2>Chrome extension, desktop, and Android</h2>
       <p>
-        The Chrome extension stores only the desk origin and a device token in{" "}
-        <code>chrome.storage.local</code> after you Sign in with CINEM (or paste a
-        pairing code). It does not sell browsing data. Desktop and Android store a
-        refresh token in the OS secure store (or Electron userData) so the same
-        account opens Mission Control. Access JWTs are the same shape as the web
-        session cookie; they are not written to web localStorage.
+        The Chrome extension, desktop app, and Android app use the same CINEM
+        account. Sign-in stays on that device. The extension does not sell
+        browsing data.
       </p>
 
       <h2>What stays on the device vs the server</h2>
@@ -86,12 +78,8 @@ export default function PrivacyPage() {
 
       <h2>Processors</h2>
       <p>
-        Hosting is on Vercel. Postgres (Neon or similar) stores accounts and
-        workspace rows. If you connect Gmail, Slack, or other plugins, those
-        providers receive the OAuth tokens you authorize. If LLM keys are
-        configured on the server, job text is sent to the selected model
-        provider (OpenAI, Anthropic, Google, or xAI) to produce drafts. We do
-        not sell your data.
+        If you connect Gmail, Slack, or other apps, those services receive
+        what you authorize. We do not sell your data.
       </p>
 
       <h2>Retention</h2>

@@ -76,8 +76,8 @@ const FEATURES = [
     body: "Give a job. It plans, uses tools, writes an artifact, then pauses at ask_user. You approve what leaves.",
   },
   {
-    title: "Multi-model",
-    body: "OpenAI, Claude, and Gemini stay on the server. The desk routes drafts and finals — you never paste a provider key.",
+    title: "Drafts you can inspect",
+    body: "Agents write drafts and finals in the desk. You review the work and approve what goes out.",
   },
   {
     title: "Brand Kit",
@@ -85,7 +85,7 @@ const FEATURES = [
   },
   {
     title: "API Console / Developer API",
-    body: "Mint a workspace key in the desk and call /api/v1. Bearer tokens never include model secrets. Jobs still wait for you.",
+    body: "Mint a workspace key in the desk and call /api/v1. Jobs still wait for you.",
   },
   {
     title: "Gmail & Slack, real OAuth",
@@ -177,7 +177,7 @@ const STEPS = [
   {
     n: "2",
     title: "Connect plugins",
-    body: "Web Search needs a real Tavily key. Gmail and Slack stay disconnected until OAuth finishes. Empty Connect never fakes Connected.",
+    body: "Gmail and Slack stay disconnected until you finish connecting. Empty Connect never fakes Connected.",
   },
   {
     n: "3",
@@ -187,7 +187,7 @@ const STEPS = [
   {
     n: "4",
     title: "Tools run",
-    body: "Browse, search, read the kit, write an artifact. Live activity shows the tool name and URL. No canned tasting-menu copy when keys exist.",
+    body: "Browse, search, read the kit, write an artifact. Live activity shows the tool name and URL.",
   },
   {
     n: "5",
@@ -220,7 +220,7 @@ export function HowItWorksSection() {
 const USE_CASES = [
   {
     title: "Founders",
-    body: "One desk for research, a week of posts, and outbound your agents run. Brand Kit holds the offer so every job sounds like your company — not a generic model.",
+    body: "One desk for research, a week of posts, and outbound your agents run. Brand Kit holds the offer so every job sounds like your company.",
   },
   {
     title: "Agencies",
@@ -496,10 +496,6 @@ const TRUST = [
     body: "CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients.",
   },
   {
-    title: "Keys stay server-side",
-    body: "LLM keys live in server env. Users never paste them. Plugin secrets are encrypted with SESSION_SECRET and never returned to the client.",
-  },
-  {
     title: "Approve before send",
     body: "Gmail can create a draft. Slack chat.postMessage runs only after ask_user is done. Ads never buy media. WhatsApp never sends.",
   },
@@ -514,7 +510,7 @@ export function TrustSection() {
       title="A registered company, trusted by 5,000+ clients"
       lead="CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients. Agents email, post, and work the browser — you approve what goes out."
     >
-      <ul className="grid gap-10 md:grid-cols-3">
+      <ul className="grid gap-10 md:grid-cols-2">
         {TRUST.map((item) => (
           <li key={item.title}>
             <h3 className="text-lg font-medium tracking-tight">{item.title}</h3>
