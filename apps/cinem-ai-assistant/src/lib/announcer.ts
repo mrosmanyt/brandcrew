@@ -36,7 +36,7 @@ export function speakQueued(text: string, opts?: SpeakOptions): Promise<void> {
     const app = useAppStore.getState();
     // Language hint follows the user's detected language (ElevenLabs
     // multilingual auto-detects from the text; Web Speech needs the tag).
-    opts = { lang: app.language.bcp47, ...opts };
+    opts = { lang: app.language.bcp47, characterId: settings.characterVoice, ...opts };
     const prev = app.voiceStatus;
     if (prev === "idle") app.setVoiceStatus("speaking");
     try {

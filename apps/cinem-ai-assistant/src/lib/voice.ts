@@ -1,12 +1,25 @@
 /**
  * Cinem AI Assistant voice engine (Phase 2).
  *  - Listening : mic capture (MediaRecorder) + live level metering
- *  - STT       : Faster-Whisper via the Rust `transcribe_audio` command
- *  - Speaking  : ElevenLabs (primary, via tauri-plugin-http) → Piper (fallback)
+ *  - STT       : Faster-Whisper (Tauri) or Chromium speech recognition (Electron)
+ *  - Speaking  : Fish Audio (optional key) → ElevenLabs → Piper (Tauri) →
+ *                Windows / Edge Neural Web Speech. Whisper is never used as TTS.
  * The waveform bar reads `voice.getLevel()` each frame for real amplitude.
  */
 import type { Settings } from "@/store/useSettingsStore";
+import { useAppStore } from "@/store/useAppStore";
 import { reportUsage } from "@/lib/usage";
+import {
+    resolveCharacterForSpeak,
+  envFishAudioKey,
+  FISH_AUDIO_DEFAULT_MODEL,
+  FISH_AUDIO_TTS_URL,
+  pickWebSpeechVoice,
+  resolveFishApiKey,
+  resolveFishVoiceId,
+  webSpeechProsody,
+  type CharacterVoice,
+} from "@/lib/character-voices";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -25,9 +38,11 @@ export interface SpeakOptions {
   voiceId?: string;
   /** Piper voice model path override. */
   piperVoice?: string;
-  /** BCP-47 language tag (e.g. "hi-IN", "ur-PK") — ElevenLabs multilingual
-   *  auto-detects from the text; this hints Web Speech / future engines. */
+  /** BCP-47 language tag (e.g. "hi-IN", "ur-PK") — Fish / ElevenLabs multilingual
+   *  auto-detect from the text; this hints Web Speech. */
   lang?: string;
+  /** Named character from Settings → Voice. */
+  characterId?: string;
 }
 
 function b64ToBlob(b64: string, mime: string): Blob {
@@ -128,34 +143,72 @@ class VoiceEngine {
 
   /* ── Speaking ─────────────────────────────────────── */
   /**
-   * Speaks `text`. `opts` lets callers override the voice per utterance —
-   * this is how each sub-agent gets its own recognizable voice identity.
-   * Fallback chain: ElevenLabs → Piper → Web Speech API (browser built-in).
+   * Speaks `text`. `opts` lets callers override the voice per utterance.
+   * Chain: Fish Audio (optional key) → ElevenLabs → Piper (Tauri only) →
+   * sweet Web Speech. Never leaves the harsh default clip as the only path.
    */
   async speak(text: string, s: Settings, opts?: SpeakOptions): Promise<void> {
     if (!text.trim()) return;
-    let audioBlob: Blob;
+    const character = resolveCharacterForSpeak(opts?.characterId || s.characterVoice, opts?.lang);
+    const lang = opts?.lang || character.bcp47;
+    const engine = s.ttsEngine || "auto";
+    const fishKey = resolveFishApiKey({ fishAudioKey: s.fishAudioKey, envKey: envFishAudioKey() });
+    const tryFish = Boolean(fishKey) && (engine === "auto" || engine === "fish");
+    const tryEleven = Boolean(s.elevenKey) && (engine === "auto" || engine === "elevenlabs");
+    const tryPiper = IS_TAURI && (engine === "piper" || (engine === "auto" && !fishKey && !s.elevenKey));
 
-    try {
-      if (s.ttsEngine === "elevenlabs" && s.elevenKey) {
-        try {
-          audioBlob = await this.elevenLabsTts(text, s, opts);
-        } catch (e) {
-          console.warn("ElevenLabs failed, falling back to Piper:", e);
-          audioBlob = await this.piperTts(text, s, opts);
-        }
-      } else {
-        audioBlob = await this.piperTts(text, s, opts);
+    if (tryFish) {
+      try {
+        await this.play(await this.fishAudioTts(text, s, opts, character, fishKey));
+        return;
+      } catch (e) {
+        console.warn("Fish Audio failed, trying next TTS:", e);
       }
-    } catch (e) {
-      // Last resort — Web Speech API, so Cinem AI Assistant is never mute (e.g. plain
-      // browser dev with no ElevenLabs key and no desktop Piper).
-      console.warn("All TTS engines failed, using Web Speech API:", e);
-      await this.webSpeechTts(text, opts?.lang);
-      return;
     }
+    if (tryEleven) {
+      try {
+        await this.play(await this.elevenLabsTts(text, s, opts));
+        return;
+      } catch (e) {
+        console.warn("ElevenLabs failed, trying next TTS:", e);
+      }
+    }
+    if (tryPiper) {
+      try {
+        await this.play(await this.piperTts(text, s, opts));
+        return;
+      } catch (e) {
+        console.warn("Piper failed, using Web Speech:", e);
+      }
+    }
+    await this.webSpeechTts(text, lang, character);
+  }
 
-    await this.play(audioBlob);
+  private async fishAudioTts(
+    text: string,
+    s: Settings,
+    opts: SpeakOptions | undefined,
+    character: CharacterVoice,
+    apiKey: string,
+  ): Promise<Blob> {
+    const referenceId = resolveFishVoiceId(character, s.fishVoiceIds);
+    const res = await fetch(FISH_AUDIO_TTS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        model: s.fishModel?.trim() || FISH_AUDIO_DEFAULT_MODEL,
+      },
+      body: JSON.stringify({
+        text,
+        format: "mp3",
+        ...(referenceId ? { reference_id: referenceId } : {}),
+        prosody: { speed: 0.96, volume: 0, normalize_loudness: true },
+      }),
+    });
+    if (!res.ok) throw new Error(`Fish Audio ${res.status}: ${await res.text()}`);
+    reportUsage("tts", text.length);
+    return new Blob([await res.arrayBuffer()], { type: "audio/mpeg" });
   }
 
   private async elevenLabsTts(text: string, s: Settings, opts?: SpeakOptions): Promise<Blob> {
@@ -218,7 +271,7 @@ class VoiceEngine {
     const Ctor = host.SpeechRecognition || host.webkitSpeechRecognition;
     if (!Ctor) return;
     const rec = new Ctor();
-    rec.lang = "en-US";
+    rec.lang = this.webSpeechListenLang();
     rec.interimResults = true;
     rec.continuous = true;
     rec.onresult = (event) => {
@@ -235,17 +288,38 @@ class VoiceEngine {
     }
   }
 
-  /** Browser-native TTS — zero-dependency last resort. */
-  private webSpeechTts(text: string, lang?: string): Promise<void> {
-    return new Promise((resolve) => {
-      if (!("speechSynthesis" in window)) return resolve();
-      const u = new SpeechSynthesisUtterance(text);
-      if (lang) {
-        u.lang = lang;
-        const match = window.speechSynthesis.getVoices().find((v) => v.lang.startsWith(lang.split("-")[0]));
-        if (match) u.voice = match;
-      }
-      u.rate = 1.02;
+  private webSpeechListenLang(): string {
+    return useAppStore.getState().language.bcp47 || "en-US";
+  }
+
+  private async loadWebSpeechVoices(): Promise<SpeechSynthesisVoice[]> {
+    if (!("speechSynthesis" in window)) return [];
+    const now = window.speechSynthesis.getVoices();
+    if (now.length) return now;
+    return await new Promise((resolve) => {
+      const done = () => resolve(window.speechSynthesis.getVoices());
+      window.speechSynthesis.addEventListener("voiceschanged", done, { once: true });
+      setTimeout(done, 1200);
+    });
+  }
+
+  /** Browser-native TTS — Neural/Natural voices, never the harsh default clip. */
+  private async webSpeechTts(text: string, lang?: string, character?: CharacterVoice): Promise<void> {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const voices = await this.loadWebSpeechVoices();
+    const picked = pickWebSpeechVoice(voices, {
+      lang: lang || character?.bcp47 || "en-US",
+      gender: character?.gender,
+      hints: character?.osHints,
+    });
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = picked?.lang || lang || character?.bcp47 || "en-US";
+    if (picked) u.voice = picked;
+    const prosody = webSpeechProsody();
+    u.rate = prosody.rate;
+    u.pitch = prosody.pitch;
+    await new Promise<void>((resolve) => {
       u.onend = () => resolve();
       u.onerror = () => resolve();
       window.speechSynthesis.speak(u);
@@ -279,6 +353,9 @@ class VoiceEngine {
     this.player?.pause();
     this.player = null;
     this.analyser = null;
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
   }
 }
 

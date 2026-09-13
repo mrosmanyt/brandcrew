@@ -10,6 +10,24 @@ contextBridge.exposeInMainWorld("cinemChrome", {
   openUpdates() {
     ipcRenderer.send("cinem:open-updates");
   },
+  windowMinimize() {
+    ipcRenderer.send("cinem:window-min");
+  },
+  windowMaximize() {
+    ipcRenderer.send("cinem:window-max");
+  },
+  windowClose() {
+    ipcRenderer.send("cinem:window-close");
+  },
+  windowState() {
+    return ipcRenderer.invoke("cinem:window-state");
+  },
+  onWindowState(handler) {
+    if (typeof handler !== "function") return () => undefined;
+    const listen = (_event, state) => handler(state);
+    ipcRenderer.on("cinem:window-state", listen);
+    return () => ipcRenderer.removeListener("cinem:window-state", listen);
+  },
   onMode(handler) {
     if (typeof handler !== "function") return () => undefined;
     const listen = (_event, mode) => handler(mode);

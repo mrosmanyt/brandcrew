@@ -6,7 +6,7 @@ const PRODUCTION_DESK_ORIGIN = "https://app.cinem.tech";
 const VERCEL_DESK_ORIGIN = "https://brandcrew.vercel.app";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 43180;
-const DESKTOP_SHELL_VERSION = "0.3.2";
+const DESKTOP_SHELL_VERSION = "0.3.3";
 const SESSION_COOKIE = "brandcrew_session";
 const PROTOCOL = "cinem-pro";
 

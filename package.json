@@ -1,6 +1,6 @@
 {
   "name": "brandcrew",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "CINEM Pro — AI employee desk. Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
   "author": "CINEM",
@@ -53,6 +53,7 @@
     "test:phase4": "tsx scripts/check-phase4.ts",
     "test:desktop-shell": "tsx scripts/check-desktop-shell.ts",
     "test:desktop-updater": "tsx scripts/check-desktop-updater.ts",
+    "test:voices": "tsx scripts/check-character-voices.ts",
     "test:cinem-ai": "tsx scripts/check-cinem-ai-assistant.ts",
     "test:assistant-ux": "tsx scripts/check-assistant-ux.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
@@ -123,6 +124,7 @@
       "electron/preload.cjs",
       "electron/desk-shell.cjs",
       "electron/modes.cjs",
+      "electron/window-chrome.cjs",
       "electron/chrome.html",
       "electron/chrome-preload.cjs",
       "electron/assistant-preload.cjs",

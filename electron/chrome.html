@@ -7,6 +7,22 @@
     <style>
       :root {
         color-scheme: dark;
+        --chrome: #09090b;
+        --line: #27272a;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --hover: #18181b;
+        --caption-reserve: 0px;
+        --traffic-reserve: 0px;
+      }
+      html[data-overlay="1"] {
+        --caption-reserve: 138px;
+      }
+      html[data-caption="1"] {
+        --caption-reserve: 138px;
+      }
+      html[data-platform="darwin"] {
+        --traffic-reserve: 78px;
       }
       * {
         box-sizing: border-box;
@@ -16,8 +32,8 @@
         margin: 0;
         height: 44px;
         overflow: hidden;
-        background: #09090b;
-        color: #fafafa;
+        background: var(--chrome);
+        color: var(--text);
         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
         user-select: none;
         -webkit-app-region: drag;
@@ -26,21 +42,26 @@
         height: 44px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 0 12px 0 14px;
-        border-bottom: 1px solid #27272a;
+        gap: 10px;
+        padding: 0 8px 0 calc(14px + var(--traffic-reserve));
+        padding-right: calc(8px + var(--caption-reserve));
+        border-bottom: 1px solid var(--line);
       }
       .mark {
         font-size: 12px;
         font-weight: 650;
-        letter-spacing: 0.04em;
-        color: #fafafa;
+        letter-spacing: 0.06em;
+        color: var(--text);
         white-space: nowrap;
       }
       .modes {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 8px;
+        background: #0c0c0f;
+        border: 1px solid #1f1f23;
         -webkit-app-region: no-drag;
       }
       button {
@@ -48,52 +69,115 @@
         appearance: none;
         border: 1px solid transparent;
         background: transparent;
-        color: #a1a1aa;
-        height: 28px;
+        color: var(--muted);
+        height: 26px;
         padding: 0 10px;
-        border-radius: 7px;
+        border-radius: 6px;
         font: inherit;
         font-size: 12px;
         cursor: pointer;
       }
       button:hover {
-        color: #fafafa;
-        background: #18181b;
+        color: var(--text);
+        background: var(--hover);
       }
       button[aria-pressed="true"] {
-        color: #fafafa;
+        color: var(--text);
         background: #18181b;
         border-color: #3f3f46;
       }
       .spacer {
         flex: 1;
       }
-      .both {
+      .ghost {
         color: #d4d4d8;
         border-color: #27272a;
+        height: 26px;
+      }
+      .captions {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 44px;
+        -webkit-app-region: no-drag;
+      }
+      html[data-caption="1"] .captions {
+        display: flex;
+      }
+      .captions button {
+        width: 46px;
+        height: 44px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        color: #c4c4c4;
+        background: transparent;
+        display: grid;
+        place-items: center;
+      }
+      .captions button:hover {
+        background: #2a2a2e;
+        color: #fafafa;
+      }
+      .captions button.close:hover {
+        background: #e81123;
+        color: #fff;
+      }
+      .captions svg {
+        display: block;
       }
     </style>
   </head>
   <body>
-    <header>
+    <header id="bar">
       <span class="mark">CINEM Pro</span>
       <nav class="modes" aria-label="App mode">
         <button type="button" id="desk" aria-pressed="true">Desk</button>
         <button type="button" id="assistant" aria-pressed="false">AI Assistant</button>
       </nav>
       <span class="spacer"></span>
-      <button type="button" id="updates" class="both">Updates</button>
-      <button type="button" id="both" class="both">Open both</button>
+      <button type="button" id="updates" class="ghost">Updates</button>
+      <button type="button" id="both" class="ghost">Open both</button>
     </header>
+    <div class="captions" id="captions" aria-label="Window">
+      <button type="button" id="min" title="Minimize" aria-label="Minimize">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M1 5h8" stroke="currentColor" stroke-width="1.15" fill="none" />
+        </svg>
+      </button>
+      <button type="button" id="max" title="Maximize" aria-label="Maximize">
+        <svg id="max-icon" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <rect x="1.4" y="1.4" width="7.2" height="7.2" rx="0.4" stroke="currentColor" stroke-width="1.15" fill="none" />
+        </svg>
+      </button>
+      <button type="button" id="close" class="close" title="Close" aria-label="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.15" fill="none" />
+        </svg>
+      </button>
+    </div>
     <script>
       const api = window.cinemChrome;
       const params = new URLSearchParams(location.search);
       const initial = params.get("mode") === "assistant" ? "assistant" : "desk";
+      document.documentElement.dataset.platform = params.get("platform") || "";
+      document.documentElement.dataset.overlay = params.get("overlay") === "1" ? "1" : "0";
+      document.documentElement.dataset.caption = params.get("caption") === "1" ? "1" : "0";
 
       function paint(mode) {
         document.getElementById("desk").setAttribute("aria-pressed", mode === "desk" ? "true" : "false");
         document.getElementById("assistant").setAttribute("aria-pressed", mode === "assistant" ? "true" : "false");
         document.title = mode === "assistant" ? "Cinem AI Assistant" : "CINEM Pro";
+      }
+
+      function paintMax(maximized) {
+        const btn = document.getElementById("max");
+        btn.setAttribute("aria-label", maximized ? "Restore" : "Maximize");
+        btn.title = maximized ? "Restore" : "Maximize";
+        document.getElementById("max-icon").innerHTML = maximized
+          ? '<path d="M2.4 3.2h4.4v4.4H2.4z" stroke="currentColor" stroke-width="1.15" fill="none"/><path d="M3.4 2.2h4.4v4.4" stroke="currentColor" stroke-width="1.15" fill="none"/>'
+          : '<rect x="1.4" y="1.4" width="7.2" height="7.2" rx="0.4" stroke="currentColor" stroke-width="1.15" fill="none" />';
       }
 
       paint(initial);
@@ -111,8 +195,23 @@
       document.getElementById("both").addEventListener("click", () => {
         api && api.openBoth();
       });
+      document.getElementById("min").addEventListener("click", () => api && api.windowMinimize && api.windowMinimize());
+      document.getElementById("max").addEventListener("click", () => api && api.windowMaximize && api.windowMaximize());
+      document.getElementById("close").addEventListener("click", () => api && api.windowClose && api.windowClose());
+      document.getElementById("bar").addEventListener("dblclick", (event) => {
+        if (event.target !== document.getElementById("bar") && event.target.className !== "spacer" && event.target.className !== "mark") {
+          return;
+        }
+        api && api.windowMaximize && api.windowMaximize();
+      });
       if (api && api.onMode) {
         api.onMode((mode) => paint(mode === "assistant" ? "assistant" : "desk"));
+      }
+      if (api && api.onWindowState) {
+        api.onWindowState((state) => paintMax(Boolean(state && state.maximized)));
+      }
+      if (api && api.windowState) {
+        Promise.resolve(api.windowState()).then((state) => paintMax(Boolean(state && state.maximized)));
       }
     </script>
   </body>

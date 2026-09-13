@@ -33,6 +33,13 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
   openUpdates() {
     ipcRenderer.send("cinem:open-updates");
   },
+  getVoiceEnv() {
+    return {
+      FISH_AUDIO_API_KEY: String(
+        process.env.FISH_AUDIO_API_KEY || process.env.FISH_API_KEY || "",
+      ).trim(),
+    };
+  },
   updates: {
     async getState() {
       return ipcRenderer.invoke("cinem:update:get");

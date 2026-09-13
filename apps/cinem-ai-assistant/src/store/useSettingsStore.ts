@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useAppStore } from "@/store/useAppStore";
 import { notify } from "@/store/useToastStore";
 import { applyTheme, themeById } from "@/lib/themes";
+import { DEFAULT_CHARACTER_ID, FISH_AUDIO_DEFAULT_MODEL } from "@/lib/character-voices";
 import type { AgentStatus } from "@/data/agents";
 
 /* ── Settings model ───────────────────────────────────────────────── */
@@ -23,7 +24,15 @@ export interface Settings {
   worldMonitorKey: string;
   /* Voice */
   whisperModel: "tiny" | "base" | "small" | "medium" | "large-v3";
-  ttsEngine: "elevenlabs" | "piper";
+  ttsEngine: "auto" | "fish" | "elevenlabs" | "piper" | "webspeech";
+  /** Named character (Aria, Zara, …). */
+  characterVoice: string;
+  /** Product default is English. "auto" follows the last user message. */
+  preferredLanguage: string;
+  fishAudioKey: string;
+  fishModel: string;
+  /** Optional per-character Fish Audio reference_id overrides. */
+  fishVoiceIds: Record<string, string>;
   elevenKey: string;
   elevenVoiceId: string;
   piperVoicePath: string;
@@ -80,7 +89,12 @@ export const DEFAULT_SETTINGS: Settings = {
   youtubeKey: "",
   worldMonitorKey: "",
   whisperModel: "base",
-  ttsEngine: "elevenlabs",
+  ttsEngine: "auto",
+  characterVoice: DEFAULT_CHARACTER_ID,
+  preferredLanguage: "en",
+  fishAudioKey: "",
+  fishModel: FISH_AUDIO_DEFAULT_MODEL,
+  fishVoiceIds: {},
   // Enter your own ElevenLabs key in Settings → API (voice).
   elevenKey: "",
   elevenVoiceId: "EXAVITQu4vr4xnSDxMaL", // "Bella" — soft, sweet, warm (change in Settings)
@@ -188,6 +202,11 @@ const pickSettings = (s: SettingsState): Settings => ({
   worldMonitorKey: s.worldMonitorKey,
   whisperModel: s.whisperModel,
   ttsEngine: s.ttsEngine,
+  characterVoice: s.characterVoice,
+  preferredLanguage: s.preferredLanguage,
+  fishAudioKey: s.fishAudioKey,
+  fishModel: s.fishModel,
+  fishVoiceIds: s.fishVoiceIds,
   elevenKey: s.elevenKey,
   elevenVoiceId: s.elevenVoiceId,
   piperVoicePath: s.piperVoicePath,
@@ -241,6 +260,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const s = get();
       // Restore the saved theme instantly (no fade on boot)
       applyTheme(themeById(s.theme));
+      if (s.preferredLanguage && s.preferredLanguage !== "auto") {
+        const { LANGS, DEFAULT_LANG } = await import("@/lib/language");
+        useAppStore.getState().setLanguage(LANGS[s.preferredLanguage] ?? DEFAULT_LANG);
+      }
       // Re-apply persisted agent statuses to the live agent grid
       if (Object.keys(s.agentStatus).length) {
         for (const [id, status] of Object.entries(s.agentStatus)) {

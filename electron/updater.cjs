@@ -6,6 +6,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
+const { browserWindowChromeOptions } = require("./window-chrome.cjs");
 
 const FEED_OWNER = "mrosmanyt";
 const FEED_REPO = "cinem-pro-releases";
@@ -310,9 +311,9 @@ function openUpdatesWindow() {
     minHeight: 480,
     parent: parent && !parent.isDestroyed() ? parent : undefined,
     title: "Updates — CINEM Pro",
-    backgroundColor: "#09090b",
-    autoHideMenuBar: true,
+    ...browserWindowChromeOptions(process.platform),
     minimizable: false,
+    maximizable: false,
     fullscreenable: false,
     show: false,
     icon: icon && fs.existsSync(icon) ? icon : undefined,

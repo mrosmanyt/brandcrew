@@ -23,6 +23,11 @@ import { useUserStore } from "@/store/useUserStore";
 import { useVisionStore } from "@/store/useVisionStore";
 import { notify } from "@/store/useToastStore";
 import { voice } from "@/lib/voice";
+import {
+  CHARACTER_VOICES,
+  FISH_AUDIO_DEFAULT_MODEL,
+  welcomeLine,
+} from "@/lib/character-voices";
 import { cn } from "@/lib/utils";
 
 type Tab = "api" | "appearance" | "voice" | "agents" | "memory" | "remote" | "account" | "general";
@@ -156,6 +161,19 @@ function ApiTab() {
           value={s.worldMonitorKey}
           onChange={(e) => void s.update({ worldMonitorKey: e.target.value.trim() })}
           placeholder="wm_…"
+        />
+      </Field>
+
+      <Field
+        label="Fish Audio API Key"
+        hint="Optional TTS. Paste a key from fish.audio → API Keys. Stored only on this machine. See docs/fish-audio-voices.md. Leave empty to use Windows Neural voices."
+      >
+        <TextInput
+          type="password"
+          value={s.fishAudioKey}
+          onChange={(e) => void s.update({ fishAudioKey: e.target.value })}
+          placeholder="Fish Audio API key"
+          autoComplete="off"
         />
       </Field>
 
@@ -457,18 +475,40 @@ function VoiceTab() {
   const s = useSettingsStore();
   const [elevenKey, setElevenKey] = useState(s.elevenKey);
   const [voiceId, setVoiceId] = useState(s.elevenVoiceId);
+  const [fishKey, setFishKey] = useState(s.fishAudioKey);
+  const [fishVoice, setFishVoice] = useState(s.fishVoiceIds[s.characterVoice] || "");
   const [testing, setTesting] = useState(false);
+  const character = CHARACTER_VOICES.find((c) => c.id === s.characterVoice) ?? CHARACTER_VOICES[0];
 
   const save = async () => {
-    await s.update({ elevenKey: elevenKey.trim(), elevenVoiceId: voiceId.trim() });
+    const fishVoiceIds = { ...s.fishVoiceIds };
+    if (fishVoice.trim()) fishVoiceIds[s.characterVoice] = fishVoice.trim();
+    else delete fishVoiceIds[s.characterVoice];
+    await s.update({
+      elevenKey: elevenKey.trim(),
+      elevenVoiceId: voiceId.trim(),
+      fishAudioKey: fishKey.trim(),
+      fishVoiceIds,
+    });
     notify("success", "Voice configuration saved.");
   };
 
   const testVoice = async () => {
     setTesting(true);
     try {
-      await voice.speak("Voice link established. Cinem AI Assistant online and at your service.", {
-        ...s, elevenKey: elevenKey.trim(), elevenVoiceId: voiceId.trim(),
+      const next = {
+        ...s,
+        elevenKey: elevenKey.trim(),
+        elevenVoiceId: voiceId.trim(),
+        fishAudioKey: fishKey.trim(),
+        fishVoiceIds: {
+          ...s.fishVoiceIds,
+          ...(fishVoice.trim() ? { [s.characterVoice]: fishVoice.trim() } : {}),
+        },
+      };
+      await voice.speak(welcomeLine(s.preferredLanguage === "auto" ? "en" : s.preferredLanguage), next, {
+        characterId: s.characterVoice,
+        lang: character.bcp47,
       });
       notify("success", "Voice test completed.");
     } catch (e) {
@@ -484,11 +524,52 @@ function VoiceTab() {
         <p className="text-sm font-semibold text-ice/90">Microphone</p>
         <p className="mt-1 text-xs leading-relaxed text-neon-dim">
           Tap the mic in Chat (or the bar below) to talk. Windows will ask for microphone access
-          the first time — allow it for CINEM Pro. Speech uses this device’s built-in recognition
-          in the unified app; no extra install.
+          the first time — allow it for CINEM Pro. Speech-to-text uses this device’s recognition
+          in the unified app (Whisper stays the Tauri path). Whisper is never used as a speaker.
         </p>
       </div>
-      <Field label="STT — Faster-Whisper Model" hint="Larger models = better accuracy, slower. Requires `pip install faster-whisper`.">
+      <Field label="Character voice" hint="10 named speakers. Replies follow the language you write or speak; default language is English.">
+        <div className="grid grid-cols-2 gap-1.5">
+          {CHARACTER_VOICES.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => {
+                void s.update({ characterVoice: c.id });
+                setFishVoice(s.fishVoiceIds[c.id] || "");
+              }}
+              className={cn(
+                "border px-2.5 py-2 text-left transition-colors",
+                s.characterVoice === c.id
+                  ? "border-neon/50 bg-neon/10 text-ice"
+                  : "border-neon/15 bg-abyss/40 text-ice/80 hover:border-neon/30",
+              )}
+            >
+              <span className="block text-sm font-semibold">{c.name}</span>
+              <span className="block text-[0.65rem] text-neon-dim">
+                {c.languageName} · {c.gender}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Spoken language" hint="Product default is English. Auto mirrors the last message.">
+        <Select
+          value={s.preferredLanguage}
+          onChange={(v) => s.update({ preferredLanguage: v })}
+          options={[
+            ["en", "English (default)"],
+            ["auto", "Auto — follow what I say"],
+            ["ur", "Urdu"],
+            ["hi", "Hindi"],
+            ["tr", "Turkish"],
+            ["es", "Spanish"],
+            ["ar", "Arabic"],
+            ["fr", "French"],
+          ]}
+        />
+      </Field>
+      <Field label="STT — Faster-Whisper Model" hint="Speech-to-text only (Tauri). Larger models = better accuracy, slower. Not used to speak.">
         <Select
           value={s.whisperModel}
           onChange={(v) => s.update({ whisperModel: v as Settings["whisperModel"] })}
@@ -498,20 +579,48 @@ function VoiceTab() {
           ]}
         />
       </Field>
-      <Field label="TTS Engine">
+      <Field label="TTS Engine" hint="Auto uses Fish Audio when a key is present, then a sweet Windows Neural voice. Never the old harsh boot clip.">
         <Select
           value={s.ttsEngine}
           onChange={(v) => s.update({ ttsEngine: v as Settings["ttsEngine"] })}
-          options={[["elevenlabs", "ElevenLabs (cloud, primary)"], ["piper", "Piper (local, offline)"]]}
+          options={[
+            ["auto", "Auto (Fish Audio → Neural Windows)"],
+            ["fish", "Fish Audio"],
+            ["webspeech", "Windows / browser Neural"],
+            ["elevenlabs", "ElevenLabs"],
+            ["piper", "Piper (Tauri offline)"],
+          ]}
         />
       </Field>
-      <Field label="ElevenLabs API Key" hint="⚠️ Stored locally. Rotate this key if the project is ever shared.">
+      <Field
+        label="Fish Audio API Key"
+        hint="Optional. Paste from fish.audio → Developers → API Keys. Also accepted as FISH_AUDIO_API_KEY. No key is shipped in the app."
+      >
+        <TextInput type="password" value={fishKey} onChange={(e) => setFishKey(e.target.value)} autoComplete="off" />
+      </Field>
+      <Field
+        label={`Fish Audio voice ID — ${character?.name ?? "character"}`}
+        hint="Copy a model id from fish.audio (the voice URL). Leave empty to use Fish’s default voice until you map one."
+      >
+        <TextInput
+          value={fishVoice}
+          onChange={(e) => setFishVoice(e.target.value)}
+          placeholder="reference_id from fish.audio"
+        />
+      </Field>
+      <Field label="Fish Audio model header" hint="Documented free developer tier is s2.1-pro-free.">
+        <TextInput
+          value={s.fishModel || FISH_AUDIO_DEFAULT_MODEL}
+          onChange={(e) => void s.update({ fishModel: e.target.value })}
+        />
+      </Field>
+      <Field label="ElevenLabs API Key" hint="Optional fallback. Stored locally.">
         <TextInput type="password" value={elevenKey} onChange={(e) => setElevenKey(e.target.value)} />
       </Field>
       <Field label="ElevenLabs Voice ID">
         <TextInput value={voiceId} onChange={(e) => setVoiceId(e.target.value)} placeholder="21m00Tcm4TlvDq8ikWAM" />
       </Field>
-      <Field label="Piper Voice Model Path" hint="Used as offline fallback, e.g. voices/en_US-amy-medium.onnx">
+      <Field label="Piper Voice Model Path" hint="Tauri offline fallback only, e.g. voices/en_US-amy-medium.onnx">
         <TextInput value={s.piperVoicePath} onChange={(e) => s.update({ piperVoicePath: e.target.value })} />
       </Field>
       <div className="flex items-center justify-between border border-neon/10 bg-abyss/50 px-3 py-3">

@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AGENTS } from "@/data/agents";
 import { speakQueued } from "@/lib/announcer";
+import { welcomeLine, normalizeWelcomeLang } from "@/lib/character-voices";
+import { LANGS, DEFAULT_LANG } from "@/lib/language";
+import { useSettingsStore } from "@/store/useSettingsStore";
+import { useAppStore } from "@/store/useAppStore";
 import { sfx } from "@/lib/sfx";
 
 const BOOT_KEY = "cinem-ai-assistant-booted"; // once per app session
@@ -34,7 +38,13 @@ export default function BootSequence() {
     // finish: voice line + fade out
     timers.push(
       setTimeout(() => {
-        void speakQueued("All systems nominal. Cinem AI Assistant online.");
+        const settings = useSettingsStore.getState();
+        const preferred = normalizeWelcomeLang(settings.preferredLanguage);
+        const lang = LANGS[preferred] ?? DEFAULT_LANG;
+        if (settings.preferredLanguage !== "auto") {
+          useAppStore.getState().setLanguage(lang);
+        }
+        void speakQueued(welcomeLine(lang.code), { lang: lang.bcp47 });
         setShow(false);
       }, 350 + AGENTS.length * perAgent + 600),
     );
