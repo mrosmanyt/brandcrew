@@ -261,7 +261,7 @@ export function HeroDemo() {
                       </p>
                       {showArtifacts ? (
                         <p className="mt-0.5">
-                          Plan ready. Brand Kit → browse → write_artifact → ask_user.
+                          Plan ready. Brand Kit, research, draft — then your approval.
                         </p>
                       ) : (
                         <>

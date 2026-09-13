@@ -73,7 +73,7 @@ const FEATURES = [
   },
   {
     title: "Mission Control jobs",
-    body: "Give a job. It plans, uses tools, writes an artifact, then pauses at ask_user. You approve what leaves.",
+    body: "Give a job. It plans, uses tools, writes a draft, then waits for you. You approve what leaves.",
   },
   {
     title: "Drafts you can inspect",
@@ -192,7 +192,7 @@ const STEPS = [
   {
     n: "5",
     title: "You approve",
-    body: "Jobs pause at ask_user. Drafts stay drafts. Gmail does not send. Slack posts only after that approval step is done.",
+    body: "Jobs wait for you. Drafts stay drafts. Gmail does not send. Slack posts only after you approve.",
   },
 ] as const;
 
@@ -463,7 +463,7 @@ export function DeveloperApiSection() {
       id="developers"
       kicker="Developer API"
       title="Call the same desk over HTTPS"
-      lead="Mint a workspace key in API Console. Secrets show once; only SHA-256 hashes are stored. Session cookies are ignored — send a Bearer token."
+      lead="Mint a workspace key in API Console. Secrets show once. Session cookies are ignored — send a Bearer token."
     >
       <div className="product-frame overflow-hidden rounded-xl">
         <div className="border-b border-border px-5 py-3 text-xs text-muted-foreground">
@@ -478,8 +478,7 @@ export function DeveloperApiSection() {
       </div>
       <p className="mt-6 max-w-2xl text-sm leading-7 text-muted-foreground">
         List agents, queue jobs, read artifacts. Jobs do not auto-publish. Slack
-        still needs an approved <code className="font-mono text-xs">ask_user</code>{" "}
-        in the desk. Rate limit: 60 requests / minute / key. Open the Console
+        still needs your approval in the desk. Rate limit: 60 requests / minute / key. Open the Console
         after signup at <span className="text-foreground">/console</span>
         {" "}(same origin as the desk).
       </p>
@@ -494,7 +493,7 @@ const TRUST = [
   },
   {
     title: "Approve before send",
-    body: "Gmail can create a draft. Slack chat.postMessage runs only after ask_user is done. Ads never buy media. WhatsApp never sends.",
+    body: "Gmail can create a draft. Slack posts only after you approve. Ads never buy media. WhatsApp never sends.",
   },
 ] as const;
 
