@@ -2,6 +2,8 @@
 /**
  * Rasterize the official CINEM hex-bracket mark (same polygons as src/lib/cinem-mark.ts).
  * Writes public brand assets, App Router metadata images, electron icon, and favicon.ico.
+ * Web tab icons use the SaaS tile in public/icon.svg (night #1a1915 + cream #f4f3ef).
+ * Pass --web-only to regenerate favicons without touching Electron/installer art.
  * No extra deps — raw PNG via zlib.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -10,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const webOnly = process.argv.includes("--web-only");
 
 const LEFT = [
   [4, 32],
@@ -172,72 +175,104 @@ function paddedBox(size, padRatio = 0.12) {
   return { x: pad, y: pad, s: size - pad * 2 };
 }
 
+const WEB_ICON_SVG = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CINEM Pro">
+  <rect width="64" height="64" rx="14" fill="#1a1915"/>
+  <g transform="translate(7.68 7.68) scale(0.76)">
+    <path fill="#f4f3ef" d="M4 32 L18 8 H30 L20 32 L30 56 H18 Z"/>
+    <path fill="#f4f3ef" d="M60 32 L46 8 H34 L44 32 L34 56 H46 Z"/>
+  </g>
+</svg>
+`;
+
+function writeWebIconSvg() {
+  const files = [
+    path.join(root, "public", "icon.svg"),
+    path.join(root, "src", "app", "icon.svg"),
+  ];
+  for (const filePath of files) {
+    mkdirSync(path.dirname(filePath), { recursive: true });
+    writeFileSync(filePath, WEB_ICON_SVG);
+    console.log("Wrote", filePath);
+  }
+}
+
+function paintNightTile(x, y, w, padRatio, samples) {
+  const t = markSample(x, y, paddedBox(w, padRatio), samples);
+  return blend(cream, night, t);
+}
+
+function paintNightTileA(x, y, w, padRatio, samples) {
+  const t = markSample(x, y, paddedBox(w, padRatio), samples);
+  return blend(paperA, nightA, t);
+}
+
 const electronDir = path.join(root, "electron", "resources");
-mkdirSync(electronDir, { recursive: true });
+if (!webOnly) {
+  mkdirSync(electronDir, { recursive: true });
 
-const icon256 = encodePng(256, 256, 3, (x, y, w) => {
-  const t = markSample(x, y, paddedBox(w, 0.18), 3);
-  return blend(cream, night, t);
-});
-writePng(path.join(electronDir, "icon.png"), icon256);
+  const icon256 = encodePng(256, 256, 3, (x, y, w) => {
+    const t = markSample(x, y, paddedBox(w, 0.18), 3);
+    return blend(cream, night, t);
+  });
+  writePng(path.join(electronDir, "icon.png"), icon256);
+}
 
-const apple = encodePng(180, 180, 3, (x, y, w) => {
-  const t = markSample(x, y, paddedBox(w, 0.18), 3);
-  return blend(cream, night, t);
-});
+writeWebIconSvg();
+
+const apple = encodePng(180, 180, 3, (x, y, w) => paintNightTile(x, y, w, 0.18, 3));
 writePng(path.join(root, "public", "apple-touch-icon.png"), apple);
 writePng(path.join(root, "src", "app", "apple-icon.png"), apple);
 
-const appIcon = encodePng(192, 192, 4, (x, y, w) => {
-  const t = markSample(x, y, paddedBox(w, 0.1), 4);
-  return blend(inkA, clear, t);
-});
+const appIcon = encodePng(192, 192, 3, (x, y, w) => paintNightTile(x, y, w, 0.14, 4));
 writePng(path.join(root, "src", "app", "icon.png"), appIcon);
+writePng(path.join(root, "public", "icon.png"), appIcon);
 
-const fav = encodePng(32, 32, 3, (x, y, w) => {
-  const t = markSample(x, y, paddedBox(w, 0.06), 4);
-  return blend(ink, paper, t);
-});
+const fav = encodePng(32, 32, 3, (x, y, w) => paintNightTile(x, y, w, 0.12, 4));
 writePng(path.join(root, "public", "icon-32.png"), fav);
 
-const logo = encodePng(1024, 1024, 4, (x, y, w) => {
-  const t = markSample(x, y, paddedBox(w, 0.08), 5);
-  return blend(inkA, clear, t);
-});
-writePng(path.join(root, "public", "brand", "cinem-logo.png"), logo);
+if (!webOnly) {
+  const logo = encodePng(1024, 1024, 4, (x, y, w) => {
+    const t = markSample(x, y, paddedBox(w, 0.08), 5);
+    return blend(inkA, clear, t);
+  });
+  writePng(path.join(root, "public", "brand", "cinem-logo.png"), logo);
 
-const og = encodePng(1200, 630, 3, (x, y, width, height) => {
-  const s = 260;
-  const box = { x: (width - s) / 2, y: (height - s) / 2, s };
-  const t = markSample(x, y, box, 3);
-  return blend(cream, night, t);
-});
-writePng(path.join(root, "public", "og.png"), og);
-writePng(path.join(root, "src", "app", "opengraph-image.png"), og);
-writePng(path.join(root, "src", "app", "twitter-image.png"), og);
+  const og = encodePng(1200, 630, 3, (x, y, width, height) => {
+    const s = 260;
+    const box = { x: (width - s) / 2, y: (height - s) / 2, s };
+    const t = markSample(x, y, box, 3);
+    return blend(cream, night, t);
+  });
+  writePng(path.join(root, "public", "og.png"), og);
+  writePng(path.join(root, "src", "app", "opengraph-image.png"), og);
+  writePng(path.join(root, "src", "app", "twitter-image.png"), og);
+}
 
 const icoSizes = [16, 32, 48];
 const icoPngs = icoSizes.map((size) => ({
   size,
   buf: encodePng(size, size, 4, (x, y, w) => {
-    const t = markSample(x, y, paddedBox(w, 0.06), 4);
-    return blend(inkA, paperA, t);
+    return paintNightTileA(x, y, w, size <= 16 ? 0.1 : 0.12, 4);
   }),
 }));
 const ico = encodeIco(icoPngs);
 writeFileSync(path.join(root, "src", "app", "favicon.ico"), ico);
+writeFileSync(path.join(root, "public", "favicon.ico"), ico);
 console.log("Wrote favicon.ico", ico.length, "bytes");
 
-const appIcoSizes = [16, 24, 32, 48, 64, 128, 256];
-const appIcoPngs = appIcoSizes.map((size) => ({
-  size,
-  buf: encodePng(size, size, 4, (x, y, w) => {
-    const t = markSample(x, y, paddedBox(w, 0.12), size >= 64 ? 4 : 3);
-    return blend(paperA, nightA, t);
-  }),
-}));
-const appIco = encodeIco(appIcoPngs);
-writeFileSync(path.join(electronDir, "icon.ico"), appIco);
-console.log("Wrote", path.join(electronDir, "icon.ico"), appIco.length, "bytes");
+if (!webOnly) {
+  const appIcoSizes = [16, 24, 32, 48, 64, 128, 256];
+  const appIcoPngs = appIcoSizes.map((size) => ({
+    size,
+    buf: encodePng(size, size, 4, (x, y, w) => {
+      const t = markSample(x, y, paddedBox(w, 0.12), size >= 64 ? 4 : 3);
+      return blend(paperA, nightA, t);
+    }),
+  }));
+  const appIco = encodeIco(appIcoPngs);
+  writeFileSync(path.join(electronDir, "icon.ico"), appIco);
+  console.log("Wrote", path.join(electronDir, "icon.ico"), appIco.length, "bytes");
 
-await import("./make-installer-art.mjs");
+  await import("./make-installer-art.mjs");
+}

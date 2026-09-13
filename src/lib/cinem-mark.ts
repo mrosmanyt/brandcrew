@@ -6,6 +6,13 @@
 export const CINEM_LOGO_SRC = "/brand/cinem-logo.png";
 export const CINEM_MARK_SRC = "/brand/cinem-mark.svg";
 export const CINEM_OG_SRC = "/og.png";
+/** SaaS tab tile: night ground + cream mark. Source of truth is public/icon.svg. */
+export const CINEM_APP_ICON_SRC = "/icon.svg";
+export const CINEM_FAVICON_ICO_SRC = "/favicon.ico";
+export const CINEM_FAVICON_PNG_SRC = "/icon-32.png";
+export const CINEM_APPLE_TOUCH_SRC = "/apple-touch-icon.png";
+/** Bump when raster/SVG favicons change so browsers drop a cached white/`<>` tile. */
+export const CINEM_FAVICON_VERSION = "20260913";
 export const CINEM_MARK_VIEWBOX = "0 0 64 64";
 
 /** Left then right closed polygons (SVG path `d`). */
