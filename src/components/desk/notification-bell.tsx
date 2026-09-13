@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { useWorkspaceJobsPoll } from "@/components/desk/use-workspace-jobs-poll";
 import { jobDeskHref } from "@/lib/desk-settings";
 import { jobStatusLabel } from "@/lib/live-progress";
 import { cn } from "@/lib/utils";
@@ -47,24 +48,22 @@ export function NotificationBell({
     setItems(initialItems);
   }, [initialItems]);
 
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === "visible") void refresh();
-    };
-    const onFocus = () => {
-      void refresh();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("focus", onFocus);
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 8000);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("focus", onFocus);
-      clearInterval(timer);
-    };
-  }, [refresh]);
+  useWorkspaceJobsPoll(workspaceId, (data) => {
+    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    setItems(
+      jobs
+        .filter((job): job is typeof job & { id: string; title: string } =>
+          job.status === "needs_you" && Boolean(job.id && job.title),
+        )
+        .map((job) => ({
+          id: job.id,
+          title: job.title,
+          agentId: job.agentId ?? null,
+          status: job.status ?? "needs_you",
+          updatedAt: job.updatedAt,
+        })),
+    );
+  });
 
   const count = items.length;
 

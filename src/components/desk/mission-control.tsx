@@ -25,6 +25,11 @@ import {
   ThreadDraftCard,
 } from "@/components/desk/chat-thread";
 import { ExtensionStatusChip } from "@/components/desk/extension-status";
+import {
+  reportWorkspaceJobsLive,
+  useWorkspaceJobsPoll,
+} from "@/components/desk/use-workspace-jobs-poll";
+import { DESK_JOB_POLL_ACTIVE_MS, workspaceJobsAreLive } from "@/lib/desk-poll";
 import { LiveResults } from "@/components/desk/live-results";
 import {
   ResizeHandle,
@@ -235,6 +240,7 @@ export function MissionControl({
         plan: data.limits.plan ?? prev.plan,
       }));
     }
+    if (Array.isArray(data.jobs)) reportWorkspaceJobsLive(workspaceId, data.jobs);
   }, [workspaceId]);
 
   const refreshChat = useCallback(
@@ -248,14 +254,34 @@ export function MissionControl({
     [workspaceId],
   );
 
+  useWorkspaceJobsPoll(
+    workspaceId,
+    (data) => {
+      if (Array.isArray(data.jobs)) setJobs(data.jobs as JobDTO[]);
+      if (Array.isArray(data.skills)) setSkills(data.skills as SkillDTO[]);
+      if (data.limits) {
+        setUsage((prev) => ({
+          ...prev,
+          tokenUsed: data.limits?.tokenUsed ?? prev.tokenUsed,
+          tokenBudget: data.limits?.tokenBudget ?? prev.tokenBudget,
+          jobsThisHour: data.limits?.jobsThisHour ?? prev.jobsThisHour,
+          jobsPerHour: data.limits?.jobsPerHour ?? prev.jobsPerHour,
+          concurrentJobs: data.limits?.concurrentJobs ?? prev.concurrentJobs,
+          maxConcurrentJobs: data.limits?.maxConcurrentJobs ?? prev.maxConcurrentJobs,
+          plan: data.limits?.plan ?? prev.plan,
+        }));
+      }
+    },
+    workspaceJobsAreLive(initialJobs),
+  );
+
   useEffect(() => {
-    if (!active) return;
+    if (!active || !selectedId) return;
     const timer = setInterval(() => {
-      void refreshJobs();
-      if (selectedId) void refreshChat(selectedId);
-    }, 1100);
+      void refreshChat(selectedId);
+    }, DESK_JOB_POLL_ACTIVE_MS);
     return () => clearInterval(timer);
-  }, [active, refreshChat, refreshJobs, selectedId]);
+  }, [active, refreshChat, selectedId]);
 
   useEffect(() => {
     const node = chatRef.current;

@@ -1,39 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import {
+  useWorkspaceDevicesPoll,
+  type DeviceRow,
+} from "@/components/desk/use-workspace-devices-poll";
 import { cn } from "@/lib/utils";
-
-type DeviceRow = {
-  id: string;
-  name: string;
-  online: boolean;
-  status: string;
-  lastSeenAt: string | null;
-};
 
 export function useExtensionDevices(workspaceId: string) {
   const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function pull() {
-      const res = await fetch(`/api/workspaces/${workspaceId}/devices`);
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      if (!cancelled) {
-        setDevices(data.devices || []);
-        setLoaded(true);
-      }
-    }
-    void pull();
-    const timer = window.setInterval(() => void pull(), 10_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [workspaceId]);
+  useWorkspaceDevicesPoll(workspaceId, (data) => {
+    setDevices(data.devices || []);
+    setLoaded(true);
+  });
 
   const online = devices.some((device) => device.online);
   const paired = devices.length > 0;
@@ -54,6 +36,7 @@ export function ExtensionStatusChip({
   return (
     <Link
       href={href}
+      prefetch={false}
       title={
         online
           ? "Paired to this Chrome — live browser employee is ready."

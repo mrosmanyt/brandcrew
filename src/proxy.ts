@@ -7,10 +7,15 @@ import {
   isConsoleHostname,
 } from "@/lib/console-site";
 import { safeNextPath } from "@/lib/google-auth-shared";
-import { applySecurityHeaders } from "@/lib/security-headers";
+import { applySecurityHeaders, requestLooksHttps } from "@/lib/security-headers";
 
-function withSecurity(response: NextResponse) {
-  applySecurityHeaders(response.headers);
+function withSecurity(response: NextResponse, request: NextRequest) {
+  applySecurityHeaders(response.headers, {
+    https: requestLooksHttps({
+      protoHeader: request.headers.get("x-forwarded-proto"),
+      protocol: request.nextUrl.protocol,
+    }),
+  });
   return response;
 }
 
@@ -39,9 +44,9 @@ export function proxy(request: NextRequest) {
     if (!authed) {
       const login = new URL("/login", request.url);
       login.searchParams.set("next", consoleLoginNext(CONSOLE_PATH));
-      return withSecurity(NextResponse.redirect(login));
+      return withSecurity(NextResponse.redirect(login), request);
     }
-    return withSecurity(NextResponse.rewrite(url));
+    return withSecurity(NextResponse.rewrite(url), request);
   }
 
   if (needsAuth(pathname, consoleHost) && !authed) {
@@ -50,7 +55,7 @@ export function proxy(request: NextRequest) {
       ? consoleLoginNext(`${pathname}${request.nextUrl.search || ""}`)
       : `${pathname}${request.nextUrl.search || ""}`;
     login.searchParams.set("next", next);
-    return withSecurity(NextResponse.redirect(login));
+    return withSecurity(NextResponse.redirect(login), request);
   }
 
   if ((pathname === "/login" || pathname === "/signup") && authed) {
@@ -58,10 +63,11 @@ export function proxy(request: NextRequest) {
     const fallback = consoleHost ? CONSOLE_PATH : "/desk";
     return withSecurity(
       NextResponse.redirect(new URL(safeNextPath(next, fallback), request.url)),
+      request,
     );
   }
 
-  return withSecurity(NextResponse.next());
+  return withSecurity(NextResponse.next(), request);
 }
 
 export const config = {

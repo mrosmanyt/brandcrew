@@ -5,8 +5,15 @@ import { WHOP_PIXEL_ORIGIN } from "./whop-pixel";
  *
  * Applied from `next.config.ts` (all routes, including static marketing pages)
  * and `src/proxy.ts` (request-time copy on matched routes).
+ * HSTS is skipped on local HTTP (`next dev` / Electron) so http://127.0.0.1
+ * is not pinned to HTTPS. Vercel production sends it from next.config
+ * (`VERCEL=1`) plus proxy when `x-forwarded-proto` is https. vercel.json
+ * repeats HSTS only when that proto header is https.
  *
- * Follow-ups (separate pass, same module): nonce-based CSP, COOP/COEP,
+ * COOP is `same-origin-allow-popups`: OAuth is a top-level redirect, and
+ * artifact print uses window.open to a same-origin document.
+ *
+ * Follow-ups (separate pass, same module): nonce-based CSP, COEP,
  * Trusted Types, report-uri. Do not add a third-party WAF here.
  *
  * HTTPS: Vercel redirects HTTP→HTTPS on *.vercel.app. HSTS + CSP
@@ -19,6 +26,9 @@ import { WHOP_PIXEL_ORIGIN } from "./whop-pixel";
  */
 
 export type HeaderPair = { key: string; value: string };
+
+export const HSTS_VALUE = "max-age=31536000; includeSubDomains";
+export const COOP_VALUE = "same-origin-allow-popups";
 
 function cspValue() {
   const isDev = process.env.NODE_ENV !== "production";
@@ -55,7 +65,8 @@ function cspValue() {
 export function securityHeaderList(): HeaderPair[] {
   return [
     { key: "Content-Security-Policy", value: cspValue() },
-    { key: "Strict-Transport-Security", value: "max-age=31536000" },
+    { key: "Strict-Transport-Security", value: HSTS_VALUE },
+    { key: "Cross-Origin-Opener-Policy", value: COOP_VALUE },
     { key: "X-Frame-Options", value: "DENY" },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -68,8 +79,26 @@ export function securityHeaderList(): HeaderPair[] {
   ];
 }
 
-export function applySecurityHeaders(headers: Headers) {
+export function requestLooksHttps(input: {
+  protoHeader?: string | null;
+  protocol?: string | null;
+}): boolean {
+  const proto = (input.protoHeader || input.protocol || "")
+    .split(",")[0]
+    ?.trim()
+    .replace(/:$/, "")
+    .toLowerCase();
+  return proto === "https";
+}
+
+export function applySecurityHeaders(
+  headers: Headers,
+  opts?: { https?: boolean },
+) {
   for (const row of securityHeaderList()) {
+    if (row.key === "Strict-Transport-Security" && opts?.https === false) {
+      continue;
+    }
     headers.set(row.key, row.value);
   }
 }

@@ -23,7 +23,11 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    const security = securityHeaderList();
+    // HSTS only on Vercel HTTPS. Local `next dev` / Electron stay HTTP.
+    const deployedHttps = process.env.VERCEL === "1";
+    const security = securityHeaderList().filter(
+      (row) => deployedHttps || row.key !== "Strict-Transport-Security",
+    );
     return [
       {
         source: "/:path*",
