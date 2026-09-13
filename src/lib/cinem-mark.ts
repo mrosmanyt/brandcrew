@@ -14,7 +14,7 @@ export const CINEM_FAVICON_ICO_SRC = "/favicon.ico";
 export const CINEM_FAVICON_PNG_SRC = "/icon-32.png";
 export const CINEM_APPLE_TOUCH_SRC = "/apple-touch-icon.png";
 /** Bump when raster/SVG favicons change so browsers drop a cached white/`<>` tile. */
-export const CINEM_FAVICON_VERSION = "20260913";
+export const CINEM_FAVICON_VERSION = "20260913b";
 export const CINEM_MARK_VIEWBOX = "0 0 64 64";
 
 /** Extra outward shift per bracket, in viewBox units. */
