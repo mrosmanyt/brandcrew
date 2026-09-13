@@ -6,18 +6,25 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import {
   HELPDESK_ACK_BUDGET_MS,
+  HELPDESK_CHAT_FALLBACK,
+  HELPDESK_ESCALATE_ACK,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_LIVE_AVAILABLE_ACK,
   HELPDESK_LIVE_OFFLINE_ACK,
+  HELPDESK_ONLINE_STATUS,
   HELPDESK_STATUSES,
+  classifyHelpdeskMessage,
   founderIsAvailable,
   helpdeskAckForLiveRequest,
   helpdeskAckSystemPrompt,
+  helpdeskCannedReply,
+  helpdeskPresenceLabel,
   helpdeskPreview,
   isHelpdeskAdminHiddenPath,
   isValidHelpdeskEmail,
   nextStatusAfterFounderReply,
+  nextStatusAfterHelpReply,
   nextStatusAfterUserMessage,
   normalizeHelpdeskPageUrl,
   parseHelpdeskStatus,
@@ -49,7 +56,24 @@ assert.equal(founderIsAvailable(null), false);
 assert.equal(shouldAutoAckUserMessage({ liveActive: false, status: "open" }), true);
 assert.equal(shouldAutoAckUserMessage({ liveActive: true, status: "live" }), false);
 assert.equal(shouldAutoAckUserMessage({ liveActive: false, status: "live" }), false);
-assert.equal(shouldAutoAckUserMessage({ liveActive: false, status: "open", followUp: true }), false);
+assert.equal(helpdeskPresenceLabel(), HELPDESK_ONLINE_STATUS);
+assert.doesNotMatch(HELPDESK_ONLINE_STATUS, /offline/i);
+assert.equal(classifyHelpdeskMessage("HI").topic, "greeting");
+assert.equal(classifyHelpdeskMessage("HI").route, "answer");
+assert.equal(classifyHelpdeskMessage("How do I download Windows?").topic, "download");
+assert.equal(classifyHelpdeskMessage("SmartScreen blocked the installer").topic, "smartscreen");
+assert.equal(classifyHelpdeskMessage("What are the plans and pricing?").topic, "plans");
+assert.equal(classifyHelpdeskMessage("How do I sign in?").topic, "signin");
+assert.equal(classifyHelpdeskMessage("What is CINEM Pro?").topic, "product");
+assert.equal(classifyHelpdeskMessage("I was charged twice and want a refund").route, "escalate");
+assert.equal(classifyHelpdeskMessage("The desk is broken and I can't access my account").route, "escalate");
+assert.equal(classifyHelpdeskMessage("talk to a human").route, "escalate");
+assert.match(helpdeskCannedReply("download"), /CINEM-Pro-Setup\.exe/);
+assert.match(helpdeskCannedReply("plans"), /\$20/);
+assert.match(helpdeskCannedReply("smartscreen"), /Run anyway/);
+assert.doesNotMatch(helpdeskCannedReply("plans"), /openai|anthropic|gemini|claude|gpt/i);
+assert.equal(nextStatusAfterHelpReply({ liveActive: false, liveRequested: false, route: "answer" }), "replied");
+assert.equal(nextStatusAfterHelpReply({ liveActive: false, liveRequested: false, route: "escalate" }), "open");
 assert.equal(
   helpdeskNetworkErrorMessage(new TypeError("Failed to fetch")),
   "Could not reach CINEM Help. Check your connection and try again.",
@@ -69,14 +93,19 @@ assert.equal(nextStatusAfterFounderReply(true), "live");
 assert.equal(nextStatusAfterFounderReply(false), "replied");
 assert.equal(helpdeskAckForLiveRequest(true), HELPDESK_LIVE_AVAILABLE_ACK);
 assert.equal(helpdeskAckForLiveRequest(false), HELPDESK_LIVE_OFFLINE_ACK);
+assert.doesNotMatch(HELPDESK_LIVE_AVAILABLE_ACK, /offline/i);
+assert.doesNotMatch(HELPDESK_LIVE_OFFLINE_ACK, /offline/i);
 console.log("ok: live handoff + presence window");
 
-assert.match(HELPDESK_FALLBACK_ACK, /CINEM team/);
-assert.match(HELPDESK_FALLBACK_ACK, /forward/i);
+assert.match(HELPDESK_ESCALATE_ACK, /CINEM team/);
+assert.match(HELPDESK_FALLBACK_ACK, /escalat/i);
+assert.match(HELPDESK_CHAT_FALLBACK, /online/i);
 assert.doesNotMatch(HELPDESK_FALLBACK_ACK, /openai|anthropic|gemini|claude|gpt/i);
-assert.match(helpdeskAckSystemPrompt(), /English only/);
+assert.match(helpdeskAckSystemPrompt(), /Default to English/);
+assert.match(helpdeskAckSystemPrompt(), /never say the CINEM team is offline/i);
+assert.doesNotMatch(helpdeskAckSystemPrompt(), /English only/);
 assert.doesNotMatch(helpdeskAckSystemPrompt(), /OpenAI|Anthropic|Gemini/);
-assert.equal(sanitizeHelpdeskAck(""), HELPDESK_FALLBACK_ACK);
+assert.equal(sanitizeHelpdeskAck(""), HELPDESK_CHAT_FALLBACK);
 assert.doesNotMatch(sanitizeHelpdeskAck("Talk to Claude or GPT-4 please."), /Claude|GPT/i);
 assert.match(sanitizeHelpdeskAck("Talk to Claude or GPT-4 please."), /CINEM/);
 assert.match(HELPDESK_JOINED_NOTE, /CINEM teammate/);
@@ -128,11 +157,14 @@ assert.match(widget, /HelpWidgetHost/);
 assert.match(widget, /CINEM Help/);
 assert.match(widget, /CinemHelpMark/);
 assert.match(widget, /Open CINEM Help/);
+assert.match(widget, /helpdeskPresenceLabel/);
 assert.match(widget, /credentials: "same-origin"/);
 assert.match(widget, /helpdeskNetworkErrorMessage/);
 assert.match(widget, /Request live chat/);
 assert.match(widget, /Support tip page/);
 assert.match(widget, /fixed right-4 bottom-5 z-40/);
+assert.doesNotMatch(widget, /Team is offline/);
+assert.doesNotMatch(widget, /offline/);
 assert.doesNotMatch(widget, /OpenAI|Anthropic|Gemini|Claude/);
 assert.doesNotMatch(widget, /\bBot\b/);
 assert.doesNotMatch(widget, /from "lucide-react".*Bot/);
@@ -143,8 +175,9 @@ assert.match(mark, /CINEM_MARK_PATHS/);
 assert.match(mark, /data-cinem-help-mark/);
 const helpdesk = readFileSync("src/lib/helpdesk.ts", "utf8");
 assert.match(helpdesk, /HELPDESK_ACK_BUDGET_MS/);
-assert.match(helpdesk, /followUp: true/);
+assert.match(helpdesk, /classifyHelpdeskMessage/);
 assert.match(helpdesk, /HELPDESK_ACK_TIMEOUT/);
+assert.doesNotMatch(helpdesk, /the team is offline/);
 const layout = readFileSync("src/app/layout.tsx", "utf8");
 assert.match(layout, /HelpWidgetHost/);
 const adminPage = readFileSync("src/app/admin/support/page.tsx", "utf8");
@@ -167,6 +200,9 @@ const docs = readFileSync("docs/helpdesk.md", "utf8");
 assert.match(docs, /Admin HQ → Support/);
 assert.match(docs, /\/admin\/support/);
 assert.match(docs, /not the `\/support` Whop tip page/i);
+assert.match(docs, /Online — ask anything/);
+assert.match(docs, /classifyHelpdeskMessage/);
+assert.doesNotMatch(docs, /Team is offline/);
 const ops = readFileSync("docs/admin-ops.md", "utf8");
 assert.match(ops, /SupportThread/);
 console.log("ok: founder docs cover Admin → Support");

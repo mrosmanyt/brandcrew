@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   HELPDESK_GUEST_STORAGE_KEY,
   helpdeskNetworkErrorMessage,
+  helpdeskPresenceLabel,
   isHelpdeskAdminHiddenPath,
   type HelpdeskThreadDTO,
   type HelpdeskViewer,
@@ -106,7 +107,6 @@ export function HelpWidget() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [founderAvailable, setFounderAvailable] = useState(false);
   const [viewer, setViewer] = useState<HelpdeskViewer>({
     signedIn: false,
     email: "",
@@ -128,9 +128,6 @@ export function HelpWidget() {
 
   const applyPayload = useCallback((payload: SupportPayload) => {
     if (payload.viewer) setViewer(payload.viewer);
-    if (typeof payload.founderAvailable === "boolean") {
-      setFounderAvailable(payload.founderAvailable);
-    }
     const next = payload.thread || payload.threads?.[0] || null;
     if (next?.guestKey) writeGuestKey(next.guestKey);
     if (next) {
@@ -221,10 +218,9 @@ export function HelpWidget() {
           <header className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-medium tracking-tight">CINEM Help</p>
-              <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                {founderAvailable
-                  ? "A teammate is available for live chat."
-                  : "Team is offline — we still take tickets here."}
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+                <span className="size-1.5 shrink-0 rounded-full bg-chart-2" aria-hidden />
+                {helpdeskPresenceLabel()}
               </p>
             </div>
             <button
@@ -240,8 +236,9 @@ export function HelpWidget() {
           <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
             {!thread?.messages?.length ? (
               <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                Describe the issue — “I’m seeing this when I…” — and CINEM Help will
-                forward it to the team. This is product helpdesk, not the{" "}
+                CINEM Help is online. Ask about download, plans, sign-in, or a
+                product issue — I’ll answer here. Bigger account or billing
+                problems get escalated to the team. Not the{" "}
                 <Link href="/support" className="underline underline-offset-2">
                   Support tip page
                 </Link>
@@ -306,7 +303,7 @@ export function HelpWidget() {
               placeholder={
                 thread?.liveActive
                   ? "Message the CINEM team…"
-                  : "I’m seeing this issue…"
+                  : "Ask CINEM Help…"
               }
               rows={3}
               className="min-h-16 text-xs"

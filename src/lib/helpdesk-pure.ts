@@ -12,21 +12,27 @@ export type HelpdeskRole = (typeof HELPDESK_ROLES)[number];
 export const HELPDESK_MESSAGE_MAX = 4000;
 export const HELPDESK_PAGE_URL_MAX = 500;
 export const HELPDESK_PREVIEW_MAX = 160;
-export const HELPDESK_ACK_MAX = 600;
+export const HELPDESK_ACK_MAX = 900;
 export const HELPDESK_PRESENCE_WINDOW_MS = 90_000;
 export const HELPDESK_PRESENCE_ID = "founder";
 export const HELPDESK_GUEST_STORAGE_KEY = "cinem_helpdesk_guest";
-/** Cap the first-message LLM ack so POST /api/support always returns. */
+/** Cap LLM replies so POST /api/support always returns. Canned FAQ is instant. */
 export const HELPDESK_ACK_BUDGET_MS = 3500;
 
+export const HELPDESK_ONLINE_STATUS = "Online — ask anything";
+
+export const HELPDESK_CHAT_FALLBACK =
+  "I'm CINEM Help — online and ready. Ask about the Windows download, plans, sign-in, SmartScreen, or what CINEM Pro is. If something is broken on your account, say so and I'll escalate it to the team.";
+
 export const HELPDESK_FALLBACK_ACK =
-  "Thanks — I've forwarded this to the CINEM team. Someone will follow up in this thread. If you need a live conversation, tap Request live chat.";
+  "I've escalated this to the CINEM team. They'll follow up in this thread. You can keep writing here.";
+
+export const HELPDESK_ESCALATE_ACK = HELPDESK_FALLBACK_ACK;
 
 export const HELPDESK_LIVE_AVAILABLE_ACK =
-  "Thanks — I've forwarded this to the CINEM team. A teammate is available and can join this chat shortly.";
+  "I've asked the CINEM team to join this chat. Keep writing here — they'll pick it up in this thread.";
 
-export const HELPDESK_LIVE_OFFLINE_ACK =
-  "Thanks — I've forwarded this to the CINEM team. Nobody is live right now, so this is queued as a ticket and we'll reply here.";
+export const HELPDESK_LIVE_OFFLINE_ACK = HELPDESK_LIVE_AVAILABLE_ACK;
 
 export const HELPDESK_JOINED_NOTE =
   "A CINEM teammate joined this chat and will reply here.";
@@ -84,13 +90,14 @@ export function founderIsAvailable(lastSeenAt?: Date | string | null, now = Date
 export function shouldAutoAckUserMessage(input: {
   liveActive: boolean;
   status: string;
-  /** Follow-ups already have an opening ack — do not block the write on another LLM call. */
-  followUp?: boolean;
 }): boolean {
-  if (input.followUp) return false;
   if (input.liveActive) return false;
   if (parseHelpdeskStatus(input.status) === "live") return false;
   return true;
+}
+
+export function helpdeskPresenceLabel(): string {
+  return HELPDESK_ONLINE_STATUS;
 }
 
 export function helpdeskNetworkErrorMessage(error: unknown): string {
@@ -109,12 +116,127 @@ export function isHelpdeskRetryableNetworkError(error: unknown): boolean {
   );
 }
 
+export type HelpdeskRoute = "answer" | "escalate";
+export type HelpdeskTopic =
+  | "greeting"
+  | "thanks"
+  | "product"
+  | "download"
+  | "smartscreen"
+  | "plans"
+  | "signin"
+  | "assistant"
+  | "api"
+  | "support_tip";
+
+export type HelpdeskClassification = {
+  route: HelpdeskRoute;
+  topic?: HelpdeskTopic;
+  looksLikeIssue: boolean;
+};
+
+const GREETING_RE = /^(hi|hii+|hello|hey|yo|salaam|salam|thanks|thank you|thx|ok|okay|cool)[\s!.]*$/i;
+const THANKS_RE = /\b(thanks|thank you|thx|shukriya|cheers)\b/i;
+const DOWNLOAD_RE =
+  /\b(download|installer|setup\.exe|cinem-pro-setup|windows app|desktop app|portable|\.exe|mac(\s+app)?|dmg|android|play store)\b/i;
+const SMARTSCREEN_RE = /\b(smartscreen|windows protected|more info|run anyway|unrecognized app|publisher)\b/i;
+const PLANS_RE =
+  /\b(pric(e|ing)|plans?|how much|subscription|pro plus|ultra|token|seats?|upgrade|free plan|credits)\b/i;
+const SIGNIN_RE =
+  /\b(sign ?in|sign ?up|log ?in|log ?on|password|google (login|sign)|can'?t (log|sign)|session|forgot)\b/i;
+const PRODUCT_RE =
+  /\b(what is cinem|what'?s cinem|cinem pro|ai employee|what does (this|it|cinem) do|how does (this|cinem) work)\b/i;
+const ASSISTANT_RE = /\b(ai assistant|cinem ai|assistant mode|windows assistant)\b/i;
+const API_RE = /\b(api (key|console|v1)|developer api|from my (own )?app)\b/i;
+const TIP_RE = /\b(tip|donate|supporter badge|support cinem)\b/i;
+const ESCALATE_RE =
+  /\b(bug|broken|crash|refund|charg(ed|e)|billing error|invoice|hacked|stolen|locked out|can'?t access|not working|doesn'?t work|won'?t load|stuck|blank screen|escalate|talk to (a )?(human|person|founder|team)|speak to|account (issue|problem)|unauthorized|500|403)\b/i;
+const ISSUE_HINT_RE =
+  /\b(i'?m seeing|this (error|issue|bug)|when i|it (fails|failed|broke)|please (fix|help)|urgent)\b/i;
+
+export function looksLikeHelpdeskIssue(raw: string): boolean {
+  const text = clipHelpdeskText(raw, 800);
+  if (!text) return false;
+  if (ESCALATE_RE.test(text) || ISSUE_HINT_RE.test(text)) return true;
+  return text.length >= 180;
+}
+
+export function classifyHelpdeskMessage(
+  raw: string,
+  opts?: { liveRequested?: boolean },
+): HelpdeskClassification {
+  const text = clipHelpdeskText(raw, 800);
+  const looksLikeIssue = looksLikeHelpdeskIssue(text);
+  if (opts?.liveRequested) {
+    return { route: "escalate", looksLikeIssue: true };
+  }
+  if (!text) return { route: "answer", topic: "greeting", looksLikeIssue: false };
+  if (ESCALATE_RE.test(text)) return { route: "escalate", looksLikeIssue: true };
+  if (GREETING_RE.test(text)) return { route: "answer", topic: "greeting", looksLikeIssue: false };
+  if (SMARTSCREEN_RE.test(text)) return { route: "answer", topic: "smartscreen", looksLikeIssue: false };
+  if (DOWNLOAD_RE.test(text)) return { route: "answer", topic: "download", looksLikeIssue: false };
+  if (PLANS_RE.test(text)) return { route: "answer", topic: "plans", looksLikeIssue: false };
+  if (SIGNIN_RE.test(text)) return { route: "answer", topic: "signin", looksLikeIssue: false };
+  if (ASSISTANT_RE.test(text)) return { route: "answer", topic: "assistant", looksLikeIssue: false };
+  if (API_RE.test(text)) return { route: "answer", topic: "api", looksLikeIssue: false };
+  if (TIP_RE.test(text)) return { route: "answer", topic: "support_tip", looksLikeIssue: false };
+  if (PRODUCT_RE.test(text)) return { route: "answer", topic: "product", looksLikeIssue: false };
+  if (THANKS_RE.test(text) && text.length < 80) {
+    return { route: "answer", topic: "thanks", looksLikeIssue: false };
+  }
+  if (looksLikeIssue) return { route: "escalate", looksLikeIssue: true };
+  return { route: "answer", looksLikeIssue: false };
+}
+
+export function helpdeskCannedReply(topic: HelpdeskTopic): string {
+  switch (topic) {
+    case "greeting":
+      return HELPDESK_CHAT_FALLBACK;
+    case "thanks":
+      return "Glad that helped. I'm still here — ask about download, plans, sign-in, or anything else.";
+    case "product":
+      return "CINEM Pro is an AI employee desk. You create agents, give them jobs, and approve what leaves — email, posts, and browser work wait for you. Open the desk from Get started, or ask me about download, plans, or sign-in.";
+    case "download":
+      return "Windows: open /download and get CINEM-Pro-Setup.exe. That one installer is the cloud desk plus Cinem AI Assistant — pick the mode in the app. There is no hosted Mac .dmg; use the web desk at app.cinem.tech, or build on a Mac. Android is package tech.cinem.pro when the Play listing is live.";
+    case "smartscreen":
+      return "Unsigned Windows builds can trip SmartScreen. Click More info, then Run anyway. The file is CINEM-Pro-Setup.exe from /download. After install, sign in with the same CINEM account you use on the website.";
+    case "plans":
+      return "Signup starts on Free (capped — there is no unlimited plan). Pro is $20/month (2 seats, 50k job tokens). Pro Plus is $79/month (5 seats, 200k). Ultra is $200/month (12 seats, 600k). Cinem AI Assistant is included with those plans, not a second purchase. Open Plans in the desk to upgrade. Credits wrap token budgets 1:1.";
+    case "signin":
+      return "Use the same CINEM account on the website, Windows app, and Chrome extension. Open /login — email or Continue with Google. Desktop and the extension pair to that account; they do not create a second login.";
+    case "assistant":
+      return "Cinem AI Assistant is Windows-only and ships in CINEM-Pro-Setup.exe with the desk. Switch Desk / AI Assistant / both in the app. It uses your existing Free, Pro, Pro Plus, or Ultra plan.";
+    case "api":
+      return "Yes — the API Console (same-origin /console) mints workspace keys for /api/v1. Jobs still wait for approval before anything is sent. Do not use console.cinem.tech — that host is not live.";
+    case "support_tip":
+      return "The Help thread is product help. A one-time tip is a separate checkout on /support — it adds a Supporter badge and does not change Free / Pro / Pro Plus / Ultra.";
+  }
+}
+
+export function nextStatusAfterHelpReply(input: {
+  liveActive: boolean;
+  liveRequested: boolean;
+  route: HelpdeskRoute;
+}): HelpdeskStatus {
+  if (input.liveActive) return "live";
+  if (input.liveRequested || input.route === "escalate") return "open";
+  return "replied";
+}
+
 export function nextStatusAfterUserMessage(input: {
   liveActive: boolean;
   liveRequested: boolean;
   founderAvailable: boolean;
   current: string;
+  route?: HelpdeskRoute;
 }): HelpdeskStatus {
+  if (input.route) {
+    return nextStatusAfterHelpReply({
+      liveActive: input.liveActive,
+      liveRequested: input.liveRequested,
+      route: input.route,
+    });
+  }
   if (input.liveActive) return "live";
   if (input.liveRequested && input.founderAvailable) return "open";
   const current = parseHelpdeskStatus(input.current);
@@ -128,25 +250,24 @@ export function nextStatusAfterFounderReply(liveActive: boolean): HelpdeskStatus
   return liveActive ? "live" : "replied";
 }
 
-export function helpdeskAckForLiveRequest(founderAvailable: boolean): string {
-  return founderAvailable ? HELPDESK_LIVE_AVAILABLE_ACK : HELPDESK_LIVE_OFFLINE_ACK;
+export function helpdeskAckForLiveRequest(_founderAvailable?: boolean): string {
+  return HELPDESK_LIVE_AVAILABLE_ACK;
 }
 
 export function sanitizeHelpdeskAck(text: string): string {
   const cleaned = clipHelpdeskText(String(text || "").replace(PROVIDER_LEAK, "CINEM"), HELPDESK_ACK_MAX);
-  return cleaned || HELPDESK_FALLBACK_ACK;
+  return cleaned || HELPDESK_CHAT_FALLBACK;
 }
 
 export function helpdeskAckSystemPrompt(): string {
   return [
-    "You are CINEM Pro Help — the product helpdesk front door.",
-    "Reply in English only, in 1-3 short professional sentences.",
-    "Acknowledge that you received the user's query or issue and that you are forwarding it to the CINEM team.",
-    "They will hear back in this same Help thread. Do not promise a phone call or email outside this thread.",
-    "If they asked for live chat and the team is available, say a teammate can join shortly.",
-    "If they asked for live chat and the team is offline, say it is queued as a ticket.",
-    "Never name third-party AI labs, models, or providers. Never mention Whop tips unless they asked about tipping CINEM.",
-    "Do not invent account changes, refunds, or technical fixes. The team will handle the request.",
+    "You are CINEM Help — the in-product chatbot for CINEM Pro. CINEM Pro made you.",
+    "Default to English when the user's language is unclear. Mirror their language if they write in another language (including Urdu / Roman Urdu).",
+    "Never claim you are English-only. Never name third-party AI labs, models, or providers. Never say the CINEM team is offline.",
+    "Small product questions (download, Windows SmartScreen, plans, sign-in, what CINEM Pro is, the Windows assistant, API Console): answer them yourself in 2-5 short sentences. Be specific. Point at /download, /login, /console, or desk Plans when useful.",
+    "Facts: Windows installer is CINEM-Pro-Setup.exe from /download (desk + Cinem AI Assistant). SmartScreen → More info → Run anyway. No hosted Mac .dmg — use the web desk. Free / Pro $20 / Pro Plus $79 / Ultra $200, all capped. Same account for web and desktop.",
+    "Account, billing disputes, refunds, bugs, access problems, or anything you cannot answer: briefly help if you can, then say you escalated it to the CINEM team and they will reply in this same thread.",
+    "Never promise a phone call or a separate email. Never mention the /support tip page unless they asked about tipping CINEM.",
   ].join(" ");
 }
 
@@ -154,21 +275,20 @@ export type HelpdeskAckContext = {
   founderAvailable: boolean;
   liveRequested: boolean;
   pageUrl?: string;
+  route?: HelpdeskRoute;
 };
 
 export function helpdeskAckUserPrompt(message: string, context: HelpdeskAckContext): string {
   const bits = [`User message:\n${clipHelpdeskText(message, 800)}`];
   if (context.liveRequested) {
-    bits.push(
-      context.founderAvailable
-        ? "They requested live chat. A CINEM teammate is available now."
-        : "They requested live chat. The team is offline — queue as a ticket.",
-    );
+    bits.push("They tapped Request live chat. Do not say the team is offline. Say you asked the CINEM team to join this thread.");
+  } else if (context.route === "escalate") {
+    bits.push("This is an escalation (account, billing, bug, or they asked for a human). Briefly help if you can, then say you escalated it to the CINEM team. They will reply in this thread.");
   } else {
-    bits.push("They did not request live chat. Confirm the ticket was forwarded.");
+    bits.push("Answer as CINEM Help. If you cannot answer from product facts, escalate to the CINEM team in this thread.");
   }
   if (context.pageUrl) bits.push(`Page: ${context.pageUrl}`);
-  bits.push("Write the English acknowledgement only.");
+  bits.push("Write only the customer-facing reply. Do not name providers. Do not say offline.");
   return bits.join("\n");
 }
 
