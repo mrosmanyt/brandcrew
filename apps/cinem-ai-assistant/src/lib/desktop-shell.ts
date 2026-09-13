@@ -25,6 +25,7 @@ export type CinemDesktopBridge = {
   setMode?: (mode: string) => void;
   openDesk?: () => void;
   openUpdates?: () => void;
+  getVoiceEnv?: () => { FISH_AUDIO_API_KEY?: string };
   httpGet?: (
     url: string,
     opts?: { worldMonitorKey?: string },

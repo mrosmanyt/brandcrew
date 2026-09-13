@@ -32,7 +32,7 @@ An optional Tauri-only `Cinem-AI-Assistant-Setup.exe` remains an advanced link (
 
 ## Windows app (renderer)
 
-Tauri + Vite + React source still lives in [`apps/cinem-ai-assistant/`](../apps/cinem-ai-assistant/). Production **Setup.exe** embeds the Vite build inside Electron — no second runtime in the primary installer. Whisper / Piper stay Tauri-only; Electron uses Web Speech + cloud APIs first.
+Tauri + Vite + React source still lives in [`apps/cinem-ai-assistant/`](../apps/cinem-ai-assistant/). Production **Setup.exe** embeds the Vite build inside Electron — no second runtime in the primary installer. Whisper is STT only (Tauri). Spoken output: optional Fish Audio ([`docs/fish-audio-voices.md`](./fish-audio-voices.md)), then Windows Neural `speechSynthesis`. Piper stays Tauri-only.
 
 Vercel / `next build` ignores this folder — Rust is never compiled on the Next.js host.
 
@@ -45,6 +45,7 @@ Vercel / `next build` ignores this folder — Rust is never compiled on the Next
 | `CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro server | Optional absolute URL for the **unified** installer |
 | `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro (public) | Same, if the marketing CTA should skip the releases host |
 | `CINEM_START_MODE` | Electron | `desk` (default), `assistant`, or `both` |
+| `FISH_AUDIO_API_KEY` | Electron / Settings | Optional Fish Audio TTS. Never committed. See [`docs/fish-audio-voices.md`](./fish-audio-voices.md). |
 
 Auth matches desktop cloud shell (`docs/auth-bridge.md`):
 

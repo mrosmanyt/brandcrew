@@ -289,13 +289,13 @@ npm run desktop:build       # current platform (Linux → AppImage)
 Artifacts land in `dist/desktop/`. Publish:
 
 ```bash
-gh release create cinem-pro-v0.3.2 \
+gh release create cinem-pro-v0.3.3 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
   dist/desktop/latest.yml \
   --repo mrosmanyt/cinem-pro-releases \
-  --title "CINEM Pro 0.3.2" \
-  --notes "Windows installer — cloud desk + Cinem AI Assistant. Updater retry, World Monitor feed, CINEM taskbar icon."
+  --title "CINEM Pro 0.3.3" \
+  --notes "Windows installer — cloud desk + Cinem AI Assistant. Frameless dark caption + character voices."
 ```
 
 **Where keys live**

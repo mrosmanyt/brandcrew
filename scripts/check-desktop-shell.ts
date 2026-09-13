@@ -129,6 +129,9 @@ assert.match(main, /installAppMenu/);
 assert.match(main, /AI Assistant/);
 assert.match(main, /Open both/);
 assert.match(main, /chrome\.html/);
+assert.match(main, /window-chrome|titleBarOverlay|titleBarStyle/);
+assert.match(readFileSync("electron/chrome.html", "utf8"), /Updates/);
+assert.match(readFileSync("electron/window-chrome.cjs", "utf8"), /titleBarOverlay/);
 assert.match(main, /assistant-preload/);
 assert.match(main, /\/privacy/);
 assert.match(main, /native-host/);
@@ -184,6 +187,7 @@ for (const file of [
   "electron/preload.cjs",
   "electron/desk-shell.cjs",
   "electron/modes.cjs",
+  "electron/window-chrome.cjs",
   "electron/chrome.html",
   "electron/chrome-preload.cjs",
   "electron/assistant-preload.cjs",
@@ -204,7 +208,9 @@ assert.ok(existsSync("electron/resources/installer/sidebar.bmp"));
 assert.ok(existsSync("electron/resources/installer/icon.ico"));
 assert.ok(existsSync("docs/windows-installer-branding.md"));
 assert.ok(existsSync("electron/chrome.html"));
+assert.ok(existsSync("electron/window-chrome.cjs"));
 assert.ok(existsSync("electron/modes.cjs"));
+assert.equal(pkg.scripts["test:voices"], "tsx scripts/check-character-voices.ts");
 assert.ok(existsSync("electron/resources/installer.nsh"));
 assert.ok(existsSync("scripts/build-assistant-renderer.mjs"));
 assert.ok(existsSync(".github/workflows/desktop-windows.yml"));

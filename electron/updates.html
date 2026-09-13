@@ -28,8 +28,13 @@
         color: var(--text);
         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
       }
+      .drag {
+        height: 36px;
+        margin-right: 138px;
+        -webkit-app-region: drag;
+      }
       main {
-        padding: 22px 22px 20px;
+        padding: 6px 22px 20px;
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -195,6 +200,7 @@
     </style>
   </head>
   <body>
+    <div class="drag" aria-hidden="true"></div>
     <main>
       <header>
         <h1>Updates</h1>

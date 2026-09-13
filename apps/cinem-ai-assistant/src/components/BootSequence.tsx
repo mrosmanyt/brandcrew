@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AGENTS } from "@/data/agents";
 import { speakQueued } from "@/lib/announcer";
+import { welcomeLine, normalizeWelcomeLang } from "@/lib/character-voices";
+import { LANGS, DEFAULT_LANG } from "@/lib/language";
+import { useSettingsStore } from "@/store/useSettingsStore";
+import { useAppStore } from "@/store/useAppStore";
 import { sfx } from "@/lib/sfx";
 
 const BOOT_KEY = "cinem-ai-assistant-booted"; // once per app session
 
 /**
- * Cinem AI Assistant OS boot sequence — 3 seconds of pure JARVIS.
- * Scanline sweep, all 15 agents registering one-by-one with ticks,
- * progress readout, then "All systems nominal." in SAM's voice.
+ * Cinem AI Assistant boot sequence — short register sweep, then a sweet
+ * welcome in the user's language (English default).
  */
 export default function BootSequence() {
   const [show, setShow] = useState(() => !sessionStorage.getItem(BOOT_KEY));
@@ -34,7 +37,13 @@ export default function BootSequence() {
     // finish: voice line + fade out
     timers.push(
       setTimeout(() => {
-        void speakQueued("All systems nominal. Cinem AI Assistant online.");
+        const settings = useSettingsStore.getState();
+        const preferred = normalizeWelcomeLang(settings.preferredLanguage);
+        const lang = LANGS[preferred] ?? DEFAULT_LANG;
+        if (settings.preferredLanguage !== "auto") {
+          useAppStore.getState().setLanguage(lang);
+        }
+        void speakQueued(welcomeLine(lang.code), { lang: lang.bcp47 });
         setShow(false);
       }, 350 + AGENTS.length * perAgent + 600),
     );
@@ -100,7 +109,7 @@ export default function BootSequence() {
           <p className="mt-2 font-display text-[0.55rem] tracking-[0.3em] text-neon-dim">
             {progress < 100
               ? `REGISTERING AGENTS… ${registered}/${AGENTS.length}`
-              : "ALL SYSTEMS NOMINAL"}
+              : "READY WHEN YOU ARE"}
           </p>
         </motion.div>
       )}

@@ -35,6 +35,7 @@ const {
   verifyShellNonce,
 } = require("./modes.cjs");
 const { startAutoUpdates, openUpdatesWindow } = require("./updater.cjs");
+const { browserWindowChromeOptions, chromeQuery } = require("./window-chrome.cjs");
 
 const HOST = "127.0.0.1";
 
@@ -475,8 +476,7 @@ function createShellWindow(mode = "desk") {
     minWidth: 960,
     minHeight: 640,
     title: startMode === "assistant" ? "Cinem AI Assistant" : "CINEM Pro",
-    backgroundColor: "#09090b",
-    autoHideMenuBar: true,
+    ...browserWindowChromeOptions(process.platform),
     show: false,
     icon: fs.existsSync(icon) ? icon : undefined,
     webPreferences: {
@@ -504,6 +504,17 @@ function createShellWindow(mode = "desk") {
   shells.set(win.id, entry);
 
   win.on("resize", () => layoutView(win, entry.view));
+  const sendWindowState = () => {
+    if (win.isDestroyed() || win.webContents.isDestroyed()) return;
+    win.webContents.send("cinem:window-state", {
+      maximized: win.isMaximized(),
+      fullscreen: win.isFullScreen(),
+    });
+  };
+  win.on("maximize", sendWindowState);
+  win.on("unmaximize", sendWindowState);
+  win.on("enter-full-screen", sendWindowState);
+  win.on("leave-full-screen", sendWindowState);
   win.on("closed", () => {
     shells.delete(win.id);
   });
@@ -511,7 +522,8 @@ function createShellWindow(mode = "desk") {
     if (!win.isDestroyed()) win.show();
   });
 
-  void win.loadFile(chromePagePath(), { query: { mode: startMode } }).then(() => {
+  void win.loadFile(chromePagePath(), { query: chromeQuery(startMode, process.platform) }).then(() => {
+    sendWindowState();
     void applyMode(entry, startMode);
   });
 
@@ -866,6 +878,28 @@ function installAppMenu() {
     ipcMain.on("cinem:open-both", () => {
       void openBoth();
     });
+    function windowFromEvent(event) {
+      return BrowserWindow.fromWebContents(event.sender);
+    }
+    ipcMain.on("cinem:window-min", (event) => {
+      const win = windowFromEvent(event);
+      if (win && !win.isDestroyed()) win.minimize();
+    });
+    ipcMain.on("cinem:window-max", (event) => {
+      const win = windowFromEvent(event);
+      if (!win || win.isDestroyed()) return;
+      if (win.isMaximized()) win.unmaximize();
+      else win.maximize();
+    });
+    ipcMain.on("cinem:window-close", (event) => {
+      const win = windowFromEvent(event);
+      if (win && !win.isDestroyed()) win.close();
+    });
+    ipcMain.handle("cinem:window-state", (event) => {
+      const win = windowFromEvent(event);
+      if (!win || win.isDestroyed()) return { maximized: false, fullscreen: false };
+      return { maximized: win.isMaximized(), fullscreen: win.isFullScreen() };
+    });
     ipcMain.handle("cinem:open-external", async (_event, url) => {
       if (!isHttpUrl(url)) return false;
       await shell.openExternal(String(url));
@@ -892,7 +926,7 @@ function installAppMenu() {
         Accept: "application/json, text/xml, */*",
         "User-Agent":
           chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent()) ||
-          "CINEMPro/0.3.2",
+          "CINEMPro/0.3.3",
       };
       const sentKey =
         payload && typeof payload.worldMonitorKey === "string" ? payload.worldMonitorKey.trim() : "";

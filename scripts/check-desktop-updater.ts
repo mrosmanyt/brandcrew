@@ -17,7 +17,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
   };
 };
 
-assert.equal(pkg.version, "0.3.2");
+assert.equal(pkg.version, "0.3.3");
 assert.match(pkg.dependencies?.["electron-updater"] ?? "", /\d/);
 assert.equal(pkg.scripts?.["test:desktop-updater"], "tsx scripts/check-desktop-updater.ts");
 console.log("ok: version + electron-updater dependency");
@@ -101,6 +101,7 @@ assert.match(docs, /cinem-pro-vX\.Y\.Z|cinem-pro-v0\.3/);
 assert.match(docs, /latest\.yml/);
 assert.match(docs, /0\.3\.1/);
 assert.match(docs, /0\.3\.2/);
+assert.match(docs, /0\.3\.3/);
 assert.match(docs, /0\.3\.0/);
 assert.match(docs, /Auto Update/);
 assert.match(docs, /SmartScreen/);
