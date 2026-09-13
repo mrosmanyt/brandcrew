@@ -59,7 +59,7 @@ export interface Settings {
   /* General */
   alwaysOnTop: boolean;
   autoStart: boolean;
-  /** Auto-download & install updates when found (restart still manual). */
+  /** Auto Update — download new versions when found (restart still manual). */
   autoUpdate: boolean;
   /* Agents enabled/disabled (id → status) */
   agentStatus: Record<string, AgentStatus>;

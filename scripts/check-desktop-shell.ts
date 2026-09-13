@@ -173,6 +173,9 @@ console.log("ok: unified desktop modes");
 assert.equal(pkg.scripts["desktop:cloud"], "node scripts/desktop-cloud.mjs");
 assert.match(pkg.scripts["desktop:assistant"] ?? "", /--mode=assistant/);
 assert.equal(pkg.scripts["test:desktop-shell"], "tsx scripts/check-desktop-shell.ts");
+assert.equal(pkg.scripts["test:desktop-updater"], "tsx scripts/check-desktop-updater.ts");
+assert.match(main, /startAutoUpdates/);
+assert.match(main, /openUpdatesWindow/);
 for (const file of [
   "electron/main.cjs",
   "electron/preload.cjs",
@@ -182,6 +185,9 @@ for (const file of [
   "electron/chrome-preload.cjs",
   "electron/assistant-preload.cjs",
   "electron/offline.html",
+  "electron/updater.cjs",
+  "electron/updates.html",
+  "electron/updates-preload.cjs",
 ]) {
   assert.ok(pkg.build.files.includes(file), `package.json build.files missing ${file}`);
 }

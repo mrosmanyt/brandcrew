@@ -211,6 +211,10 @@ assert.match(readFileSync("src/server/api/auth/me.ts", "utf8"), /entitlementFrom
 assert.match(readFileSync("src/components/auth/connect-client.tsx", "utf8"), /Same CINEM Pro account = same plan on desktop/);
 const guard = readFileSync("apps/cinem-ai-assistant/src/lib/guard.ts", "utf8");
 assert.match(guard, /isCinemElectron|verifyElectronShell/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/updater.ts", "utf8"), /cinemDesktopBridge/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/lib/updater.ts", "utf8"), /electron-updater/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/settings/SettingsModal.tsx", "utf8"), /Auto Update/);
+assert.match(docs, /desktop-auto-update/);
 const vite = readFileSync("apps/cinem-ai-assistant/vite.config.ts", "utf8");
 assert.match(vite, /CINEM_ELECTRON_ASSISTANT/);
 const orchestrator = readFileSync("apps/cinem-ai-assistant/src/lib/orchestrator.ts", "utf8");

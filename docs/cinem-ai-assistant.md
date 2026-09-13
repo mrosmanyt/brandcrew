@@ -100,7 +100,7 @@ Primary filename: `CINEM-Pro-Setup.exe`.
 
 1. **Actions → CINEM Pro Windows → Run workflow**, or push tag `v*` / `cinem-pro-v*`.
 2. Download the workflow artifact (or the GitHub Release asset).
-3. Host it on `cinem-pro-releases` (marketing buttons already use that latest-download URL).
+3. Host it on `cinem-pro-releases` (marketing buttons already use that latest-download URL). Also upload `latest.yml` and `*.blockmap` so installed NSIS apps can auto-update — [desktop-auto-update.md](./desktop-auto-update.md).
 
 Local Windows: `npm run desktop:build:win`. That runs the assistant Vite build (`scripts/build-assistant-renderer.mjs`, no Rust) then electron-builder NSIS.
 

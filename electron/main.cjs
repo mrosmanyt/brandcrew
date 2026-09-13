@@ -34,6 +34,7 @@ const {
   isHttpUrl,
   verifyShellNonce,
 } = require("./modes.cjs");
+const { startAutoUpdates, openUpdatesWindow } = require("./updater.cjs");
 
 const HOST = "127.0.0.1";
 
@@ -731,6 +732,12 @@ function installAppMenu() {
           },
         },
         {
+          label: "Updates",
+          click: () => {
+            openUpdatesWindow();
+          },
+        },
+        {
           label: "Sign in with CINEM",
           click: () => {
             void showMode("desk", "/connect/desktop");
@@ -765,6 +772,17 @@ function installAppMenu() {
         },
       ],
     },
+    {
+      role: "help",
+      submenu: [
+        {
+          label: "Updates",
+          click: () => {
+            openUpdatesWindow();
+          },
+        },
+      ],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -790,6 +808,17 @@ function installAppMenu() {
       app.setAsDefaultProtocolClient(PROTOCOL);
     }
     installAppMenu();
+    startAutoUpdates({
+      extraContents() {
+        const list = [];
+        for (const entry of shells.values()) {
+          if (entry.view && entry.view.webContents && !entry.view.webContents.isDestroyed()) {
+            list.push(entry.view.webContents);
+          }
+        }
+        return list;
+      },
+    });
     ipcMain.on("cinem:retry-desk", (event) => {
       const entry = shellFromContents(event.sender) || firstShell();
       void applyMode(entry, "desk");

@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld("cinemChrome", {
   openBoth() {
     ipcRenderer.send("cinem:open-both");
   },
+  openUpdates() {
+    ipcRenderer.send("cinem:open-updates");
+  },
   onMode(handler) {
     if (typeof handler !== "function") return () => undefined;
     const listen = (_event, mode) => handler(mode);

@@ -1,42 +1,33 @@
 /**
- * Cinem AI Assistant In-App Updates — powered by the official Tauri updater.
+ * CINEM Pro in-app updates.
  *
- * Flow:
- *   1. On boot (and on demand from Settings → General → Updates) Cinem AI Assistant
- *      checks the release manifest (latest.json) on the Cinem AI Assistant website.
- *   2. If a newer signed build exists: with Auto-Update ON it downloads &
- *      installs silently and asks for a restart; with Auto-Update OFF the
- *      user clicks "Download & Install" themselves.
- *   3. Every artifact is cryptographically signed — only updates signed
- *      with YOUR private key are ever accepted (no tampering possible).
+ * Primary path: Electron `electron-updater` via the unified NSIS app
+ * (`window.cinemDesktop.updates`). Feed is the public GitHub repo
+ * mrosmanyt/cinem-pro-releases (`latest.yml`). No client token.
  *
- * Publishing a new version (developer):
- *   - bump `version` in src-tauri/tauri.conf.json
- *   - set TAURI_SIGNING_PRIVATE_KEY (from `npx tauri signer generate`)
- *   - `npm run tauri build` → installer + .sig updater artifacts
- *   - upload artifacts + updated latest.json to the website /updates/
+ * Optional leftover: Tauri updater for the advanced assistant-only installer.
+ * The installed CINEM-Pro-Setup.exe does not depend on Tauri.
  */
 import { create } from "zustand";
 import { notify } from "@/store/useToastStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
-
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+import { cinemDesktopBridge, isTauriShell } from "@/lib/desktop-shell";
 
 export type UpdateStatus =
-  | "idle"        // not checked yet
+  | "idle"
   | "checking"
-  | "none"        // up to date
-  | "available"   // newer version found
+  | "none"
+  | "available"
   | "downloading"
-  | "ready"       // installed — restart to apply
+  | "ready"
   | "error";
 
 interface UpdateState {
   status: UpdateStatus;
   currentVersion: string;
-  version: string;   // available version
-  notes: string;     // release notes from latest.json
-  progress: number;  // 0..1 while downloading
+  version: string;
+  notes: string;
+  progress: number;
   error: string;
 }
 
@@ -51,22 +42,82 @@ export const useUpdateStore = create<UpdateState>(() => ({
 
 const set = useUpdateStore.setState;
 
-/** The pending update object between check() and downloadAndInstall(). */
-let pending: { version: string; body?: string; downloadAndInstall: (cb?: (e: DlEvent) => void) => Promise<void> } | null = null;
+type ElectronUpdatePayload = {
+  status?: UpdateStatus;
+  currentVersion?: string;
+  version?: string;
+  notes?: string;
+  progress?: number;
+  error?: string;
+  autoUpdate?: boolean;
+};
+
+let pending: {
+  version: string;
+  body?: string;
+  downloadAndInstall: (cb?: (e: DlEvent) => void) => Promise<void>;
+} | null = null;
 
 interface DlEvent {
   event: "Started" | "Progress" | "Finished";
   data: { contentLength?: number; chunkLength?: number };
 }
 
+let electronSubscribed = false;
+
+function applyPayload(payload: ElectronUpdatePayload | null | undefined) {
+  if (!payload) return;
+  set({
+    status: payload.status || "idle",
+    currentVersion: payload.currentVersion || "",
+    version: payload.version || "",
+    notes: payload.notes || "",
+    progress: typeof payload.progress === "number" ? payload.progress : 0,
+    error: payload.error || "",
+  });
+  if (typeof payload.autoUpdate === "boolean") {
+    const settings = useSettingsStore.getState();
+    if (settings.autoUpdate !== payload.autoUpdate) {
+      void settings.update({ autoUpdate: payload.autoUpdate });
+    }
+  }
+}
+
+export function subscribeToUpdates(): () => void {
+  const bridge = cinemDesktopBridge();
+  if (!bridge?.updates?.onStatus) return () => undefined;
+  if (!electronSubscribed) {
+    electronSubscribed = true;
+    void bridge.updates.getState?.().then(applyPayload);
+  }
+  return bridge.updates.onStatus((payload) => applyPayload(payload));
+}
+
+export async function setAutoUpdateEnabled(enabled: boolean): Promise<void> {
+  await useSettingsStore.getState().update({ autoUpdate: enabled });
+  const bridge = cinemDesktopBridge();
+  if (bridge?.updates?.setAutoUpdate) {
+    applyPayload(await bridge.updates.setAutoUpdate(enabled));
+  }
+}
+
 /**
  * Checks for a new version.
- * @param opts.auto   true → respect the Auto-Update setting (download silently)
+ * @param opts.auto   true → respect the Auto Update setting (download silently)
  * @param opts.silent true → no error toasts (used for the boot check)
  */
 export async function checkForUpdate(opts?: { auto?: boolean; silent?: boolean }): Promise<void> {
-  if (!IS_TAURI) {
-    set({ status: "error", error: "Updates work in the installed desktop app only." });
+  const bridge = cinemDesktopBridge();
+  if (bridge?.updates?.check) {
+    subscribeToUpdates();
+    const st = useUpdateStore.getState().status;
+    if (st === "checking" || st === "downloading") return;
+    applyPayload(await bridge.updates.check({ auto: opts?.auto, silent: opts?.silent }));
+    return;
+  }
+
+  if (!isTauriShell()) {
+    set({ status: "error", error: "Updates work in the installed CINEM Pro app (CINEM-Pro-Setup.exe)." });
     return;
   }
   const st = useUpdateStore.getState().status;
@@ -87,7 +138,7 @@ export async function checkForUpdate(opts?: { auto?: boolean; silent?: boolean }
 
     pending = update as unknown as typeof pending;
     set({ status: "available", version: update.version, notes: update.body ?? "" });
-    notify("info", `Cinem AI Assistant v${update.version} is available — see Settings → General.`);
+    notify("info", `CINEM Pro ${update.version} is available — see Settings → Updates.`);
 
     if (opts?.auto && useSettingsStore.getState().autoUpdate) {
       await downloadAndInstall();
@@ -95,7 +146,7 @@ export async function checkForUpdate(opts?: { auto?: boolean; silent?: boolean }
   } catch (e) {
     pending = null;
     if (opts?.silent) {
-      set({ status: "idle" }); // boot check failed quietly (offline etc.)
+      set({ status: "idle" });
     } else {
       set({ status: "error", error: e instanceof Error ? e.message : String(e) });
     }
@@ -104,6 +155,11 @@ export async function checkForUpdate(opts?: { auto?: boolean; silent?: boolean }
 
 /** Downloads + installs the pending update; restart applies it. */
 export async function downloadAndInstall(): Promise<void> {
+  const bridge = cinemDesktopBridge();
+  if (bridge?.updates?.download) {
+    applyPayload(await bridge.updates.download());
+    return;
+  }
   if (!pending) return;
   set({ status: "downloading", progress: 0 });
 
@@ -118,7 +174,7 @@ export async function downloadAndInstall(): Promise<void> {
       } else if (ev.event === "Finished") set({ progress: 1 });
     });
     set({ status: "ready", progress: 1 });
-    notify("success", "Update installed — restart Cinem AI Assistant to finish.");
+    notify("success", "Update installed — restart CINEM Pro to finish.");
   } catch (e) {
     set({ status: "error", error: e instanceof Error ? e.message : String(e) });
   }
@@ -126,6 +182,11 @@ export async function downloadAndInstall(): Promise<void> {
 
 /** Restarts the app to boot into the freshly installed version. */
 export async function relaunchApp(): Promise<void> {
+  const bridge = cinemDesktopBridge();
+  if (bridge?.updates?.install) {
+    await bridge.updates.install();
+    return;
+  }
   const { relaunch } = await import("@tauri-apps/plugin-process");
   await relaunch();
 }

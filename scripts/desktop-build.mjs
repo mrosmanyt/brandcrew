@@ -185,8 +185,23 @@ const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", build
   shell: process.platform === "win32",
 });
 
+function logUpdaterArtifacts() {
+  const outDir = path.join(root, "dist", "desktop");
+  const latest = path.join(outDir, "latest.yml");
+  if (existsSync(latest)) {
+    console.log("electron-updater metadata:", latest);
+    return;
+  }
+  if (targets.includes("--win")) {
+    console.warn(
+      "latest.yml was not generated. Installed NSIS apps will not see this build as an update feed. See docs/desktop-auto-update.md.",
+    );
+  }
+}
+
 if (result.status === 0) {
   ensureFriendlyWinNames();
+  logUpdaterArtifacts();
   process.exit(0);
 }
 
@@ -207,6 +222,7 @@ if (targets.includes("--win") && (wineMissing || result.status !== 0)) {
     builderEnv,
   );
   ensureFriendlyWinNames();
+  logUpdaterArtifacts();
   console.warn(
     "Produced win-unpacked / portable .exe. Full NSIS installer needs wine32 or a Windows runner.",
   );

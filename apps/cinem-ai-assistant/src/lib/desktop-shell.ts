@@ -2,6 +2,18 @@
  * Official CINEM Pro desktop bridges (Electron unified shell, or Tauri-only build).
  */
 
+export type CinemUpdatePayload = {
+  status?: "idle" | "checking" | "none" | "available" | "downloading" | "ready" | "error";
+  currentVersion?: string;
+  version?: string;
+  notes?: string;
+  progress?: number;
+  error?: string;
+  autoUpdate?: boolean;
+  channel?: "nsis" | "portable" | "dev";
+  feed?: string;
+};
+
 export type CinemDesktopBridge = {
   desktop: boolean;
   shell?: string;
@@ -12,6 +24,15 @@ export type CinemDesktopBridge = {
   storeSession?: (session: { refreshToken?: string }) => Promise<unknown>;
   setMode?: (mode: string) => void;
   openDesk?: () => void;
+  openUpdates?: () => void;
+  updates?: {
+    getState: () => Promise<CinemUpdatePayload>;
+    check: (opts?: { auto?: boolean; silent?: boolean }) => Promise<CinemUpdatePayload>;
+    download: () => Promise<CinemUpdatePayload>;
+    install: () => Promise<{ ok?: boolean }>;
+    setAutoUpdate: (enabled: boolean) => Promise<CinemUpdatePayload>;
+    onStatus: (handler: (payload: CinemUpdatePayload) => void) => () => void;
+  };
 };
 
 declare global {

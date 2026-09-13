@@ -82,6 +82,7 @@
         <button type="button" id="assistant" aria-pressed="false">AI Assistant</button>
       </nav>
       <span class="spacer"></span>
+      <button type="button" id="updates" class="both">Updates</button>
       <button type="button" id="both" class="both">Open both</button>
     </header>
     <script>
@@ -103,6 +104,9 @@
       document.getElementById("assistant").addEventListener("click", () => {
         paint("assistant");
         api && api.setMode("assistant");
+      });
+      document.getElementById("updates").addEventListener("click", () => {
+        api && api.openUpdates && api.openUpdates();
       });
       document.getElementById("both").addEventListener("click", () => {
         api && api.openBoth();
