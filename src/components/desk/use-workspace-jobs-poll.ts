@@ -115,17 +115,19 @@ export function useWorkspaceJobsPoll(
   liveSeed = false,
 ) {
   const onPayloadRef = useRef(onPayload);
-  onPayloadRef.current = onPayload;
-  const seedRef = useRef(liveSeed);
-  seedRef.current = liveSeed;
+  useEffect(() => {
+    onPayloadRef.current = onPayload;
+  });
 
   useEffect(() => {
     const listener: Listener = (payload) => onPayloadRef.current(payload);
-    const hub = ensureHub(workspaceId, seedRef.current);
+    const hub = ensureHub(workspaceId, liveSeed);
     hub.listeners.add(listener);
     if (hub.listeners.size === 1) {
       void tick(workspaceId);
     }
     return () => releaseHub(workspaceId, listener);
+    // liveSeed is a first-subscriber hint only; do not restart the shared loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 }

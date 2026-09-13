@@ -91,7 +91,9 @@ function releaseHub(workspaceId: string, listener: Listener) {
 /** One GET /devices loop per workspace (sidebar chips share it). Hidden tabs pause. */
 export function useWorkspaceDevicesPoll(workspaceId: string, onPayload: Listener) {
   const onPayloadRef = useRef(onPayload);
-  onPayloadRef.current = onPayload;
+  useEffect(() => {
+    onPayloadRef.current = onPayload;
+  });
 
   useEffect(() => {
     const listener: Listener = (payload) => onPayloadRef.current(payload);
