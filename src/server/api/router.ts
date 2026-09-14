@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/http";
 import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
 import { isNativeCorsPath, nativeCorsPreflight, withNativeCors } from "@/lib/auth-native";
+import {
+  helpdeskCorsHeaders,
+  helpdeskCorsOrigin,
+  isHelpdeskCorsPath,
+} from "@/lib/helpdesk-pure";
 import { matchBestPattern, pathToSegments, type RouteParams } from "./match";
 import * as adminRoot from "./admin/root";
 import * as adminBackup from "./admin/backup";
@@ -406,6 +411,16 @@ export function allowedMethods(handlers: HandlerModule): HttpMethod[] {
   return HTTP_METHODS.filter((method) => typeof handlers[method] === "function");
 }
 
+function withHelpdeskCors(request: Request, response: Response): Response {
+  const origin = helpdeskCorsOrigin(request.headers.get("origin"));
+  if (!origin) return response;
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(helpdeskCorsHeaders(origin))) {
+    headers.set(key, value);
+  }
+  return new NextResponse(response.body, { status: response.status, headers });
+}
+
 export async function dispatchApi(
   request: Request,
   path: string[] | undefined,
@@ -421,6 +436,9 @@ export async function dispatchApi(
   const method = request.method.toUpperCase();
   if (method === "OPTIONS") {
     if (isNativeCorsPath(segments)) return nativeCorsPreflight();
+    if (isHelpdeskCorsPath(segments)) {
+      return withHelpdeskCors(request, new NextResponse(null, { status: 204 }));
+    }
     return new NextResponse(null, {
       status: 204,
       headers: { Allow: allowedMethods(matched.handlers).join(", ") },
@@ -429,7 +447,8 @@ export async function dispatchApi(
   try {
     await enforceSensitiveRateLimit(request, segments, method);
   } catch (error) {
-    return jsonError(error);
+    const limited = jsonError(error);
+    return isHelpdeskCorsPath(segments) ? withHelpdeskCors(request, limited) : limited;
   }
   const handler = matched.handlers[method as HttpMethod];
   if (!handler) {
@@ -444,6 +463,9 @@ export async function dispatchApi(
   const response = await handler(request, { params: Promise.resolve(matched.params) });
   if (isNativeCorsPath(segments) && response instanceof NextResponse) {
     return withNativeCors(response);
+  }
+  if (isHelpdeskCorsPath(segments)) {
+    return withHelpdeskCors(request, response);
   }
   return response;
 }

@@ -18,6 +18,16 @@ export const HELPDESK_PRESENCE_ID = "founder";
 export const HELPDESK_GUEST_STORAGE_KEY = "cinem_helpdesk_guest";
 /** Cap LLM replies so POST /api/support always returns. Canned FAQ is instant. */
 export const HELPDESK_ACK_BUDGET_MS = 3500;
+/** Browser abort so a hung Help POST surfaces a retry instead of an infinite spinner. */
+export const HELPDESK_CLIENT_TIMEOUT_MS = 12_000;
+export const HELPDESK_CLIENT_RETRIES = 1;
+
+/** Canonical desk origin — marketing hosts (cinem.tech) pin Help API here. */
+export const HELPDESK_APP_ORIGIN = "https://app.cinem.tech";
+export const HELPDESK_MARKETING_ORIGINS = [
+  "https://cinem.tech",
+  "https://www.cinem.tech",
+] as const;
 
 export const HELPDESK_ONLINE_STATUS = "Online — ask anything";
 
@@ -127,6 +137,8 @@ export type HelpdeskTopic =
   | "signin"
   | "assistant"
   | "api"
+  | "agents"
+  | "chrome"
   | "support_tip";
 
 export type HelpdeskClassification = {
@@ -148,6 +160,9 @@ const PRODUCT_RE =
   /\b(what is cinem|what'?s cinem|cinem pro|ai employee|what does (this|it|cinem) do|how does (this|cinem) work)\b/i;
 const ASSISTANT_RE = /\b(ai assistant|cinem ai|assistant mode|windows assistant)\b/i;
 const API_RE = /\b(api (key|console|v1)|developer api|from my (own )?app)\b/i;
+const AGENTS_RE =
+  /\b(create (an )?agent|add (an )?agent|how (do i|to) (use |make )?agents?|what( is|'s) an agent)\b/i;
+const CHROME_RE = /\b(chrome extension|browser extension|pair(ing)? code)\b/i;
 const TIP_RE = /\b(tip|donate|supporter badge|support cinem)\b/i;
 const ESCALATE_RE =
   /\b(bug|broken|crash|refund|charg(ed|e)|billing error|invoice|hacked|stolen|locked out|can'?t access|not working|doesn'?t work|won'?t load|stuck|blank screen|escalate|talk to (a )?(human|person|founder|team)|speak to|account (issue|problem)|unauthorized|500|403)\b/i;
@@ -179,6 +194,8 @@ export function classifyHelpdeskMessage(
   if (SIGNIN_RE.test(text)) return { route: "answer", topic: "signin", looksLikeIssue: false };
   if (ASSISTANT_RE.test(text)) return { route: "answer", topic: "assistant", looksLikeIssue: false };
   if (API_RE.test(text)) return { route: "answer", topic: "api", looksLikeIssue: false };
+  if (AGENTS_RE.test(text)) return { route: "answer", topic: "agents", looksLikeIssue: false };
+  if (CHROME_RE.test(text)) return { route: "answer", topic: "chrome", looksLikeIssue: false };
   if (TIP_RE.test(text)) return { route: "answer", topic: "support_tip", looksLikeIssue: false };
   if (PRODUCT_RE.test(text)) return { route: "answer", topic: "product", looksLikeIssue: false };
   if (THANKS_RE.test(text) && text.length < 80) {
@@ -208,9 +225,79 @@ export function helpdeskCannedReply(topic: HelpdeskTopic): string {
       return "Cinem AI Assistant is Windows-only and ships in CINEM-Pro-Setup.exe with the desk. Switch Desk / AI Assistant / both in the app. It uses your existing Free, Pro, Pro Plus, or Ultra plan.";
     case "api":
       return "Yes — the API Console (same-origin /console) mints workspace keys for /api/v1. Jobs still wait for approval before anything is sent. Do not use console.cinem.tech — that host is not live.";
+    case "agents":
+      return "In the desk, open Mission Control and create an agent. Give it a job in chat — browse, draft, or research. Email, Slack posts, and payments wait for your approval. Ask me about download or sign-in if you are not in the desk yet.";
+    case "chrome":
+      return "On-device Chrome lives under Settings → Desk tools. Download the extension from /download, then Sign in with CINEM in the popup so it attaches to your workspace. Pairing codes still work. This is not a second account.";
     case "support_tip":
       return "The Help thread is product help. A one-time tip is a separate checkout on /support — it adds a Supporter badge and does not change Free / Pro / Pro Plus / Ultra.";
   }
+}
+
+export type HelpdeskReplyPlan = {
+  route: HelpdeskRoute;
+  useLlm: boolean;
+  topic?: HelpdeskTopic;
+  template: string;
+};
+
+/**
+ * FAQ + live/escalate stay on canned copy so POST /api/support never waits on a model.
+ * Unknown small questions may use a time-boxed classify call.
+ */
+export function helpdeskReplyPlan(
+  classified: HelpdeskClassification,
+  opts?: { liveRequested?: boolean },
+): HelpdeskReplyPlan {
+  if (opts?.liveRequested) {
+    return { route: "escalate", useLlm: false, template: HELPDESK_LIVE_AVAILABLE_ACK };
+  }
+  if (classified.route === "escalate") {
+    return { route: "escalate", useLlm: false, template: HELPDESK_ESCALATE_ACK };
+  }
+  if (classified.topic) {
+    return {
+      route: "answer",
+      useLlm: false,
+      topic: classified.topic,
+      template: helpdeskCannedReply(classified.topic),
+    };
+  }
+  return { route: "answer", useLlm: true, template: HELPDESK_CHAT_FALLBACK };
+}
+
+export function helpdeskApiUrl(path: string, pageOrigin?: string | null): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const origin = (pageOrigin || "").replace(/\/$/, "").toLowerCase();
+  if ((HELPDESK_MARKETING_ORIGINS as readonly string[]).includes(origin)) {
+    return `${HELPDESK_APP_ORIGIN}${normalized}`;
+  }
+  return normalized;
+}
+
+export function helpdeskCorsOrigin(requestOrigin?: string | null): string | null {
+  const origin = (requestOrigin || "").trim().replace(/\/$/, "");
+  if (!origin) return null;
+  const allowed = new Set<string>([
+    HELPDESK_APP_ORIGIN,
+    ...HELPDESK_MARKETING_ORIGINS,
+    "https://brandcrew.vercel.app",
+  ]);
+  return allowed.has(origin) ? origin : null;
+}
+
+export function isHelpdeskCorsPath(segments: string[]): boolean {
+  return segments[0] === "api" && segments[1] === "support";
+}
+
+export function helpdeskCorsHeaders(origin: string): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, x-cinem-help-key",
+    Vary: "Origin",
+  };
 }
 
 export function nextStatusAfterHelpReply(input: {

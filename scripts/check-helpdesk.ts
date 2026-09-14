@@ -6,7 +6,9 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import {
   HELPDESK_ACK_BUDGET_MS,
+  HELPDESK_APP_ORIGIN,
   HELPDESK_CHAT_FALLBACK,
+  HELPDESK_CLIENT_TIMEOUT_MS,
   HELPDESK_ESCALATE_ACK,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
@@ -18,7 +20,10 @@ import {
   founderIsAvailable,
   helpdeskAckForLiveRequest,
   helpdeskAckSystemPrompt,
+  helpdeskApiUrl,
   helpdeskCannedReply,
+  helpdeskCorsOrigin,
+  helpdeskReplyPlan,
   helpdeskPresenceLabel,
   helpdeskPreview,
   isHelpdeskAdminHiddenPath,
@@ -38,6 +43,8 @@ import { HONEYPOT_FIELD } from "../src/lib/site";
 import { sensitiveRateLimit } from "../src/lib/rate-limit";
 
 assert.equal(HELPDESK_ACK_BUDGET_MS, 3500);
+assert.equal(HELPDESK_CLIENT_TIMEOUT_MS, 12_000);
+assert.equal(HELPDESK_APP_ORIGIN, "https://app.cinem.tech");
 assert.deepEqual([...HELPDESK_STATUSES], ["open", "live", "replied", "closed"]);
 assert.equal(parseHelpdeskStatus("replied"), "replied");
 assert.equal(parseHelpdeskStatus("nope"), "open");
@@ -65,10 +72,30 @@ assert.equal(classifyHelpdeskMessage("SmartScreen blocked the installer").topic,
 assert.equal(classifyHelpdeskMessage("What are the plans and pricing?").topic, "plans");
 assert.equal(classifyHelpdeskMessage("How do I sign in?").topic, "signin");
 assert.equal(classifyHelpdeskMessage("What is CINEM Pro?").topic, "product");
+assert.equal(classifyHelpdeskMessage("How do I create an agent?").topic, "agents");
+assert.equal(classifyHelpdeskMessage("Where is the Chrome extension?").topic, "chrome");
 assert.equal(classifyHelpdeskMessage("I was charged twice and want a refund").route, "escalate");
 assert.equal(classifyHelpdeskMessage("The desk is broken and I can't access my account").route, "escalate");
 assert.equal(classifyHelpdeskMessage("talk to a human").route, "escalate");
+assert.equal(helpdeskReplyPlan(classifyHelpdeskMessage("How do I download Windows?")).useLlm, false);
+assert.equal(helpdeskReplyPlan(classifyHelpdeskMessage("How do I download Windows?")).route, "answer");
+assert.equal(
+  helpdeskReplyPlan(classifyHelpdeskMessage("I was charged twice and want a refund")).useLlm,
+  false,
+);
+assert.equal(
+  helpdeskReplyPlan(classifyHelpdeskMessage("I was charged twice and want a refund")).route,
+  "escalate",
+);
+assert.equal(helpdeskReplyPlan({ route: "answer", looksLikeIssue: false }).useLlm, true);
+assert.equal(helpdeskApiUrl("/api/support", "https://cinem.tech"), "https://app.cinem.tech/api/support");
+assert.equal(helpdeskApiUrl("/api/support", "https://www.cinem.tech"), "https://app.cinem.tech/api/support");
+assert.equal(helpdeskApiUrl("/api/support", "https://app.cinem.tech"), "/api/support");
+assert.equal(helpdeskCorsOrigin("https://cinem.tech"), "https://cinem.tech");
+assert.equal(helpdeskCorsOrigin("https://evil.example"), null);
 assert.match(helpdeskCannedReply("download"), /CINEM-Pro-Setup\.exe/);
+assert.match(helpdeskCannedReply("agents"), /Mission Control/);
+assert.match(helpdeskCannedReply("chrome"), /Sign in with CINEM/);
 assert.match(helpdeskCannedReply("plans"), /\$20/);
 assert.match(helpdeskCannedReply("smartscreen"), /Run anyway/);
 assert.doesNotMatch(helpdeskCannedReply("plans"), /openai|anthropic|gemini|claude|gpt/i);
@@ -138,6 +165,8 @@ const router = readFileSync("src/server/api/router.ts", "utf8");
 assert.match(router, /\["api", "support"\]/);
 assert.match(router, /\["api", "support", "presence"\]/);
 assert.match(router, /\["api", "support", ":threadId"\]/);
+assert.match(router, /isHelpdeskCorsPath/);
+assert.match(router, /withHelpdeskCors/);
 assert.match(router, /\["api", "admin", "support"\]/);
 assert.match(router, /\["api", "admin", "support", ":threadId"\]/);
 const userApi = readFileSync("src/server/api/support/root.ts", "utf8");
@@ -158,7 +187,9 @@ assert.match(widget, /CINEM Help/);
 assert.match(widget, /CinemHelpMark/);
 assert.match(widget, /Open CINEM Help/);
 assert.match(widget, /helpdeskPresenceLabel/);
-assert.match(widget, /credentials: "same-origin"/);
+assert.match(widget, /credentials: crossOrigin \? "include" : "same-origin"/);
+assert.match(widget, /helpdeskApiUrl/);
+assert.match(widget, /HELPDESK_CLIENT_TIMEOUT_MS/);
 assert.match(widget, /helpdeskNetworkErrorMessage/);
 assert.match(widget, /Request live chat/);
 assert.match(widget, /Support tip page/);
@@ -173,9 +204,12 @@ assert.match(mark, /CINEM_NIGHT/);
 assert.match(mark, /CINEM_PAPER/);
 assert.match(mark, /CINEM_MARK_PATHS/);
 assert.match(mark, /data-cinem-help-mark/);
+assert.match(mark, /scale\(0\.76\)/);
+assert.match(mark, /scale\(0\.76\)/);
 const helpdesk = readFileSync("src/lib/helpdesk.ts", "utf8");
 assert.match(helpdesk, /HELPDESK_ACK_BUDGET_MS/);
 assert.match(helpdesk, /classifyHelpdeskMessage/);
+assert.match(helpdesk, /helpdeskReplyPlan/);
 assert.match(helpdesk, /HELPDESK_ACK_TIMEOUT/);
 assert.doesNotMatch(helpdesk, /the team is offline/);
 const layout = readFileSync("src/app/layout.tsx", "utf8");
@@ -202,6 +236,8 @@ assert.match(docs, /\/admin\/support/);
 assert.match(docs, /not the `\/support` Whop tip page/i);
 assert.match(docs, /Online — ask anything/);
 assert.match(docs, /classifyHelpdeskMessage/);
+assert.match(docs, /helpdeskReplyPlan/);
+assert.match(docs, /app\.cinem\.tech/);
 assert.doesNotMatch(docs, /Team is offline/);
 const ops = readFileSync("docs/admin-ops.md", "utf8");
 assert.match(ops, /SupportThread/);

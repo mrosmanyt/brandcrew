@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from "./site";
 import { WHOP_PIXEL_ORIGIN } from "./whop-pixel";
 
 /**
@@ -50,7 +51,7 @@ function cspValue() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
-    `connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://plausible.io https://*.plausible.io ${WHOP_PIXEL_ORIGIN} https://*.whop.tw`,
+    `connect-src 'self' ${SITE_ORIGIN} https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://plausible.io https://*.plausible.io ${WHOP_PIXEL_ORIGIN} https://*.whop.tw`,
     "frame-src 'self' blob: data:",
     "frame-ancestors 'none'",
     "base-uri 'self'",

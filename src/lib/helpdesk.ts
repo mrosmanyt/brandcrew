@@ -5,19 +5,15 @@ import { prisma } from "@/lib/db";
 import { llm } from "@/lib/llm";
 import {
   HELPDESK_ACK_BUDGET_MS,
-  HELPDESK_CHAT_FALLBACK,
-  HELPDESK_ESCALATE_ACK,
-  HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_MESSAGE_MAX,
   HELPDESK_PRESENCE_ID,
   classifyHelpdeskMessage,
   clipHelpdeskText,
   founderIsAvailable,
-  helpdeskAckForLiveRequest,
   helpdeskAckSystemPrompt,
   helpdeskAckUserPrompt,
-  helpdeskCannedReply,
+  helpdeskReplyPlan,
   helpdeskPreview,
   isValidHelpdeskEmail,
   nextStatusAfterFounderReply,
@@ -47,6 +43,7 @@ export {
   founderIsAvailable,
   helpdeskAckForLiveRequest,
   helpdeskCannedReply,
+  helpdeskReplyPlan,
   helpdeskNetworkErrorMessage,
   helpdeskPresenceLabel,
   helpdeskPreview,
@@ -180,21 +177,9 @@ export async function composeHelpdeskAck(input: {
   const classified = classifyHelpdeskMessage(input.message, {
     liveRequested: input.liveRequested,
   });
-  if (classified.route === "answer" && classified.topic) {
-    return {
-      text: helpdeskCannedReply(classified.topic),
-      source: "template",
-      route: "answer",
-    };
-  }
-  const template = input.liveRequested
-    ? helpdeskAckForLiveRequest(input.founderAvailable)
-    : classified.route === "escalate" || classified.looksLikeIssue
-      ? HELPDESK_ESCALATE_ACK
-      : HELPDESK_CHAT_FALLBACK;
-  const route = input.liveRequested || classified.route === "escalate" ? "escalate" : "answer";
-  if (!llm.isLiveFor("classify")) {
-    return { text: template, source: "template", route };
+  const plan = helpdeskReplyPlan(classified, { liveRequested: input.liveRequested });
+  if (!plan.useLlm || !llm.isLiveFor("classify")) {
+    return { text: plan.template, source: "template", route: plan.route };
   }
   try {
     const result = await withAckBudget(
@@ -209,15 +194,15 @@ export async function composeHelpdeskAck(input: {
               founderAvailable: input.founderAvailable,
               liveRequested: input.liveRequested,
               pageUrl: input.pageUrl,
-              route,
+              route: plan.route,
             }),
           },
         ],
       }),
     );
-    return { text: sanitizeHelpdeskAck(result.text), source: "llm", route };
+    return { text: sanitizeHelpdeskAck(result.text), source: "llm", route: plan.route };
   } catch {
-    return { text: template, source: "template", route };
+    return { text: plan.template, source: "template", route: plan.route };
   }
 }
 
@@ -234,6 +219,8 @@ function withAckBudget<T>(promise: Promise<T>): Promise<T> {
         reject(error);
       },
     );
+    // Do not let a hung provider call keep the function from returning after the budget.
+    promise.catch(() => undefined);
   });
 }
 
