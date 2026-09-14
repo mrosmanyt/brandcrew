@@ -9,10 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  HELPDESK_CLIENT_RETRIES,
+  HELPDESK_CLIENT_TIMEOUT_MS,
   HELPDESK_GUEST_STORAGE_KEY,
+  helpdeskApiUrl,
   helpdeskNetworkErrorMessage,
   helpdeskPresenceLabel,
   isHelpdeskAdminHiddenPath,
+  isHelpdeskRetryableNetworkError,
   type HelpdeskThreadDTO,
   type HelpdeskViewer,
 } from "@/lib/helpdesk-pure";
@@ -48,9 +52,19 @@ function helpHeaders(): HeadersInit {
   return key ? { "x-cinem-help-key": key } : {};
 }
 
-function helpInit(init?: RequestInit): RequestInit {
+function helpPageOrigin() {
+  return typeof window === "undefined" ? "" : window.location.origin;
+}
+
+function helpInit(url: string, init?: RequestInit): RequestInit {
+  const pageOrigin = helpPageOrigin();
+  const crossOrigin =
+    /^https?:\/\//i.test(url) &&
+    Boolean(pageOrigin) &&
+    !url.startsWith(`${pageOrigin}/`) &&
+    url !== pageOrigin;
   return {
-    credentials: "same-origin",
+    credentials: crossOrigin ? "include" : "same-origin",
     cache: "no-store",
     ...init,
     headers: {
@@ -78,9 +92,27 @@ async function readJson<T>(res: Response): Promise<T> {
   return payload;
 }
 
-async function helpRequest<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, helpInit(init));
-  return readJson<T>(res);
+async function helpRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = helpdeskApiUrl(path, helpPageOrigin());
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= HELPDESK_CLIENT_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), HELPDESK_CLIENT_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, helpInit(url, { ...init, signal: controller.signal }));
+      return await readJson<T>(res);
+    } catch (error) {
+      lastError =
+        error instanceof Error && error.name === "AbortError"
+          ? new TypeError("Failed to fetch")
+          : error;
+      const retryable = isHelpdeskRetryableNetworkError(lastError);
+      if (!retryable || attempt === HELPDESK_CLIENT_RETRIES) throw lastError;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  throw lastError;
 }
 
 function statusLabel(status: string) {

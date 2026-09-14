@@ -149,6 +149,7 @@ assert.match(csp, /frame-ancestors 'none'/);
 assert.match(csp, /https:\/\/t\.whop\.tw/);
 assert.match(csp, /script-src[^;]*https:\/\/t\.whop\.tw/);
 assert.match(csp, /connect-src[^;]*https:\/\/t\.whop\.tw/);
+assert.match(csp, /connect-src[^;]*https:\/\/app\.cinem\.tech/);
 const hsts = headers.find((row) => row.key === "Strict-Transport-Security")?.value || "";
 assert.equal(hsts, HSTS_VALUE);
 assert.match(hsts, /max-age=/);

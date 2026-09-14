@@ -6,8 +6,8 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * CINEM Help FAB glyph: night disc + cream brackets.
- * Theme-proof so marketing (light canvas) and the dark desk both read it.
+ * CINEM Help FAB glyph: night disc + cream brackets, same mark as the
+ * official night-tile favicon so it reads on light marketing and the dark desk.
  */
 export function CinemHelpMark({
   className,
@@ -33,9 +33,9 @@ export function CinemHelpMark({
         fill="none"
         stroke={CINEM_PAPER}
         strokeWidth="1.35"
-        opacity="0.32"
+        opacity="0.38"
       />
-      <g transform="translate(8.96 8.96) scale(0.595)">
+      <g transform="translate(6.72 6.72) scale(0.76)">
         {CINEM_MARK_PATHS.map((d) => (
           <path key={d} d={d} fill={CINEM_PAPER} />
         ))}
