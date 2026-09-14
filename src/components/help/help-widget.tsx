@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Loader2, Send, X } from "lucide-react";
+import { Loader2, Send, X } from "lucide-react";
+import { CinemHelpMark } from "@/components/help/help-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   HELPDESK_GUEST_STORAGE_KEY,
+  helpdeskNetworkErrorMessage,
+  helpdeskPresenceLabel,
   isHelpdeskAdminHiddenPath,
   type HelpdeskThreadDTO,
   type HelpdeskViewer,
@@ -45,10 +48,39 @@ function helpHeaders(): HeadersInit {
   return key ? { "x-cinem-help-key": key } : {};
 }
 
+function helpInit(init?: RequestInit): RequestInit {
+  return {
+    credentials: "same-origin",
+    cache: "no-store",
+    ...init,
+    headers: {
+      ...helpHeaders(),
+      ...(init?.headers || {}),
+    },
+  };
+}
+
 async function readJson<T>(res: Response): Promise<T> {
-  const payload = (await res.json()) as T & { error?: string };
+  const text = await res.text();
+  let payload = {} as T & { error?: string };
+  if (text) {
+    try {
+      payload = JSON.parse(text) as T & { error?: string };
+    } catch {
+      throw new Error(
+        res.ok
+          ? "Could not read the Help response."
+          : "Could not reach CINEM Help. Try again in a moment.",
+      );
+    }
+  }
   if (!res.ok) throw new Error(payload.error || "Could not reach CINEM Help.");
   return payload;
+}
+
+async function helpRequest<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, helpInit(init));
+  return readJson<T>(res);
 }
 
 function statusLabel(status: string) {
@@ -75,7 +107,6 @@ export function HelpWidget() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [founderAvailable, setFounderAvailable] = useState(false);
   const [viewer, setViewer] = useState<HelpdeskViewer>({
     signedIn: false,
     email: "",
@@ -88,6 +119,7 @@ export function HelpWidget() {
   const [unread, setUnread] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const lastSeenCount = useRef(0);
+  const sendingRef = useRef(false);
 
   const workspaceId = useMemo(() => {
     const match = pathname.match(/^\/desk\/([^/]+)/);
@@ -96,9 +128,6 @@ export function HelpWidget() {
 
   const applyPayload = useCallback((payload: SupportPayload) => {
     if (payload.viewer) setViewer(payload.viewer);
-    if (typeof payload.founderAvailable === "boolean") {
-      setFounderAvailable(payload.founderAvailable);
-    }
     const next = payload.thread || payload.threads?.[0] || null;
     if (next?.guestKey) writeGuestKey(next.guestKey);
     if (next) {
@@ -113,13 +142,13 @@ export function HelpWidget() {
   }, [open]);
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/support", { headers: helpHeaders() });
-    const payload = await readJson<SupportPayload>(res);
+    if (sendingRef.current) return;
+    const payload = await helpRequest<SupportPayload>("/api/support");
     applyPayload(payload);
-    if (payload.thread?.id || payload.threads?.[0]?.id) {
-      const id = payload.thread?.id || payload.threads?.[0]?.id;
-      const detail = await fetch(`/api/support/${id}`, { headers: helpHeaders() });
-      applyPayload(await readJson<SupportPayload>(detail));
+    if (sendingRef.current) return;
+    const id = payload.thread?.id || payload.threads?.[0]?.id;
+    if (id) {
+      applyPayload(await helpRequest<SupportPayload>(`/api/support/${id}`));
     }
   }, [applyPayload]);
 
@@ -152,6 +181,7 @@ export function HelpWidget() {
     }
     setBusy(true);
     setError("");
+    sendingRef.current = true;
     try {
       const body: Record<string, unknown> = {
         message: message || undefined,
@@ -162,18 +192,18 @@ export function HelpWidget() {
         [HONEYPOT_FIELD]: honeypot,
       };
       const url = thread ? `/api/support/${thread.id}` : "/api/support";
-      const res = await fetch(url, {
+      const payload = await helpRequest<SupportPayload>(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...helpHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const payload = await readJson<SupportPayload>(res);
       applyPayload(payload);
       setDraft("");
       lastSeenCount.current = payload.thread?.messages?.length ?? lastSeenCount.current;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send that.");
+      setError(helpdeskNetworkErrorMessage(err));
     } finally {
+      sendingRef.current = false;
       setBusy(false);
     }
   }
@@ -188,10 +218,9 @@ export function HelpWidget() {
           <header className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-medium tracking-tight">CINEM Help</p>
-              <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                {founderAvailable
-                  ? "A teammate is available for live chat."
-                  : "Team is offline — we still take tickets here."}
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+                <span className="size-1.5 shrink-0 rounded-full bg-chart-2" aria-hidden />
+                {helpdeskPresenceLabel()}
               </p>
             </div>
             <button
@@ -207,8 +236,9 @@ export function HelpWidget() {
           <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
             {!thread?.messages?.length ? (
               <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                Describe the issue — “I’m seeing this when I…” — and CINEM Help will
-                forward it to the team. This is product helpdesk, not the{" "}
+                CINEM Help is online. Ask about download, plans, sign-in, or a
+                product issue — I’ll answer here. Bigger account or billing
+                problems get escalated to the team. Not the{" "}
                 <Link href="/support" className="underline underline-offset-2">
                   Support tip page
                 </Link>
@@ -273,7 +303,7 @@ export function HelpWidget() {
               placeholder={
                 thread?.liveActive
                   ? "Message the CINEM team…"
-                  : "I’m seeing this issue…"
+                  : "Ask CINEM Help…"
               }
               rows={3}
               className="min-h-16 text-xs"
@@ -304,14 +334,15 @@ export function HelpWidget() {
           setOpen((value) => !value);
           setUnread(false);
         }}
-        className="pointer-events-auto relative flex size-12 items-center justify-center rounded-full border border-border bg-primary text-primary-foreground shadow-lg ring-2 ring-background transition hover:bg-primary/90"
+        className="pointer-events-auto relative size-14 overflow-hidden rounded-full shadow-[0_10px_28px_rgba(26,25,21,0.28)] ring-2 ring-[#f4f3ef]/45 transition hover:scale-[1.03] hover:shadow-[0_12px_32px_rgba(26,25,21,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4f3ef] dark:shadow-[0_10px_28px_rgba(0,0,0,0.45)] dark:ring-[#f4f3ef]/20"
         aria-expanded={open}
-        aria-label="Help"
-        title="Help"
+        aria-label={open ? "Close CINEM Help" : "Open CINEM Help"}
+        title="CINEM Help"
       >
-        <Bot className="size-5" />
+        <CinemHelpMark className="size-full" />
+        <span className="pointer-events-none absolute inset-0 rounded-full motion-safe:animate-pulse motion-safe:[animation-duration:2.8s] ring-2 ring-[#f4f3ef]/15 ring-inset" />
         {unread && !open ? (
-          <span className="absolute top-0.5 right-0.5 size-2.5 rounded-full bg-chart-2 ring-2 ring-background" />
+          <span className="absolute top-1 right-1 size-2.5 rounded-full bg-chart-2 ring-2 ring-[#1a1915]" />
         ) : null}
       </button>
     </div>

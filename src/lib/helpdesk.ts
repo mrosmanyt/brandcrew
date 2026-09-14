@@ -4,19 +4,24 @@ import { ClientError } from "@/lib/http";
 import { prisma } from "@/lib/db";
 import { llm } from "@/lib/llm";
 import {
+  HELPDESK_ACK_BUDGET_MS,
+  HELPDESK_CHAT_FALLBACK,
+  HELPDESK_ESCALATE_ACK,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_MESSAGE_MAX,
   HELPDESK_PRESENCE_ID,
+  classifyHelpdeskMessage,
   clipHelpdeskText,
   founderIsAvailable,
   helpdeskAckForLiveRequest,
   helpdeskAckSystemPrompt,
   helpdeskAckUserPrompt,
+  helpdeskCannedReply,
   helpdeskPreview,
   isValidHelpdeskEmail,
   nextStatusAfterFounderReply,
-  nextStatusAfterUserMessage,
+  nextStatusAfterHelpReply,
   normalizeHelpdeskPageUrl,
   parseHelpdeskStatus,
   sanitizeHelpdeskAck,
@@ -29,15 +34,24 @@ import {
 } from "@/lib/helpdesk-pure";
 
 export {
+  HELPDESK_ACK_BUDGET_MS,
+  HELPDESK_CHAT_FALLBACK,
+  HELPDESK_ESCALATE_ACK,
   HELPDESK_FALLBACK_ACK,
   HELPDESK_JOINED_NOTE,
   HELPDESK_LIVE_AVAILABLE_ACK,
   HELPDESK_LIVE_OFFLINE_ACK,
   HELPDESK_MESSAGE_MAX,
+  HELPDESK_ONLINE_STATUS,
+  classifyHelpdeskMessage,
   founderIsAvailable,
   helpdeskAckForLiveRequest,
+  helpdeskCannedReply,
+  helpdeskNetworkErrorMessage,
+  helpdeskPresenceLabel,
   helpdeskPreview,
   isHelpdeskAdminHiddenPath,
+  isHelpdeskRetryableNetworkError,
   isValidHelpdeskEmail,
   normalizeHelpdeskPageUrl,
   parseHelpdeskStatus,
@@ -162,34 +176,65 @@ export async function composeHelpdeskAck(input: {
   founderAvailable: boolean;
   liveRequested: boolean;
   pageUrl?: string;
-}): Promise<{ text: string; source: "llm" | "template" }> {
+}): Promise<{ text: string; source: "llm" | "template"; route: "answer" | "escalate" }> {
+  const classified = classifyHelpdeskMessage(input.message, {
+    liveRequested: input.liveRequested,
+  });
+  if (classified.route === "answer" && classified.topic) {
+    return {
+      text: helpdeskCannedReply(classified.topic),
+      source: "template",
+      route: "answer",
+    };
+  }
   const template = input.liveRequested
     ? helpdeskAckForLiveRequest(input.founderAvailable)
-    : HELPDESK_FALLBACK_ACK;
+    : classified.route === "escalate" || classified.looksLikeIssue
+      ? HELPDESK_ESCALATE_ACK
+      : HELPDESK_CHAT_FALLBACK;
+  const route = input.liveRequested || classified.route === "escalate" ? "escalate" : "answer";
   if (!llm.isLiveFor("classify")) {
-    return { text: template, source: "template" };
+    return { text: template, source: "template", route };
   }
   try {
-    const result = await llm.complete({
-      mode: "draft",
-      kind: "classify",
-      messages: [
-        { role: "system", content: helpdeskAckSystemPrompt() },
-        {
-          role: "user",
-          content: helpdeskAckUserPrompt(input.message, {
-            founderAvailable: input.founderAvailable,
-            liveRequested: input.liveRequested,
-            pageUrl: input.pageUrl,
-          }),
-        },
-      ],
-    });
-    const text = sanitizeHelpdeskAck(result.text);
-    return { text, source: "llm" };
+    const result = await withAckBudget(
+      llm.complete({
+        mode: "draft",
+        kind: "classify",
+        messages: [
+          { role: "system", content: helpdeskAckSystemPrompt() },
+          {
+            role: "user",
+            content: helpdeskAckUserPrompt(input.message, {
+              founderAvailable: input.founderAvailable,
+              liveRequested: input.liveRequested,
+              pageUrl: input.pageUrl,
+              route,
+            }),
+          },
+        ],
+      }),
+    );
+    return { text: sanitizeHelpdeskAck(result.text), source: "llm", route };
   } catch {
-    return { text: template, source: "template" };
+    return { text: template, source: "template", route };
   }
+}
+
+function withAckBudget<T>(promise: Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("HELPDESK_ACK_TIMEOUT")), HELPDESK_ACK_BUDGET_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 function assertMessageBody(raw: string): string {
@@ -228,7 +273,7 @@ export async function listViewerThreads(input: {
     orderBy: { lastMessageAt: "desc" },
     take: 20,
   });
-  return rows.map((row) => serializeThread(row));
+  return rows.map((row) => serializeThread(row, { includeGuestKey: Boolean(guestKey) }));
 }
 
 export async function getViewerThread(input: {
@@ -246,7 +291,7 @@ export async function getViewerThread(input: {
     (input.user && row.userId === input.user.id) ||
     (guestKey && row.guestKey && row.guestKey === guestKey);
   if (!owns) throw new ClientError("Help thread not found.", 404, "not_found");
-  return serializeThread(row);
+  return serializeThread(row, { includeGuestKey: Boolean(guestKey) });
 }
 
 export async function createHelpdeskThread(input: {
@@ -276,11 +321,16 @@ export async function createHelpdeskThread(input: {
   const liveRequested = Boolean(input.liveRequested);
   const { available } = await getFounderAvailability();
   const guestKey = input.user ? "" : newGuestKey();
-  const status = nextStatusAfterUserMessage({
+  const ack = await composeHelpdeskAck({
+    message: body,
+    founderAvailable: available,
+    liveRequested,
+    pageUrl,
+  });
+  const status = nextStatusAfterHelpReply({
     liveActive: false,
     liveRequested,
-    founderAvailable: available,
-    current: "open",
+    route: ack.route,
   });
 
   const thread = await prisma.supportThread.create({
@@ -303,12 +353,6 @@ export async function createHelpdeskThread(input: {
     role: "user",
     body,
     authorEmail: email,
-  });
-  const ack = await composeHelpdeskAck({
-    message: body,
-    founderAvailable: available,
-    liveRequested,
-    pageUrl,
   });
   await addMessage({
     threadId: thread.id,
@@ -346,12 +390,6 @@ export async function appendViewerMessage(input: {
   const { available } = await getFounderAvailability();
   const pageUrl = normalizeHelpdeskPageUrl(input.pageUrl) || existing.pageUrl;
   const now = new Date();
-  const status = nextStatusAfterUserMessage({
-    liveActive: existing.liveActive,
-    liveRequested,
-    founderAvailable: available,
-    current: existing.status,
-  });
 
   if (body) {
     await addMessage({
@@ -362,37 +400,33 @@ export async function appendViewerMessage(input: {
     });
   }
 
+  let route: "answer" | "escalate" = liveRequested ? "escalate" : "answer";
   const shouldAck =
-    Boolean(body) &&
-    shouldAutoAckUserMessage({
-      liveActive: existing.liveActive,
-      status: existing.status,
-    });
+    (Boolean(body) &&
+      shouldAutoAckUserMessage({
+        liveActive: existing.liveActive,
+        status: existing.status,
+      })) ||
+    (!body && liveRequested && !existing.liveRequested);
   if (shouldAck) {
     const ack = await composeHelpdeskAck({
-      message: body || "Live chat requested.",
+      message: body || "I'd like to talk with the CINEM team live.",
       founderAvailable: available,
       liveRequested,
       pageUrl,
     });
-    await addMessage({
-      threadId: existing.id,
-      role: "ai",
-      body: ack.text,
-    });
-  } else if (!body && liveRequested && !existing.liveRequested) {
-    const ack = await composeHelpdeskAck({
-      message: "I'd like to talk with the team live.",
-      founderAvailable: available,
-      liveRequested: true,
-      pageUrl,
-    });
+    route = ack.route;
     await addMessage({
       threadId: existing.id,
       role: "ai",
       body: ack.text,
     });
   }
+  const status = nextStatusAfterHelpReply({
+    liveActive: existing.liveActive,
+    liveRequested,
+    route,
+  });
 
   const updated = await prisma.supportThread.update({
     where: { id: existing.id },
@@ -408,7 +442,9 @@ export async function appendViewerMessage(input: {
     },
     include: { messages: { orderBy: { createdAt: "asc" } } },
   });
-  return serializeThread(updated);
+  return serializeThread(updated, {
+    includeGuestKey: Boolean(existing.guestKey) && !input.user,
+  });
 }
 
 export async function getHelpdeskInbox(input?: {
