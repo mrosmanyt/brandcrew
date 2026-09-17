@@ -6,7 +6,7 @@ Independent implementation in Cinem’s TypeScript/Electron stack — inspired b
 
 | Inspired capability | Cinem implementation | Status |
 |---------------------|----------------------|--------|
-| Real-time voice | Mic bar + STT chain (Deepgram / browser / Whisper) + TTS (Fish / ElevenLabs / Neural) | **Shipped** |
+| Real-time voice | Mic bar + STT chain (Deepgram / browser / Whisper) + TTS (Deepgram Aura / Fish / ElevenLabs / Neural) | **Shipped** |
 | Persistent memory | `longMemory.ts` + Settings → Memory + `remember that` / `forget` | **Shipped** |
 | Multi-mode web search | `multiModeSearch.ts` — news / research / price / compare / search | **Shipped** |
 | YouTube control | Playwright `/youtube` + in-app player + `/youtube/control` pause/play/next | **Shipped** |
@@ -29,8 +29,8 @@ Independent implementation in Cinem’s TypeScript/Electron stack — inspired b
 
 | Variable | Purpose |
 |----------|---------|
-| `DEEPGRAM_API_KEY` | Paid STT (Electron env or Settings → Voice) |
-| `VITE_DEEPGRAM_API_KEY` | Local Vite dev STT |
+| `DEEPGRAM_API_KEY` | Paid STT + Aura/Aura-2 TTS (Electron env or Settings → Voice) |
+| `VITE_DEEPGRAM_API_KEY` | Local Vite dev STT/TTS |
 | `FISH_AUDIO_API_KEY` | Optional TTS |
 | `ELEVENLABS` via Settings | TTS fallback |
 

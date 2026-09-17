@@ -32,6 +32,22 @@ assert.match(orchestrator, /parseYouTubeControl/);
 
 const voice = read("apps/cinem-ai-assistant/src/lib/voice.ts");
 assert.match(voice, /deepgramTranscribe/);
+assert.match(voice, /deepgramSpeak/);
+
+const dgVoice = read("apps/cinem-ai-assistant/src/lib/deepgramVoice.ts");
+assert.match(dgVoice, /deepgramSpeak/);
+assert.match(dgVoice, /listDeepgramVoices/);
+
+const dgCatalog = read("apps/cinem-ai-assistant/src/lib/deepgram-voices.ts");
+assert.match(dgCatalog, /aura-2-thalia-en/);
+assert.match(dgCatalog, /aura-zeus-en/);
+
+const settingsModal = read("apps/cinem-ai-assistant/src/components/settings/SettingsModal.tsx");
+assert.match(settingsModal, /DeepgramVoicePicker/);
+assert.match(settingsModal, /deepgramVoiceId/);
+
+const settingsStore = read("apps/cinem-ai-assistant/src/store/useSettingsStore.ts");
+assert.match(settingsStore, /deepgramVoiceId/);
 
 const pw = read("apps/cinem-ai-assistant/playwright-server/index.js");
 assert.match(pw, /youtube\/control/);

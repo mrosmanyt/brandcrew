@@ -20,7 +20,13 @@ import {
   webSpeechProsody,
   type CharacterVoice,
 } from "@/lib/character-voices";
-import { deepgramTranscribe, resolveDeepgramKey } from "@/lib/deepgramVoice";
+import {
+  deepgramSpeak,
+  deepgramSttLanguageHint,
+  deepgramTranscribe,
+  resolveDeepgramKey,
+} from "@/lib/deepgramVoice";
+import { resolveDeepgramVoiceId } from "@/lib/deepgram-voices";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -133,7 +139,11 @@ class VoiceEngine {
     const settings = s ?? useSettingsStore.getState();
     const sttEngine = settings.sttEngine || "auto";
     const dgKey = resolveDeepgramKey(settings.deepgramApiKey);
-    const lang = useAppStore.getState().language.bcp47 || "en-US";
+    const lang = deepgramSttLanguageHint({
+      deepgramVoiceId: settings.deepgramVoiceId,
+      preferredLanguage: settings.preferredLanguage,
+      appBcp47: useAppStore.getState().language.bcp47 || "en-US",
+    });
 
     const tryDeepgram =
       Boolean(dgKey) && blob.size >= 500 && (sttEngine === "deepgram" || sttEngine === "auto");
@@ -184,19 +194,39 @@ class VoiceEngine {
   /* ── Speaking ─────────────────────────────────────── */
   /**
    * Speaks `text`. `opts` lets callers override the voice per utterance.
-   * Chain: Fish Audio (optional key) → ElevenLabs → Piper (Tauri only) →
-   * sweet Web Speech. Never leaves the harsh default clip as the only path.
+   * Chain: Deepgram Aura (optional key + voice) → Fish Audio → ElevenLabs →
+   * Piper (Tauri only) → sweet Web Speech. Never leaves the harsh default clip as the only path.
    */
   async speak(text: string, s: Settings, opts?: SpeakOptions): Promise<void> {
     if (!text.trim()) return;
     const character = resolveCharacterForSpeak(opts?.characterId || s.characterVoice, opts?.lang);
     const lang = opts?.lang || character.bcp47;
     const engine = s.ttsEngine || "auto";
+    const dgKey = resolveDeepgramKey(s.deepgramApiKey);
+    const dgVoice = resolveDeepgramVoiceId(s.deepgramVoiceId);
+    const tryDeepgram =
+      Boolean(dgKey) &&
+      Boolean(dgVoice) &&
+      (engine === "deepgram" || engine === "auto");
     const fishKey = resolveFishApiKey({ fishAudioKey: s.fishAudioKey, envKey: envFishAudioKey() });
     const tryFish = Boolean(fishKey) && (engine === "auto" || engine === "fish");
     const tryEleven = Boolean(s.elevenKey) && (engine === "auto" || engine === "elevenlabs");
-    const tryPiper = IS_TAURI && (engine === "piper" || (engine === "auto" && !fishKey && !s.elevenKey));
+    const tryPiper =
+      IS_TAURI &&
+      (engine === "piper" || (engine === "auto" && !dgKey && !fishKey && !s.elevenKey));
 
+    if (tryDeepgram) {
+      try {
+        await this.play(await deepgramSpeak(text, dgKey, dgVoice));
+        reportUsage("tts", text.length);
+        return;
+      } catch (e) {
+        if (engine === "deepgram") {
+          throw e instanceof Error ? e : new Error("Deepgram TTS failed.");
+        }
+        console.warn("Deepgram TTS failed, trying next engine:", e);
+      }
+    }
     if (tryFish) {
       try {
         await this.play(await this.fishAudioTts(text, s, character, fishKey));
