@@ -15,6 +15,8 @@ import { assertPasswordAllowed } from "@/lib/password";
 import { entitlementFromWorkspaces } from "@/lib/cinem-ai-assistant";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 import { withNativeCors } from "@/lib/auth-native";
+import { userFoundingBadge } from "@/lib/founding-members";
+import { readByokSnapshot } from "@/lib/user-provider-keys";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -24,12 +26,22 @@ export async function GET() {
   }
   const row = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { passwordHash: true, googleId: true, supporter: true },
+    select: {
+      passwordHash: true,
+      googleId: true,
+      supporter: true,
+      assistantFoundingMember: true,
+      assistantFoundingNumber: true,
+      inviteCode: true,
+    },
   });
   const workspaces = await listUserWorkspaces(user.id);
   const entitlement = entitlementFromWorkspaces(
     workspaces.map((workspace) => ({ id: workspace.id, plan: workspace.plan })),
+    { assistantFoundingMember: row?.assistantFoundingMember },
   );
+  const founding = await userFoundingBadge(user.id);
+  const byok = await readByokSnapshot(user.id).catch(() => null);
   return withNativeCors(
     jsonOk({
       user: {
@@ -38,12 +50,18 @@ export async function GET() {
         googleLinked: Boolean(row?.googleId),
         isAdmin: isAdminEmail(user.email),
         supporter: Boolean(row?.supporter),
+        assistantFoundingMember: Boolean(row?.assistantFoundingMember),
+        assistantFoundingNumber: row?.assistantFoundingNumber ?? null,
+        inviteCode: row?.inviteCode ?? null,
       },
       workspaces: workspaces.map(serializeWorkspace),
       plan: entitlement.plan,
       planName: entitlement.planName,
       includedWithPlan: entitlement.includedWithPlan,
+      foundingMember: entitlement.foundingMember,
       workspaceId: entitlement.workspaceId,
+      founding,
+      byok,
       googleLogin,
     }),
   );

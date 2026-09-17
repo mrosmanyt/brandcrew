@@ -9,6 +9,7 @@ import {
 } from "@/lib/browserIntents";
 import { searchYouTubeViaWeb } from "@/lib/publicWebSearch";
 import type { Settings } from "@/store/useSettingsStore";
+import { resolveGoogleApiKey, googleApiKeyHint } from "@/lib/googleApiKey";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -34,8 +35,9 @@ export async function searchYouTube(
   settings: Settings,
   maxResults = 6,
 ): Promise<YtVideo[]> {
-  if (!settings.youtubeKey) {
-    throw new Error("No YouTube API key set — add one in Settings → API.");
+  const apiKey = resolveGoogleApiKey(settings);
+  if (!apiKey) {
+    throw new Error(googleApiKeyHint(settings) || "No Google API key set.");
   }
 
   const doFetch = IS_TAURI
@@ -45,7 +47,7 @@ export async function searchYouTube(
   const url =
     "https://www.googleapis.com/youtube/v3/search" +
     `?part=snippet&type=video&videoEmbeddable=true&maxResults=${maxResults}` +
-    `&q=${encodeURIComponent(query)}&key=${settings.youtubeKey}`;
+    `&q=${encodeURIComponent(query)}&key=${apiKey}`;
 
   const res = await doFetch(url);
   if (!res.ok) throw new Error(`YouTube API ${res.status}: ${await res.text()}`);
@@ -77,7 +79,8 @@ export async function searchYouTubeWithFallback(
   settings: Settings,
   maxResults = 6,
 ): Promise<YtVideo[]> {
-  if (settings.youtubeKey) {
+  const apiKey = resolveGoogleApiKey(settings);
+  if (apiKey) {
     try {
       return await searchYouTube(query, settings, maxResults);
     } catch {
@@ -115,8 +118,9 @@ export async function trendingYouTube(
   settings: Settings,
   maxResults = 6,
 ): Promise<YtVideo[]> {
-  if (!settings.youtubeKey) {
-    throw new Error("No YouTube API key set — add one in Settings → API.");
+  const apiKey = resolveGoogleApiKey(settings);
+  if (!apiKey) {
+    throw new Error(googleApiKeyHint(settings) || "No Google API key set.");
   }
 
   const doFetch = IS_TAURI
@@ -126,7 +130,7 @@ export async function trendingYouTube(
   const url =
     "https://www.googleapis.com/youtube/v3/videos" +
     `?part=snippet&chart=mostPopular&maxResults=${maxResults}` +
-    `&regionCode=US&key=${settings.youtubeKey}`;
+    `&regionCode=US&key=${apiKey}`;
 
   const res = await doFetch(url);
   if (!res.ok) throw new Error(`YouTube API ${res.status}: ${await res.text()}`);

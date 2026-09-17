@@ -93,6 +93,65 @@ function chromePagePath() {
   return path.join(__dirname, "chrome.html");
 }
 
+function modeChooserPagePath() {
+  return path.join(__dirname, "mode-chooser.html");
+}
+
+function preferredModePath() {
+  return path.join(app.getPath("userData"), "preferred-mode.json");
+}
+
+function readPreferredMode() {
+  try {
+    const raw = fs.readFileSync(preferredModePath(), "utf8");
+    const parsed = JSON.parse(raw);
+    const mode = parsed?.mode;
+    return mode === "assistant" || mode === "desk" ? mode : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePreferredMode(mode) {
+  const next = normalizeMode(mode);
+  if (next === "both") return;
+  fs.mkdirSync(path.dirname(preferredModePath()), { recursive: true });
+  fs.writeFileSync(preferredModePath(), JSON.stringify({ mode: next, at: Date.now() }), {
+    mode: 0o600,
+  });
+}
+
+function showFirstLaunchChooser() {
+  return new Promise((resolve) => {
+    const win = new BrowserWindow({
+      width: 560,
+      height: 420,
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      fullscreenable: false,
+      title: "Welcome to CINEM Pro",
+      ...browserWindowChromeOptions(process.platform),
+      webPreferences: {
+        preload: path.join(__dirname, "mode-chooser-preload.cjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+    const done = (mode) => {
+      if (!win.isDestroyed()) win.close();
+      resolve(normalizeMode(mode) === "assistant" ? "assistant" : "desk");
+    };
+    ipcMain.once("cinem:mode-chooser-pick", (_event, mode) => {
+      writePreferredMode(mode);
+      done(mode);
+    });
+    win.on("closed", () => done("desk"));
+    void win.loadFile(modeChooserPagePath());
+  });
+}
+
 function signInPagePath() {
   return path.join(__dirname, "sign-in.html");
 }
@@ -887,7 +946,15 @@ async function boot() {
   }
 
   await restoreCloudSession();
-  const startMode = parseStartMode(process.argv, process.env);
+  let startMode = parseStartMode(process.argv, process.env);
+  if (startMode !== "both") {
+    const saved = readPreferredMode();
+    if (saved && !process.argv.some((a) => a.startsWith("--mode="))) {
+      startMode = saved;
+    } else if (!saved && packaged()) {
+      startMode = await showFirstLaunchChooser();
+    }
+  }
   if (startMode === "both") {
     createShellWindow("desk");
     createShellWindow("assistant");
@@ -1065,6 +1132,7 @@ function installAppMenu() {
     ipcMain.on("cinem:set-mode", (event, mode) => {
       const entry = shellFromContents(event.sender);
       const next = normalizeMode(mode);
+      if (next !== "both") writePreferredMode(next);
       if (next === "both") {
         void openBoth();
         return;

@@ -23,6 +23,15 @@ model User {
   supporter          Boolean   @default(false)
   supporterAt        DateTime?
   supporterTotalCents Int      @default(0)
+  /// First-50 founding member — Cinem AI Assistant included free for life on this account.
+  assistantFoundingMember Boolean @default(false)
+  /// 1–50 when claimed at signup; null otherwise.
+  assistantFoundingNumber Int?
+  /// Shareable invite code for viral +1 free month (stub redemption).
+  inviteCode             String?  @unique
+  invitedByUserId        String?
+  /// Set at signup when founding spots were full — assistant needs paid plan.
+  assistantRequiresPaid  Boolean  @default(false)
   createdAt     DateTime           @default(now())
   memberships   WorkspaceMember[]
   invitesSent   WorkspaceInvite[]
@@ -30,8 +39,12 @@ model User {
   supports      BrandSupport[]
   productUsage  ProductUsage[]
   helpThreads   SupportThread[]
+  providerKeys  UserProviderKey?
+  invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  invitees      User[]             @relation("UserInvites")
 
   @@index([supporter])
+  @@index([assistantFoundingMember])
 }
 
 model Workspace {
@@ -672,4 +685,25 @@ model SupportStaffPresence {
   id         String   @id
   lastSeenAt DateTime @default(now())
   actorEmail String   @default("")
+}
+
+/// Singleton — public founding-member counter for Cinem AI Assistant.
+model SiteConfig {
+  id                       String   @id @default("global")
+  assistantFoundingSlots   Int      @default(50)
+  assistantFoundingClaimed Int      @default(0)
+  updatedAt                DateTime @updatedAt
+}
+
+/// Per-user BYOK keys (Gemini + Deepgram) encrypted at rest.
+model UserProviderKey {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  geminiKeyEnc     String   @default("")
+  deepgramKeyEnc   String   @default("")
+  geminiTokensUsed Int      @default(0)
+  deepgramCharsUsed Int     @default(0)
+  spendCapUsd      Float    @default(25)
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

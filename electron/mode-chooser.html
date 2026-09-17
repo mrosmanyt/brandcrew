@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to CINEM Pro</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #09090b;
+        --panel: #18181b;
+        --line: #3f3f46;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --accent: #a3e635;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: radial-gradient(circle at 50% 20%, #1a1a22, var(--bg));
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: grid;
+        place-items: center;
+      }
+      .card {
+        width: min(520px, 92vw);
+        padding: 32px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(24, 24, 27, 0.92);
+        text-align: center;
+      }
+      h1 { margin: 0 0 8px; font-size: 1.35rem; letter-spacing: 0.04em; }
+      p { margin: 0 0 24px; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+      .choices { display: grid; gap: 12px; }
+      button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 18px 16px;
+        font: inherit;
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      button:hover { border-color: var(--accent); background: #222226; }
+      button strong { display: block; font-size: 1rem; margin-bottom: 4px; }
+      button span { color: var(--muted); font-size: 0.85rem; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Choose your workspace</h1>
+      <p>Pick where to start. Switch anytime from the top bar — Desk or AI Assistant.</p>
+      <div class="choices">
+        <button type="button" id="assistant">
+          <strong>Cinem AI Assistant</strong>
+          <span>Voice Jarvis, creator tools, and chat on Windows</span>
+        </button>
+        <button type="button" id="desk">
+          <strong>Cinem Pro</strong>
+          <span>Mission Control desk — agents, jobs, and approvals</span>
+        </button>
+      </div>
+    </div>
+    <script>
+      const api = window.cinemModeChooser;
+      document.getElementById("assistant").addEventListener("click", () => api && api.choose("assistant"));
+      document.getElementById("desk").addEventListener("click", () => api && api.choose("desk"));
+    </script>
+  </body>
+</html>
