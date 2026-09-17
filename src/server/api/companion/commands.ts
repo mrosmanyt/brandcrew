@@ -26,7 +26,7 @@ export async function GET() {
 
 const ackSchema = z.object({
   commandId: z.string().min(1).max(80),
-  result: z.record(z.unknown()).optional(),
+  result: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function PATCH(request: Request) {

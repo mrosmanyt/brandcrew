@@ -58,7 +58,7 @@ export function DeskCompanionDeepLink({ workspaceId }: { workspaceId: string }) 
     next.delete("action");
     const qs = next.toString();
     router.replace(qs ? `/desk/${workspaceId}?${qs}` : `/desk/${workspaceId}`);
-  }, [action, companion, params, router, workspaceId]);
+  }, [params, router, workspaceId]);
 
   return null;
 }
