@@ -47,6 +47,29 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
       DEEPGRAM_API_KEY: String(process.env.DEEPGRAM_API_KEY || "").trim(),
     };
   },
+  wakeWord: {
+    async status() {
+      return ipcRenderer.invoke("cinem:wake-word:status");
+    },
+    async start() {
+      return ipcRenderer.invoke("cinem:wake-word:start");
+    },
+    async stop() {
+      return ipcRenderer.invoke("cinem:wake-word:stop");
+    },
+    async setDeepSleep(on) {
+      return ipcRenderer.invoke("cinem:wake-word:deep-sleep", Boolean(on));
+    },
+    onDetected(handler) {
+      if (typeof handler !== "function") return () => undefined;
+      const listen = (_event, payload) => handler(payload || {});
+      ipcRenderer.on("cinem:wake-word", listen);
+      return () => ipcRenderer.removeListener("cinem:wake-word", listen);
+    },
+    async installModel(sourcePath) {
+      return ipcRenderer.invoke("cinem:wake-word:install-model", sourcePath);
+    },
+  },
   updates: {
     async getState() {
       return ipcRenderer.invoke("cinem:update:get");

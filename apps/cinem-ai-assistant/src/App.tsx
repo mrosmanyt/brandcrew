@@ -97,7 +97,7 @@ export default function App() {
     // Resume any 30-day Auto-Pilot campaign + arm the daily scheduler.
     void import("@/store/useAutopilotStore").then((m) => m.useAutopilotStore.getState()._load());
     if (wakeWordEnabled()) {
-      startWakeWord(() => void toggleVoiceCommand());
+      void startWakeWord(() => void toggleVoiceCommand());
     }
     return () => stopWakeWord();
   }, []);

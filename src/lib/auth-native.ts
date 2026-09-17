@@ -46,6 +46,9 @@ export function isNativeCorsPath(segments: string[]) {
   const path = segments.join("/");
   if (path === "api/cinem-ai-assistant/usage") return true;
   if (path === "api/downloads/cinem-ai-assistant") return true;
+  if (path.startsWith("api/companion/")) return true;
+  if (path === "api/user/invite" || path === "api/user/byok") return true;
+  if (path.startsWith("api/workspaces/") && path.endsWith("/marketplace")) return true;
   return (
     path === "api/auth/token" ||
     path === "api/auth/refresh" ||

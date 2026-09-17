@@ -27,6 +27,20 @@ export type CinemDesktopBridge = {
   openDesk?: () => void;
   openUpdates?: () => void;
   getVoiceEnv?: () => { FISH_AUDIO_API_KEY?: string; DEEPGRAM_API_KEY?: string };
+  wakeWord?: {
+    status: () => Promise<{
+      engine: string;
+      nativeAvailable: boolean;
+      reason?: string;
+      accessKeyConfigured?: boolean;
+      keywordPath?: string | null;
+    }>;
+    start: () => Promise<{ ok?: boolean; engine?: string; error?: string }>;
+    stop: () => Promise<{ ok?: boolean }>;
+    setDeepSleep: (on: boolean) => Promise<{ ok?: boolean; deepSleep?: boolean }>;
+    onDetected: (handler: (payload: { phrase?: string; engine?: string }) => void) => () => void;
+    installModel: (sourcePath: string) => Promise<{ ok?: boolean; path?: string; error?: string }>;
+  };
   httpGet?: (
     url: string,
     opts?: { worldMonitorKey?: string },

@@ -52,6 +52,7 @@ export async function GET(request: Request) {
     intent: url.searchParams.get("intent"),
     next: url.searchParams.get("next"),
     invite: url.searchParams.get("invite"),
+    ref: url.searchParams.get("ref"),
   });
   return NextResponse.redirect(googleLoginAuthorizeUrl(state));
 }

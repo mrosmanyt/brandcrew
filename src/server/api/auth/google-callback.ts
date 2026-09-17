@@ -70,6 +70,7 @@ export async function GET(request: Request) {
       userId: user.id,
       created,
       inviteToken: parsed.invite,
+      memberInvite: parsed.memberInvite,
       next: parsed.next,
       intent,
     });

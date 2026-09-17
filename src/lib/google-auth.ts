@@ -13,6 +13,7 @@ import { ClientError } from "@/lib/http";
 import { assertCanAcceptInvite, normalizeInviteEmail } from "@/lib/invites";
 import { createDemoWorkspace } from "@/lib/workspace";
 import { claimFoundingMember } from "@/lib/founding-members";
+import { redeemReferralOnSignup } from "@/lib/referral-invites";
 
 export {
   GOOGLE_LOGIN_CALLBACK_PATH,
@@ -98,12 +99,14 @@ export type GoogleLoginState = {
   intent: GoogleLoginIntent;
   next: string;
   invite: string;
+  memberInvite: string;
 };
 
 export async function signGoogleLoginState(input: {
   intent?: string | null;
   next?: string | null;
   invite?: string | null;
+  ref?: string | null;
 }) {
   const intent: GoogleLoginIntent = input.intent === "signup" ? "signup" : "login";
   return new SignJWT({
@@ -111,6 +114,7 @@ export async function signGoogleLoginState(input: {
     intent,
     next: safeNextPath(input.next, ""),
     invite: String(input.invite || "").trim(),
+    memberInvite: String(input.ref || "").trim().toLowerCase(),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -129,6 +133,7 @@ export async function readGoogleLoginState(token: string): Promise<GoogleLoginSt
     intent,
     next: typeof payload.next === "string" ? payload.next : "",
     invite: typeof payload.invite === "string" ? payload.invite : "",
+    memberInvite: typeof payload.memberInvite === "string" ? payload.memberInvite : "",
   };
 }
 
@@ -239,6 +244,7 @@ export async function finishGoogleLogin(input: {
   userId: string;
   created: boolean;
   inviteToken?: string;
+  memberInvite?: string;
   next?: string;
   intent: GoogleLoginIntent;
 }) {
@@ -296,7 +302,8 @@ export async function finishGoogleLogin(input: {
   if (memberships === 0) {
     await createDemoWorkspace(input.userId);
     if (input.created) {
-      await claimFoundingMember(input.userId);
+      await claimFoundingMember(input.userId, input.memberInvite);
+      await redeemReferralOnSignup(input.userId, input.memberInvite);
     }
     return {
       path: safeNextPath(input.next, "/onboarding"),

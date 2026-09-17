@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DeskChromeHeader } from "@/components/desk/desk-chrome";
+import { DeskCompanionDeepLink } from "@/components/desk/desk-companion-deeplink";
 import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
 import { WindowsDownloadNudge } from "@/components/desk/windows-download-nudge";
@@ -92,6 +93,9 @@ export default async function WorkspaceLayout({
           placement="desk"
           downloadHref={cinemAiAssistantDownloadHref()}
         />
+        <Suspense fallback={null}>
+          <DeskCompanionDeepLink workspaceId={member.workspace.id} />
+        </Suspense>
         <DeskChromeHeader
           workspaceId={member.workspace.id}
           tokensLeft={Math.max(0, tokenBudget - member.workspace.tokenUsed)}

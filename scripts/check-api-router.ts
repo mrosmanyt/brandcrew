@@ -17,6 +17,12 @@ const PATTERNS: string[][] = [
   ["api", "downloads", "cinem-ai-assistant"],
   ["api", "cinem-ai-assistant", "usage"],
   ["api", "guest", "chat"],
+  ["api", "founding", "spots"],
+  ["api", "user", "byok"],
+  ["api", "user", "invite"],
+  ["api", "companion", "commands"],
+  ["api", "companion", "command"],
+  ["api", "companion", "pair"],
   ["api", "v1"],
   ["api", "v1", "workspace"],
   ["api", "v1", "agents", ":agentId"],
@@ -376,8 +382,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 91);
-console.log("ok: 91 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 97);
+console.log("ok: 97 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

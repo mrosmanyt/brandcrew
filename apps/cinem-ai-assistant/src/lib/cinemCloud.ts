@@ -138,7 +138,7 @@ export async function refreshSession(refreshToken: string): Promise<CinemSession
   return next;
 }
 
-async function withFreshAccess<T>(fn: (accessToken: string) => Promise<T>): Promise<T> {
+export async function withFreshAccess<T>(fn: (accessToken: string) => Promise<T>): Promise<T> {
   const session = readSession();
   if (!session?.accessToken && !session?.refreshToken) {
     throw new Error("Sign in to continue.");
