@@ -4,7 +4,7 @@
  * plus Cinem AI Assistant from the bundled Vite renderer.
  * Local Next + Postgres only when CINEM_DESK_MODE=local (or unpackaged desktop:dev).
  */
-const { app, BrowserWindow, BrowserView, Menu, shell, dialog, session, ipcMain } = require("electron");
+const { app, BrowserWindow, BrowserView, Menu, shell, dialog, session, ipcMain, powerMonitor } = require("electron");
 const { spawn, fork } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -36,6 +36,7 @@ const {
 } = require("./modes.cjs");
 const { startAutoUpdates, openUpdatesWindow } = require("./updater.cjs");
 const { browserWindowChromeOptions, chromeQuery } = require("./window-chrome.cjs");
+const wakeWord = require("./wake-word.cjs");
 
 const HOST = "127.0.0.1";
 
@@ -1085,6 +1086,10 @@ function installAppMenu() {
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
       callback(permission === "media" || permission === "mediaKeySystem" || permission === "clipboard-sanitized-write");
     });
+    if (powerMonitor?.on) {
+      powerMonitor.on("suspend", () => wakeWord.setDeepSleep(true));
+      powerMonitor.on("resume", () => wakeWord.setDeepSleep(false));
+    }
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
       const headers = { ...details.requestHeaders };
       for (const key of Object.keys(headers)) {
@@ -1223,6 +1228,24 @@ function installAppMenu() {
     });
     ipcMain.handle("cinem:verify-shell", (_event, nonce) => verifyShellNonce(nonce));
     ipcMain.handle("cinem:ping", () => ASSISTANT_PING);
+    ipcMain.handle("cinem:wake-word:status", () => wakeWord.engineStatus());
+    ipcMain.handle("cinem:wake-word:start", (event) => {
+      if (!event.sender || event.sender.isDestroyed()) return { ok: false, error: "no sender" };
+      const result = wakeWord.startWakeWord(event.sender);
+      const status = wakeWord.engineStatus();
+      return { ok: true, engine: status.engine, nativeAvailable: status.nativeAvailable, ...result };
+    });
+    ipcMain.handle("cinem:wake-word:stop", () => {
+      wakeWord.stopWakeWord();
+      return { ok: true };
+    });
+    ipcMain.handle("cinem:wake-word:deep-sleep", (_event, on) => {
+      wakeWord.setDeepSleep(Boolean(on));
+      return { ok: true, deepSleep: Boolean(on) };
+    });
+    ipcMain.handle("cinem:wake-word:install-model", (_event, sourcePath) =>
+      wakeWord.installWakeModel(String(sourcePath || "")),
+    );
     ipcMain.handle("cinem:get-session", () => ({
       refreshToken: readStoredRefresh(),
     }));

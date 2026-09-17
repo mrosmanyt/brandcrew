@@ -97,10 +97,12 @@ export function GoogleContinueButton({
   intent,
   next,
   invite,
+  refCode,
 }: {
   intent: GoogleLoginIntent;
   next?: string | null;
   invite?: string | null;
+  refCode?: string | null;
 }) {
   const [status, setStatus] = useState<GoogleStatus | null>(null);
   const [desktop, setDesktop] = useState(false);
@@ -138,7 +140,7 @@ export function GoogleContinueButton({
 
   if (desktop) return <DesktopCinemSignIn />;
 
-  const href = googleLoginStartHref({ intent, next, invite });
+  const href = googleLoginStartHref({ intent, next, invite, ref: refCode });
 
   return (
     <div className="space-y-2">

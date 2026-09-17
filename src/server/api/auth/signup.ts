@@ -9,6 +9,7 @@ import { jsonError } from "@/lib/http";
 import { assertPasswordAllowed } from "@/lib/password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/password-rules";
 import { claimFoundingMember, foundingSpotsSnapshot } from "@/lib/founding-members";
+import { redeemReferralOnSignup } from "@/lib/referral-invites";
 
 const schema = z.object({
   name: z.string().min(1).max(80),
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
       workspaceId = workspace.id;
     }
     const founding = await claimFoundingMember(user.id, body.memberInvite);
+    const referral = await redeemReferralOnSignup(user.id, body.memberInvite);
     const spots = await foundingSpotsSnapshot();
     await setSessionCookie(user.id);
     return NextResponse.json({
@@ -109,6 +111,7 @@ export async function POST(request: Request) {
         remaining: spots.remaining,
         open: spots.open,
       },
+      referral,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

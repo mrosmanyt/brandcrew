@@ -8,10 +8,13 @@ export function googleLoginStartHref(input: {
   intent: GoogleLoginIntent;
   next?: string | null;
   invite?: string | null;
+  /** Viral founding invite code (?ref=) */
+  ref?: string | null;
 }) {
   const params = new URLSearchParams({ intent: input.intent });
   if (input.next) params.set("next", input.next);
   if (input.invite) params.set("invite", input.invite);
+  if (input.ref) params.set("ref", input.ref);
   return `${GOOGLE_LOGIN_START_PATH}?${params.toString()}`;
 }
 

@@ -62,6 +62,7 @@
     "test:assistant-browser": "tsx scripts/check-assistant-browser-loop.ts",
     "test:jarvis-features": "tsx scripts/check-jarvis-features.ts",
     "test:power-pack": "tsx scripts/check-power-pack.ts",
+    "test:referral-invites": "tsx scripts/check-referral-invites.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",
     "test:win-nudge": "tsx scripts/check-windows-download-nudge.ts",

@@ -245,13 +245,17 @@ export function usageSnapshot(input: {
   foundingMember?: boolean;
   /** Post–first-50 demo users — assistant requires paid plan. */
   gatePaidOnly?: boolean;
+  /** Extra turns from viral +1 free month redemptions. */
+  referralBonusMonths?: number;
 }): CinemAiAssistantUsageSnapshot {
   const plan = normalizePlanId(input.plan);
   const paid = isPaidPlan(plan);
   const included =
     input.includedWithPlan ?? (paid || Boolean(input.foundingMember));
   const gatePaidOnly = Boolean(input.gatePaidOnly && !included);
-  const limit = gatePaidOnly ? 0 : cinemAiAssistantTurnLimit(plan);
+  const referralBonus = Math.max(0, Math.floor(input.referralBonusMonths ?? 0));
+  const referralTurns = referralBonus * CINEM_AI_ASSISTANT_FREE_TURNS;
+  const limit = gatePaidOnly ? referralTurns : cinemAiAssistantTurnLimit(plan) + referralTurns;
   const used = Math.max(0, Math.floor(input.used));
   const remaining = Math.max(0, limit - used);
   return {

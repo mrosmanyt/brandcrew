@@ -112,6 +112,7 @@ function SignupForm() {
               <GoogleContinueButton
                 intent="signup"
                 invite={inviteToken || undefined}
+                refCode={memberInvite || undefined}
                 next={next}
               />
               <AuthDivider />

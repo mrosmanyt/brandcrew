@@ -38,13 +38,15 @@ import {
 import { deepgramConfigured, listDeepgramVoices } from "@/lib/deepgramVoice";
 import { cn } from "@/lib/utils";
 import ByokDashboardTab from "@/components/byok/ByokDashboardTab";
-import MobileCompanionStub from "@/components/mobile/MobileCompanionStub";
+import MobileCompanionPanel from "@/components/mobile/MobileCompanionPanel";
 import PluginRegistryPanel from "@/components/marketplace/PluginRegistryPanel";
+import InviteSharePanel from "@/components/invite/InviteSharePanel";
 import {
   setWakeWordEnabled,
   startWakeWord,
   stopWakeWord,
   wakeWordEnabled,
+  wakeWordStatusLine,
   WAKE_WORD_DOCS,
 } from "@/lib/wakeWord";
 import { toggleVoiceCommand } from "@/lib/voice-command";
@@ -1043,7 +1045,7 @@ function RemoteTab() {
       </div>
       <TelegramCard />
       <WhatsAppCard />
-      <MobileCompanionStub />
+      <MobileCompanionPanel />
       <PluginRegistryPanel />
       <div className="border border-neon/10 bg-abyss/40 px-3 py-2.5 text-[0.65rem] leading-relaxed text-neon-dim">
         <p className="mb-1 flex items-center gap-1.5 font-display text-[0.55rem] tracking-[0.2em] text-neon">
@@ -1263,6 +1265,8 @@ function AccountTab() {
         </span>
       </div>
 
+      <InviteSharePanel />
+
       <div className="space-y-2">
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between border-b border-neon/[0.08] py-1.5 text-sm">
@@ -1425,6 +1429,11 @@ function UpdatesCard() {
 function GeneralTab() {
   const s = useSettingsStore();
   const [confirming, setConfirming] = useState(false);
+  const [wakeDocs, setWakeDocs] = useState(WAKE_WORD_DOCS);
+
+  useEffect(() => {
+    void wakeWordStatusLine().then(setWakeDocs);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -1459,13 +1468,13 @@ function GeneralTab() {
       <div className="flex items-center justify-between border border-neon/10 bg-abyss/50 px-3 py-3">
         <div>
           <p className="text-sm font-semibold text-ice/90">Wake word — &quot;Hey Cinem&quot;</p>
-          <p className="text-xs text-neon-dim">{WAKE_WORD_DOCS}</p>
+          <p className="text-xs text-neon-dim">{wakeDocs}</p>
         </div>
         <Switch
           checked={wakeWordEnabled()}
           onChange={(v) => {
             setWakeWordEnabled(v);
-            if (v) startWakeWord(() => void toggleVoiceCommand());
+            if (v) void startWakeWord(() => void toggleVoiceCommand());
             else stopWakeWord();
           }}
         />
