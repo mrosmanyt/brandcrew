@@ -56,6 +56,7 @@ import {
   type LlmStatus,
 } from "@/lib/llm-routing";
 import { cn } from "@/lib/utils";
+import { CinemAiAssistantDownloadPrompt } from "@/components/marketing/cinem-ai-assistant-download-prompt";
 import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 
 const BUILD_ICONS = {
@@ -379,6 +380,8 @@ export function GuestChatHome() {
           </form>
         </div>
       </div>
+
+      <CinemAiAssistantDownloadPrompt />
 
       <DesktopBuildRequiredDialog open={buildOpen} onOpenChange={setBuildOpen} />
 
