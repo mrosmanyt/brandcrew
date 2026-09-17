@@ -80,6 +80,72 @@ export function lockAllowlist(url: string, allowlist: string[]): string[] {
   return allowlistFromUrls([url]);
 }
 
+const SEARCH_HUBS = new Set([
+  "google.com",
+  "bing.com",
+  "duckduckgo.com",
+  "yahoo.com",
+  "youtube.com",
+  "youtu.be",
+  "search.yahoo.com",
+]);
+
+export function isSearchHubHost(rawHost: string): boolean {
+  const host = String(rawHost || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
+  if (!host) return false;
+  if (SEARCH_HUBS.has(host)) return true;
+  return [...SEARCH_HUBS].some((hub) => host === hub || host.endsWith(`.${hub}`));
+}
+
+export function expandAllowlist(url: string, allowlist: string[]): string[] {
+  return parseAllowlist([...parseAllowlist(allowlist), ...allowlistFromUrls([url])]);
+}
+
+const DEFAULT_RESEARCH_HOPS = 6;
+
+/**
+ * Search-engine jobs must follow result links (Google → publisher).
+ * Brand-site jobs still abort if the agent wanders off-domain.
+ * Returns the updated allowlist when the hop is admitted; otherwise a skip reason
+ * (callers should not fail the whole job for a skipped crawl/click hop).
+ */
+export function admitResearchHop(
+  url: string,
+  allowlist: string[],
+  hopsUsed = 0,
+  maxHops = DEFAULT_RESEARCH_HOPS,
+):
+  | { ok: true; allowlist: string[]; hopsUsed: number }
+  | { ok: false; host: string; reason: string } {
+  const check = hostAllowed(url, allowlist);
+  if (check.ok) {
+    return { ok: true, allowlist: parseAllowlist(allowlist), hopsUsed };
+  }
+  const hosts = parseAllowlist(allowlist);
+  const hubJob = !hosts.length || hosts.some((h) => isSearchHubHost(h));
+  if (!hubJob) {
+    return { ok: false, host: check.host, reason: check.reason };
+  }
+  if (hopsUsed >= maxHops) {
+    return {
+      ok: false,
+      host: check.host,
+      reason: `Research hop cap (${maxHops}) — skipping ${check.host}.`,
+    };
+  }
+  if (!check.host) {
+    return { ok: false, host: "", reason: check.reason };
+  }
+  return {
+    ok: true,
+    allowlist: expandAllowlist(url, hosts),
+    hopsUsed: hopsUsed + 1,
+  };
+}
+
 function hostMatches(host: string, allowed: string): boolean {
   return host === allowed || host.endsWith(`.${allowed}`);
 }

@@ -22,6 +22,7 @@ export interface PlayerVideo {
   title: string;
   channel: string;
   thumbnail: string;
+  embedUrl?: string;
 }
 
 interface AppState {

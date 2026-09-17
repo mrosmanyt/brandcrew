@@ -873,7 +873,13 @@ export function playbookFromKey(
   if (key === "inbox_invoices") return inboxInvoicesPlaybook(Boolean(options?.gmailConnected));
   if (key === "ad_angles_from_url") return adAnglesFromUrlPlaybook(url);
   if (key === "strategy_from_site") return strategyFromSitePlaybook(url);
-  if (key === "web_search") return webSearchPlaybook(message.trim());
+  if (key === "web_search") {
+    const q =
+      message.match(/^research\s+(?:on\s+|about\s+|using\s+)?(.+)$/i)?.[1]?.trim() ||
+      message.match(/^(?:search|google|look up|lookup)\s+(?:for\s+)?(.+)$/i)?.[1]?.trim() ||
+      message.trim();
+    return webSearchPlaybook(q.replace(/\bon (?:the )?(?:web|google|internet)\b/gi, "").trim());
+  }
   if (key === "inbox_replies") return inboxRepliesPlaybook(Boolean(options?.gmailConnected));
   if (key === "whatsapp_drafts") return whatsappDraftsPlaybook();
   if (key === "gmail_inbox") return gmailInboxPlaybook();
@@ -938,6 +944,16 @@ export function inferPlaybookKey(
     ? (role as AgentRole)
     : playbookHintFromRole(String(role));
   if (/web search|search the web|tavily/.test(text)) {
+    return "web_search";
+  }
+  if (
+    /^research\s+/i.test(text) &&
+    !extractUrls(message).length &&
+    !/research pack|browse (the )?(site|company|page)/.test(text)
+  ) {
+    return "web_search";
+  }
+  if (/\b(on )?google\b/.test(text) && /\b(research|search|look up|lookup)\b/.test(text)) {
     return "web_search";
   }
   if (/whatsapp/.test(text) && /draft|repl(y|ies)|inbox/.test(text)) {

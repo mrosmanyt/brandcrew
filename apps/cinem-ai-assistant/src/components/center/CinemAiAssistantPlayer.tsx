@@ -104,8 +104,11 @@ export default function CinemAiAssistantPlayer() {
         {video ? (
           <iframe
             ref={iframeRef}
-            key={video.id} /* remount per video → reliable autoplay */
-            src={`https://www.youtube.com/embed/${video.id}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
+            key={video.embedUrl || video.id}
+            src={
+              video.embedUrl ||
+              `https://www.youtube.com/embed/${video.id}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`
+            }
             title={video.title}
             className="h-full w-full"
             allow="autoplay; encrypted-media; fullscreen"

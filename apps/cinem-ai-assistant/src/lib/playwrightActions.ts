@@ -8,6 +8,7 @@
  * reliable, with or without Playwright.
  */
 import { openExternal, resolveBrowserTarget } from "@/lib/quickActions";
+import { youtubeSearchUrl } from "@/lib/browserIntents";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const PW_BASE = "http://127.0.0.1:7878";
@@ -54,7 +55,6 @@ export function matchBrowserCommand(text: string): BrowserAction | null {
     label: target.label,
     reply: target.reply,
     run: async () => {
-      // 1) Try Playwright sidecar (visible, persistent Chromium).
       if (await isPlaywrightUp()) {
         try {
           const res = await pwFetch("/open", { url: target.url });
@@ -64,23 +64,94 @@ export function matchBrowserCommand(text: string): BrowserAction | null {
           console.warn("[Cinem AI Assistant] Playwright open failed, falling back:", e);
         }
       }
-      // 2) Fallback — open in the system default browser. Always works.
       await openExternal(target.url);
     },
   };
 }
 
-/** Direct YouTube play via Playwright (opens results + clicks first video).
- *  Falls back to opening the YouTube search page. */
-export async function playOnYouTube(query: string): Promise<boolean> {
+export type YoutubePlayResult = {
+  ok: boolean;
+  played: boolean;
+  url: string;
+  title?: string;
+  autoplayBlocked?: boolean;
+  error?: string;
+  via: "playwright" | "system-browser";
+};
+
+/** Direct YouTube play via Playwright (search → watch URL → play). */
+export async function playOnYouTube(query: string): Promise<YoutubePlayResult> {
+  const search = youtubeSearchUrl(query);
   if (await isPlaywrightUp()) {
     try {
-      const res = await pwFetch("/youtube", { query, play: true }, 15000);
-      if (res.ok) return true;
+      const res = await pwFetch("/youtube", { query, play: true }, 25000);
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        played?: boolean;
+        url?: string;
+        title?: string;
+        autoplayBlocked?: boolean;
+        error?: string;
+      };
+      if (res.ok) {
+        return {
+          ok: true,
+          played: Boolean(data.played),
+          url: data.url || search,
+          title: data.title,
+          autoplayBlocked: Boolean(data.autoplayBlocked),
+          error: data.error,
+          via: "playwright",
+        };
+      }
     } catch (e) {
       console.warn("[Cinem AI Assistant] Playwright youtube failed:", e);
     }
   }
-  await openExternal(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`);
-  return false;
+  await openExternal(search);
+  return { ok: true, played: false, url: search, via: "system-browser" };
+}
+
+export type ResearchBrowseResult = {
+  ok: boolean;
+  via: "playwright" | "none";
+  url?: string;
+  results: { title: string; url: string; snippet?: string }[];
+  pages: { url: string; title?: string; text?: string }[];
+  error?: string;
+};
+
+/** Google search in the live Chromium, then follow top result pages. */
+export async function researchInBrowser(query: string): Promise<ResearchBrowseResult> {
+  if (!(await isPlaywrightUp())) {
+    return { ok: false, via: "none", results: [], pages: [] };
+  }
+  try {
+    const res = await pwFetch("/research", { query, follow: 3 }, 45000);
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      url?: string;
+      results?: { title: string; url: string; snippet?: string }[];
+      pages?: { url: string; title?: string; text?: string }[];
+      error?: string;
+    };
+    if (!res.ok) {
+      return { ok: false, via: "playwright", results: [], pages: [], error: data.error || `HTTP ${res.status}` };
+    }
+    return {
+      ok: true,
+      via: "playwright",
+      url: data.url,
+      results: data.results || [],
+      pages: data.pages || [],
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      via: "playwright",
+      results: [],
+      pages: [],
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
 }

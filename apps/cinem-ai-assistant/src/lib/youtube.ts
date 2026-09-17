@@ -3,6 +3,11 @@
  * Uses tauri-plugin-http in the desktop app (no CORS); window.fetch in
  * browser dev (YouTube API allows browser calls).
  */
+import {
+  youtubeEmbedSearchUrl,
+  youtubeEmbedWatchUrl,
+} from "@/lib/browserIntents";
+import { searchYouTubeViaWeb } from "@/lib/publicWebSearch";
 import type { Settings } from "@/store/useSettingsStore";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -12,6 +17,8 @@ export interface YtVideo {
   title: string;
   channel: string;
   thumbnail: string;
+  /** Full embed URL when we are not using a single /embed/VIDEO_ID watch. */
+  embedUrl?: string;
 }
 
 /** Decodes HTML entities the API returns in titles (&amp;quot; etc.). */
@@ -60,6 +67,46 @@ export async function searchYouTube(
 
   if (!items.length) throw new Error(`No YouTube results for "${query}".`);
   return items;
+}
+
+/**
+ * API key when set; otherwise DuckDuckGo site:youtube.com scrape; finally embed-search fallback.
+ */
+export async function searchYouTubeWithFallback(
+  query: string,
+  settings: Settings,
+  maxResults = 6,
+): Promise<YtVideo[]> {
+  if (settings.youtubeKey) {
+    try {
+      return await searchYouTube(query, settings, maxResults);
+    } catch {
+      /* fall through */
+    }
+  }
+  try {
+    const web = await searchYouTubeViaWeb(query, maxResults);
+    if (web.length) {
+      return web.map((v) => ({
+        id: v.id,
+        title: v.title,
+        channel: "YouTube",
+        thumbnail: `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`,
+        embedUrl: youtubeEmbedWatchUrl(v.id),
+      }));
+    }
+  } catch {
+    /* fall through */
+  }
+  return [
+    {
+      id: `search:${query.slice(0, 80)}`,
+      title: query,
+      channel: "YouTube",
+      thumbnail: "",
+      embedUrl: youtubeEmbedSearchUrl(query),
+    },
+  ];
 }
 
 /** Fetches currently-trending YouTube videos (real "recent media" for the
