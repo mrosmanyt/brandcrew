@@ -7,15 +7,7 @@ import {
   googleLoginStartHref,
   type GoogleLoginIntent,
 } from "@/lib/google-auth-shared";
-
-declare global {
-  interface Window {
-    brandcrewDesktop?: {
-      desktop?: boolean;
-      startCinemSignIn?: () => Promise<{ ok?: boolean; error?: string }>;
-    };
-  }
-}
+import "@/lib/desktop-client";
 
 function isCinemDesktopShell() {
   return Boolean(typeof window !== "undefined" && window.brandcrewDesktop?.desktop);
@@ -35,8 +27,17 @@ function DesktopCinemSignIn() {
     setError(null);
     try {
       const result = await startSignIn();
-      if (result && result.ok === false) {
-        setError(result.error || "Could not start CINEM Pro sign-in.");
+      if (
+        result &&
+        typeof result === "object" &&
+        "ok" in result &&
+        result.ok === false
+      ) {
+        const message =
+          "error" in result && typeof result.error === "string"
+            ? result.error
+            : "Could not start CINEM Pro sign-in.";
+        setError(message);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start CINEM Pro sign-in.");
