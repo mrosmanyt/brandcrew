@@ -5,9 +5,10 @@
  * the Cinem AI Assistant desktop app calls for reliable browser automation.
  *
  *   GET  /health                      → { ok: true }
- *   POST /open    { url }             → navigates (opens a tab) to url
- *   POST /search  { query }           → Google search for query
- *   POST /youtube { query, play }     → YouTube search; if play, opens first video
+ *   POST /open     { url }                        → navigates (opens a tab) to url
+ *   POST /search   { query, extract, follow }     → Google search; extract results; follow N
+ *   POST /research { query, follow }              → search + open top result pages
+ *   POST /youtube  { query, play }                → YouTube search; play first video (autoplay)
  *
  * Run:
  *   cd playwright-server
@@ -32,7 +33,12 @@ async function getContext() {
   context = await chromium.launchPersistentContext(USER_DATA_DIR, {
     headless: false,
     viewport: null, // use the real window size
-    args: ["--start-maximized"],
+    args: [
+      "--start-maximized",
+      // YouTube / Google otherwise open but never start playback.
+      "--autoplay-policy=no-user-gesture-required",
+      "--disable-features=PreloadMediaEngagementData,AutoplayIgnoreWebAudio",
+    ],
   });
   context.on("close", () => { context = null; });
   return context;
@@ -68,38 +74,181 @@ async function bringWindowToFront(page) {
   await page.bringToFront().catch(() => {});
 }
 
+async function dismissOverlays(page) {
+  const labels = [
+    "Accept all",
+    "Accept All",
+    "I agree",
+    "Agree",
+    "Reject all",
+    "Reject All",
+    "Got it",
+    "Not now",
+    "No thanks",
+    "Skip",
+  ];
+  for (const label of labels) {
+    const btn = page.getByRole("button", { name: label }).first();
+    if (await btn.count().catch(() => 0)) {
+      try {
+        await btn.click({ timeout: 1200 });
+        await page.waitForTimeout(250);
+      } catch {
+        /* overlay not clickable */
+      }
+    }
+  }
+  // Google/YouTube consent iframe (EU).
+  for (const frame of page.frames()) {
+    try {
+      const agree = frame.getByRole("button", { name: /accept all|i agree|agree/i }).first();
+      if (await agree.count()) await agree.click({ timeout: 1200 }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 async function openUrl(url) {
   const page = await getPage();
   await bringWindowToFront(page); // foreground FIRST — user watches it load
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await dismissOverlays(page);
   await bringWindowToFront(page);
-  return { ok: true, url };
+  return { ok: true, url: page.url() };
 }
 
-async function googleSearch(query) {
-  return openUrl(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+function videoIdFromHref(href) {
+  const m = String(href || "").match(/(?:v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+  return m?.[1] || null;
+}
+
+async function extractSearchResults(page, max = 8) {
+  return page.evaluate((limit) => {
+    const out = [];
+    const seen = new Set();
+    const push = (title, href, snippet) => {
+      if (!href || !href.startsWith("http")) return;
+      if (seen.has(href)) return;
+      seen.add(href);
+      const t = (title || "").trim();
+      if (!t) return;
+      out.push({ title: t.slice(0, 180), url: href, snippet: (snippet || "").trim().slice(0, 240) });
+    };
+    for (const a of document.querySelectorAll("a")) {
+      if (out.length >= limit) break;
+      const href = a.href || "";
+      if (/google\.[^/]+\/search|accounts\.google|policies\.google|support\.google/.test(href)) continue;
+      const h3 = a.querySelector("h3");
+      const title = h3 ? h3.textContent : a.textContent;
+      if (h3 || /\/url\?|uddg=/.test(href)) {
+        let url = href;
+        try {
+          const u = new URL(href);
+          url = u.searchParams.get("q") || u.searchParams.get("uddg") || href;
+        } catch { /* keep href */ }
+        push(title, url, a.closest("div")?.innerText?.slice(0, 240) || "");
+      }
+    }
+    return out.slice(0, limit);
+  }, max);
+}
+
+async function googleSearch(query, opts = {}) {
+  const extract = Boolean(opts.extract);
+  const follow = Math.max(0, Math.min(Number(opts.follow) || 0, 4));
+  const page = await getPage();
+  await bringWindowToFront(page);
+  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&igu=1`;
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await dismissOverlays(page);
+  await page.waitForTimeout(600);
+  const results = extract || follow ? await extractSearchResults(page, 8) : [];
+  const pages = [];
+  for (const hit of results.slice(0, follow)) {
+    try {
+      await page.goto(hit.url, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await dismissOverlays(page);
+      const text = await page.evaluate(() => (document.body?.innerText || "").replace(/\s+/g, " ").trim().slice(0, 4000));
+      pages.push({ url: page.url(), title: await page.title(), text });
+    } catch (e) {
+      pages.push({ url: hit.url, title: hit.title, text: "", error: String(e?.message || e) });
+    }
+  }
+  await bringWindowToFront(page);
+  return { ok: true, url: page.url(), results, pages };
+}
+
+async function ensurePlaying(page) {
+  await page.locator("video").first().waitFor({ timeout: 8000 }).catch(() => {});
+  const playBtn = page.locator(
+    ".ytp-play-button[aria-label*='Play'], button[aria-label^='Play'], .ytp-large-play-button",
+  ).first();
+  if (await playBtn.count().catch(() => 0)) {
+    await playBtn.click({ timeout: 2500 }).catch(() => {});
+  }
+  await page.keyboard.press("k").catch(() => {});
+  const state = await page.evaluate(() => {
+    const v = document.querySelector("video");
+    if (!v) return { hasVideo: false, paused: true, time: 0 };
+    return { hasVideo: true, paused: v.paused, time: v.currentTime || 0 };
+  }).catch(() => ({ hasVideo: false, paused: true, time: 0 }));
+  return state;
 }
 
 async function youtube(query, play) {
   const page = await getPage();
   await bringWindowToFront(page);
-  await page.goto(
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-    { waitUntil: "domcontentloaded", timeout: 30000 },
-  );
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await dismissOverlays(page);
+  let played = false;
+  let watchUrl = searchUrl;
+  let title = "";
+  let autoplayBlocked = false;
+  let error = "";
   if (play) {
     try {
-      // First real video result; fall back to leaving the results page open.
-      const first = page.locator("ytd-video-renderer a#thumbnail, a#video-title").first();
-      await first.waitFor({ timeout: 8000 });
-      await first.click();
-      await page.waitForLoadState("domcontentloaded", { timeout: 15000 }).catch(() => {});
-    } catch {
-      /* leave results page open */
+      const first = page.locator(
+        [
+          "ytd-video-renderer a#video-title",
+          "ytd-video-renderer a#thumbnail",
+          "a#video-title-link",
+          "ytd-rich-item-renderer a#video-title-link",
+          "a[href*='/watch?v=']",
+        ].join(", "),
+      ).first();
+      await first.waitFor({ timeout: 10000 });
+      const href = await first.getAttribute("href");
+      title = ((await first.textContent()) || "").trim();
+      const id = videoIdFromHref(href) || videoIdFromHref(await first.evaluate((el) => el.href || ""));
+      if (id) {
+        watchUrl = `https://www.youtube.com/watch?v=${id}&autoplay=1`;
+        await page.goto(watchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+      } else {
+        await first.click({ timeout: 5000 });
+        await page.waitForLoadState("domcontentloaded", { timeout: 15000 }).catch(() => {});
+        watchUrl = page.url();
+      }
+      await dismissOverlays(page);
+      const state = await ensurePlaying(page);
+      played = Boolean(state.hasVideo && (!state.paused || state.time > 0));
+      autoplayBlocked = Boolean(state.hasVideo && !played);
+      if (!state.hasVideo) error = "YouTube player did not appear after opening the video.";
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+      // Leave the results page open — user can click. Not a 500.
     }
   }
   await bringWindowToFront(page);
-  return { ok: true };
+  return {
+    ok: true,
+    played,
+    url: page.url() || watchUrl,
+    title,
+    autoplayBlocked,
+    error: error || undefined,
+  };
 }
 
 /* ══ WHATSAPP REMOTE CONTROL ════════════════════════════════════════
@@ -546,11 +695,21 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.url === "/search") {
       if (!body.query) return send(res, 400, { ok: false, error: "query required" });
-      return send(res, 200, await googleSearch(body.query));
+      return send(res, 200, await googleSearch(body.query, {
+        extract: body.extract !== false,
+        follow: body.follow,
+      }));
+    }
+    if (req.url === "/research") {
+      if (!body.query) return send(res, 400, { ok: false, error: "query required" });
+      return send(res, 200, await googleSearch(body.query, {
+        extract: true,
+        follow: body.follow ?? 3,
+      }));
     }
     if (req.url === "/youtube") {
       if (!body.query) return send(res, 400, { ok: false, error: "query required" });
-      return send(res, 200, await youtube(body.query, !!body.play));
+      return send(res, 200, await youtube(body.query, body.play !== false));
     }
 
     /* — WhatsApp remote control — */

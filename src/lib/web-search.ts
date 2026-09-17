@@ -1,3 +1,5 @@
+import { duckDuckGoSearch } from "@/lib/public-web-search";
+
 const TAVILY_URL = "https://api.tavily.com/search";
 
 export async function tavilySearch(input: {
@@ -54,4 +56,25 @@ export async function tavilySearch(input: {
       error: error instanceof Error ? error.message : "Search failed.",
     };
   }
+}
+
+/** Tavily when Connected; DuckDuckGo HTML otherwise. Never throws. */
+export async function webSearchWithFallback(input: {
+  query: string;
+  apiKey?: string | null;
+}): Promise<{ ok: boolean; query: string; text: string; error?: string; engine: "tavily" | "duckduckgo" }> {
+  const query = input.query.trim();
+  const key = String(input.apiKey || "").trim();
+  if (key) {
+    const searched = await tavilySearch({ apiKey: key, query });
+    if (searched.ok) return { ...searched, engine: "tavily" };
+  }
+  const fallback = await duckDuckGoSearch(query);
+  return {
+    ok: fallback.ok,
+    query: fallback.query,
+    text: fallback.text,
+    error: fallback.error || (key ? "Tavily failed; DuckDuckGo also returned nothing." : undefined),
+    engine: "duckduckgo",
+  };
 }

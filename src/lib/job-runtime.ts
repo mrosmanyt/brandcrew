@@ -105,13 +105,15 @@ import {
   slackPostMessage,
 } from "@/lib/slack";
 import { assertWorkspaceBudget, assertLlmCallBudget, recordUsage, BudgetError, rethrowIfBudget } from "@/lib/usage";
-import { tavilySearch } from "@/lib/web-search";
+import { webSearchWithFallback } from "@/lib/web-search";
 import { ClientError } from "@/lib/http";
 import { recordWorkspaceAudit } from "@/lib/audit";
 import {
   allowlistFromUrls,
   assertHostAllowed,
   hostAllowed,
+  admitResearchHop,
+  expandAllowlist,
   lockAllowlist,
   parseAllowlist,
 } from "@/lib/domain-allowlist";
@@ -254,6 +256,12 @@ export async function createJobFromChat(input: {
     playbook?.key ||
     inferPlaybookKey(hintRole, message, input.action);
 
+  const seedUrls = [
+    extractUrls(message)[0],
+    kit.website,
+    ...(playbookKey === "web_search" ? ["https://www.google.com/search?q=research"] : []),
+  ];
+
   if (!playbook) {
     const gmail = await getConnectedPlugin(input.workspaceId, "gmail");
     playbook = playbookFromKey(playbookKey, hintRole, message, kit.website, {
@@ -293,13 +301,15 @@ export async function createJobFromChat(input: {
       : defaultCompetitorUrls(message, kit.website),
     pages: [],
     pageCount: 0,
-    allowedDomains: allowlistFromUrls([
-      extractUrls(message)[0],
-      kit.website,
-      ...(MULTI_TAB_PLAYBOOKS.has(playbook.key)
-        ? researchUrlsFromMessage(message, kit.website)
-        : defaultCompetitorUrls(message, kit.website)),
-    ]),
+    allowedDomains: expandAllowlist(
+      seedUrls[0] || "https://google.com",
+      allowlistFromUrls([
+        ...seedUrls,
+        ...(MULTI_TAB_PLAYBOOKS.has(playbook.key)
+          ? researchUrlsFromMessage(message, kit.website)
+          : defaultCompetitorUrls(message, kit.website)),
+      ]),
+    ),
     cost: {
       ...emptyCostStats(),
       cacheHits: cached.cacheHits,
@@ -498,6 +508,7 @@ export async function tickJob(jobId: string): Promise<boolean> {
         data: { cost: context.cost },
       });
       await persistSessionReplay(jobId);
+      await postJobOutcomeMessage(jobId);
       return false;
     }
 
@@ -641,6 +652,61 @@ async function failJob(jobId: string, message: string, type = "error") {
     data: { status: "failed", error: message, runnerLock: "" },
   });
   await appendEvent({ jobId, type, message });
+  await postJobOutcomeMessage(jobId);
+}
+
+/** Posts artifact content (or failure) into the desk chat thread when a job ends. */
+async function postJobOutcomeMessage(jobId: string) {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      artifacts: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+  if (!job?.agentId) return;
+
+  const conversationKey = conversationKeyForAgent(job.agentId);
+  const conversation = await prisma.conversation.findUnique({
+    where: {
+      workspaceId_agentRole: {
+        workspaceId: job.workspaceId,
+        agentRole: conversationKey,
+      },
+    },
+  });
+  if (!conversation) return;
+
+  const marker =
+    job.status === "failed"
+      ? `job-failed:${jobId}`
+      : job.artifacts[0]?.id
+        ? `job-artifact:${job.artifacts[0].id}`
+        : `job-done:${jobId}`;
+  const recent = await prisma.message.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: { content: true },
+  });
+  if (recent.some((row) => row.content.includes(marker))) return;
+
+  let content = "";
+  if (job.status === "failed") {
+    content = `${marker}\n\n⚠ **${job.title}** failed: ${job.error || "See the job timeline."}`;
+  } else {
+    const art = job.artifacts[0];
+    if (art?.content?.trim()) {
+      const body =
+        art.content.length > 4000 ? `${art.content.slice(0, 4000)}…\n\n_(Full artifact on the desk.)_` : art.content;
+      content = `${marker}\n\n${body}`;
+    } else {
+      content = `${marker}\n\n✓ **${job.title}** finished. Open the live job panel for step details.`;
+    }
+  }
+
+  await prisma.message.create({
+    data: { conversationId: conversation.id, role: "assistant", content },
+  });
 }
 
 async function planSteps(input: {
@@ -1137,10 +1203,23 @@ async function executeTool(input: {
     );
     for (const raw of extra) {
       const page = toBrowsedPage(raw);
-      const allowed = hostAllowed(page.url, allowedDomains);
-      if (!allowed.ok) {
-        throw new DomainAllowlistAbort(allowed.reason, allowed.host);
+      const hop = admitResearchHop(
+        page.url,
+        allowedDomains,
+        context.researchHopCount ?? 0,
+      );
+      if (!hop.ok) {
+        await appendEvent({
+          jobId: input.jobId,
+          type: "narration",
+          message: hop.reason,
+          stepId: step.id,
+        });
+        continue;
       }
+      allowedDomains = hop.allowlist;
+      context.allowedDomains = allowedDomains;
+      context.researchHopCount = hop.hopsUsed;
       rememberPage(context, page);
       await appendEvent({
         jobId: input.jobId,
@@ -1403,28 +1482,29 @@ async function executeTool(input: {
       input.prompt.trim() ||
       "";
     const connected = await getConnectedPlugin(input.workspaceId, "web-search");
-    if (!connected) {
-      throw new Error(
-        "Web Search is not connected. Open Marketplace → Plugins and Connect with a Tavily API key (or documented TAVILY_API_KEY).",
-      );
-    }
     await appendEvent({
       jobId: input.jobId,
       type: "tool_call",
       message: `web_search ${query.slice(0, 80)}`,
       stepId: step.id,
     });
-    const searched = await tavilySearch({ apiKey: connected.secret, query });
+    const searched = await webSearchWithFallback({
+      query,
+      apiKey: connected?.secret,
+    });
     context.search = {
       query: searched.query,
       ok: searched.ok,
       text: searched.text,
     };
     if (!searched.ok) {
-      throw new Error(searched.error || "Web search returned nothing.");
+      return {
+        summary: `Web search returned nothing for “${searched.query}”${searched.error ? ` — ${searched.error}` : ""}. Will write from Brand Kit only.`,
+        context,
+      };
     }
     return {
-      summary: `Searched the web for “${searched.query}” (${searched.text.length} chars).`,
+      summary: `Searched the web for “${searched.query}” via ${searched.engine} (${searched.text.length} chars).`,
       context,
     };
   }

@@ -1,33 +1,28 @@
 /**
  * Visual Task Execution — runners that drive the floating task windows.
- *
- *  • openWebTask     — "open google" → Google renders INSIDE a popup window
- *  • runResearchTask — "research …"  → ALENA's live research panel
- *                       (steps → real sources → LLM synthesis, all live)
- *  • runEditorTask   — "video edit"  → NOVA's editor preview with staged
- *                       progress (visual placeholder until the real editor
- *                       toolchain ships)
  */
 import { useTaskStore } from "@/store/useTaskStore";
 import { useAppStore } from "@/store/useAppStore";
+import { googleSearchUrl, youtubeVideoIdFromUrl } from "@/lib/browserIntents";
 import { openExternal, type BrowserTarget } from "@/lib/quickActions";
 import { fetchHeadlines } from "@/lib/news";
 import { chatLLM } from "@/lib/llm";
 import { languageDirective } from "@/lib/language";
+import {
+  fetchPageText,
+  formatHitsForPrompt,
+  searchPublicWeb,
+} from "@/lib/publicWebSearch";
+import { researchInBrowser } from "@/lib/playwrightActions";
 import type { Settings } from "@/store/useSettingsStore";
 
 /* ── Embeddable URL transforms ────────────────────────────────────── */
 
-/**
- * Returns a URL that renders inside an iframe, or null when the site
- * refuses embedding (X-Frame-Options) — those open externally instead.
- */
 export function toEmbeddable(url: string): string | null {
   try {
     const u = new URL(url);
     const host = u.hostname.replace(/^www\./, "");
 
-    // Google blocks iframes — EXCEPT with the igu=1 parameter.
     if (host === "google.com") {
       if (u.pathname.startsWith("/search")) {
         u.searchParams.set("igu", "1");
@@ -37,27 +32,25 @@ export function toEmbeddable(url: string): string | null {
     }
     if (host === "maps.google.com") return "https://www.google.com/maps?igu=1";
 
-    // YouTube: only /watch is embeddable (as /embed/); the homepage is not.
-    if (host === "youtube.com" && u.pathname === "/watch") {
-      const id = u.searchParams.get("v");
-      if (id) return `https://www.youtube.com/embed/${id}?autoplay=1`;
+    if (host === "youtube.com") {
+      if (u.pathname === "/watch") {
+        const id = u.searchParams.get("v");
+        if (id) return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1`;
+      }
+      if (u.pathname === "/embed" || u.searchParams.get("listType") === "search") {
+        return u.toString();
+      }
     }
 
-    // Known iframe-friendly sites.
     if (/(^|\.)wikipedia\.org$/.test(host)) return url;
-    if (host === "lite.duckduckgo.com") return url;
+    if (host === "lite.duckduckgo.com" || host === "html.duckduckgo.com") return url;
 
-    return null; // everything else: most big sites send X-Frame-Options
+    return null;
   } catch {
     return null;
   }
 }
 
-/**
- * Opens a browser command as a visual task window when the page can be
- * embedded; otherwise opens the system browser AND shows a status window.
- * Returns the task id.
- */
 export function openWebTask(target: BrowserTarget): string {
   const { openTask, patchTask } = useTaskStore.getState();
   const embed = toEmbeddable(target.url);
@@ -79,7 +72,6 @@ export function openWebTask(target: BrowserTarget): string {
   });
 
   if (embed) {
-    // iframe gives no load signal cross-origin — mark live shortly after.
     setTimeout(() => patchTask(id, { status: "done", subtitle: `${host} • live` }), 2500);
   } else {
     void openExternal(target.url).then(
@@ -92,6 +84,18 @@ export function openWebTask(target: BrowserTarget): string {
 
 /* ── Live research (ALENA) ────────────────────────────────────────── */
 
+function offlineResearchBrief(query: string, block: string): string {
+  return [
+    `# Research: ${query}`,
+    "",
+    "## Key Findings",
+    block.trim() || "- Public search returned limited text — try the Playwright sidecar for live Google tabs.",
+    "",
+    "## Bottom Line",
+    "These notes are from public web sources only (no login). Verify critical facts before acting.",
+  ].join("\n");
+}
+
 export async function runResearchTask(query: string, settings: Settings): Promise<string> {
   const { openTask, patchTask, appendTaskStep } = useTaskStore.getState();
   const id = openTask({
@@ -101,52 +105,99 @@ export async function runResearchTask(query: string, settings: Settings): Promis
     agent: "ALENA · RESEARCH AGENT",
   });
 
+  let evidence = "";
+  const sources: { title: string; url: string }[] = [];
+
   try {
-    /* 1 — live sources (real headlines when the topic is news-flavored) */
-    appendTaskStep(id, "Scanning live sources…");
-    let sourcesBlock = "";
-    try {
-      const heads = await fetchHeadlines(5);
-      patchTask(id, {
-        sources: heads.map((h) => ({ title: `${h.source}: ${h.title}`, url: h.url })),
-      });
-      sourcesBlock =
-        "\n\nLIVE HEADLINES (use any that are relevant):\n" +
-        heads.map((h) => `- ${h.title} (${h.source})`).join("\n");
-      appendTaskStep(id, `✓ ${heads.length} live sources pulled`);
-    } catch {
-      appendTaskStep(id, "(live feeds unavailable — using model knowledge)");
+    appendTaskStep(id, "Searching the public web…");
+    const hits = await searchPublicWeb(query, 6);
+    if (hits.length) {
+      patchTask(id, { sources: hits.map((h) => ({ title: h.title, url: h.url })) });
+      appendTaskStep(id, `✓ ${hits.length} search hits`);
+      sources.push(...hits.map((h) => ({ title: h.title, url: h.url })));
+    } else {
+      appendTaskStep(id, "(search returned no hits — trying headlines)");
     }
 
-    /* 2 — synthesis */
+    appendTaskStep(id, "Reading top sources…");
+    const pages: { url: string; text: string }[] = [];
+    for (const hit of hits.slice(0, 3)) {
+      const page = await fetchPageText(hit.url);
+      if (page.ok) pages.push({ url: page.url, text: page.text });
+    }
+    if (pages.length) appendTaskStep(id, `✓ Read ${pages.length} page(s)`);
+
+    appendTaskStep(id, "Checking Playwright sidecar…");
+    const live = await researchInBrowser(query);
+    if (live.ok && (live.pages.length || live.results.length)) {
+      appendTaskStep(id, `✓ Live browser: ${live.pages.length || live.results.length} source(s)`);
+      for (const r of live.results.slice(0, 6)) {
+        sources.push({ title: r.title, url: r.url });
+      }
+      for (const p of live.pages) {
+        if (p.text) pages.push({ url: p.url, text: p.text });
+      }
+      patchTask(id, { sources });
+    } else {
+      appendTaskStep(id, "(Playwright offline — public fetch only)");
+      void openExternal(googleSearchUrl(query));
+    }
+
+    try {
+      const heads = await fetchHeadlines(5);
+      if (heads.length) {
+        appendTaskStep(id, `✓ ${heads.length} headline(s)`);
+        sources.push(...heads.map((h) => ({ title: `${h.source}: ${h.title}`, url: h.url })));
+        patchTask(id, { sources });
+      }
+    } catch {
+      /* optional */
+    }
+
+    evidence = formatHitsForPrompt(hits, pages);
+    if (live.pages.length) {
+      evidence += `\n\nLIVE BROWSER PAGES:\n${live.pages.map((p) => `${p.url}\n${(p.text || "").slice(0, 1200)}`).join("\n\n")}`;
+    }
+
     appendTaskStep(id, "Synthesizing findings…");
     const lang = languageDirective(useAppStore.getState().language);
-    const result = (
-      await chatLLM(
-        `Research brief on: """${query}"""${sourcesBlock}
+    let result = "";
+    try {
+      result = (
+        await chatLLM(
+          `Research brief on: """${query}"""
 
-Write a tight, well-structured research brief in markdown:
-- "## Key Findings" — 4-6 concrete bullet points
-- "## Details" — short paragraphs with specifics
+${evidence ? `PUBLIC SOURCES (cite URLs that you use):\n${evidence}` : "No page text captured — be honest about limits."}
+
+Write a tight markdown brief:
+- "## Key Findings" — 4-6 bullets with specifics
+- "## Details" — short sourced paragraphs
 - "## Bottom Line" — 2 sentences
-Be concrete and current; no filler.${lang}`,
-        settings,
-        {
-          system:
-            "You are ALENA, Cinem AI Assistant's Research Agent — sharp, factual, source-aware. You produce professional research briefs.",
-          temperature: 0.4,
-          maxTokens: 1600,
-        },
-      )
-    ).trim();
+No filler.${lang}`,
+          settings,
+          {
+            system:
+              "You are ALENA, Cinem AI Assistant's Research Agent — factual, source-aware. Never invent quotes or stats.",
+            temperature: 0.4,
+            maxTokens: 1600,
+          },
+        )
+      ).trim();
+    } catch {
+      result = offlineResearchBrief(query, evidence);
+    }
+
+    if (!result) result = offlineResearchBrief(query, evidence);
 
     patchTask(id, { result, status: "done", subtitle: "research complete" });
     appendTaskStep(id, "✓ Research complete");
     return result;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    patchTask(id, { status: "error", subtitle: "failed", result: `Research failed: ${msg}` });
-    throw e;
+    const fallback = offlineResearchBrief(query, evidence);
+    patchTask(id, { status: "done", subtitle: "partial", result: fallback });
+    appendTaskStep(id, `⚠ Partial (${msg})`);
+    return fallback;
   }
 }
 
@@ -160,11 +211,6 @@ const EDIT_STAGES: { at: number; label: string }[] = [
   { at: 92, label: "Rendering preview…" },
 ];
 
-/**
- * Visual editor job with staged progress. The Editor Agent's real toolchain
- * (ffmpeg pipeline) lands later — this is its live progress surface, so the
- * window honestly labels the output as a preview plan.
- */
 export function runEditorTask(request: string): string {
   const { openTask, patchTask, appendTaskStep } = useTaskStore.getState();
   const id = openTask({
@@ -201,3 +247,5 @@ export function runEditorTask(request: string): string {
 
   return id;
 }
+
+export { youtubeVideoIdFromUrl };

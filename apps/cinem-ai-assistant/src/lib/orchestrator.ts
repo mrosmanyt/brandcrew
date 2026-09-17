@@ -10,7 +10,14 @@
  */
 import { chatLLM } from "@/lib/llm";
 import { getAgentImpl } from "@/lib/agents";
-import { searchYouTube } from "@/lib/youtube";
+import {
+  extractMediaQuery,
+  extractResearchQuery,
+  isMediaCommand,
+  isResearchCommand,
+} from "@/lib/browserIntents";
+import { playOnYouTube } from "@/lib/playwrightActions";
+import { searchYouTubeWithFallback } from "@/lib/youtube";
 import { resolveBrowserTarget } from "@/lib/quickActions";
 import { openWebTask, runResearchTask, runEditorTask } from "@/lib/taskRunner";
 import { runMorningBriefing } from "@/lib/morningProtocol";
@@ -124,34 +131,7 @@ const agentNames = (ids: string[]): string[] => {
     .filter((n): n is string => !!n);
 };
 
-/* ── Media fast-path (Cinem AI Assistant Player / YouTube) ────────────────────── */
-
-/**
- * Detects in-app media playback commands → Cinem AI Assistant Player.
- * NOTE: a bare "open youtube" is NOT media (that opens the website via a quick
- * action); only "play …", "… cinem-ai-assistant player", or a YouTube *search/watch*
- * counts as media.
- */
-function isMediaCommand(text: string): boolean {
-  const t = text.toLowerCase();
-  if (/\bcinem-ai-assistant player\b/.test(t)) return true;
-  if (/\bplay\b/.test(t)) return true;
-  if (/\byoutube\b/.test(t) && /\b(search|watch|stream|find)\b/.test(t)) return true;
-  return false;
-}
-
-/** Strips trigger phrasing to leave the bare search query. */
-function extractMediaQuery(text: string): string {
-  return text
-    .replace(/\b(open|launch|start)\s+(youtube|cinem-ai-assistant player)\s*(and|then)?\s*/gi, "")
-    .replace(/\b(on|in|from)\s+(youtube|the\s+)?(cinem-ai-assistant\s+)?player\b/gi, "")
-    .replace(/\bon\s+youtube\b/gi, "")
-    .replace(/\byoutube\b/gi, "")
-    .replace(/\b(please|can you|could you|for me)\b/gi, "")
-    .replace(/\b(play|watch|put on|stream)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+/* ── Media fast-path (Playwright + Cinem AI Assistant Player / YouTube) ─────── */
 
 /** Extracts the topic/niche from an Auto-Pilot command (Phase 4).
  *  Urdu word order puts the subject BEFORE "par/pe", English AFTER "about/on",
@@ -173,25 +153,51 @@ function extractFactorySubject(text: string): string {
     .trim();
 }
 
-/** Searches YouTube and auto-plays the best match in the Cinem AI Assistant Player. */
+/** Play via Playwright when available; else in-app player (API → web scrape → embed). */
 async function handleMediaCommand(text: string, thoughtId: string): Promise<string> {
   const app = useAppStore.getState();
   const settings = useSettingsStore.getState();
 
   const query = extractMediaQuery(text) || text;
   app.patchMessage(thoughtId, { routedAgents: ["Cinem AI Assistant Player"] });
-  app.appendStep(thoughtId, "Media command detected → Cinem AI Assistant Player");
-  app.appendStep(thoughtId, `Searching YouTube: "${query}"`);
+  app.appendStep(thoughtId, "Media command → YouTube playback");
+  app.appendStep(thoughtId, `Query: "${query}"`);
 
-  const results = await searchYouTube(query, settings);
+  app.appendStep(thoughtId, "Trying Playwright sidecar (visible Chromium)…");
+  const pw = await playOnYouTube(query);
+  if (pw.via === "playwright") {
+    app.appendStep(
+      thoughtId,
+      pw.played
+        ? `▶ Playing in Chromium${pw.title ? `: ${pw.title}` : ""}`
+        : `Opened watch page${pw.autoplayBlocked ? " (autoplay blocked — press Play)" : ""}`,
+    );
+    app.patchMessage(thoughtId, { pending: false });
+    const reply = pw.played
+      ? `Playing "${pw.title || query}" in Chromium.`
+      : `Opened "${pw.title || query}" on YouTube. ${
+          pw.autoplayBlocked
+            ? "Your browser blocked autoplay — press Play in the Chromium window."
+            : pw.error || "Press Play in the window if the video did not start."
+        }`;
+    app.addMessage({ role: "assistant", text: reply });
+    return reply;
+  }
+
+  app.appendStep(thoughtId, "Sidecar offline → Cinem AI Assistant Player");
+  const results = await searchYouTubeWithFallback(query, settings);
   const best = results[0];
-
   app.setPlayerResults(results);
-  app.playVideo(best); // also switches the center tab to Cinem AI Assistant PLAYER
-  app.appendStep(thoughtId, `▶ Streaming: ${best.title}`);
+  app.playVideo(best);
+  app.appendStep(thoughtId, `▶ Player: ${best.title}`);
   app.patchMessage(thoughtId, { pending: false });
 
-  const reply = `Now playing "${best.title}" by ${best.channel} in the Cinem AI Assistant Player.`;
+  const note = best.embedUrl?.includes("listType=search")
+    ? " (embed search — autoplay may still require a click depending on OS/browser policy.)"
+    : !settings.youtubeKey
+      ? " (no YouTube API key — using public search/embed fallback.)"
+      : "";
+  const reply = `Now playing "${best.title}" in the Cinem AI Assistant Player.${note}`;
   app.addMessage({ role: "assistant", text: reply });
   return reply;
 }
@@ -865,27 +871,25 @@ export async function processCommand(text: string): Promise<string> {
       return reply;
     }
 
-    /* 0d — VISUAL research: "research latest AI news", "research karo …" →
-       ALENA's live panel (sources stream in, then the synthesized brief). */
-    const research = trimmed.match(/^research\s+(?:on\s+|about\s+)?(.+)$/i)
-      ?? trimmed.match(/^(.+?)\s+(?:par|pe|ki|ka)?\s*research\s*(?:karo|karein|kar)\s*$/i);
-    if (research) {
-      const query = research[1].replace(/\b(please|for me|karo|kar)\b/gi, "").trim() || trimmed;
+    /* 0d — Research: search → read sources → synthesize → reply in chat. */
+    if (isResearchCommand(trimmed)) {
+      const query = extractResearchQuery(trimmed);
       announceAgent("research");
       app.flashAgent("research");
       app.patchMessage(thoughtId, { routedAgents: ["ALENA · Research Agent"] });
-      app.appendStep(thoughtId, `🔬 Live research window opened: "${query}"`);
+      app.appendStep(thoughtId, `🔬 Researching: "${query}"`);
       try {
-        await runResearchTask(query, settings);
+        const brief = await runResearchTask(query, settings);
         app.appendStep(thoughtId, "✓ Research complete");
         app.patchMessage(thoughtId, { pending: false });
-        const reply = `Research on "${query}" is complete, Sir — the full brief is in the task window.`;
-        app.addMessage({ role: "assistant", text: reply });
-        return reply;
+        app.addMessage({ role: "assistant", text: brief });
+        return brief;
       } catch (e) {
-        app.appendStep(thoughtId, `✗ Research failed: ${e instanceof Error ? e.message : e}`);
+        app.appendStep(thoughtId, `✗ ${e instanceof Error ? e.message : e}`);
         app.patchMessage(thoughtId, { pending: false });
-        const reply = "The research run hit an error — check the task window for details.";
+        const reply =
+          "Research could not finish cleanly — I saved what I could in the task window. " +
+          "Start the Playwright sidecar (`npm start` in playwright-server) for live Google tabs.";
         app.addMessage({ role: "assistant", text: reply });
         return reply;
       }

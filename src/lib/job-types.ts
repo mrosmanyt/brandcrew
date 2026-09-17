@@ -123,6 +123,8 @@ export type JobContext = {
   clientName?: string;
   composio?: { toolkit: string; tool: string; ok: boolean; text: string };
   maxPages?: number;
+  /** Off-domain hops allowed when the job started on a search engine (Google → results). */
+  researchHopCount?: number;
   attachments?: {
     name: string;
     size: number;

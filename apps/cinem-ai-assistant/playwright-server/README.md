@@ -28,8 +28,9 @@ Leave this terminal running. Start it before (or alongside) the Cinem AI Assista
 |--------|------------|--------------------------|--------------------------------|
 | GET    | `/health`  | —                        | liveness check                 |
 | POST   | `/open`    | `{ url }`                | navigate to a URL              |
-| POST   | `/search`  | `{ query }`              | Google search                  |
-| POST   | `/youtube` | `{ query, play }`        | YouTube search; play first hit |
+| POST   | `/search`    | `{ query, extract?, follow? }` | Google search (+ optional result extract) |
+| POST   | `/research`  | `{ query, follow? }`           | Google search + open top result pages     |
+| POST   | `/youtube`   | `{ query, play? }`             | YouTube search; play first hit (autoplay) |
 
 ## Commands that use it (in Cinem AI Assistant)
 
