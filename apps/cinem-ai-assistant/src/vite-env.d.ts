@@ -12,7 +12,7 @@ interface CinemDesktopBridge {
   setMode?: (mode: string) => void;
   openDesk?: () => void;
   openUpdates?: () => void;
-  getVoiceEnv?: () => { FISH_AUDIO_API_KEY?: string };
+  getVoiceEnv?: () => { FISH_AUDIO_API_KEY?: string; DEEPGRAM_API_KEY?: string };
   httpGet?: (
     url: string,
     opts?: { worldMonitorKey?: string },
@@ -38,6 +38,7 @@ interface ImportMetaEnv {
   readonly VITE_CINEM_UPGRADE_URL: string;
   readonly VITE_FISH_AUDIO_API_KEY?: string;
   readonly VITE_FISH_API_KEY?: string;
+  readonly VITE_DEEPGRAM_API_KEY?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

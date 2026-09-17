@@ -9,6 +9,7 @@
  *   POST /search   { query, extract, follow }     → Google search; extract results; follow N
  *   POST /research { query, follow }              → search + open top result pages
  *   POST /youtube  { query, play }                → YouTube search; play first video (autoplay)
+ *   POST /youtube/control { action }              → pause | play | next on active YouTube tab
  *
  * Run:
  *   cd playwright-server
@@ -249,6 +250,32 @@ async function youtube(query, play) {
     autoplayBlocked,
     error: error || undefined,
   };
+}
+
+async function youtubeControl(action) {
+  const page = await getPage();
+  await bringWindowToFront(page);
+  const url = page.url();
+  if (!/youtube\.com/.test(url)) {
+    return { ok: false, error: "No YouTube tab active — say 'play … on youtube' first." };
+  }
+  const act = String(action || "pause").toLowerCase();
+  if (act === "next" || act === "skip") {
+    await page.keyboard.press("Shift+N").catch(() => {});
+  } else if (act === "play" || act === "resume") {
+    const state = await page.evaluate(() => {
+      const v = document.querySelector("video");
+      return v ? { paused: v.paused } : { paused: true };
+    }).catch(() => ({ paused: true }));
+    if (state.paused) await page.keyboard.press("k").catch(() => {});
+  } else {
+    await page.keyboard.press("k").catch(() => {});
+  }
+  const paused = await page.evaluate(() => {
+    const v = document.querySelector("video");
+    return v ? v.paused : true;
+  }).catch(() => true);
+  return { ok: true, action: act, paused };
 }
 
 /* ══ WHATSAPP REMOTE CONTROL ════════════════════════════════════════
@@ -710,6 +737,10 @@ const server = http.createServer(async (req, res) => {
     if (req.url === "/youtube") {
       if (!body.query) return send(res, 400, { ok: false, error: "query required" });
       return send(res, 200, await youtube(body.query, body.play !== false));
+    }
+    if (req.url === "/youtube/control") {
+      if (!body.action) return send(res, 400, { ok: false, error: "action required" });
+      return send(res, 200, await youtubeControl(body.action));
     }
 
     /* — WhatsApp remote control — */

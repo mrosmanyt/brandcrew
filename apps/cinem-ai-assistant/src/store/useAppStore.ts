@@ -50,6 +50,9 @@ interface AppState {
   /** Loads a video into the Cinem AI Assistant Player and switches the center view. */
   playVideo: (v: PlayerVideo) => void;
   setPlayerResults: (r: PlayerVideo[]) => void;
+  /** Remote control for embedded player (voice commands). */
+  playerCommand: { action: "play" | "pause" | "next"; tick: number } | null;
+  dispatchPlayerCommand: (action: "play" | "pause" | "next") => void;
 
   /* Chat */
   messages: ChatMessage[];
@@ -137,6 +140,9 @@ export const useAppStore = create<AppState>((set) => ({
       return { currentVideo: v, centerView: "player", playHistory };
     }),
   setPlayerResults: (r) => set({ playerResults: r }),
+  playerCommand: null,
+  dispatchPlayerCommand: (action) =>
+    set({ playerCommand: { action, tick: Date.now() } }),
 
   messages: bootMessages(),
 

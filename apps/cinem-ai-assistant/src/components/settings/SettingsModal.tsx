@@ -474,6 +474,7 @@ function AppearanceTab() {
 function VoiceTab() {
   const s = useSettingsStore();
   const [elevenKey, setElevenKey] = useState(s.elevenKey);
+  const [deepgramKey, setDeepgramKey] = useState(s.deepgramApiKey);
   const [voiceId, setVoiceId] = useState(s.elevenVoiceId);
   const [fishKey, setFishKey] = useState(s.fishAudioKey);
   const [fishVoice, setFishVoice] = useState(s.fishVoiceIds[s.characterVoice] || "");
@@ -486,6 +487,7 @@ function VoiceTab() {
     else delete fishVoiceIds[s.characterVoice];
     await s.update({
       elevenKey: elevenKey.trim(),
+      deepgramApiKey: deepgramKey.trim(),
       elevenVoiceId: voiceId.trim(),
       fishAudioKey: fishKey.trim(),
       fishVoiceIds,
@@ -523,9 +525,9 @@ function VoiceTab() {
       <div className="border border-neon/15 bg-neon/[0.04] px-3 py-2.5">
         <p className="text-sm font-semibold text-ice/90">Microphone</p>
         <p className="mt-1 text-xs leading-relaxed text-neon-dim">
-          Tap the mic in Chat (or the bar below) to talk. Windows will ask for microphone access
-          the first time — allow it for CINEM Pro. Speech-to-text uses this device’s recognition
-          in the unified app (Whisper stays the Tauri path). Whisper is never used as a speaker.
+          Tap the mic in Chat (or the bar below) to talk. STT chain: Deepgram (paid, optional key)
+          → browser recognition (Electron) → Faster-Whisper (Tauri). TTS: Fish Audio → ElevenLabs
+          → Neural Windows. Set keys below or via DEEPGRAM_API_KEY / FISH_AUDIO_API_KEY env vars.
         </p>
       </div>
       <Field label="Character voice" hint="10 named speakers. Replies follow the language you write or speak; default language is English.">
@@ -568,6 +570,27 @@ function VoiceTab() {
             ["fr", "French"],
           ]}
         />
+      </Field>
+      <Field
+        label="STT Engine"
+        hint="Auto prefers Deepgram when a key is set, else platform default (browser STT or Whisper on Tauri)."
+      >
+        <Select
+          value={s.sttEngine}
+          onChange={(v) => s.update({ sttEngine: v as Settings["sttEngine"] })}
+          options={[
+            ["auto", "Auto (Deepgram → platform default)"],
+            ["deepgram", "Deepgram Nova-2 (paid)"],
+            ["webspeech", "Browser / Chromium recognition"],
+            ["whisper", "Faster-Whisper (Tauri only)"],
+          ]}
+        />
+      </Field>
+      <Field
+        label="Deepgram API Key"
+        hint="Paid STT — paste from console.deepgram.com. Also accepted as DEEPGRAM_API_KEY or VITE_DEEPGRAM_API_KEY."
+      >
+        <TextInput type="password" value={deepgramKey} onChange={(e) => setDeepgramKey(e.target.value)} autoComplete="off" />
       </Field>
       <Field label="STT — Faster-Whisper Model" hint="Speech-to-text only (Tauri). Larger models = better accuracy, slower. Not used to speak.">
         <Select
@@ -655,6 +678,15 @@ function VoiceTab() {
           />
           <Switch checked={s.morningEnabled} onChange={(v) => s.update({ morningEnabled: v })} />
         </div>
+      </div>
+      <div className="flex items-center justify-between border border-neon/10 bg-abyss/50 px-3 py-3">
+        <div>
+          <p className="text-sm font-semibold text-ice/90">Session briefing</p>
+          <p className="text-xs text-neon-dim">
+            Short proactive greeting when you open the assistant (once per session).
+          </p>
+        </div>
+        <Switch checked={s.sessionBriefingEnabled} onChange={(v) => s.update({ sessionBriefingEnabled: v })} />
       </div>
       <div className="flex gap-2">
         <button onClick={save} className="glass flex items-center gap-2 px-4 py-2 text-sm text-neon hover:bg-neon/10">

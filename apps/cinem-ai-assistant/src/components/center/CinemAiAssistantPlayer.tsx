@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Search, Loader2, MonitorPlay,
@@ -20,6 +20,7 @@ export default function CinemAiAssistantPlayer() {
   const results = useAppStore((s) => s.playerResults);
   const playVideo = useAppStore((s) => s.playVideo);
   const setPlayerResults = useAppStore((s) => s.setPlayerResults);
+  const playerCommand = useAppStore((s) => s.playerCommand);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -42,6 +43,21 @@ export default function CinemAiAssistantPlayer() {
     yt(playing ? "pauseVideo" : "playVideo");
     setPlaying(!playing);
   };
+
+  useEffect(() => {
+    if (!playerCommand || !video) return;
+    const { action } = playerCommand;
+    if (action === "play") {
+      yt("playVideo");
+      setPlaying(true);
+    } else if (action === "pause") {
+      yt("pauseVideo");
+      setPlaying(false);
+    } else if (action === "next") {
+      yt("nextVideo");
+      setPlaying(true);
+    }
+  }, [playerCommand?.tick, video?.id]);
 
   const toggleMute = () => {
     yt(muted ? "unMute" : "mute");

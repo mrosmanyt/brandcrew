@@ -27,7 +27,7 @@ export async function toggleVoiceCommand(): Promise<void> {
   if (status === "listening") {
     setStatus("transcribing");
     try {
-      const text = await voice.stopListening(settings.whisperModel);
+      const text = await voice.stopListening(settings.whisperModel, settings);
       if (!text) {
         notify("info", "No speech detected.");
         setStatus("idle");

@@ -24,6 +24,10 @@ export interface Settings {
   worldMonitorKey: string;
   /* Voice */
   whisperModel: "tiny" | "base" | "small" | "medium" | "large-v3";
+  /** Speech-to-text engine preference. Auto: Deepgram if keyed, else platform default. */
+  sttEngine: "auto" | "deepgram" | "webspeech" | "whisper";
+  /** Deepgram API key for paid STT (optional — Settings or DEEPGRAM_API_KEY). */
+  deepgramApiKey: string;
   ttsEngine: "auto" | "fish" | "elevenlabs" | "piper" | "webspeech";
   /** Named character (Aria, Zara, …). */
   characterVoice: string;
@@ -45,6 +49,8 @@ export interface Settings {
   /** Morning Protocol — daily spoken briefing. */
   morningEnabled: boolean;
   morningTime: string; // "HH:MM" 24h
+  /** Short greeting when the assistant opens (once per session). */
+  sessionBriefingEnabled: boolean;
   /* Gmail (OSCAR — Email Agent) */
   gmailClientId: string;
   gmailClientSecret: string;
@@ -89,6 +95,8 @@ export const DEFAULT_SETTINGS: Settings = {
   youtubeKey: "",
   worldMonitorKey: "",
   whisperModel: "base",
+  sttEngine: "auto",
+  deepgramApiKey: "",
   ttsEngine: "auto",
   characterVoice: DEFAULT_CHARACTER_ID,
   preferredLanguage: "en",
@@ -104,6 +112,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showRadar: true,
   morningEnabled: false,
   morningTime: "08:30",
+  sessionBriefingEnabled: true,
   // Enter your own Google OAuth desktop client in Settings → API (email agent).
   gmailClientId: "",
   gmailClientSecret: "",
@@ -201,6 +210,8 @@ const pickSettings = (s: SettingsState): Settings => ({
   youtubeKey: s.youtubeKey,
   worldMonitorKey: s.worldMonitorKey,
   whisperModel: s.whisperModel,
+  sttEngine: s.sttEngine,
+  deepgramApiKey: s.deepgramApiKey,
   ttsEngine: s.ttsEngine,
   characterVoice: s.characterVoice,
   preferredLanguage: s.preferredLanguage,
@@ -215,6 +226,7 @@ const pickSettings = (s: SettingsState): Settings => ({
   showRadar: s.showRadar,
   morningEnabled: s.morningEnabled,
   morningTime: s.morningTime,
+  sessionBriefingEnabled: s.sessionBriefingEnabled,
   gmailClientId: s.gmailClientId,
   gmailClientSecret: s.gmailClientSecret,
   gmailRefreshToken: s.gmailRefreshToken,
