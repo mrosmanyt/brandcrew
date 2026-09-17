@@ -7,6 +7,7 @@ import { parseWeatherQuery, isWeatherCommand } from "../apps/cinem-ai-assistant/
 import { parseReminderCreate } from "../apps/cinem-ai-assistant/src/lib/reminders";
 import { parseYouTubeControl } from "../apps/cinem-ai-assistant/src/lib/browserIntents";
 import { ASSISTANT_TOOLS } from "../apps/cinem-ai-assistant/src/lib/toolRegistry";
+import { isImageGenCommand, parseImageGenPrompt } from "../src/lib/image-generation-pure";
 
 const root = process.cwd();
 
@@ -29,6 +30,7 @@ assert.match(orchestrator, /fetchWeather/);
 assert.match(orchestrator, /createReminder/);
 assert.match(orchestrator, /postInstantAck/);
 assert.match(orchestrator, /parseYouTubeControl/);
+assert.match(orchestrator, /generateImageViaCloud/);
 
 const voice = read("apps/cinem-ai-assistant/src/lib/voice.ts");
 assert.match(voice, /deepgramTranscribe/);
@@ -68,5 +70,9 @@ assert.equal(parseYouTubeControl("pause youtube"), "pause");
 assert.equal(parseYouTubeControl("next video"), "next");
 
 assert.ok(ASSISTANT_TOOLS.length >= 10);
+assert.ok(ASSISTANT_TOOLS.some((t) => t.id === "generate_image"));
+
+assert.equal(parseImageGenPrompt("draw an image of a lighthouse"), "a lighthouse");
+assert.ok(isImageGenCommand("generate image of neon city"));
 
 console.log("check-jarvis-features: OK");

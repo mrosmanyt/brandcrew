@@ -7,6 +7,8 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   text: string;
   time: string;
+  /** Inline generated image (data URL) for assistant replies */
+  imageDataUrl?: string;
   /** "thought" = orchestrator brain block (thinking process) */
   kind?: "thought";
   steps?: string[];

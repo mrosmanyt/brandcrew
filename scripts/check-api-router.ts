@@ -17,6 +17,7 @@ const PATTERNS: string[][] = [
   ["api", "downloads", "cinem-ai-assistant"],
   ["api", "cinem-ai-assistant", "usage"],
   ["api", "guest", "chat"],
+  ["api", "image", "generate"],
   ["api", "founding", "spots"],
   ["api", "user", "byok"],
   ["api", "user", "invite"],
@@ -48,6 +49,7 @@ const PATTERNS: string[][] = [
   ["api", "billing", "checkout"],
   ["api", "billing", "support"],
   ["api", "webhooks", "whop"],
+  ["api", "webhooks", "geminigen-image"],
   ["api", "cron", "jobs"],
   ["api", "device", "claim"],
   ["api", "device", "heartbeat"],
@@ -128,6 +130,7 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/downloads/extension", ["api", "downloads", "extension"], {}],
   ["/api/downloads/cinem-ai-assistant", ["api", "downloads", "cinem-ai-assistant"], {}],
   ["/api/cinem-ai-assistant/usage", ["api", "cinem-ai-assistant", "usage"], {}],
+  ["/api/image/generate", ["api", "image", "generate"], {}],
   ["/api/v1", ["api", "v1"], {}],
   ["/api/v1/workspace", ["api", "v1", "workspace"], {}],
   ["/api/v1/agents", ["api", "v1", "agents"], {}],
@@ -165,6 +168,7 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/billing/checkout", ["api", "billing", "checkout"], {}],
   ["/api/billing/support", ["api", "billing", "support"], {}],
   ["/api/webhooks/whop", ["api", "webhooks", "whop"], {}],
+  ["/api/webhooks/geminigen-image", ["api", "webhooks", "geminigen-image"], {}],
   ["/api/cron/jobs", ["api", "cron", "jobs"], {}],
   ["/api/device/claim", ["api", "device", "claim"], {}],
   ["/api/device/heartbeat", ["api", "device", "heartbeat"], {}],
@@ -382,8 +386,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 97);
-console.log("ok: 97 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 99);
+console.log("ok: 99 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

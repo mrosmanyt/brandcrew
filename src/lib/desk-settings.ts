@@ -78,6 +78,11 @@ export function settingsDeskCategories(workspaceId: string): SettingsDeskCategor
           label: "On-device Chrome",
           hint: "Download the MV3 zip first, then Sign in with CINEM so jobs run as your account.",
         },
+        {
+          href: `/desk/${workspaceId}/image-gen`,
+          label: "Generate image",
+          hint: "Text-to-image via Cloudflare Workers AI. Server proxies your worker — key stays off the browser.",
+        },
       ],
     },
     {
@@ -124,6 +129,7 @@ export function settingsNestedDeskPaths(workspaceId: string) {
     `/desk/${workspaceId}/calendar`,
     `/desk/${workspaceId}/ops`,
     `/desk/${workspaceId}/on-device`,
+    `/desk/${workspaceId}/image-gen`,
     `/desk/${workspaceId}/brand-kit`,
   ] as const;
 }

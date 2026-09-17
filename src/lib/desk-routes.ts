@@ -12,6 +12,7 @@ export const DESK_PAGE_SECTIONS = [
   "on-device",
   "clients",
   "trust",
+  "image-gen",
 ] as const;
 
 export type DeskPageSection = (typeof DESK_PAGE_SECTIONS)[number];

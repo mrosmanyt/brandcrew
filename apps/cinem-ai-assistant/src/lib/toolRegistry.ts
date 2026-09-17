@@ -88,6 +88,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     triggers: ["security scan", "organize downloads"],
     description: "15 specialized agents (research, security, local files, email, …).",
   },
+  {
+    id: "generate_image",
+    name: "Image generation",
+    triggers: ["generate an image", "create a picture", "draw"],
+    description: "Text-to-image via Cloudflare Workers AI or GeminiGen Nano Banana (server proxy).",
+    requires: "CINEM_IMAGE_GEN_* or GEMINIGEN_API_KEY on server, or BYOK keys in Settings",
+  },
 ];
 
 /** Compact catalog for LLM routing prompts. */

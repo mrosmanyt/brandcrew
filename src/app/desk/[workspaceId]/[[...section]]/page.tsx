@@ -13,6 +13,7 @@ import { ClientDesksPanel } from "@/components/desk/client-desks";
 import { TrustCenter } from "@/components/desk/trust-center";
 import { UsageDashboard } from "@/components/desk/usage-dashboard";
 import { OnDevicePage } from "@/components/desk/on-device-page";
+import { ImageGeneratorPanel } from "@/components/desk/image-generator";
 import { SupportForm } from "@/components/support/support-form";
 import { SupporterBadge } from "@/components/support/supporter-badge";
 import { getCurrentUser } from "@/lib/auth";
@@ -375,6 +376,9 @@ export default async function WorkspaceSectionPage({
   }
   if (head === "on-device") {
     return <OnDevicePage workspaceId={workspaceId} />;
+  }
+  if (head === "image-gen") {
+    return <ImageGeneratorPanel workspaceId={workspaceId} />;
   }
   if (head === "clients") {
     return <ClientDesksPanel workspaceId={workspaceId} />;

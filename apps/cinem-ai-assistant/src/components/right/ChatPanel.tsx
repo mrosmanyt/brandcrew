@@ -71,6 +71,13 @@ function Bubble({ m }: { m: ChatMessage }) {
           isRtlText(m.text) && "rtl-text",
         )}
       >
+        {m.imageDataUrl && (
+          <img
+            src={m.imageDataUrl}
+            alt={m.text || "Generated image"}
+            className="mb-2 max-h-72 w-full rounded-lg border border-neon/20 object-contain bg-abyss/60"
+          />
+        )}
         {m.role === "assistant" ? (
           <Markdown>{m.text}</Markdown>
         ) : (

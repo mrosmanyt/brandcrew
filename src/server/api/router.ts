@@ -25,6 +25,7 @@ import * as authConnectClaim from "./auth/connect-claim";
 import * as billingCheckout from "./billing/checkout";
 import * as billingSupport from "./billing/support";
 import * as whopWebhook from "./webhooks/whop";
+import * as geminigenImageWebhook from "./webhooks/geminigen-image";
 import * as cronJobs from "./cron/jobs";
 import * as inviteToken from "./invites/token";
 import * as oauthCallback from "./oauth/callback";
@@ -87,6 +88,7 @@ import * as downloadsExtension from "./downloads/extension";
 import * as downloadsCinemAiAssistant from "./downloads/cinem-ai-assistant";
 import * as cinemAiAssistantUsage from "./cinem-ai-assistant/usage";
 import * as guestChat from "./guest/chat";
+import * as imageGenerate from "./image/generate";
 import * as foundingSpots from "./founding/spots";
 import * as userByok from "./user/byok";
 import * as userInvite from "./user/invite";
@@ -148,6 +150,7 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(cinemAiAssistantUsage),
   },
   { pattern: ["api", "guest", "chat"], handlers: asHandlers(guestChat) },
+  { pattern: ["api", "image", "generate"], handlers: asHandlers(imageGenerate) },
   { pattern: ["api", "founding", "spots"], handlers: asHandlers(foundingSpots) },
   { pattern: ["api", "user", "byok"], handlers: asHandlers(userByok) },
   { pattern: ["api", "user", "invite"], handlers: asHandlers(userInvite) },
@@ -188,6 +191,10 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "billing", "support"], handlers: asHandlers(billingSupport) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
+  {
+    pattern: ["api", "webhooks", "geminigen-image"],
+    handlers: asHandlers(geminigenImageWebhook),
+  },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
   { pattern: ["api", "device", "claim"], handlers: asHandlers(deviceClaim) },
   { pattern: ["api", "device", "heartbeat"], handlers: asHandlers(deviceHeartbeat) },
