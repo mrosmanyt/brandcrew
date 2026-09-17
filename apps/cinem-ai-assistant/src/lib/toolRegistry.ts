@@ -92,8 +92,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     id: "generate_image",
     name: "Image generation",
     triggers: ["generate an image", "create a picture", "draw"],
-    description: "Text-to-image via Cloudflare Workers AI proxied through CINEM Pro.",
-    requires: "CINEM_IMAGE_GEN_URL + CINEM_IMAGE_GEN_API_KEY on server, or BYOK worker URL + key",
+    description: "Text-to-image via Cloudflare Workers AI or GeminiGen Nano Banana (server proxy).",
+    requires: "CINEM_IMAGE_GEN_* or GEMINIGEN_API_KEY on server, or BYOK keys in Settings",
   },
 ];
 

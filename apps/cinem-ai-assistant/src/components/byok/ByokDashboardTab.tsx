@@ -8,6 +8,7 @@ type ByokSnapshot = {
   hasGeminiKey: boolean;
   hasDeepgramKey: boolean;
   hasImageGenWorker: boolean;
+  hasGeminigenKey: boolean;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -22,6 +23,7 @@ export default function ByokDashboardTab() {
   const [deepgram, setDeepgram] = useState(local.deepgramApiKey);
   const [imageGenUrl, setImageGenUrl] = useState("");
   const [imageGenApiKey, setImageGenApiKey] = useState("");
+  const [geminigenApiKey, setGeminigenApiKey] = useState("");
   const [cap, setCap] = useState(25);
   const [cloud, setCloud] = useState<ByokSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,6 +66,7 @@ export default function ByokDashboardTab() {
             deepgramKey: deepgram.trim(),
             imageGenUrl: imageGenUrl.trim(),
             imageGenApiKey: imageGenApiKey.trim(),
+            geminigenApiKey: geminigenApiKey.trim(),
             spendCapUsd: cap,
           }),
         });
@@ -82,7 +85,7 @@ export default function ByokDashboardTab() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-neon-dim">
-        Bring your own Gemini + Deepgram keys, or your Cloudflare image worker URL + API key.
+        Bring your own Gemini + Deepgram keys, Cloudflare image worker, or GeminiGen API key.
         Usage meter estimates spend from token/character counters.
       </p>
       <div className="border border-neon/20 bg-abyss/50 p-3">
@@ -145,6 +148,20 @@ export default function ByokDashboardTab() {
           onChange={(e) => setImageGenApiKey(e.target.value)}
           className="w-full border border-neon/20 bg-abyss/80 px-3 py-2 text-sm text-ice"
         />
+      </label>
+      <label className="block">
+        <span className="panel-title mb-1.5 text-[0.62rem] text-neon-dim">
+          GeminiGen API key (optional BYOK)
+        </span>
+        <input
+          type="password"
+          value={geminigenApiKey}
+          onChange={(e) => setGeminigenApiKey(e.target.value)}
+          className="w-full border border-neon/20 bg-abyss/80 px-3 py-2 text-sm text-ice"
+        />
+        {cloud?.hasGeminigenKey && (
+          <p className="mt-1 text-[0.62rem] text-neon-dim">GeminiGen key saved (encrypted).</p>
+        )}
       </label>
       <label className="block">
         <span className="panel-title mb-1.5 text-[0.62rem] text-neon-dim">Spend cap (USD)</span>

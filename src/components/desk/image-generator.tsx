@@ -1,58 +1,101 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, ImageIcon, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type ImageGenStatus = {
+type ImageGenProviderOption = {
+  id: "cloudflare" | "geminigen";
+  label: string;
   configured: boolean;
   source: "env" | "byok" | "none";
+  models?: string[];
+  defaultModel?: string;
+};
+
+type ImageGenStatus = {
+  configured: boolean;
   setupHint: string;
+  providers: ImageGenProviderOption[];
+  defaultProvider: "cloudflare" | "geminigen" | null;
 };
 
 type ImageGenResponse = {
   imageBase64: string;
-  mimeType: "image/jpeg";
+  mimeType: string;
   prompt: string;
+  provider: "cloudflare" | "geminigen";
   source: "env" | "byok";
+  model?: string;
+  mediaUrl?: string;
 };
 
 export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
   const [status, setStatus] = useState<ImageGenStatus | null>(null);
+  const [provider, setProvider] = useState<"cloudflare" | "geminigen" | "">("");
+  const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ImageGenResponse | null>(null);
+
+  const readyProviders = useMemo(
+    () => status?.providers.filter((p) => p.configured) ?? [],
+    [status],
+  );
+
+  const activeProvider = useMemo(() => {
+    if (provider && readyProviders.some((p) => p.id === provider)) return provider;
+    return status?.defaultProvider ?? readyProviders[0]?.id ?? "";
+  }, [provider, readyProviders, status?.defaultProvider]);
+
+  const activeProviderMeta = readyProviders.find((p) => p.id === activeProvider);
 
   const loadStatus = useCallback(async () => {
     const res = await fetch("/api/image/generate");
     if (!res.ok) {
       setStatus({
         configured: false,
-        source: "none",
         setupHint: "Sign in to generate images.",
+        providers: [],
+        defaultProvider: null,
       });
       return;
     }
     const data = (await res.json()) as ImageGenStatus;
     setStatus(data);
-  }, []);
+    if (!provider && data.defaultProvider) {
+      setProvider(data.defaultProvider);
+      const meta = data.providers.find((p) => p.id === data.defaultProvider);
+      if (meta?.defaultModel) setModel(meta.defaultModel);
+    }
+  }, [provider]);
 
   useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
 
+  useEffect(() => {
+    if (activeProviderMeta?.defaultModel && !model) {
+      setModel(activeProviderMeta.defaultModel);
+    }
+  }, [activeProviderMeta, model]);
+
   const generate = async () => {
     const text = prompt.trim();
-    if (!text || busy) return;
+    if (!text || busy || !activeProvider) return;
     setBusy(true);
     setError("");
     try {
       const res = await fetch("/api/image/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text }),
+        body: JSON.stringify({
+          prompt: text,
+          provider: activeProvider,
+          model: activeProvider === "geminigen" ? model || undefined : undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -75,11 +118,14 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
 
   const download = () => {
     if (!dataUrl || !result) return;
+    const ext = result.mimeType.includes("png") ? "png" : "jpg";
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `cinem-image-${Date.now()}.jpg`;
+    a.download = `cinem-image-${Date.now()}.${ext}`;
     a.click();
   };
+
+  const showProviderPicker = readyProviders.length > 1;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10">
@@ -89,8 +135,8 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
         Generate image
       </h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Text-to-image via your Cloudflare Workers AI endpoint. Prompts are proxied
-        server-side — the worker API key never reaches the browser.
+        Text-to-image via Cloudflare Workers AI or GeminiGen Nano Banana. Prompts are
+        proxied server-side — API keys never reach the browser.
       </p>
 
       {status && !status.configured && (
@@ -103,6 +149,46 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
       )}
 
       <div className="mt-6 space-y-4 rounded-xl border bg-card p-5 shadow-sm">
+        {showProviderPicker && (
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Provider</span>
+            <select
+              value={activeProvider}
+              onChange={(e) => {
+                const next = e.target.value as "cloudflare" | "geminigen";
+                setProvider(next);
+                const meta = readyProviders.find((p) => p.id === next);
+                setModel(meta?.defaultModel || "");
+              }}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              disabled={busy}
+            >
+              {readyProviders.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                  {p.source === "byok" ? " (your key)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {activeProvider === "geminigen" && activeProviderMeta?.models?.length && (
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Model</span>
+            <select
+              value={model || activeProviderMeta.defaultModel || "nano-banana"}
+              onChange={(e) => setModel(e.target.value)}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              disabled={busy}
+            >
+              {activeProviderMeta.models.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="block space-y-2">
           <span className="text-sm font-medium">Prompt</span>
           <Input
@@ -120,7 +206,7 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
           <Button
             type="button"
             onClick={() => void generate()}
-            disabled={busy || !prompt.trim() || !status?.configured}
+            disabled={busy || !prompt.trim() || !status?.configured || !activeProvider}
           >
             {busy ? (
               <Loader2 className="size-4 animate-spin" />
@@ -132,7 +218,7 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
           {dataUrl && (
             <Button type="button" variant="outline" onClick={download}>
               <Download className="size-4" />
-              Download JPG
+              Download
             </Button>
           )}
         </div>
@@ -147,7 +233,11 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
               {result.prompt}
-              {result.source === "byok" ? " · your worker" : " · server worker"}
+              {" · "}
+              {result.provider === "geminigen"
+                ? `GeminiGen${result.model ? ` (${result.model})` : ""}`
+                : "Cloudflare Workers AI"}
+              {result.source === "byok" ? " · your key" : " · server key"}
             </p>
             <img
               src={dataUrl}
@@ -159,10 +249,10 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Workspace: {workspaceId}. Self-host reference:{" "}
-        <code className="rounded bg-muted px-1 py-0.5">
-          docs/integrations/cloudflare-image-worker/
-        </code>
+        Workspace: {workspaceId}. Docs:{" "}
+        <code className="rounded bg-muted px-1 py-0.5">docs/integrations/cloudflare-image-worker/</code>
+        {" · "}
+        <code className="rounded bg-muted px-1 py-0.5">docs/integrations/geminigen-image-api/</code>
       </p>
     </div>
   );

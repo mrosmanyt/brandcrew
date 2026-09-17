@@ -20,6 +20,7 @@ const patchSchema = z.object({
   deepgramKey: z.string().max(200).optional().nullable(),
   imageGenUrl: z.string().max(500).optional().nullable(),
   imageGenApiKey: z.string().max(200).optional().nullable(),
+  geminigenApiKey: z.string().max(200).optional().nullable(),
   spendCapUsd: z.number().min(1).max(500).optional(),
 });
 

@@ -19,7 +19,9 @@ CINEM_IMAGE_GEN_URL=https://your-worker.workers.dev
 CINEM_IMAGE_GEN_API_KEY=your-secret-api-key
 ```
 
-Or per-user BYOK: Cinem AI Assistant → Settings → BYOK → Image worker URL + API key.
+Or per-user BYOK: Cinem AI Assistant → Settings → BYOK → **Image worker URL + API key**.
+
+CINEM Pro also supports **GeminiGen Nano Banana** (`GEMINIGEN_API_KEY`) — see `docs/integrations/geminigen-image-api/`. When both are configured, the desk shows a provider picker.
 
 ## API contract
 

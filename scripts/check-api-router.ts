@@ -49,6 +49,7 @@ const PATTERNS: string[][] = [
   ["api", "billing", "checkout"],
   ["api", "billing", "support"],
   ["api", "webhooks", "whop"],
+  ["api", "webhooks", "geminigen-image"],
   ["api", "cron", "jobs"],
   ["api", "device", "claim"],
   ["api", "device", "heartbeat"],
@@ -167,6 +168,7 @@ const cases: Array<[string, string[], Record<string, string>]> = [
   ["/api/billing/checkout", ["api", "billing", "checkout"], {}],
   ["/api/billing/support", ["api", "billing", "support"], {}],
   ["/api/webhooks/whop", ["api", "webhooks", "whop"], {}],
+  ["/api/webhooks/geminigen-image", ["api", "webhooks", "geminigen-image"], {}],
   ["/api/cron/jobs", ["api", "cron", "jobs"], {}],
   ["/api/device/claim", ["api", "device", "claim"], {}],
   ["/api/device/heartbeat", ["api", "device", "heartbeat"], {}],
@@ -384,8 +386,8 @@ for (const [pathname, pattern, params] of cases) {
 }
 console.log(`ok: ${cases.length} public API URLs still match`);
 
-assert.equal(PATTERNS.length, 98);
-console.log("ok: 98 handlers share one catch-all (Hobby function budget)");
+assert.equal(PATTERNS.length, 99);
+console.log("ok: 99 handlers share one catch-all (Hobby function budget)");
 
 assert.equal(matchPath("/api/unknown"), null);
 assert.equal(matchPath("/api/workspaces/ws_1/nope"), null);

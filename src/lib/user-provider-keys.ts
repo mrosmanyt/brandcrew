@@ -14,6 +14,7 @@ export type ByokPublicSnapshot = {
   hasGeminiKey: boolean;
   hasDeepgramKey: boolean;
   hasImageGenWorker: boolean;
+  hasGeminigenKey: boolean;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -42,6 +43,7 @@ export function publicByokSnapshot(row: {
   deepgramKeyEnc: string;
   imageGenUrlEnc: string;
   imageGenApiKeyEnc: string;
+  geminigenApiKeyEnc: string;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -53,6 +55,7 @@ export function publicByokSnapshot(row: {
     hasGeminiKey: Boolean(row.geminiKeyEnc),
     hasDeepgramKey: Boolean(row.deepgramKeyEnc),
     hasImageGenWorker: Boolean(row.imageGenUrlEnc && row.imageGenApiKeyEnc),
+    hasGeminigenKey: Boolean(row.geminigenApiKeyEnc),
     geminiTokensUsed: row.geminiTokensUsed,
     deepgramCharsUsed: row.deepgramCharsUsed,
     spendCapUsd: row.spendCapUsd,
@@ -74,6 +77,7 @@ export async function patchProviderKeys(
     deepgramKey?: string | null;
     imageGenUrl?: string | null;
     imageGenApiKey?: string | null;
+    geminigenApiKey?: string | null;
     spendCapUsd?: number;
   },
 ) {
@@ -82,6 +86,7 @@ export async function patchProviderKeys(
     deepgramKeyEnc?: string;
     imageGenUrlEnc?: string;
     imageGenApiKeyEnc?: string;
+    geminigenApiKeyEnc?: string;
     spendCapUsd?: number;
   } = {};
   if (input.geminiKey !== undefined) {
@@ -99,6 +104,10 @@ export async function patchProviderKeys(
   if (input.imageGenApiKey !== undefined) {
     const trimmed = (input.imageGenApiKey || "").trim();
     data.imageGenApiKeyEnc = trimmed ? encryptSecret(trimmed) : "";
+  }
+  if (input.geminigenApiKey !== undefined) {
+    const trimmed = (input.geminigenApiKey || "").trim();
+    data.geminigenApiKeyEnc = trimmed ? encryptSecret(trimmed) : "";
   }
   if (input.spendCapUsd !== undefined) {
     data.spendCapUsd = Math.max(1, Math.min(500, input.spendCapUsd));

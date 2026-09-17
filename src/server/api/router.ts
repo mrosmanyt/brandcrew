@@ -25,6 +25,7 @@ import * as authConnectClaim from "./auth/connect-claim";
 import * as billingCheckout from "./billing/checkout";
 import * as billingSupport from "./billing/support";
 import * as whopWebhook from "./webhooks/whop";
+import * as geminigenImageWebhook from "./webhooks/geminigen-image";
 import * as cronJobs from "./cron/jobs";
 import * as inviteToken from "./invites/token";
 import * as oauthCallback from "./oauth/callback";
@@ -190,6 +191,10 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "billing", "support"], handlers: asHandlers(billingSupport) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
+  {
+    pattern: ["api", "webhooks", "geminigen-image"],
+    handlers: asHandlers(geminigenImageWebhook),
+  },
   { pattern: ["api", "cron", "jobs"], handlers: asHandlers(cronJobs) },
   { pattern: ["api", "device", "claim"], handlers: asHandlers(deviceClaim) },
   { pattern: ["api", "device", "heartbeat"], handlers: asHandlers(deviceHeartbeat) },

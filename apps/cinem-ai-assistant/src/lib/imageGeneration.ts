@@ -31,17 +31,32 @@ export function isImageGenCommand(text: string): boolean {
   return parseImageGenPrompt(text) !== null;
 }
 
-export type CloudImageGenStatus = {
+export type ImageGenProviderId = "cloudflare" | "geminigen";
+
+export type ImageGenProviderOption = {
+  id: ImageGenProviderId;
+  label: string;
   configured: boolean;
   source: "env" | "byok" | "none";
+  models?: string[];
+  defaultModel?: string;
+};
+
+export type CloudImageGenStatus = {
+  configured: boolean;
   setupHint: string;
+  providers: ImageGenProviderOption[];
+  defaultProvider: ImageGenProviderId | null;
 };
 
 export type CloudImageGenResult = {
   imageBase64: string;
-  mimeType: "image/jpeg";
+  mimeType: string;
   prompt: string;
+  provider: ImageGenProviderId;
   source: "env" | "byok";
+  model?: string;
+  mediaUrl?: string;
 };
 
 function authHeaders(): Record<string, string> {
@@ -60,18 +75,29 @@ export async function fetchImageGenStatus(): Promise<CloudImageGenStatus> {
   if (!res.ok) {
     return {
       configured: false,
-      source: "none",
       setupHint: "Sign in to Cinem Pro to generate images.",
+      providers: [],
+      defaultProvider: null,
     };
   }
   return (await res.json()) as CloudImageGenStatus;
 }
 
-export async function generateImageViaCloud(prompt: string): Promise<CloudImageGenResult> {
+export async function generateImageViaCloud(
+  prompt: string,
+  options?: { provider?: ImageGenProviderId; model?: string },
+): Promise<CloudImageGenResult> {
+  const status = await fetchImageGenStatus();
+  const provider = options?.provider ?? status.defaultProvider ?? undefined;
+
   const res = await fetch(`${cinemCloudOrigin()}/api/image/generate`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({
+      prompt,
+      provider,
+      model: options?.model,
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

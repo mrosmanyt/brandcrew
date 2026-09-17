@@ -2,6 +2,21 @@
 
 export const IMAGE_PROMPT_MAX = 800;
 
+export type ImageGenProviderId = "cloudflare" | "geminigen";
+export type ImageGenCredentialSource = "env" | "byok";
+
+export const GEMINIGEN_IMAGE_MODELS = [
+  "nano-banana",
+  "imagen-flash",
+  "imagen-4",
+  "imagen-4-fast",
+  "imagen-4-ultra",
+] as const;
+
+export type GeminiGenImageModel = (typeof GEMINIGEN_IMAGE_MODELS)[number];
+
+export const GEMINIGEN_DEFAULT_MODEL: GeminiGenImageModel = "nano-banana";
+
 const PLACEHOLDER_VALUES = new Set([
   "",
   "changeme",
@@ -21,52 +36,62 @@ export function isPlaceholderSecret(value: string | undefined | null): boolean {
   return PLACEHOLDER_VALUES.has(v);
 }
 
-export type ImageGenConfigSource = "env" | "byok" | "none";
+export type ImageGenProviderOption = {
+  id: ImageGenProviderId;
+  label: string;
+  configured: boolean;
+  source: ImageGenCredentialSource | "none";
+  models?: readonly string[];
+  defaultModel?: string;
+};
 
 export type ImageGenPublicStatus = {
   configured: boolean;
-  source: ImageGenConfigSource;
   setupHint: string;
+  providers: ImageGenProviderOption[];
+  defaultProvider: ImageGenProviderId | null;
 };
 
 export function imageGenSetupHint(): string {
   return (
-    "Image generation is not configured. Set CINEM_IMAGE_GEN_URL and CINEM_IMAGE_GEN_API_KEY " +
-    "on the server, or add your Cloudflare Worker URL + API key under Settings → BYOK."
+    "Image generation is not configured. Set Cloudflare worker env " +
+    "(CINEM_IMAGE_GEN_URL + CINEM_IMAGE_GEN_API_KEY) or GeminiGen " +
+    "(GEMINIGEN_API_KEY), or add keys under Settings → BYOK."
   );
 }
 
-export function imageGenPublicStatus(input: {
-  envUrl?: string | null;
-  envKey?: string | null;
-  byokUrl?: string | null;
-  byokKey?: string | null;
-}): ImageGenPublicStatus {
-  const byokReady =
-    !isPlaceholderSecret(input.byokUrl) && !isPlaceholderSecret(input.byokKey);
-  if (byokReady) {
-    return {
-      configured: true,
-      source: "byok",
-      setupHint: "",
-    };
-  }
+export function resolveDefaultProvider(
+  providers: ImageGenProviderOption[],
+): ImageGenProviderId | null {
+  const ready = providers.filter((p) => p.configured);
+  if (!ready.length) return null;
+  const geminigen = ready.find((p) => p.id === "geminigen");
+  if (geminigen) return "geminigen";
+  const cloudflare = ready.find((p) => p.id === "cloudflare");
+  return cloudflare?.id ?? ready[0]?.id ?? null;
+}
 
-  const envReady =
-    !isPlaceholderSecret(input.envUrl) && !isPlaceholderSecret(input.envKey);
-  if (envReady) {
-    return {
-      configured: true,
-      source: "env",
-      setupHint: "",
-    };
-  }
-
+export function buildImageGenPublicStatus(providers: ImageGenProviderOption[]): ImageGenPublicStatus {
+  const configured = providers.some((p) => p.configured);
+  const defaultProvider = resolveDefaultProvider(providers);
   return {
-    configured: false,
-    source: "none",
-    setupHint: imageGenSetupHint(),
+    configured,
+    setupHint: configured ? "" : imageGenSetupHint(),
+    providers,
+    defaultProvider,
   };
+}
+
+export function isImageGenProviderId(value: string): value is ImageGenProviderId {
+  return value === "cloudflare" || value === "geminigen";
+}
+
+export function normalizeImageGenProvider(
+  value: string | undefined | null,
+  fallback: ImageGenProviderId | null,
+): ImageGenProviderId | null {
+  if (value === "auto" || !value) return fallback;
+  return isImageGenProviderId(value) ? value : fallback;
 }
 
 /** Extract a generation prompt from natural-language assistant/desk commands. */
@@ -90,4 +115,12 @@ export function parseImageGenPrompt(text: string): string | null {
 
 export function isImageGenCommand(text: string): boolean {
   return parseImageGenPrompt(text) !== null;
+}
+
+export function mimeFromUrl(url: string): string {
+  const lower = url.toLowerCase();
+  if (lower.includes(".png")) return "image/png";
+  if (lower.includes(".webp")) return "image/webp";
+  if (lower.includes(".gif")) return "image/gif";
+  return "image/jpeg";
 }
