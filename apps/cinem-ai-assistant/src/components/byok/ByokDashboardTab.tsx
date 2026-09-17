@@ -7,6 +7,7 @@ import { notify } from "@/store/useToastStore";
 type ByokSnapshot = {
   hasGeminiKey: boolean;
   hasDeepgramKey: boolean;
+  hasImageGenWorker: boolean;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -19,6 +20,8 @@ export default function ByokDashboardTab() {
   const local = useSettingsStore();
   const [gemini, setGemini] = useState(local.geminiKey);
   const [deepgram, setDeepgram] = useState(local.deepgramApiKey);
+  const [imageGenUrl, setImageGenUrl] = useState("");
+  const [imageGenApiKey, setImageGenApiKey] = useState("");
   const [cap, setCap] = useState(25);
   const [cloud, setCloud] = useState<ByokSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,6 +62,8 @@ export default function ByokDashboardTab() {
           body: JSON.stringify({
             geminiKey: gemini.trim(),
             deepgramKey: deepgram.trim(),
+            imageGenUrl: imageGenUrl.trim(),
+            imageGenApiKey: imageGenApiKey.trim(),
             spendCapUsd: cap,
           }),
         });
@@ -77,7 +82,8 @@ export default function ByokDashboardTab() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-neon-dim">
-        Bring your own Gemini + Deepgram keys. Usage meter estimates spend from token/character counters.
+        Bring your own Gemini + Deepgram keys, or your Cloudflare image worker URL + API key.
+        Usage meter estimates spend from token/character counters.
       </p>
       <div className="border border-neon/20 bg-abyss/50 p-3">
         <div className="mb-2 flex items-center gap-2 font-display text-[0.6rem] tracking-[0.2em] text-neon">
@@ -111,6 +117,32 @@ export default function ByokDashboardTab() {
           type="password"
           value={deepgram}
           onChange={(e) => setDeepgram(e.target.value)}
+          className="w-full border border-neon/20 bg-abyss/80 px-3 py-2 text-sm text-ice"
+        />
+      </label>
+      <label className="block">
+        <span className="panel-title mb-1.5 text-[0.62rem] text-neon-dim">
+          Image worker URL (optional BYOK)
+        </span>
+        <input
+          type="url"
+          value={imageGenUrl}
+          onChange={(e) => setImageGenUrl(e.target.value)}
+          placeholder="https://your-worker.workers.dev"
+          className="w-full border border-neon/20 bg-abyss/80 px-3 py-2 text-sm text-ice"
+        />
+        {cloud?.hasImageGenWorker && (
+          <p className="mt-1 text-[0.62rem] text-neon-dim">Worker URL saved (encrypted).</p>
+        )}
+      </label>
+      <label className="block">
+        <span className="panel-title mb-1.5 text-[0.62rem] text-neon-dim">
+          Image worker API key
+        </span>
+        <input
+          type="password"
+          value={imageGenApiKey}
+          onChange={(e) => setImageGenApiKey(e.target.value)}
           className="w-full border border-neon/20 bg-abyss/80 px-3 py-2 text-sm text-ice"
         />
       </label>

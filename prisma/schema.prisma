@@ -750,12 +750,14 @@ model SiteConfig {
   updatedAt                DateTime @updatedAt
 }
 
-/// Per-user BYOK keys (Gemini + Deepgram) encrypted at rest.
+/// Per-user BYOK keys (Gemini + Deepgram + optional image worker) encrypted at rest.
 model UserProviderKey {
   id               String   @id @default(cuid())
   userId           String   @unique
   geminiKeyEnc     String   @default("")
   deepgramKeyEnc   String   @default("")
+  imageGenUrlEnc   String   @default("")
+  imageGenApiKeyEnc String  @default("")
   geminiTokensUsed Int      @default(0)
   deepgramCharsUsed Int     @default(0)
   spendCapUsd      Float    @default(25)

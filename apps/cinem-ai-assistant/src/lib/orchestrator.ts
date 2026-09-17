@@ -34,6 +34,13 @@ import {
   parseReminderCreate,
 } from "@/lib/reminders";
 import { fetchWeather, formatWeatherReply, isWeatherCommand, parseWeatherQuery } from "@/lib/weather";
+import {
+  generateImageViaCloud,
+  imageDataUrl,
+  fetchImageGenStatus,
+  isImageGenCommand,
+  parseImageGenPrompt,
+} from "@/lib/imageGeneration";
 import { toolCatalogForPrompt } from "@/lib/toolRegistry";
 import { searchYouTubeWithFallback } from "@/lib/youtube";
 import { resolveBrowserTarget } from "@/lib/quickActions";
@@ -927,6 +934,35 @@ export async function processCommand(text: string): Promise<string> {
         : `I couldn't find a custom agent named "${deleteA[1].trim()}" — note that the 15 core agents can't be deleted, only disabled.`;
       app.addMessage({ role: "assistant", text: reply });
       return reply;
+    }
+
+    /* 0b4 — Cloud image generation (Workers AI via CINEM Pro proxy). */
+    if (isImageGenCommand(trimmed)) {
+      const imagePrompt = parseImageGenPrompt(trimmed) || trimmed;
+      app.patchMessage(thoughtId, { routedAgents: ["Image Studio"] });
+      app.appendStep(thoughtId, "Checking image worker configuration…");
+      try {
+        const status = await fetchImageGenStatus();
+        if (!status.configured) {
+          app.patchMessage(thoughtId, { pending: false });
+          const reply = status.setupHint || "Image generation is not configured on this desk.";
+          app.addMessage({ role: "assistant", text: reply });
+          return reply;
+        }
+        app.appendStep(thoughtId, `Generating: "${imagePrompt.slice(0, 80)}${imagePrompt.length > 80 ? "…" : ""}"`);
+        const result = await generateImageViaCloud(imagePrompt);
+        const dataUrl = imageDataUrl(result);
+        app.appendStep(thoughtId, "✓ Image ready");
+        app.patchMessage(thoughtId, { pending: false });
+        const reply = `Here is your image for: **${result.prompt}**`;
+        app.addMessage({ role: "assistant", text: reply, imageDataUrl: dataUrl });
+        return reply;
+      } catch (e) {
+        app.patchMessage(thoughtId, { pending: false });
+        const reply = e instanceof Error ? e.message : "Image generation failed.";
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      }
     }
 
     /* 0b5 — Weather (Open-Meteo, no key). */

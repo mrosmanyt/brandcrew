@@ -13,6 +13,7 @@ const DEEPGRAM_USD_PER_M_CHARS = 15;
 export type ByokPublicSnapshot = {
   hasGeminiKey: boolean;
   hasDeepgramKey: boolean;
+  hasImageGenWorker: boolean;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -39,6 +40,8 @@ export async function getOrCreateProviderKeys(userId: string) {
 export function publicByokSnapshot(row: {
   geminiKeyEnc: string;
   deepgramKeyEnc: string;
+  imageGenUrlEnc: string;
+  imageGenApiKeyEnc: string;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -49,6 +52,7 @@ export function publicByokSnapshot(row: {
   return {
     hasGeminiKey: Boolean(row.geminiKeyEnc),
     hasDeepgramKey: Boolean(row.deepgramKeyEnc),
+    hasImageGenWorker: Boolean(row.imageGenUrlEnc && row.imageGenApiKeyEnc),
     geminiTokensUsed: row.geminiTokensUsed,
     deepgramCharsUsed: row.deepgramCharsUsed,
     spendCapUsd: row.spendCapUsd,
@@ -68,12 +72,16 @@ export async function patchProviderKeys(
   input: {
     geminiKey?: string | null;
     deepgramKey?: string | null;
+    imageGenUrl?: string | null;
+    imageGenApiKey?: string | null;
     spendCapUsd?: number;
   },
 ) {
   const data: {
     geminiKeyEnc?: string;
     deepgramKeyEnc?: string;
+    imageGenUrlEnc?: string;
+    imageGenApiKeyEnc?: string;
     spendCapUsd?: number;
   } = {};
   if (input.geminiKey !== undefined) {
@@ -83,6 +91,14 @@ export async function patchProviderKeys(
   if (input.deepgramKey !== undefined) {
     const trimmed = (input.deepgramKey || "").trim();
     data.deepgramKeyEnc = trimmed ? encryptSecret(trimmed) : "";
+  }
+  if (input.imageGenUrl !== undefined) {
+    const trimmed = (input.imageGenUrl || "").trim();
+    data.imageGenUrlEnc = trimmed ? encryptSecret(trimmed) : "";
+  }
+  if (input.imageGenApiKey !== undefined) {
+    const trimmed = (input.imageGenApiKey || "").trim();
+    data.imageGenApiKeyEnc = trimmed ? encryptSecret(trimmed) : "";
   }
   if (input.spendCapUsd !== undefined) {
     data.spendCapUsd = Math.max(1, Math.min(500, input.spendCapUsd));

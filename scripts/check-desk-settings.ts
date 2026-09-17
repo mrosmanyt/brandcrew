@@ -113,6 +113,7 @@ assert.ok(categories.find((category) => category.id === "integrations")?.links.s
 assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "On-device Chrome"));
 assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "Calendar"));
 assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "Ops board"));
+assert.ok(categories.find((category) => category.id === "desk-tools")?.links.some((link) => link.label === "Generate image"));
 
 const links = settingsDeskLinks("ws_1");
 const labels = links.map((link) => link.label);
