@@ -15,13 +15,31 @@ import {
   extractResearchQuery,
   isMediaCommand,
   isResearchCommand,
+  parseYouTubeControl,
 } from "@/lib/browserIntents";
-import { playOnYouTube } from "@/lib/playwrightActions";
+import { controlYouTube, playOnYouTube } from "@/lib/playwrightActions";
+import { postInstantAck } from "@/lib/instantAck";
+import {
+  isMultiModeSearchCommand,
+  parseMultiModeSearch,
+  runMultiModeSearch,
+} from "@/lib/multiModeSearch";
+import {
+  cancelReminder,
+  createReminder,
+  formatReminderList,
+  isListRemindersCommand,
+  listReminders,
+  parseReminderCancel,
+  parseReminderCreate,
+} from "@/lib/reminders";
+import { fetchWeather, formatWeatherReply, isWeatherCommand, parseWeatherQuery } from "@/lib/weather";
+import { toolCatalogForPrompt } from "@/lib/toolRegistry";
 import { searchYouTubeWithFallback } from "@/lib/youtube";
 import { resolveBrowserTarget } from "@/lib/quickActions";
 import { openWebTask, runResearchTask, runEditorTask } from "@/lib/taskRunner";
 import { runMorningBriefing } from "@/lib/morningProtocol";
-import { addMemory, allMemories, memoryContext } from "@/lib/longMemory";
+import { addMemory, allMemories, deleteMemory, memoryContext, searchMemory } from "@/lib/longMemory";
 import { createCustomAgent, deleteCustomAgent, findCustomAgent } from "@/lib/customAgents";
 import {
   maxOrganizeDownloads, maxConfirm, maxCancel, maxUndo, maxFind, maxCleanTemp, maxHasPending,
@@ -63,6 +81,9 @@ function routingPrompt(request: string): string {
     .join("\n");
 
   return `You are the Orchestrator of Cinem AI Assistant, a personal AI assistant with 15 specialized sub-agents.
+
+Built-in tools (deterministic fast-paths handle these when phrasing matches):
+${toolCatalogForPrompt()}
 
 Available agents:
 ${roster}
@@ -267,6 +288,7 @@ async function handleComplexTask(
   /* 0 — The CEO takes command of complex tasks (deep, confident voice). */
   announceCEO();
   app.flashAgent("ceo"); // CEO node glow burst in the SUB AGENTS panel
+  postInstantAck({ message: "Complex task — planning now.", thoughtId, speak: false });
   app.appendStep(thoughtId, "👑 SAM (Main Orchestrator) has taken command");
 
   /* 1 — PLAN (structured, assigns a collaborating agent per section) */
@@ -430,6 +452,37 @@ export async function processCommand(text: string): Promise<string> {
   });
 
   try {
+    /* 0a-yt — YouTube transport controls (pause / play / next). */
+    const ytControl = parseYouTubeControl(trimmed);
+    if (ytControl) {
+      app.patchMessage(thoughtId, { routedAgents: ["Cinem AI Assistant Player"] });
+      app.appendStep(thoughtId, `YouTube control: ${ytControl}`);
+      if (app.currentVideo) {
+        const mapped = ytControl === "skip" ? "next" : ytControl;
+        app.dispatchPlayerCommand(mapped);
+        app.patchMessage(thoughtId, { pending: false });
+        const reply =
+          mapped === "next"
+            ? "Skipping to the next video in the player."
+            : mapped === "pause"
+              ? "Paused the player."
+              : "Resuming playback.";
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      }
+      const pw = await controlYouTube(ytControl);
+      app.patchMessage(thoughtId, { pending: false });
+      const reply = pw.ok
+        ? pw.action === "next" || pw.action === "skip"
+          ? "Next track in the Chromium YouTube tab."
+          : pw.paused
+            ? "Paused YouTube in Chromium."
+            : "Playing YouTube in Chromium."
+        : pw.error || "Could not control YouTube — open a video first.";
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
     /* 0a — Media fast-path: "play despacito on youtube" → Cinem AI Assistant Player.
        On failure (quota, no results…) we fall through to normal routing. */
     if (isMediaCommand(trimmed)) {
@@ -794,6 +847,25 @@ export async function processCommand(text: string): Promise<string> {
       return reply;
     }
 
+    const forget = trimmed.match(/^forget(?:\s+that)?\s+(.+)$/i);
+    if (forget) {
+      const needle = forget[1].trim();
+      app.patchMessage(thoughtId, { routedAgents: ["Long-Term Memory"] });
+      const hits = await searchMemory(needle, 8);
+      const exact = hits.find((h) => h.text.toLowerCase() === needle.toLowerCase()) || hits[0];
+      if (!exact) {
+        app.patchMessage(thoughtId, { pending: false });
+        const reply = `I couldn't find a memory matching "${needle}".`;
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      }
+      await deleteMemory(exact.id);
+      app.patchMessage(thoughtId, { pending: false });
+      const reply = `Removed from memory: "${exact.text}".`;
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
     if (/\b(everything|all)\b[\s\S]*\bknow about me\b|what do you know about me|tell me what you remember/i.test(trimmed)) {
       app.patchMessage(thoughtId, { routedAgents: ["Long-Term Memory"] });
       app.appendStep(thoughtId, "🧠 Reading long-term memory…");
@@ -857,12 +929,74 @@ export async function processCommand(text: string): Promise<string> {
       return reply;
     }
 
+    /* 0b5 — Weather (Open-Meteo, no key). */
+    if (isWeatherCommand(trimmed)) {
+      const city = parseWeatherQuery(trimmed) || trimmed;
+      app.patchMessage(thoughtId, { routedAgents: ["SAM · Weather"] });
+      app.appendStep(thoughtId, `🌤 Fetching weather for ${city}…`);
+      try {
+        const report = await fetchWeather(city);
+        const reply = formatWeatherReply(report);
+        app.patchMessage(thoughtId, { pending: false });
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      } catch (e) {
+        app.patchMessage(thoughtId, { pending: false });
+        const reply = e instanceof Error ? e.message : "Weather lookup failed.";
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      }
+    }
+
+    /* 0b6 — Reminders. */
+    const reminderCreate = parseReminderCreate(trimmed);
+    if (reminderCreate) {
+      app.patchMessage(thoughtId, { routedAgents: ["SAM · Reminders"] });
+      const r = await createReminder(reminderCreate.text, reminderCreate.ms);
+      app.patchMessage(thoughtId, { pending: false });
+      const when = new Date(r.at).toLocaleString([], { hour: "2-digit", minute: "2-digit", weekday: "short" });
+      const reply = `Reminder set for ${when}: "${r.text}". I'll notify you here.`;
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+    if (isListRemindersCommand(trimmed)) {
+      app.patchMessage(thoughtId, { routedAgents: ["SAM · Reminders"], pending: false });
+      const items = await listReminders();
+      const reply = formatReminderList(items);
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+    const cancelNeedle = parseReminderCancel(trimmed);
+    if (cancelNeedle) {
+      app.patchMessage(thoughtId, { routedAgents: ["SAM · Reminders"], pending: false });
+      const ok = await cancelReminder(cancelNeedle);
+      const reply = ok ? `Cancelled reminder matching "${cancelNeedle}".` : `No reminder matched "${cancelNeedle}".`;
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
+    /* 0b7 — Multi-mode web search (news / price / compare / search). */
+    if (isMultiModeSearchCommand(trimmed)) {
+      const parsed = parseMultiModeSearch(trimmed)!;
+      announceAgent("research");
+      app.flashAgent("research");
+      app.patchMessage(thoughtId, { routedAgents: ["ALENA · Web Search"] });
+      postInstantAck({ message: `Searching (${parsed.mode})…`, thoughtId, speak: false });
+      app.appendStep(thoughtId, `🔍 ${parsed.mode} search: "${parsed.query}"`);
+      const brief = await runMultiModeSearch(parsed, settings);
+      app.appendStep(thoughtId, "✓ Search complete");
+      app.patchMessage(thoughtId, { pending: false });
+      app.addMessage({ role: "assistant", text: brief });
+      return brief;
+    }
+
     /* 0c — VISUAL editor jobs: "video edit karo", "edit this clip"… →
        NOVA's live preview window with staged progress. */
     if (/\b(video|clip|reel|photo|picture)\b[\s\S]*\bedit\b|\bedit\b[\s\S]*\b(video|clip|reel|photo|picture)\b/i.test(trimmed)) {
       announceAgent("editor");
       app.flashAgent("editor");
       app.patchMessage(thoughtId, { routedAgents: ["NOVA · Editor Agent"] });
+      postInstantAck({ message: "Opening the edit preview…", thoughtId, speak: false });
       app.appendStep(thoughtId, "🎬 Editor task window opened — live preview running");
       runEditorTask(trimmed);
       app.patchMessage(thoughtId, { pending: false });
@@ -877,6 +1011,7 @@ export async function processCommand(text: string): Promise<string> {
       announceAgent("research");
       app.flashAgent("research");
       app.patchMessage(thoughtId, { routedAgents: ["ALENA · Research Agent"] });
+      postInstantAck({ message: "Researching — I'll post the brief here.", thoughtId });
       app.appendStep(thoughtId, `🔬 Researching: "${query}"`);
       try {
         const brief = await runResearchTask(query, settings);

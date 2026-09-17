@@ -13,6 +13,8 @@ import ScriptPanel from "@/components/script/ScriptPanel";
 import GrokPanel from "@/components/grok/GrokPanel";
 import AutopilotPanel from "@/components/autopilot/AutopilotPanel";
 import { initMorningProtocol } from "@/lib/morningProtocol";
+import { initSessionBriefing } from "@/lib/sessionBriefing";
+import { initReminderScheduler } from "@/lib/reminders";
 import { loadCustomAgents } from "@/lib/customAgents";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import MediaLink from "@/components/sidebar/MediaLink";
@@ -83,6 +85,8 @@ export default function App() {
     loadCustomAgents(); // user-built agents FIRST, so saved statuses apply
     void useSettingsStore.getState().init();
     initMorningProtocol(); // daily briefing scheduler
+    initSessionBriefing(); // once-per-session JARVIS greeting
+    initReminderScheduler();
     // Belt-and-suspenders: make sure the Node sidecars (media-server 7880,
     // playwright-server 7878) are running, in case the Rust boot-spawn missed.
     void import("@/lib/sidecars").then((m) => m.startSidecars());

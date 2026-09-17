@@ -6,7 +6,7 @@
  *                Windows / Edge Neural Web Speech. Whisper stays speech-to-text only.
  * The waveform bar reads `voice.getLevel()` each frame for real amplitude.
  */
-import type { Settings } from "@/store/useSettingsStore";
+import { useSettingsStore, type Settings } from "@/store/useSettingsStore";
 import { useAppStore } from "@/store/useAppStore";
 import { reportUsage } from "@/lib/usage";
 import {
@@ -20,6 +20,7 @@ import {
   webSpeechProsody,
   type CharacterVoice,
 } from "@/lib/character-voices";
+import { deepgramTranscribe, resolveDeepgramKey } from "@/lib/deepgramVoice";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -108,7 +109,7 @@ class VoiceEngine {
   }
 
   /** Stops recording and returns the transcribed text. */
-  async stopListening(whisperModel: string): Promise<string> {
+  async stopListening(whisperModel: string, s?: Settings): Promise<string> {
     const recorder = this.recorder;
     if (!recorder) return "";
 
@@ -129,10 +130,49 @@ class VoiceEngine {
 
     if (blob.size < 1000 && !liveText) return ""; // nothing captured
 
-    if (!IS_TAURI) {
-      if (liveText) return liveText;
-      throw new Error("Voice typing needs Chromium speech recognition, or the Tauri Whisper build.");
+    const settings = s ?? useSettingsStore.getState();
+    const sttEngine = settings.sttEngine || "auto";
+    const dgKey = resolveDeepgramKey(settings.deepgramApiKey);
+    const lang = useAppStore.getState().language.bcp47 || "en-US";
+
+    const tryDeepgram =
+      Boolean(dgKey) && blob.size >= 500 && (sttEngine === "deepgram" || sttEngine === "auto");
+    if (tryDeepgram) {
+      try {
+        const text = await deepgramTranscribe(blob, dgKey, lang);
+        if (text) return text;
+      } catch (e) {
+        if (sttEngine === "deepgram") {
+          throw new Error(
+            e instanceof Error
+              ? e.message
+              : "Deepgram STT failed — check Settings → Voice or DEEPGRAM_API_KEY.",
+          );
+        }
+        console.warn("Deepgram STT failed, trying fallback:", e);
+      }
     }
+
+    if (!IS_TAURI) {
+      if (sttEngine === "whisper") {
+        throw new Error("Whisper STT requires the Tauri desktop build.");
+      }
+      if (liveText) return liveText;
+      if (sttEngine === "deepgram" && !dgKey) {
+        throw new Error(
+          "Deepgram API key missing — paste it in Settings → Voice or set DEEPGRAM_API_KEY.",
+        );
+      }
+      throw new Error(
+        "Voice typing needs Chromium speech recognition, Deepgram (Settings → Voice), or the Tauri Whisper build.",
+      );
+    }
+
+    if (sttEngine === "webspeech" && liveText) return liveText;
+    if (sttEngine === "webspeech") {
+      throw new Error("No speech captured — speak clearly or switch STT to Whisper / Deepgram.");
+    }
+
     const { invoke } = await import("@tauri-apps/api/core");
     const audioB64 = await blobToBase64(blob);
     return await invoke<string>("transcribe_audio", {

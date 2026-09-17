@@ -8,7 +8,7 @@
  * reliable, with or without Playwright.
  */
 import { openExternal, resolveBrowserTarget } from "@/lib/quickActions";
-import { youtubeSearchUrl } from "@/lib/browserIntents";
+import { youtubeSearchUrl, type YouTubeControlAction } from "@/lib/browserIntents";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const PW_BASE = "http://127.0.0.1:7878";
@@ -120,6 +120,43 @@ export type ResearchBrowseResult = {
   pages: { url: string; title?: string; text?: string }[];
   error?: string;
 };
+
+export type YoutubeControlResult = {
+  ok: boolean;
+  action: YouTubeControlAction;
+  paused?: boolean;
+  error?: string;
+  via: "playwright" | "none";
+};
+
+/** Pause / play / next on the active YouTube tab in Chromium. */
+export async function controlYouTube(action: YouTubeControlAction): Promise<YoutubeControlResult> {
+  if (!(await isPlaywrightUp())) {
+    return { ok: false, action, via: "none", error: "Playwright sidecar offline" };
+  }
+  try {
+    const res = await pwFetch("/youtube/control", { action }, 8000);
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      paused?: boolean;
+      error?: string;
+    };
+    return {
+      ok: Boolean(data.ok),
+      action,
+      paused: data.paused,
+      error: data.error,
+      via: "playwright",
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      action,
+      via: "playwright",
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
 
 /** Google search in the live Chromium, then follow top result pages. */
 export async function researchInBrowser(query: string): Promise<ResearchBrowseResult> {

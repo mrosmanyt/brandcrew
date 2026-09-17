@@ -46,6 +46,7 @@ Vercel / `next build` ignores this folder — Rust is never compiled on the Next
 | `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro (public) | Same, if the marketing CTA should skip the releases host |
 | `CINEM_START_MODE` | Electron | `desk` (default), `assistant`, or `both` |
 | `FISH_AUDIO_API_KEY` | Electron / Settings | Optional Fish Audio TTS. Never committed. See [`docs/fish-audio-voices.md`](./fish-audio-voices.md). |
+| `DEEPGRAM_API_KEY` | Electron / Settings | Optional Deepgram STT (Nova-2). Settings → Voice or `VITE_DEEPGRAM_API_KEY` in dev. See [`apps/cinem-ai-assistant/JARVIS-FEATURES.md`](../apps/cinem-ai-assistant/JARVIS-FEATURES.md). |
 
 Auth matches desktop cloud shell (`docs/auth-bridge.md`):
 

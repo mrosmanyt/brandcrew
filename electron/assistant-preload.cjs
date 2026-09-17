@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
       FISH_AUDIO_API_KEY: String(
         process.env.FISH_AUDIO_API_KEY || process.env.FISH_API_KEY || "",
       ).trim(),
+      DEEPGRAM_API_KEY: String(process.env.DEEPGRAM_API_KEY || "").trim(),
     };
   },
   updates: {

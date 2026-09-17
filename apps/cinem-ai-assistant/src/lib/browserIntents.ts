@@ -117,6 +117,20 @@ export function youtubeVideoIdFromUrl(url: string): string | null {
   return match?.[1] || null;
 }
 
+export type YouTubeControlAction = "play" | "pause" | "next" | "skip";
+
+/** Voice commands for in-app player or Playwright YouTube tab. */
+export function parseYouTubeControl(text: string): YouTubeControlAction | null {
+  const t = text.toLowerCase().trim();
+  if (!/\b(youtube|video|player|music)\b/.test(t) && !/^(pause|play|resume|next|skip)\b/.test(t)) {
+    return null;
+  }
+  if (/\b(next|skip)\b/.test(t)) return "next";
+  if (/\b(pause|stop)\b/.test(t)) return "pause";
+  if (/\b(play|resume|unpause|continue)\b/.test(t)) return "play";
+  return null;
+}
+
 export function parseYouTubeIdsFromHtml(html: string, max = 6): string[] {
   const ids: string[] = [];
   const seen = new Set<string>();
