@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import CinemProGate from "./components/gate/CinemProGate";
+import GeminiOnboardingModal from "./components/gate/GeminiOnboardingModal";
 import UpgradeModal from "./components/gate/UpgradeModal";
 import IntegrityGuard from "./components/gate/IntegrityGuard";
 import AdminPanel from "./components/admin/AdminPanel";
@@ -33,6 +34,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <IntegrityGuard>
         <CinemProGate>
           <App />
+          <GeminiOnboardingModal />
           <UpgradeModal />
         </CinemProGate>
       </IntegrityGuard>

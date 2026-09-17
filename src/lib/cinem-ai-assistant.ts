@@ -132,16 +132,22 @@ export type WorkspacePlanRow = {
  * (Pro $20 `starter`, Pro Plus `pro`, Ultra `ultra`) — not the first desk
  * created, and not a stale Free snapshot.
  */
-export function entitlementFromWorkspaces(workspaces: WorkspacePlanRow[]) {
+export function entitlementFromWorkspaces(
+  workspaces: WorkspacePlanRow[],
+  opts?: { assistantFoundingMember?: boolean },
+) {
   const plan = bestPlanId(workspaces.map((row) => row.plan));
   const match =
     workspaces.find((row) => row.id && normalizePlanId(row.plan) === plan) ||
     workspaces.find((row) => row.id);
+  const paid = isPaidPlan(plan);
+  const foundingMember = Boolean(opts?.assistantFoundingMember);
   return {
     plan,
     workspaceId: match?.id ?? null,
-    planName: planDisplayName(plan),
-    includedWithPlan: isPaidPlan(plan),
+    planName: foundingMember && !paid ? "Founding Free" : planDisplayName(plan),
+    includedWithPlan: paid || foundingMember,
+    foundingMember,
   };
 }
 
@@ -235,25 +241,32 @@ export function usageSnapshot(input: {
   period?: string;
   upgradeUrl: string;
   workspaceId?: string | null;
+  includedWithPlan?: boolean;
+  foundingMember?: boolean;
+  /** Post–first-50 demo users — assistant requires paid plan. */
+  gatePaidOnly?: boolean;
 }): CinemAiAssistantUsageSnapshot {
   const plan = normalizePlanId(input.plan);
-  const limit = cinemAiAssistantTurnLimit(plan);
+  const paid = isPaidPlan(plan);
+  const included =
+    input.includedWithPlan ?? (paid || Boolean(input.foundingMember));
+  const gatePaidOnly = Boolean(input.gatePaidOnly && !included);
+  const limit = gatePaidOnly ? 0 : cinemAiAssistantTurnLimit(plan);
   const used = Math.max(0, Math.floor(input.used));
   const remaining = Math.max(0, limit - used);
-  const paid = isPaidPlan(plan);
   return {
     product: CINEM_AI_ASSISTANT_PRODUCT,
     name: CINEM_AI_ASSISTANT_NAME,
     plan,
-    planName: planDisplayName(plan),
+    planName: input.foundingMember && !paid ? "Founding Free" : planDisplayName(plan),
     paid,
-    includedWithPlan: paid,
+    includedWithPlan: included,
     meter: "chat_voice_turns",
     period: input.period || cinemAiAssistantPeriodUtc(),
     used,
     limit,
     remaining,
-    allowed: remaining > 0,
+    allowed: gatePaidOnly ? false : remaining > 0,
     upgradeUrl: input.upgradeUrl,
     workspaceId: input.workspaceId ?? null,
   };

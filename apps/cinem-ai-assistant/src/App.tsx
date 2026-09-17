@@ -12,6 +12,8 @@ import ThumbnailPanel from "@/components/thumbnails/ThumbnailPanel";
 import ScriptPanel from "@/components/script/ScriptPanel";
 import GrokPanel from "@/components/grok/GrokPanel";
 import AutopilotPanel from "@/components/autopilot/AutopilotPanel";
+import CreatorOsPanel, { setCreatorOsOpen } from "@/components/creator/CreatorOsPanel";
+import TeamHandoffPanel, { openTeamHandoff } from "@/components/team/TeamHandoffPanel";
 import { initMorningProtocol } from "@/lib/morningProtocol";
 import { initSessionBriefing } from "@/lib/sessionBriefing";
 import { initReminderScheduler } from "@/lib/reminders";
@@ -29,6 +31,8 @@ import { cn } from "@/lib/utils";
 import ChatPanel from "@/components/right/ChatPanel";
 import SubAgentsPanel from "@/components/right/SubAgentsPanel";
 import VoiceCommandBar from "@/components/VoiceCommandBar";
+import { startWakeWord, stopWakeWord, wakeWordEnabled } from "@/lib/wakeWord";
+import { toggleVoiceCommand } from "@/lib/voice-command";
 
 /** Center view switcher — HUB ⇄ WORLD ⇄ PLAYER ⇄ RISK RADAR. */
 function CenterTabs() {
@@ -92,6 +96,10 @@ export default function App() {
     void import("@/lib/sidecars").then((m) => m.startSidecars());
     // Resume any 30-day Auto-Pilot campaign + arm the daily scheduler.
     void import("@/store/useAutopilotStore").then((m) => m.useAutopilotStore.getState()._load());
+    if (wakeWordEnabled()) {
+      startWakeWord(() => void toggleVoiceCommand());
+    }
+    return () => stopWakeWord();
   }, []);
 
   return (
@@ -140,6 +148,8 @@ export default function App() {
       <ScriptPanel />
       <GrokPanel />
       <AutopilotPanel />
+      <CreatorOsPanel />
+      <TeamHandoffPanel />
       <TaskWindows />
       <CommandPalette />
       <Toasts />

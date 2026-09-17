@@ -25,11 +25,17 @@ export type AssistantCaller = {
 
 /** Best paid desk on this CINEM Pro account — same plan the website sold. */
 export async function planForUser(userId: string, extra: WorkspacePlanRow[] = []) {
-  const workspaces = await listUserWorkspaces(userId);
-  return entitlementFromWorkspaces([
-    ...workspaces.map((row) => ({ id: row.id, plan: row.plan })),
-    ...extra,
+  const [workspaces, userRow] = await Promise.all([
+    listUserWorkspaces(userId),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { assistantFoundingMember: true },
+    }),
   ]);
+  return entitlementFromWorkspaces(
+    [...workspaces.map((row) => ({ id: row.id, plan: row.plan })), ...extra],
+    { assistantFoundingMember: userRow?.assistantFoundingMember },
+  );
 }
 
 async function ownerUserId(workspaceId: string) {
@@ -98,12 +104,20 @@ export async function getCinemAssistantUsage(
 ): Promise<CinemAiAssistantUsageSnapshot> {
   const period = cinemAiAssistantPeriodUtc();
   const used = await readUsed(caller.userId, period);
+  const userRow = await prisma.user.findUnique({
+    where: { id: caller.userId },
+    select: { assistantFoundingMember: true, assistantRequiresPaid: true },
+  });
+  const entitlement = await planForUser(caller.userId);
   return usageSnapshot({
     plan: caller.plan,
     used,
     period,
     upgradeUrl: cinemAiAssistantUpgradeUrl(originFromRequest(request)),
     workspaceId: caller.workspaceId,
+    includedWithPlan: entitlement.includedWithPlan,
+    foundingMember: entitlement.foundingMember,
+    gatePaidOnly: Boolean(userRow?.assistantRequiresPaid && !entitlement.includedWithPlan),
   });
 }
 
@@ -117,14 +131,23 @@ export async function incrementCinemAssistantUsage(
   const limit = cinemAiAssistantTurnLimit(caller.plan);
   const current = await readUsed(caller.userId, period);
   const upgradeUrl = cinemAiAssistantUpgradeUrl(originFromRequest(request));
+  const userRow = await prisma.user.findUnique({
+    where: { id: caller.userId },
+    select: { assistantFoundingMember: true, assistantRequiresPaid: true },
+  });
+  const entitlement = await planForUser(caller.userId);
+  const gatePaidOnly = Boolean(userRow?.assistantRequiresPaid && !entitlement.includedWithPlan);
 
-  if (current >= limit) {
+  if (gatePaidOnly || current >= limit) {
     return usageSnapshot({
       plan: caller.plan,
       used: current,
       period,
       upgradeUrl,
       workspaceId: caller.workspaceId,
+      includedWithPlan: entitlement.includedWithPlan,
+      foundingMember: entitlement.foundingMember,
+      gatePaidOnly,
     });
   }
 
@@ -152,5 +175,8 @@ export async function incrementCinemAssistantUsage(
     period,
     upgradeUrl,
     workspaceId: caller.workspaceId,
+    includedWithPlan: entitlement.includedWithPlan,
+    foundingMember: entitlement.foundingMember,
+    gatePaidOnly,
   });
 }

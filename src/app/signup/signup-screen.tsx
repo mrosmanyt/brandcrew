@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showcaseSignupHint } from "@/lib/integrations-showcase";
+import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 import { authHrefWithNext, checkoutPlanFromNextPath } from "@/lib/billing-ui";
 import { PLANS } from "@/lib/constants";
 import { validateSignupInput } from "@/lib/form-guard";
@@ -25,6 +26,7 @@ function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const inviteToken = params.get("invite") || "";
+  const memberInvite = params.get("ref") || "";
   const next = params.get("next");
   const checkoutPlan = checkoutPlanFromNextPath(next);
   const chipHint = showcaseSignupHint(params.get("chip"));
@@ -52,6 +54,7 @@ function SignupForm() {
         email,
         password,
         inviteToken: inviteToken || undefined,
+        memberInvite: memberInvite || undefined,
         [HONEYPOT_FIELD]: honeypot,
       }),
     });
@@ -104,6 +107,7 @@ function SignupForm() {
             {chipHint ? (
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{chipHint}</p>
             ) : null}
+            <FoundingSpotsBanner className="mt-4" compact />
             <div className="mt-8 space-y-5">
               <GoogleContinueButton
                 intent="signup"

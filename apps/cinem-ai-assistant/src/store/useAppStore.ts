@@ -69,6 +69,10 @@ interface AppState {
   /** Language of the user's LAST message — Cinem AI Assistant replies in this language. */
   language: Lang;
   setLanguage: (l: Lang) => void;
+
+  /* Power pack panels */
+  creatorOsOpen: boolean;
+  teamHandoffOpen: boolean;
 }
 
 const now = () =>
@@ -171,4 +175,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   language: DEFAULT_LANG,
   setLanguage: (l) => set({ language: l }),
+
+  creatorOsOpen: false,
+  teamHandoffOpen: false,
 }));

@@ -8,12 +8,15 @@ import { honeypotFilled } from "@/lib/form-guard";
 import { jsonError } from "@/lib/http";
 import { assertPasswordAllowed } from "@/lib/password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/password-rules";
+import { claimFoundingMember, foundingSpotsSnapshot } from "@/lib/founding-members";
 
 const schema = z.object({
   name: z.string().min(1).max(80),
   email: z.string().email(),
   password: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
   inviteToken: z.string().max(200).optional(),
+  /** Viral invite code from a founding member (?invite=abc). */
+  memberInvite: z.string().max(40).optional(),
   company_url: z.string().max(200).optional(),
 });
 
@@ -93,11 +96,19 @@ export async function POST(request: Request) {
       const workspace = await createDemoWorkspace(user.id);
       workspaceId = workspace.id;
     }
+    const founding = await claimFoundingMember(user.id, body.memberInvite);
+    const spots = await foundingSpotsSnapshot();
     await setSessionCookie(user.id);
     return NextResponse.json({
       user: { id: user.id, email: user.email, name: user.name },
       workspaceId,
       joinedViaInvite: Boolean(invite),
+      founding: {
+        claimed: founding.claimed,
+        number: founding.number,
+        remaining: spots.remaining,
+        open: spots.open,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

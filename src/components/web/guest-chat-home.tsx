@@ -56,6 +56,7 @@ import {
   type LlmStatus,
 } from "@/lib/llm-routing";
 import { cn } from "@/lib/utils";
+import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 
 const BUILD_ICONS = {
   website: AppWindow,
@@ -218,6 +219,8 @@ export function GuestChatHome() {
           </Button>
         </div>
       </header>
+
+      <FoundingSpotsBanner className="mx-4 mt-3" />
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">

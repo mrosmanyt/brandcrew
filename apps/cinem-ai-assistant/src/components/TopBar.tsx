@@ -1,4 +1,6 @@
-import { Camera, LogOut, MonitorUp, Settings } from "lucide-react";
+import { Camera, LogOut, MonitorUp, Settings, Clapperboard, Users } from "lucide-react";
+import { setCreatorOsOpen } from "@/components/creator/CreatorOsPanel";
+import { openTeamHandoff } from "@/components/team/TeamHandoffPanel";
 import { motion } from "framer-motion";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useVisionStore } from "@/store/useVisionStore";
@@ -95,6 +97,22 @@ export default function TopBar() {
 
       {/* Right: vision controls + settings */}
       <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setCreatorOsOpen(true)}
+          className="glass hidden h-8 items-center gap-1 px-2 text-[0.55rem] tracking-widest text-neon-dim hover:text-neon sm:flex"
+          title="Creator OS"
+        >
+          <Clapperboard className="size-3.5" /> CREATOR
+        </button>
+        <button
+          type="button"
+          onClick={() => openTeamHandoff()}
+          className="glass hidden h-8 items-center gap-1 px-2 text-[0.55rem] tracking-widest text-neon-dim hover:text-neon sm:flex"
+          title="Team handoff"
+        >
+          <Users className="size-3.5" /> TEAM
+        </button>
         <button
           type="button"
           onClick={() => void signOut()}

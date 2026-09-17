@@ -12,6 +12,7 @@ import {
 import { ClientError } from "@/lib/http";
 import { assertCanAcceptInvite, normalizeInviteEmail } from "@/lib/invites";
 import { createDemoWorkspace } from "@/lib/workspace";
+import { claimFoundingMember } from "@/lib/founding-members";
 
 export {
   GOOGLE_LOGIN_CALLBACK_PATH,
@@ -294,6 +295,9 @@ export async function finishGoogleLogin(input: {
   });
   if (memberships === 0) {
     await createDemoWorkspace(input.userId);
+    if (input.created) {
+      await claimFoundingMember(input.userId);
+    }
     return {
       path: safeNextPath(input.next, "/onboarding"),
       created: true,

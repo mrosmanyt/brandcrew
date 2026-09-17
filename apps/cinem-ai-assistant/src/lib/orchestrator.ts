@@ -215,8 +215,8 @@ async function handleMediaCommand(text: string, thoughtId: string): Promise<stri
 
   const note = best.embedUrl?.includes("listType=search")
     ? " (embed search — autoplay may still require a click depending on OS/browser policy.)"
-    : !settings.youtubeKey
-      ? " (no YouTube API key — using public search/embed fallback.)"
+    : !settings.geminiKey?.trim()
+      ? " (add your Gemini key for YouTube Data API search — or using public fallback.)"
       : "";
   const reply = `Now playing "${best.title}" in the Cinem AI Assistant Player.${note}`;
   app.addMessage({ role: "assistant", text: reply });

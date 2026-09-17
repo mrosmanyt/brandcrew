@@ -13,6 +13,7 @@ import { chatLLM } from "@/lib/llm";
 import { fetchHeadlines } from "@/lib/news";
 import { speakQueued } from "@/lib/announcer";
 import { languageDirective } from "@/lib/language";
+import { memoriesForBriefing, formatBriefingMemories } from "@/lib/compoundingMemory";
 import { useAppStore } from "@/store/useAppStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useUserStore } from "@/store/useUserStore";
@@ -49,6 +50,12 @@ export async function runMorningBriefing(): Promise<string> {
     } catch { /* scan unavailable */ }
   }
 
+  let brandMemory = "";
+  try {
+    const mem = await memoriesForBriefing(5);
+    brandMemory = formatBriefingMemories(mem);
+  } catch { /* offline */ }
+
   /* compose (LLM, with a no-LLM fallback so it never fails silent) */
   const date = new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
   let briefing: string;
@@ -57,6 +64,7 @@ export async function runMorningBriefing(): Promise<string> {
       await chatLLM(
         `Compose Cinem AI Assistant's spoken ${timeOfDay()} briefing for ${userName}. Today is ${date}.
 ${headlines ? `TOP HEADLINES:\n${headlines}` : "No live headlines available."}
+${brandMemory ? `CREATOR MEMORY:\n${brandMemory}` : ""}
 ${system ? `SYSTEM STATUS: ${system}` : ""}
 
 Rules: under 110 words, warm JARVIS tone, address them by name, summarize 2-3 headlines naturally,

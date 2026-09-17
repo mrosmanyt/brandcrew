@@ -4,7 +4,7 @@ import {
   X, KeyRound, Mic2, Bot, SlidersHorizontal, Volume2, Trash2, Save,
   ShieldCheck, LogOut, Camera, MonitorUp, Mail, Loader2, BrainCircuit, Plus,
   Palette, Check, Smartphone, Send, MessageCircle, Copy, Unlink,
-  DownloadCloud, RotateCw, RefreshCcw,
+  DownloadCloud, RotateCw, RefreshCcw, Gauge,
 } from "lucide-react";
 import { useUpdateStore, checkForUpdate, downloadAndInstall, relaunchApp, setAutoUpdateEnabled, subscribeToUpdates } from "@/lib/updater";
 import { THEMES, applyTheme, themeById, type Theme as UITheme } from "@/lib/themes";
@@ -37,8 +37,19 @@ import {
 } from "@/lib/deepgram-voices";
 import { deepgramConfigured, listDeepgramVoices } from "@/lib/deepgramVoice";
 import { cn } from "@/lib/utils";
+import ByokDashboardTab from "@/components/byok/ByokDashboardTab";
+import MobileCompanionStub from "@/components/mobile/MobileCompanionStub";
+import PluginRegistryPanel from "@/components/marketplace/PluginRegistryPanel";
+import {
+  setWakeWordEnabled,
+  startWakeWord,
+  stopWakeWord,
+  wakeWordEnabled,
+  WAKE_WORD_DOCS,
+} from "@/lib/wakeWord";
+import { toggleVoiceCommand } from "@/lib/voice-command";
 
-type Tab = "api" | "appearance" | "voice" | "agents" | "memory" | "remote" | "account" | "general";
+type Tab = "api" | "appearance" | "voice" | "agents" | "memory" | "remote" | "account" | "general" | "byok";
 
 const TABS: { id: Tab; label: string; icon: typeof KeyRound }[] = [
   { id: "api", label: "API", icon: KeyRound },
@@ -46,6 +57,7 @@ const TABS: { id: Tab; label: string; icon: typeof KeyRound }[] = [
   { id: "voice", label: "Voice", icon: Mic2 },
   { id: "agents", label: "Agents", icon: Bot },
   { id: "memory", label: "Memory", icon: BrainCircuit },
+  { id: "byok", label: "BYOK", icon: Gauge },
   { id: "remote", label: "Remote", icon: Smartphone },
   { id: "account", label: "Account", icon: ShieldCheck },
   { id: "general", label: "General", icon: SlidersHorizontal },
@@ -147,18 +159,14 @@ function ApiTab() {
       </Field>
 
       {/* ── Gemini ── */}
-      <Field label="Gemini API Key" hint="Google AI key (AIza…). Stored locally — never leaves this machine.">
+      <Field label="Gemini API Key" hint="Google AI key (AIza…). Powers chat, vision, and YouTube search. Stored locally — syncs to your CINEM account when signed in.">
         <TextInput type="password" value={gemini} onChange={(e) => setGemini(e.target.value)} placeholder="AIza…" />
       </Field>
 
-      <Field label="YouTube API Key" hint="Powers Cinem AI Assistant Player search ('play … on youtube').">
-        <TextInput
-          type="password"
-          value={s.youtubeKey}
-          onChange={(e) => void s.update({ youtubeKey: e.target.value.trim() })}
-          placeholder="AIza…"
-        />
-      </Field>
+      <p className="rounded border border-neon/15 bg-abyss/50 px-3 py-2 text-[0.68rem] text-neon-dim/90">
+        YouTube play/search uses this same Gemini key. Optional: enable YouTube Data API v3 on the same GCP
+        project for richer results — no separate key field.
+      </p>
 
       <Field
         label="World Monitor API Key"
@@ -1035,6 +1043,8 @@ function RemoteTab() {
       </div>
       <TelegramCard />
       <WhatsAppCard />
+      <MobileCompanionStub />
+      <PluginRegistryPanel />
       <div className="border border-neon/10 bg-abyss/40 px-3 py-2.5 text-[0.65rem] leading-relaxed text-neon-dim">
         <p className="mb-1 flex items-center gap-1.5 font-display text-[0.55rem] tracking-[0.2em] text-neon">
           <Copy className="size-3" /> EXAMPLE COMMANDS
@@ -1446,6 +1456,21 @@ function GeneralTab() {
 
       <VisionControls />
 
+      <div className="flex items-center justify-between border border-neon/10 bg-abyss/50 px-3 py-3">
+        <div>
+          <p className="text-sm font-semibold text-ice/90">Wake word — &quot;Hey Cinem&quot;</p>
+          <p className="text-xs text-neon-dim">{WAKE_WORD_DOCS}</p>
+        </div>
+        <Switch
+          checked={wakeWordEnabled()}
+          onChange={(v) => {
+            setWakeWordEnabled(v);
+            if (v) startWakeWord(() => void toggleVoiceCommand());
+            else stopWakeWord();
+          }}
+        />
+      </div>
+
       <div className="border border-rose-400/25 bg-rose-500/5 p-3">
         <p className="text-sm font-semibold text-rose-300">Danger Zone</p>
         <p className="mb-2 text-xs text-neon-dim">
@@ -1537,6 +1562,7 @@ export default function SettingsModal() {
               {tab === "voice" && <VoiceTab />}
               {tab === "agents" && <AgentsTab />}
               {tab === "memory" && <MemoryTab />}
+              {tab === "byok" && <ByokDashboardTab />}
               {tab === "remote" && <RemoteTab />}
               {tab === "account" && <AccountTab />}
               {tab === "general" && <GeneralTab />}
