@@ -135,10 +135,12 @@ assert.doesNotMatch(visibleCopy, /Grok/i);
 const deskLayout = readFileSync("src/app/desk/[workspaceId]/layout.tsx", "utf8");
 assert.match(deskLayout, /WindowsDownloadNudge/);
 assert.match(deskLayout, /cinemAiAssistantDownloadHref\(\)/);
+const about = readFileSync("src/app/about/page.tsx", "utf8");
+assert.match(about, /WindowsDownloadNudge/);
+assert.match(about, /cinemAiAssistantDownloadHref\(\)/);
 const home = readFileSync("src/app/page.tsx", "utf8");
-assert.match(home, /WindowsDownloadNudge/);
-assert.match(home, /cinemAiAssistantDownloadHref\(\)/);
+assert.match(home, /GuestChatHome/);
 assert.equal(pkg.scripts?.["test:win-nudge"], "tsx scripts/check-windows-download-nudge.ts");
-console.log("ok: desk shell + home mount; no per-message hooks; CINEM Pro copy only");
+console.log("ok: desk shell + about mount; home is guest chat; CINEM Pro copy only");
 
 console.log("Windows download nudge checks passed.");

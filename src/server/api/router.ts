@@ -86,6 +86,7 @@ import * as workspaceTriggerFire from "./workspaces/trigger-fire";
 import * as downloadsExtension from "./downloads/extension";
 import * as downloadsCinemAiAssistant from "./downloads/cinem-ai-assistant";
 import * as cinemAiAssistantUsage from "./cinem-ai-assistant/usage";
+import * as guestChat from "./guest/chat";
 import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
@@ -140,6 +141,7 @@ export const API_ROUTES: RouteSpec[] = [
     pattern: ["api", "cinem-ai-assistant", "usage"],
     handlers: asHandlers(cinemAiAssistantUsage),
   },
+  { pattern: ["api", "guest", "chat"], handlers: asHandlers(guestChat) },
   { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
   { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
   {

@@ -14,6 +14,7 @@ import {
   Paperclip,
   PenLine,
   Plug,
+  Lock,
   Plus,
   Smartphone,
   SquareDashedMousePointer,
@@ -75,6 +76,9 @@ import { marketplaceBotsHref, type JobChip, type PlanId } from "@/lib/constants"
 import type { SkillDTO } from "@/lib/job-types";
 import type { LlmRoutingPreference, LlmStatus } from "@/lib/llm-routing";
 import { MARKETPLACE_PLUGINS } from "@/lib/marketplace";
+import { DesktopBuildRequiredDialog } from "@/components/desk/desktop-build-required-dialog";
+import { intentRequiresDesktopBuild } from "@/lib/build-gate";
+import { isDesktopClient } from "@/lib/desktop-client";
 import { cn } from "@/lib/utils";
 
 type ConnectorRow = {
@@ -165,6 +169,21 @@ export function ChatComposer({
   );
   const pluginsHref = `/desk/${workspaceId}/marketplace?tab=plugins`;
   const exampleChips = plusMenuExampleChips();
+  const [buildDialogOpen, setBuildDialogOpen] = useState(false);
+  const buildLocked = !isDesktopClient();
+
+  function blockIfBuildLocked(input: {
+    action?: string | null;
+    playbookKey?: string | null;
+    message?: string | null;
+    categoryId?: string | null;
+    chipId?: string | null;
+  }) {
+    if (!buildLocked) return false;
+    if (!intentRequiresDesktopBuild(input)) return false;
+    setBuildDialogOpen(true);
+    return true;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -322,22 +341,61 @@ export function ChatComposer({
 
   function send() {
     if (disabled || busy || !canSend) return;
-    onSubmit(value.trim(), { action: "default" }, toWireAttachments(readyAttachments));
+    const message = value.trim();
+    if (
+      blockIfBuildLocked({
+        action: "default",
+        message,
+      })
+    ) {
+      return;
+    }
+    onSubmit(message, { action: "default" }, toWireAttachments(readyAttachments));
     clearAttachments();
     refocusComposer();
   }
 
   function runBuildIntent(intent: BuildPromptIntent, fill?: string) {
     if (disabled || busy) return;
-    onSubmit(value.trim() || fill || "", intent, toWireAttachments(readyAttachments));
+    const message = value.trim() || fill || "";
+    if (
+      blockIfBuildLocked({
+        action: intent.action,
+        playbookKey: intent.playbookKey,
+        message,
+      })
+    ) {
+      return;
+    }
+    onSubmit(message, intent, toWireAttachments(readyAttachments));
     clearAttachments();
   }
 
   function runCategory(category: BuildPromptCategory) {
+    if (
+      blockIfBuildLocked({
+        categoryId: category.id,
+        action: category.action,
+        playbookKey: category.playbookKey,
+        message: value.trim(),
+      })
+    ) {
+      return;
+    }
     runBuildIntent(resolveBuildPromptIntent({ categoryId: category.id }));
   }
 
   function runExample(chip: BuildPromptChip) {
+    if (
+      blockIfBuildLocked({
+        chipId: chip.id,
+        action: chip.action,
+        playbookKey: chip.playbookKey,
+        message: chip.fill,
+      })
+    ) {
+      return;
+    }
     onChange(chip.fill);
     runBuildIntent(resolveBuildPromptIntent({ chipId: chip.id }), chip.fill);
   }
@@ -507,6 +565,9 @@ export function ChatComposer({
                       >
                         <Icon className="size-4" />
                         {category.label}
+                        {buildLocked ? (
+                          <Lock className="ml-auto size-3.5 text-muted-foreground" />
+                        ) : null}
                       </DropdownMenuItem>
                     );
                   })}
@@ -678,6 +739,7 @@ export function ChatComposer({
           e.target.value = "";
         }}
       />
+      <DesktopBuildRequiredDialog open={buildDialogOpen} onOpenChange={setBuildDialogOpen} />
     </form>
   );
 }

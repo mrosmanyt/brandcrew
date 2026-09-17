@@ -70,7 +70,7 @@ const banned =
 const files = [
   "src/lib/hero-demo.ts",
   "src/components/marketing/hero-demo.tsx",
-  "src/app/page.tsx",
+  "src/app/about/page.tsx",
 ];
 for (const file of files) {
   const text = readFileSync(file, "utf8");
@@ -79,7 +79,7 @@ for (const file of files) {
 }
 console.log("ok: demo files do not lift Strawberry branding or video");
 
-const page = readFileSync("src/app/page.tsx", "utf8");
+const page = readFileSync("src/app/about/page.tsx", "utf8");
 assert.match(page, /HeroDemo/);
 assert.doesNotMatch(page, /ProductShot/);
 assert.match(page, /Hire agents/);

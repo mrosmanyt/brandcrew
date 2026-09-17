@@ -12,6 +12,7 @@ import { runDueEventTriggers } from "@/lib/event-triggers";
 import { employeeStatusFromJobs, serializeJob, serializeSkill } from "@/lib/job-serialize";
 import { isTeamLaunchIntent } from "@/lib/team-launch";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
+import { desktopBuildRequiredResponse } from "@/lib/build-gate-http";
 import { BudgetError } from "@/lib/usage";
 
 const postSchema = z.object({
@@ -80,6 +81,13 @@ export async function POST(
     if (isTeamLaunchIntent(message) && !body.skillId) {
       return jsonOk({ teamLaunch: true });
     }
+
+    const buildBlocked = desktopBuildRequiredResponse(request, {
+      action: body.action ?? "default",
+      playbookKey: body.playbookKey,
+      message,
+    });
+    if (buildBlocked) return buildBlocked;
 
     if (!body.agentId) {
       return NextResponse.json(

@@ -15,6 +15,18 @@ contextBridge.exposeInMainWorld("brandcrewDesktop", {
   startCinemSignIn() {
     return ipcRenderer.invoke("cinem:start-sign-in");
   },
+  pickProjectFolder() {
+    return ipcRenderer.invoke("cinem:pick-project-folder");
+  },
+  getBuildPermission() {
+    return ipcRenderer.invoke("cinem:get-build-permission");
+  },
+  requestBuildPermission(folder) {
+    return ipcRenderer.invoke("cinem:request-build-permission", folder);
+  },
+  runLocalBuild(input) {
+    return ipcRenderer.invoke("cinem:run-local-build", input);
+  },
   onSession(handler) {
     if (typeof handler !== "function") return () => undefined;
     const listen = (_event, payload) => handler(payload);

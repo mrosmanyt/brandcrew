@@ -22,6 +22,7 @@ const {
   deskPath,
   fetchWithTimeout,
 } = require("./desk-shell.cjs");
+const localBuilder = require("./local-builder.cjs");
 const {
   CHROME_HEIGHT,
   ASSISTANT_PING,
@@ -1022,6 +1023,9 @@ function installAppMenu() {
       for (const key of Object.keys(headers)) {
         if (key.toLowerCase().startsWith("sec-ch-ua")) delete headers[key];
       }
+      if (details.resourceType === "xhr" || details.resourceType === "fetch") {
+        headers["x-cinem-client"] = "desktop";
+      }
       callback({ requestHeaders: headers });
     });
     session.defaultSession.cookies.on("changed", (_event, cookie, _cause, removed) => {
@@ -1155,6 +1159,24 @@ function installAppMenu() {
       refreshToken: readStoredRefresh(),
     }));
     ipcMain.handle("cinem:start-sign-in", () => startDesktopConnect());
+    ipcMain.handle("cinem:pick-project-folder", async () => {
+      const win = firstShell()?.win;
+      const result = await dialog.showOpenDialog(win && !win.isDestroyed() ? win : undefined, {
+        title: "Choose a project folder",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (result.canceled || !result.filePaths?.[0]) {
+        return { ok: false, canceled: true };
+      }
+      return { ok: true, path: result.filePaths[0] };
+    });
+    ipcMain.handle("cinem:get-build-permission", () => localBuilder.getBuildPermission());
+    ipcMain.handle("cinem:request-build-permission", (_event, folder) =>
+      localBuilder.requestBuildPermission(folder),
+    );
+    ipcMain.handle("cinem:run-local-build", async (_event, input) =>
+      localBuilder.runLocalBuild(input),
+    );
     ipcMain.handle("cinem:store-session", async (_event, payload) => {
       const refresh =
         payload && typeof payload.refreshToken === "string" ? payload.refreshToken.trim() : "";

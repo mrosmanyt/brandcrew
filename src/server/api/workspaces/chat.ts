@@ -9,6 +9,7 @@ import { isLightweightDeskQuestion, answerDeskQuestion } from "@/lib/desk-qa";
 import { createJobFromChat } from "@/lib/job-runtime";
 import { getWorkspaceLimits, serializeLimits } from "@/lib/limits";
 import { isTeamLaunchIntent } from "@/lib/team-launch";
+import { desktopBuildRequiredResponse } from "@/lib/build-gate-http";
 import { BudgetError } from "@/lib/usage";
 
 const postSchema = z.object({
@@ -62,6 +63,12 @@ export async function POST(
     if (isTeamLaunchIntent(message)) {
       return jsonOk({ teamLaunch: true });
     }
+
+    const buildBlocked = desktopBuildRequiredResponse(request, {
+      action,
+      message,
+    });
+    if (buildBlocked) return buildBlocked;
 
     if (
       isLightweightDeskQuestion({

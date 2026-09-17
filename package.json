@@ -42,6 +42,7 @@
     "test:desk-ux": "tsx scripts/check-desk-ux.ts",
     "test:hero-demo": "tsx scripts/check-hero-demo.ts",
     "test:build-prompt": "tsx scripts/check-build-prompt.ts",
+    "test:build-gate": "tsx scripts/check-build-gate.ts",
     "test:integrations": "tsx scripts/check-integrations-showcase.ts",
     "test:billing": "tsx scripts/check-billing.ts",
     "test:launch": "tsx scripts/check-launch.ts",
