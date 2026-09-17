@@ -28,6 +28,14 @@ import {
   FISH_AUDIO_DEFAULT_MODEL,
   welcomeLine,
 } from "@/lib/character-voices";
+import {
+  DEEPGRAM_LANGUAGE_FILTERS,
+  filterDeepgramVoices,
+  getDeepgramVoice,
+  resolveDeepgramVoiceId,
+  type DeepgramVoiceEntry,
+} from "@/lib/deepgram-voices";
+import { deepgramConfigured, listDeepgramVoices } from "@/lib/deepgramVoice";
 import { cn } from "@/lib/utils";
 
 type Tab = "api" | "appearance" | "voice" | "agents" | "memory" | "remote" | "account" | "general";
@@ -471,6 +479,112 @@ function AppearanceTab() {
   );
 }
 
+function DeepgramVoicePicker({
+  selectedId,
+  apiKey,
+  onSelect,
+}: {
+  selectedId: string;
+  apiKey: string;
+  onSelect: (modelId: string) => void;
+}) {
+  const [voices, setVoices] = useState<DeepgramVoiceEntry[]>([]);
+  const [langFilter, setLangFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void listDeepgramVoices(apiKey.trim() || undefined).then((list) => {
+      if (!cancelled) {
+        setVoices(list);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey]);
+
+  const filtered = filterDeepgramVoices(voices, langFilter, query);
+  const activeId = resolveDeepgramVoiceId(selectedId);
+  const active = getDeepgramVoice(activeId);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={langFilter}
+          onChange={(e) => setLangFilter(e.target.value)}
+          className={cn(inputCls, "w-auto min-w-[140px]")}
+        >
+          {DEEPGRAM_LANGUAGE_FILTERS.map(({ code, label }) => (
+            <option key={code} value={code} className="bg-abyss text-ice">
+              {label}
+            </option>
+          ))}
+        </select>
+        <TextInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search name or model id…"
+          className="min-w-0 flex-1"
+        />
+      </div>
+      {active && (
+        <p className="text-[0.68rem] text-neon-dim">
+          Selected: <span className="text-ice/90">{active.displayName}</span> · {active.gender} ·{" "}
+          {active.style} · {active.locale} · <code className="text-neon">{active.modelId}</code>
+        </p>
+      )}
+      <div className="max-h-52 overflow-y-auto border border-neon/15 bg-abyss/40">
+        {loading && (
+          <p className="flex items-center gap-2 px-3 py-4 text-xs text-neon-dim">
+            <Loader2 className="size-3.5 animate-spin" /> Loading Deepgram voices…
+          </p>
+        )}
+        {!loading && filtered.length === 0 && (
+          <p className="px-3 py-4 text-xs text-neon-dim">No voices match this filter.</p>
+        )}
+        {!loading &&
+          filtered.map((v) => (
+            <button
+              key={v.modelId}
+              type="button"
+              onClick={() => onSelect(v.modelId)}
+              className={cn(
+                "flex w-full flex-col gap-0.5 border-b border-neon/10 px-3 py-2 text-left transition-colors last:border-b-0",
+                activeId === v.modelId
+                  ? "bg-neon/10 text-ice"
+                  : "text-ice/85 hover:bg-neon/5",
+              )}
+            >
+              <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                {v.displayName}
+                <span className="font-display text-[0.5rem] tracking-[0.15em] text-neon-dim">
+                  {v.architecture === "aura-2" ? "AURA-2" : "AURA"}
+                </span>
+              </span>
+              <span className="text-[0.65rem] text-neon-dim">
+                {v.gender} · {v.style}
+              </span>
+              <span className="font-mono text-[0.62rem] text-neon/80">
+                {v.locale} · {v.modelId}
+              </span>
+            </button>
+          ))}
+      </div>
+      {!deepgramConfigured(apiKey) && (
+        <p className="text-[0.65rem] text-neon-dim/80">
+          Paste a Deepgram key below to refresh the live voice list from the API. The catalog above
+          works offline.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function VoiceTab() {
   const s = useSettingsStore();
   const [elevenKey, setElevenKey] = useState(s.elevenKey);
@@ -500,6 +614,7 @@ function VoiceTab() {
     try {
       const next = {
         ...s,
+        deepgramApiKey: deepgramKey.trim(),
         elevenKey: elevenKey.trim(),
         elevenVoiceId: voiceId.trim(),
         fishAudioKey: fishKey.trim(),
@@ -525,9 +640,10 @@ function VoiceTab() {
       <div className="border border-neon/15 bg-neon/[0.04] px-3 py-2.5">
         <p className="text-sm font-semibold text-ice/90">Microphone</p>
         <p className="mt-1 text-xs leading-relaxed text-neon-dim">
-          Tap the mic in Chat (or the bar below) to talk. STT chain: Deepgram (paid, optional key)
-          → browser recognition (Electron) → Faster-Whisper (Tauri). TTS: Fish Audio → ElevenLabs
-          → Neural Windows. Set keys below or via DEEPGRAM_API_KEY / FISH_AUDIO_API_KEY env vars.
+          Tap the mic in Chat (or the bar below) to talk. STT: Deepgram Nova-2 (optional key) →
+          browser recognition (Electron) → Faster-Whisper (Tauri). TTS: Deepgram Aura / Aura-2 →
+          Fish Audio → ElevenLabs → Neural Windows. Keys via Settings or DEEPGRAM_API_KEY /
+          VITE_DEEPGRAM_API_KEY / FISH_AUDIO_API_KEY env vars.
         </p>
       </div>
       <Field label="Character voice" hint="10 named speakers. Replies follow the language you write or speak; default language is English.">
@@ -588,9 +704,19 @@ function VoiceTab() {
       </Field>
       <Field
         label="Deepgram API Key"
-        hint="Paid STT — paste from console.deepgram.com. Also accepted as DEEPGRAM_API_KEY or VITE_DEEPGRAM_API_KEY."
+        hint="Paid STT + Aura TTS — paste from console.deepgram.com. Also accepted as DEEPGRAM_API_KEY or VITE_DEEPGRAM_API_KEY."
       >
         <TextInput type="password" value={deepgramKey} onChange={(e) => setDeepgramKey(e.target.value)} autoComplete="off" />
+      </Field>
+      <Field
+        label="Deepgram TTS voice"
+        hint="Aura and Aura-2 speakers for assistant speech. STT language hint follows this voice when Deepgram transcribes."
+      >
+        <DeepgramVoicePicker
+          selectedId={s.deepgramVoiceId}
+          apiKey={deepgramKey}
+          onSelect={(modelId) => void s.update({ deepgramVoiceId: modelId })}
+        />
       </Field>
       <Field label="STT — Faster-Whisper Model" hint="Speech-to-text only (Tauri). Larger models = better accuracy, slower. Not used to speak.">
         <Select
@@ -602,12 +728,16 @@ function VoiceTab() {
           ]}
         />
       </Field>
-      <Field label="TTS Engine" hint="Auto uses Fish Audio when a key is present, then a sweet Windows Neural voice. Never the old harsh boot clip.">
+      <Field
+        label="TTS Engine"
+        hint="Auto prefers Deepgram when keyed + a voice is selected, then Fish Audio, then Neural Windows."
+      >
         <Select
           value={s.ttsEngine}
           onChange={(v) => s.update({ ttsEngine: v as Settings["ttsEngine"] })}
           options={[
-            ["auto", "Auto (Fish Audio → Neural Windows)"],
+            ["auto", "Auto (Deepgram → Fish → Neural)"],
+            ["deepgram", "Deepgram Aura / Aura-2"],
             ["fish", "Fish Audio"],
             ["webspeech", "Windows / browser Neural"],
             ["elevenlabs", "ElevenLabs"],

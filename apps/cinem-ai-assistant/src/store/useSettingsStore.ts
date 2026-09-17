@@ -3,6 +3,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { notify } from "@/store/useToastStore";
 import { applyTheme, themeById } from "@/lib/themes";
 import { DEFAULT_CHARACTER_ID, FISH_AUDIO_DEFAULT_MODEL } from "@/lib/character-voices";
+import { DEFAULT_DEEPGRAM_VOICE_ID } from "@/lib/deepgram-voices";
 import type { AgentStatus } from "@/data/agents";
 
 /* ── Settings model ───────────────────────────────────────────────── */
@@ -26,9 +27,11 @@ export interface Settings {
   whisperModel: "tiny" | "base" | "small" | "medium" | "large-v3";
   /** Speech-to-text engine preference. Auto: Deepgram if keyed, else platform default. */
   sttEngine: "auto" | "deepgram" | "webspeech" | "whisper";
-  /** Deepgram API key for paid STT (optional — Settings or DEEPGRAM_API_KEY). */
+  /** Deepgram API key for paid STT/TTS (optional — Settings or DEEPGRAM_API_KEY). */
   deepgramApiKey: string;
-  ttsEngine: "auto" | "fish" | "elevenlabs" | "piper" | "webspeech";
+  /** Deepgram Aura / Aura-2 model id for TTS (e.g. aura-2-thalia-en). */
+  deepgramVoiceId: string;
+  ttsEngine: "auto" | "deepgram" | "fish" | "elevenlabs" | "piper" | "webspeech";
   /** Named character (Aria, Zara, …). */
   characterVoice: string;
   /** Product default is English. "auto" follows the last user message. */
@@ -97,6 +100,7 @@ export const DEFAULT_SETTINGS: Settings = {
   whisperModel: "base",
   sttEngine: "auto",
   deepgramApiKey: "",
+  deepgramVoiceId: DEFAULT_DEEPGRAM_VOICE_ID,
   ttsEngine: "auto",
   characterVoice: DEFAULT_CHARACTER_ID,
   preferredLanguage: "en",
@@ -212,6 +216,7 @@ const pickSettings = (s: SettingsState): Settings => ({
   whisperModel: s.whisperModel,
   sttEngine: s.sttEngine,
   deepgramApiKey: s.deepgramApiKey,
+  deepgramVoiceId: s.deepgramVoiceId,
   ttsEngine: s.ttsEngine,
   characterVoice: s.characterVoice,
   preferredLanguage: s.preferredLanguage,
