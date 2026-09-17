@@ -116,6 +116,9 @@ export function sensitiveRateLimit(
   if (path === "api/cinem-ai-assistant/usage") {
     return { key: "assistant-usage", limit: 60, windowMs: 60 * 1000 };
   }
+  if (path === "api/guest/chat" && verb === "POST") {
+    return { key: "guest-chat", limit: 40, windowMs: 60 * 1000 };
+  }
   if (path === "api/device/claim" && verb === "POST") {
     return { key: "device-claim", limit: 12, windowMs: AUTH_WINDOW_MS };
   }

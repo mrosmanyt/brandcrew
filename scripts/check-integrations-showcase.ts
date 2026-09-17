@@ -72,7 +72,7 @@ const banned =
 const files = [
   "src/lib/integrations-showcase.ts",
   "src/components/marketing/integrations-showcase.tsx",
-  "src/app/page.tsx",
+  "src/app/about/page.tsx",
   "src/components/marketing/home-sections.tsx",
 ];
 for (const file of files) {
@@ -82,7 +82,7 @@ for (const file of files) {
 }
 console.log("ok: showcase files do not lift Strawberry branding or video");
 
-const page = readFileSync("src/app/page.tsx", "utf8");
+const page = readFileSync("src/app/about/page.tsx", "utf8");
 assert.match(page, /IntegrationsShowcase/);
 assert.match(page, /HeroDemo/);
 assert.match(page, /PricingSection/);
@@ -92,14 +92,14 @@ console.log("ok: landing keeps hero demo and pricing, and mounts the showcase");
 const pricing = readFileSync("src/components/marketing/home-sections.tsx", "utf8");
 assert.match(pricing, /Ultra/);
 assert.match(pricing, /PLANS\.ultra/);
-assert.match(pricing, /\/#integrations/);
+assert.match(pricing, /\/about#integrations/);
 assert.match(pricing, /PricingPlanCta/);
 assert.match(pricing, /Get Pro \/ Get Pro Plus \/ Get Ultra/);
 assert.match(pricing, /Checkout uses Whop/);
 console.log("ok: pricing still includes Ultra and footer links Connectors");
 
 const nav = readFileSync("src/components/marketing/site-nav.tsx", "utf8");
-assert.match(nav, /\/#integrations/);
+assert.match(nav, /\/about#integrations/);
 console.log("ok: site nav links to connectors");
 
 const css = readFileSync("src/app/globals.css", "utf8");

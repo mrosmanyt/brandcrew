@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
+import { BuildSidebarSection } from "@/components/desk/build-sidebar-section";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
 import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
 import { useWorkspaceJobsPoll } from "@/components/desk/use-workspace-jobs-poll";
@@ -351,6 +352,8 @@ function NavBody({
             </ul>
           )}
         </div>
+
+        <BuildSidebarSection collapsed={collapsed} />
 
         <div className="px-1.5 py-2">
           {!collapsed ? (

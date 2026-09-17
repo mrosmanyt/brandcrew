@@ -60,6 +60,14 @@ import type { ProposedAgent } from "@/lib/team-launch";
 import type { OnboardingState } from "@/lib/onboarding";
 import { shouldShowOnboarding } from "@/lib/onboarding";
 import type { ArtifactDTO, LimitsDTO, MessageDTO } from "@/lib/types";
+import { DesktopBuildRequiredDialog } from "@/components/desk/desktop-build-required-dialog";
+import { useLocalBuildFlow } from "@/components/desk/local-build-flow";
+import {
+  intentRequiresDesktopBuild,
+  playbookUsesLocalFiles,
+} from "@/lib/build-gate";
+import { isDesktopClient } from "@/lib/desktop-client";
+import type { BuildPromptIntent } from "@/lib/build-prompt";
 import { cn } from "@/lib/utils";
 
 export function MissionControl({
@@ -140,6 +148,9 @@ export function MissionControl({
     return initialJobs[0]?.id ?? null;
   });
   const [launchOpen, setLaunchOpen] = useState(false);
+  const [buildDialogOpen, setBuildDialogOpen] = useState(false);
+  const { maybeRunLocalBuild, permissionDialog, localBuildBusy } = useLocalBuildFlow();
+  const buildLocked = !isDesktopClient();
   const [launchProposal, setLaunchProposal] = useState<ProposedAgent[]>([]);
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
@@ -423,6 +434,25 @@ export function MissionControl({
     router.refresh();
   }
 
+  function appendThreadMessages(
+    agentId: string,
+    rows: Array<{ role: "user" | "assistant"; content: string }>,
+  ) {
+    const stamp = new Date().toISOString();
+    setMessagesByAgent((prev) => ({
+      ...prev,
+      [agentId]: [
+        ...(prev[agentId] || []),
+        ...rows.map((row, index) => ({
+          id: `local-${Date.now()}-${index}`,
+          role: row.role,
+          content: row.content,
+          createdAt: stamp,
+        })),
+      ],
+    }));
+  }
+
   async function startJob(
     action: GenerateAction = "default",
     message?: string,
@@ -436,6 +466,51 @@ export function MissionControl({
     const text =
       (message ?? input).trim() || JOB_ACTION_MESSAGES[action] || "";
     if (!text && action === "default" && !attachments?.length) return;
+
+    if (
+      buildLocked &&
+      intentRequiresDesktopBuild({
+        action,
+        playbookKey,
+        message: text,
+      })
+    ) {
+      setBuildDialogOpen(true);
+      return;
+    }
+
+    const intent: BuildPromptIntent = { action, playbookKey };
+    const effectivePlaybook =
+      playbookKey ||
+      (action === "build_app"
+        ? "app_builder"
+        : action === "build_deck"
+          ? "deck_builder"
+          : action === "build_website"
+            ? "website_builder"
+            : "");
+    if (isDesktopClient() && playbookUsesLocalFiles(effectivePlaybook)) {
+      setBusy(true);
+      const local = await maybeRunLocalBuild(intent, text);
+      setBusy(false);
+      if (local?.ok) {
+        appendThreadMessages(selected.id, [
+          { role: "user", content: text },
+          {
+            role: "assistant",
+            content: `Your ${local.folder?.includes("deck") ? "deck" : action === "build_app" ? "app" : "website"} is ready.\n\n${local.summary || "Files written locally."}\n\nOpen the project folder on your computer to review:\n${local.folder}`,
+          },
+        ]);
+        setInput("");
+        toast.success("Local build complete — check your project folder.");
+        return;
+      }
+      if (local && !local.ok) {
+        toast.error(local.error || "Local build failed.");
+        return;
+      }
+    }
+
     setBusy(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`, {
       method: "POST",
@@ -457,6 +532,10 @@ export function MissionControl({
     }
     if (data.code === "RATE_LIMIT") {
       toast.error(data.error || "Workspace rate limit reached.");
+      return;
+    }
+    if (data.code === "DESKTOP_BUILD_REQUIRED" || data.desktopRequired) {
+      setBuildDialogOpen(true);
       return;
     }
     if (!res.ok) {
@@ -832,7 +911,7 @@ export function MissionControl({
             onSubmit={(message, intent, attachments) =>
               startJob(intent.action, message, intent.playbookKey, attachments)
             }
-            busy={busy}
+            busy={busy || localBuildBusy}
             messageCount={messages.length}
             disabled={!selected}
             showHero={!thread.length && !latestDraft}
@@ -892,6 +971,8 @@ export function MissionControl({
         busy={busy}
         onApprove={approveLaunch}
       />
+      <DesktopBuildRequiredDialog open={buildDialogOpen} onOpenChange={setBuildDialogOpen} />
+      {permissionDialog}
     </div>
   );
 }

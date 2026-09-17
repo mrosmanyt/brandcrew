@@ -6,13 +6,14 @@ import { useMarketingAuth } from "@/components/marketing/use-signed-in";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
-  { href: "/#features", label: "Features" },
-  { href: "/#integrations", label: "Connectors" },
-  { href: "/#agents", label: "Agents" },
-  { href: "/#how-it-works", label: "How it works" },
+  { href: "/", label: "Chat" },
+  { href: "/about#features", label: "Features" },
+  { href: "/about#integrations", label: "Connectors" },
+  { href: "/about#agents", label: "Agents" },
+  { href: "/about#how-it-works", label: "How it works" },
   { href: "/cinem-ai-assistant", label: "Assistant" },
   { href: "/download", label: "Download" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/about#pricing", label: "Pricing" },
 ] as const;
 
 export function SiteNav() {
