@@ -68,6 +68,7 @@
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",
     "test:win-nudge": "tsx scripts/check-windows-download-nudge.ts",
     "test:guest-assistant-prompt": "tsx scripts/check-guest-assistant-download-prompt.ts",
+    "test:direct-desktop-download": "tsx scripts/check-direct-desktop-download.ts",
     "installer:art": "node scripts/make-installer-art.mjs",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:cloud": "node scripts/desktop-cloud.mjs",

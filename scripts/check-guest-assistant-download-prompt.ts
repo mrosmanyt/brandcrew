@@ -36,7 +36,8 @@ assert.equal(isPackagedDesktopShell(ELECTRON_WIN), true);
 console.log("ok: dismiss + packaged shell gates");
 
 const href = cinemAiAssistantDownloadHref();
-assert.ok(href.includes("CINEM-Pro-Setup.exe") || href.includes("/downloads/"));
+assert.match(href, /^https:\/\/github\.com\/mrosmanyt\/cinem-pro-releases\//);
+assert.match(href, /CINEM-Pro-Setup\.exe/);
 assert.equal(WIN_SETUP_FILENAME, "CINEM-Pro-Setup.exe");
 console.log("ok: download CTA reuses unified Setup.exe");
 

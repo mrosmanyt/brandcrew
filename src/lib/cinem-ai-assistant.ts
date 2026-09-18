@@ -218,6 +218,37 @@ export function cinemAiAssistantSetupEnvUrl() {
   );
 }
 
+/** True when the URL is an absolute https asset off the app origin (CDN / GitHub Releases). */
+export function isExternalDirectInstallerUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "app.cinem.tech" ||
+      host === "app.cinem.pro" ||
+      host === "brandcrew.vercel.app" ||
+      host.endsWith(".vercel.app")
+    ) {
+      return false;
+    }
+    if (parsed.pathname.startsWith("/api/") || parsed.pathname.startsWith("/downloads/")) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Optional env override — only honored when it points at a real external CDN, not the app server. */
+export function validatedDesktopInstallerEnvUrl() {
+  const raw = cinemAiAssistantSetupEnvUrl();
+  return raw && isExternalDirectInstallerUrl(raw) ? raw : "";
+}
+
 export function cinemAiAssistantReleaseUrl() {
   return DESKTOP_WIN_DOWNLOAD;
 }
@@ -226,13 +257,13 @@ export function cinemAiAssistantAdvancedReleaseUrl() {
   return `${PUBLIC_RELEASES_REPO}/releases/latest/download/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
 }
 
-/** Public download CTA. Env override, else the unified CINEM-Pro-Setup.exe. */
+/** Public download CTA. Env override (external CDN only), else GitHub Releases latest asset. */
 export function cinemAiAssistantDownloadHref() {
-  return cinemAiAssistantSetupEnvUrl() || DESKTOP_WIN_DOWNLOAD;
+  return validatedDesktopInstallerEnvUrl() || DESKTOP_WIN_DOWNLOAD;
 }
 
 export function cinemAiAssistantAdvancedDownloadHref() {
-  return `${CINEM_AI_ASSISTANT_DOWNLOAD_API}?advanced=1`;
+  return cinemAiAssistantAdvancedReleaseUrl();
 }
 
 export function usageSnapshot(input: {

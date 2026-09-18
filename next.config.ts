@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import {
+  CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
+  cinemAiAssistantAdvancedReleaseUrl,
+} from "./src/lib/cinem-ai-assistant";
+import { DESKTOP_WIN_DOWNLOAD, DESKTOP_WIN_PORTABLE } from "./src/lib/site";
 import { securityHeaderList } from "./src/lib/security-headers";
 
 const desktop = process.env.DESKTOP === "1";
@@ -13,7 +19,25 @@ const nextConfig: NextConfig = {
   // Static metadata PNGs live at /apple-icon.png etc. Alias the
   // extensionless Metadata API paths so crawlers and old bookmarks 200.
   async redirects() {
-    return [{ source: "/security", destination: "/privacy", permanent: true }];
+    return [
+      { source: "/security", destination: "/privacy", permanent: true },
+      // Never serve ~120MB installers from Vercel — hand off to GitHub Releases CDN.
+      {
+        source: `/downloads/${CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}`,
+        destination: DESKTOP_WIN_DOWNLOAD,
+        permanent: false,
+      },
+      {
+        source: `/downloads/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`,
+        destination: cinemAiAssistantAdvancedReleaseUrl(),
+        permanent: false,
+      },
+      {
+        source: "/downloads/CINEM-Pro-Portable.exe",
+        destination: DESKTOP_WIN_PORTABLE,
+        permanent: false,
+      },
+    ];
   },
   async rewrites() {
     return [
