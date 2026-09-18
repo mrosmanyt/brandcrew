@@ -109,8 +109,9 @@ assert.equal(WIN_DOWNLOAD_NUDGE_LOCAL_KEY, "cinem-win-download-nudge-hide");
 const assistantLib = readFileSync("src/lib/cinem-ai-assistant.ts", "utf8");
 assert.match(assistantLib, /export function cinemAiAssistantDownloadHref/);
 assert.match(assistantLib, /DESKTOP_WIN_DOWNLOAD/);
-assert.match(assistantLib, /CINEM_AI_ASSISTANT_DOWNLOAD_API = "\/api\/downloads\/cinem-ai-assistant"/);
-console.log("ok: CTA helpers still point at latest Setup.exe");
+assert.match(assistantLib, /validatedDesktopInstallerEnvUrl/);
+assert.match(assistantLib, /isExternalDirectInstallerUrl/);
+console.log("ok: CTA helpers still point at latest Setup.exe via direct CDN URL");
 
 assert.ok(existsSync("src/lib/windows-download-nudge.ts"));
 assert.ok(existsSync("src/components/desk/windows-download-nudge.tsx"));

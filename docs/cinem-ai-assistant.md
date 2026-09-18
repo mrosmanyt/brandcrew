@@ -96,7 +96,7 @@ Primary filename: `CINEM-Pro-Setup.exe`.
 1. Publish via **Actions → CINEM Pro Windows**, or `npm run desktop:build:win` on Windows, **or**
 2. Set `CINEM_AI_ASSISTANT_SETUP_URL` to a hosted `CINEM-Pro-Setup.exe`.
 
-`GET /api/downloads/cinem-ai-assistant` redirects to the unified Setup (env URL, local `public/downloads/CINEM-Pro-Setup.exe`, else `cinem-pro-releases` latest). `?advanced=1` is the optional Tauri-only exe. `Accept: application/json` returns metadata.
+`GET /api/downloads/cinem-ai-assistant` 307-redirects to the unified Setup on GitHub Releases (or an external `CINEM_AI_ASSISTANT_SETUP_URL` CDN — never streams through Vercel). `?advanced=1` is the optional Tauri-only exe. `Accept: application/json` returns metadata. `/downloads/CINEM-Pro-Setup.exe` on the app host also redirects to the releases CDN.
 
 ### How to produce `CINEM-Pro-Setup.exe`
 
