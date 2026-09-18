@@ -7,6 +7,12 @@ import {
   googleLoginSetupHint,
   signGoogleLoginState,
 } from "@/lib/google-auth";
+import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
+import {
+  startSupabaseGoogleOAuth,
+  supabaseGooglePublicStatus,
+  supabaseGoogleSetupHint,
+} from "@/lib/supabase/oauth";
 
 function bounceUrl(
   intent: string | null,
@@ -21,8 +27,9 @@ function bounceUrl(
 }
 
 /**
- * Start Google *user login* (OpenID). Marketplace Gmail connect is
- * `/api/workspaces/:id/plugins/gmail/oauth/start`.
+ * Start Google *user login*. When Supabase Auth is configured, Google OAuth
+ * runs through the Supabase Google provider. Otherwise falls back to the
+ * legacy direct Google OpenID flow.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -30,9 +37,43 @@ export async function GET(request: Request) {
     url.searchParams.get("format") === "json" ||
     (request.headers.get("accept") || "").includes("application/json");
 
+  if (isSupabaseAuthEnabled()) {
+    const status = supabaseGooglePublicStatus();
+    if (wantsJson && url.searchParams.get("start") !== "1") {
+      return NextResponse.json(status);
+    }
+    if (!status.ready) {
+      const hint = status.setupHint;
+      if (wantsJson) {
+        return NextResponse.json(
+          { error: hint, code: "google_not_configured", ...status },
+          { status: 503 },
+        );
+      }
+      return NextResponse.redirect(
+        bounceUrl(url.searchParams.get("intent"), "google_not_configured", hint),
+      );
+    }
+    try {
+      const redirectUrl = await startSupabaseGoogleOAuth(request);
+      return NextResponse.redirect(redirectUrl);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Google sign-in failed.";
+      if (wantsJson) {
+        return NextResponse.json({ error: message }, { status: 503 });
+      }
+      return NextResponse.redirect(
+        bounceUrl(url.searchParams.get("intent"), "google_failed", message),
+      );
+    }
+  }
+
   const status = googleLoginPublicStatus();
   if (wantsJson && url.searchParams.get("start") !== "1") {
-    return NextResponse.json(status);
+    return NextResponse.json({
+      ...status,
+      setupHint: status.setupHint || supabaseGoogleSetupHint(),
+    });
   }
 
   if (!googleLoginReady()) {

@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, setSessionCookie, verifyPassword } from "@/lib/auth";
+import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureAppUser } from "@/lib/supabase/ensure-app-user";
 import { googleOnlyPasswordMessage, isAuthSurface, type AuthSurface } from "@/lib/auth-bridge";
 import {
   issueNativeSession,
@@ -42,23 +45,43 @@ export async function POST(request: Request) {
     let userId = "";
     const email = body.email?.toLowerCase().trim();
     if (email && body.password) {
-      const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) {
-        return withNativeCors(
-          NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 }),
-        );
+      if (isSupabaseAuthEnabled()) {
+        const supabase = await createSupabaseServerClient();
+        if (!supabase) {
+          return withNativeCors(
+            NextResponse.json({ error: "Supabase Auth is not configured." }, { status: 503 }),
+          );
+        }
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password: body.password,
+        });
+        if (error || !data.user) {
+          return withNativeCors(
+            NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 }),
+          );
+        }
+        const ensured = await ensureAppUser(data.user);
+        userId = ensured.user.id;
+      } else {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+          return withNativeCors(
+            NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 }),
+          );
+        }
+        if (!user.passwordHash) {
+          return withNativeCors(
+            NextResponse.json({ error: googleOnlyPasswordMessage(surface) }, { status: 401 }),
+          );
+        }
+        if (!(await verifyPassword(body.password, user.passwordHash))) {
+          return withNativeCors(
+            NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 }),
+          );
+        }
+        userId = user.id;
       }
-      if (!user.passwordHash) {
-        return withNativeCors(
-          NextResponse.json({ error: googleOnlyPasswordMessage(surface) }, { status: 401 }),
-        );
-      }
-      if (!(await verifyPassword(body.password, user.passwordHash))) {
-        return withNativeCors(
-          NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 }),
-        );
-      }
-      userId = user.id;
     } else {
       const session = await getCurrentUser();
       if (!session) {

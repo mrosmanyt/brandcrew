@@ -6,6 +6,9 @@ import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { issueNativeSession, readCinemClient, wantsNativeTokens } from "@/lib/auth-native";
 import { honeypotFilled } from "@/lib/form-guard";
 import { jsonError } from "@/lib/http";
+import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureAppUser } from "@/lib/supabase/ensure-app-user";
 
 const schema = z.object({
   email: z.string().email(),
@@ -21,9 +24,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not complete that request." }, { status: 400 });
     }
     const body = schema.parse(raw);
-    const user = await prisma.user.findUnique({
-      where: { email: body.email.toLowerCase().trim() },
-    });
+    const email = body.email.toLowerCase().trim();
+
+    if (isSupabaseAuthEnabled()) {
+      const supabase = await createSupabaseServerClient();
+      if (!supabase) {
+        return NextResponse.json(
+          { error: "Supabase Auth is not configured." },
+          { status: 503 },
+        );
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: body.password,
+      });
+      if (error || !data.user) {
+        return NextResponse.json(
+          { error: "Email or password is incorrect." },
+          { status: 401 },
+        );
+      }
+      const ensured = await ensureAppUser(data.user);
+      const payload: Record<string, unknown> = {
+        user: ensured.user,
+      };
+      if (wantsNativeTokens(request, body)) {
+        const native = await issueNativeSession({
+          userId: ensured.user.id,
+          surface: readCinemClient(request),
+        });
+        payload.tokenType = native.tokenType;
+        payload.accessToken = native.accessToken;
+        payload.refreshToken = native.refreshToken;
+        payload.expiresIn = native.expiresIn;
+      }
+      return NextResponse.json(payload);
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return NextResponse.json(
         { error: "Email or password is incorrect." },

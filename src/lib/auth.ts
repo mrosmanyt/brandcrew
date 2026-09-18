@@ -11,6 +11,8 @@ import {
   roleLabel,
   type WorkspaceCapability,
 } from "@/lib/rbac";
+import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const SESSION_DAYS = 30;
 
@@ -105,7 +107,39 @@ export async function clearSessionCookie() {
   jar.delete(SESSION_COOKIE);
 }
 
+/** Sign out Supabase session (web). No-op when Supabase Auth is not configured. */
+export async function clearSupabaseSession() {
+  if (!isSupabaseAuthEnabled()) return;
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return;
+  await supabase.auth.signOut();
+}
+
+async function getSupabaseSessionUser(): Promise<SessionUser | null> {
+  if (!isSupabaseAuthEnabled()) return null;
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user?.id) return null;
+  const email = data.user.email?.toLowerCase().trim();
+  if (!email) return null;
+  const meta = data.user.user_metadata ?? {};
+  const name =
+    (typeof meta.name === "string" && meta.name) ||
+    (typeof meta.full_name === "string" && meta.full_name) ||
+    email.split("@")[0];
+  const row = await prisma.user.findUnique({
+    where: { id: data.user.id },
+    select: { id: true, email: true, name: true },
+  });
+  if (row) return row;
+  return { id: data.user.id, email, name: name.slice(0, 80) };
+}
+
 export async function getCurrentUser(): Promise<SessionUser | null> {
+  const supabaseUser = await getSupabaseSessionUser();
+  if (supabaseUser) return supabaseUser;
+
   const token = await readRequestSessionToken();
   const userId = await readSessionUserId(token);
   if (!userId) return null;

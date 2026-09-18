@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { googleLoginPublicStatus } from "@/lib/google-auth";
+import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
+import { supabaseGooglePublicStatus } from "@/lib/supabase/oauth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { isAdminEmail } from "@/lib/admin";
 import { assertPasswordAllowed } from "@/lib/password";
@@ -20,7 +22,9 @@ import { readByokSnapshot } from "@/lib/user-provider-keys";
 
 export async function GET() {
   const user = await getCurrentUser();
-  const googleLogin = googleLoginPublicStatus();
+  const googleLogin = isSupabaseAuthEnabled()
+    ? supabaseGooglePublicStatus()
+    : googleLoginPublicStatus();
   if (!user) {
     return withNativeCors(jsonOk({ user: null, workspaces: [], googleLogin }));
   }

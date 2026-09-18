@@ -83,6 +83,8 @@
     "@composio/core": "^0.17.0",
     "@google/genai": "^2.21.0",
     "@prisma/client": "^6.16.3",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.116.0",
     "@whop/sdk": "^1.1.2",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
