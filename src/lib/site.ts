@@ -1,8 +1,15 @@
 /** Internal repo URL — do not link from marketing, footer, or customer CTAs. */
 export const GITHUB_REPO = "https://github.com/mrosmanyt/brandcrew";
 export const GITHUB_RELEASES = `${GITHUB_REPO}/releases`;
-/** Installer host for Windows asset URLs. Do not surface as a GitHub CTA. */
-export const PUBLIC_RELEASES_REPO = "https://github.com/mrosmanyt/cinem-pro-releases";
+export {
+  CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  DESKTOP_AI_ASSISTANT_ADVANCED_DOWNLOAD,
+  DESKTOP_WIN_DOWNLOAD,
+  DESKTOP_WIN_PORTABLE,
+  PUBLIC_RELEASES_REPO,
+  WIN_PORTABLE_FILENAME,
+  WIN_SETUP_FILENAME,
+} from "./desktop-download-redirects";
 export const COMPANY_SITE = "https://cinem.tech";
 /**
  * Canonical production desk (custom domain).
@@ -34,17 +41,6 @@ export const COOKIE_CONSENT_KEY = "cinem_cookie_consent";
 export const COOKIE_CONSENT_EVENT = "cinem-cookie-consent";
 
 export const HONEYPOT_FIELD = "company_url";
-
-/** Exact Windows filenames from electron-builder (package.json build.nsis / portable). */
-export const WIN_SETUP_FILENAME = "CINEM-Pro-Setup.exe";
-export const WIN_PORTABLE_FILENAME = "CINEM-Pro-Portable.exe";
-
-/**
- * Direct GitHub Release asset URLs from the public cinem-pro-releases repo.
- * Not README / tree anchors. No sign-in required for anonymous visitors.
- */
-export const DESKTOP_WIN_DOWNLOAD = `${PUBLIC_RELEASES_REPO}/releases/latest/download/${WIN_SETUP_FILENAME}`;
-export const DESKTOP_WIN_PORTABLE = `${PUBLIC_RELEASES_REPO}/releases/latest/download/${WIN_PORTABLE_FILENAME}`;
 
 /** Chrome MV3 zip served from this app. Store listing is filled in after unlisted publish. */
 export const CHROME_EXTENSION_ZIP = "/downloads/cinem-pro-chrome.zip";

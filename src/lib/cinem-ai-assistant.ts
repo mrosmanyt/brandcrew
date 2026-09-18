@@ -6,8 +6,9 @@
 import { planDisplayName, type CheckoutPlanId, type PlanId } from "@/lib/constants";
 import { isPaidPlan, normalizePlanId } from "@/lib/limits";
 import {
+  CINEM_AI_ASSISTANT_SETUP_FILENAME,
+  DESKTOP_AI_ASSISTANT_ADVANCED_DOWNLOAD,
   DESKTOP_WIN_DOWNLOAD,
-  PUBLIC_RELEASES_REPO,
   SITE_ORIGIN,
   WIN_SETUP_FILENAME,
   siteOrigin,
@@ -16,7 +17,7 @@ import {
 export const CINEM_AI_ASSISTANT_PRODUCT = "cinem-ai-assistant";
 export const CINEM_AI_ASSISTANT_NAME = "Cinem AI Assistant";
 export const CINEM_AI_ASSISTANT_PATH = "/cinem-ai-assistant";
-export const CINEM_AI_ASSISTANT_SETUP_FILENAME = "Cinem-AI-Assistant-Setup.exe";
+export { CINEM_AI_ASSISTANT_SETUP_FILENAME };
 /** Primary Windows installer — Desk + AI Assistant in one NSIS Setup.exe. */
 export const CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME = WIN_SETUP_FILENAME;
 export const CINEM_AI_ASSISTANT_PUBLIC_PATH = `/downloads/${CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}`;
@@ -254,7 +255,7 @@ export function cinemAiAssistantReleaseUrl() {
 }
 
 export function cinemAiAssistantAdvancedReleaseUrl() {
-  return `${PUBLIC_RELEASES_REPO}/releases/latest/download/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`;
+  return DESKTOP_AI_ASSISTANT_ADVANCED_DOWNLOAD;
 }
 
 /** Public download CTA. Env override (external CDN only), else GitHub Releases latest asset. */

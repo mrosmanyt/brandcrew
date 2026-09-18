@@ -59,7 +59,7 @@ assert.match(apiSource, /NextResponse\.redirect/);
 console.log("ok: download API redirects only (no serverless streaming)");
 
 const nextConfig = readFileSync("next.config.ts", "utf8");
-assert.match(nextConfig, /\/downloads\/\$\{CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME\}/);
+assert.match(nextConfig, /\/downloads\/\$\{WIN_SETUP_FILENAME\}/);
 assert.match(nextConfig, /DESKTOP_WIN_DOWNLOAD/);
 console.log("ok: /downloads/*.exe redirects to releases CDN");
 
