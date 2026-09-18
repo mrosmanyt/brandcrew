@@ -12,13 +12,18 @@ datasource db {
 }
 
 model User {
-  id            String             @id @default(cuid())
+  /// Matches Supabase auth.users.id when Supabase Auth is enabled.
+  id            String             @id @default(uuid())
   email         String             @unique
   /// Null for Google-only accounts. Email/password users always have a hash.
   passwordHash  String?
   /// Google account `sub`. Distinct from Marketplace Gmail plugin tokens.
   googleId      String?            @unique
   name          String
+  /// UI language (default English). Synced to public.profiles.
+  language      String             @default("en")
+  /// desk | assistant | both — desktop mode chooser preference.
+  preferredMode String             @default("desk")
   /// True after a successful Support (tip) payment webhook — not from the thank-you page alone.
   supporter          Boolean   @default(false)
   supporterAt        DateTime?

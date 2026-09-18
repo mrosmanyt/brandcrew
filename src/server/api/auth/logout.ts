@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/auth";
+import { clearSessionCookie, clearSupabaseSession } from "@/lib/auth";
 import { revokeRefreshToken } from "@/lib/auth-native";
 
 export async function POST(request: Request) {
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
   } catch {
     // Body is optional — web logout is cookie-only.
   }
+  await clearSupabaseSession();
   await clearSessionCookie();
   return NextResponse.json({ ok: true });
 }

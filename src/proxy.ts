@@ -8,6 +8,8 @@ import {
 } from "@/lib/console-site";
 import { safeNextPath } from "@/lib/google-auth-shared";
 import { applySecurityHeaders, requestLooksHttps } from "@/lib/security-headers";
+import { hasSupabaseAuthCookie } from "@/lib/supabase/env";
+import { refreshSupabaseSession } from "@/lib/supabase/middleware";
 
 function withSecurity(response: NextResponse, request: NextRequest) {
   applySecurityHeaders(response.headers, {
@@ -31,10 +33,15 @@ function needsAuth(pathname: string, consoleHost: boolean) {
   return consoleHost && (pathname === "/" || pathname === "");
 }
 
-export function proxy(request: NextRequest) {
+function requestIsAuthed(request: NextRequest) {
+  if (request.cookies.get(SESSION_COOKIE)?.value) return true;
+  return hasSupabaseAuthCookie(request.cookies.getAll());
+}
+
+export async function proxy(request: NextRequest) {
+  const sessionRefresh = await refreshSupabaseSession(request);
   const { pathname } = request.nextUrl;
-  const session = request.cookies.get(SESSION_COOKIE)?.value;
-  const authed = Boolean(session);
+  const authed = requestIsAuthed(request);
   const host = request.headers.get("host");
   const consoleHost = isConsoleHostname(host);
 
@@ -67,7 +74,7 @@ export function proxy(request: NextRequest) {
     );
   }
 
-  return withSecurity(NextResponse.next(), request);
+  return withSecurity(sessionRefresh, request);
 }
 
 export const config = {
