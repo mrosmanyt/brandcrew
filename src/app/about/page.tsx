@@ -34,7 +34,7 @@ export default function AboutPage() {
         <section className="mx-auto w-full max-w-6xl px-6 pt-16 pb-16 md:pt-24 md:pb-20">
           <div className="max-w-5xl">
             <p className="mkt-hero-kicker text-sm text-muted-foreground">
-              CINEM Pro · AI employee desk
+              Cinem Pro · AI employee desk
             </p>
             <h1 className="mkt-hero-title font-heading mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
               Hire agents.

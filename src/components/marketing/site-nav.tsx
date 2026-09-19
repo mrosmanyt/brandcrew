@@ -6,14 +6,11 @@ import { useMarketingAuth } from "@/components/marketing/use-signed-in";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
-  { href: "/", label: "Chat" },
-  { href: "/about#features", label: "Features" },
-  { href: "/about#integrations", label: "Connectors" },
-  { href: "/about#agents", label: "Agents" },
-  { href: "/about#how-it-works", label: "How it works" },
-  { href: "/cinem-ai-assistant", label: "Assistant" },
+  { href: "/", label: "Assistant" },
+  { href: "/cinem-ai-assistant/billing", label: "Pricing" },
+  { href: "/about", label: "Cinem Pro" },
   { href: "/download", label: "Download" },
-  { href: "/about#pricing", label: "Pricing" },
+  { href: "/login", label: "Login" },
 ] as const;
 
 export function SiteNav() {
@@ -36,18 +33,20 @@ export function SiteNav() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            nativeButton={false}
-            render={<Link href={accountHref} />}
-          >
-            Account
-          </Button>
           {signedIn ? (
-            <Button size="sm" nativeButton={false} render={<Link href={deskHref} />}>
-              Open desk
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
+                render={<Link href={accountHref} />}
+              >
+                Account
+              </Button>
+              <Button size="sm" nativeButton={false} render={<Link href={deskHref} />}>
+                Open desk
+              </Button>
+            </>
           ) : (
             <Button size="sm" nativeButton={false} render={<Link href="/signup" />}>
               Get started

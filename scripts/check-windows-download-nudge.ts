@@ -140,8 +140,11 @@ const about = readFileSync("src/app/about/page.tsx", "utf8");
 assert.match(about, /WindowsDownloadNudge/);
 assert.match(about, /cinemAiAssistantDownloadHref\(\)/);
 const home = readFileSync("src/app/page.tsx", "utf8");
-assert.match(home, /GuestChatHome/);
+assert.match(home, /AssistantMarketingMain/);
+assert.match(home, /WindowsDownloadNudge/);
+const chat = readFileSync("src/app/chat/page.tsx", "utf8");
+assert.match(chat, /GuestChatHome/);
 assert.equal(pkg.scripts?.["test:win-nudge"], "tsx scripts/check-windows-download-nudge.ts");
-console.log("ok: desk shell + about mount; home is guest chat; CINEM Pro copy only");
+console.log("ok: desk shell + about mount; home is assistant; guest chat at /chat");
 
 console.log("Windows download nudge checks passed.");

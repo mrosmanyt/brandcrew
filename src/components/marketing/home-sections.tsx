@@ -569,18 +569,18 @@ export function FaqSection() {
 }
 
 const FOOTER_LINKS = [
-  { href: "/about#features", label: "Features" },
-  { href: "/about#integrations", label: "Connectors" },
-  { href: "/about#agents", label: "Agents" },
-  { href: "/about#how-it-works", label: "How it works" },
-  { href: "/cinem-ai-assistant", label: "Assistant" },
+  { href: "/", label: "Assistant" },
+  { href: "/cinem-ai-assistant/billing", label: "Pricing" },
+  { href: "/about", label: "Cinem Pro" },
   { href: "/download", label: "Download" },
-  { href: "/about#pricing", label: "Pricing" },
+  { href: "/chat", label: "Cloud chat" },
+  { href: "/about#features", label: "Pro features" },
+  { href: "/about#integrations", label: "Connectors" },
+  { href: "/about#pricing", label: "Pro pricing" },
   { href: "/support", label: "Support" },
   { href: "/about#developers", label: "Developer API" },
   { href: "/about#faq", label: "FAQ" },
-  { href: "/about#trust", label: "Trust" },
-  { href: "/login", label: "Account" },
+  { href: "/login", label: "Login" },
   { href: "/signup", label: "Get started" },
   { href: "/privacy", label: "Privacy" },
   { href: "/dpa", label: "DPA" },
@@ -597,8 +597,9 @@ export function SiteFooter() {
             <BrandMark />
           </Link>
           <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-            From CINEM. An AI employee desk — not a CRM, not an ad account.
-            Agents that email, post, and work the browser for you.
+            From CINEM. Cinem AI Assistant is the Windows desktop product — voice,
+            vision, and supervised computer-use. Cinem Pro is the cloud desk for
+            agents, integrations, and approvals.
           </p>
         </div>
         <nav className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm text-muted-foreground sm:grid-cols-3">

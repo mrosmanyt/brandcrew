@@ -144,13 +144,15 @@ for (const id of [
 }
 console.log("ok: usage snapshot + feature list");
 
-const page = readFileSync("src/app/cinem-ai-assistant/page.tsx", "utf8");
+const page = readFileSync("src/components/marketing/assistant-marketing-main.tsx", "utf8");
+const home = readFileSync("src/app/page.tsx", "utf8");
 assert.match(page, /Plans for|standalone|billing/i);
 assert.match(page, /desktop-control|Desktop control/i);
 assert.match(page, /kill switch|Safety/i);
 assert.match(page, /Hey Cinem|wake word/i);
 assert.match(page, /COMPUTER_USE_ENABLED/);
 assert.doesNotMatch(page, /mickey|cinempro\.site|OpenAI|Claude|Gemini|Google/i);
+assert.match(home, /AssistantMarketingMain/);
 const download = readFileSync("src/app/download/page.tsx", "utf8");
 assert.match(download, /CINEM-Pro-Setup\.exe|CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME|WIN_SETUP_FILENAME/);
 assert.match(download, /Get CINEM Pro|Get desktop/);
