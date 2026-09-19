@@ -3,6 +3,7 @@ import { RefreshCcw, Plus, BrainCircuit } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import GlassPanel from "@/components/GlassPanel";
 import { useAppStore } from "@/store/useAppStore";
+import { useMultilayerStore } from "@/store/useMultilayerStore";
 import { announceAgent } from "@/lib/announcer";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,7 @@ export default function SubAgentsPanel() {
   const toggleAgent = useAppStore((s) => s.toggleAgent);
   const flashAgent = useAppStore((s) => s.flashAgent);
   const agentFlash = useAppStore((s) => s.agentFlash);
+  const handoffs = useMultilayerStore((s) => s.activeHandoffs);
   const activeCount = agents.filter((a) => a.status === "active").length;
 
   /* Re-render once after each burst so the glow cleanly disappears. */
@@ -219,6 +221,7 @@ export default function SubAgentsPanel() {
           {agents.map((a, i) => {
             const processing = a.status === "processing";
             const active = a.status === "active" || processing;
+            const handoffStep = handoffs[a.id];
             const label = processing ? "PROCESSING" : active ? "ACTIVE" : "IDLE";
             return (
               <motion.button
@@ -251,12 +254,19 @@ export default function SubAgentsPanel() {
                       : "border-neon/15 bg-abyss/60 text-ice/65 hover:border-neon/35 hover:text-ice",
                   isBursting(a.id) &&
                     "border-neon bg-neon/25 shadow-[0_0_32px_rgba(var(--glow),0.65)]",
+                  handoffStep &&
+                    "border-cyan-400/70 bg-cyan-400/10 shadow-[0_0_20px_rgba(0,212,255,0.4)]",
                 )}
                 style={{
                   clipPath:
                     "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)",
                 }}
               >
+                {handoffStep ? (
+                  <span className="absolute left-1 top-1 rounded bg-cyan-400/20 px-1 text-[0.45rem] font-bold text-cyan-300">
+                    S{handoffStep}
+                  </span>
+                ) : null}
                 <span
                   className={cn(
                     "absolute right-1.5 top-1.5 size-1.5 rounded-full",

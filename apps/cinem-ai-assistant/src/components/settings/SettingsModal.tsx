@@ -38,6 +38,7 @@ import {
 import { deepgramConfigured, listDeepgramVoices } from "@/lib/deepgramVoice";
 import { cn } from "@/lib/utils";
 import ByokDashboardTab from "@/components/byok/ByokDashboardTab";
+import GeminiByokWizard from "@/components/byok/GeminiByokWizard";
 import MobileCompanionPanel from "@/components/mobile/MobileCompanionPanel";
 import PluginRegistryPanel from "@/components/marketplace/PluginRegistryPanel";
 import InviteSharePanel from "@/components/invite/InviteSharePanel";
@@ -1601,7 +1602,14 @@ export default function SettingsModal() {
               {tab === "voice" && <VoiceTab />}
               {tab === "agents" && <AgentsTab />}
               {tab === "memory" && <MemoryTab />}
-              {tab === "byok" && <ByokDashboardTab />}
+              {tab === "byok" && (
+                <>
+                  <GeminiByokWizard />
+                  <div className="mt-4">
+                    <ByokDashboardTab />
+                  </div>
+                </>
+              )}
               {tab === "remote" && <RemoteTab />}
               {tab === "account" && <AccountTab />}
               {tab === "general" && <GeneralTab />}

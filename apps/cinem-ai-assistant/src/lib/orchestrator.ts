@@ -88,6 +88,11 @@ import {
   runSocialPlaybookIntent,
 } from "@/lib/social-playbooks/runner";
 import { getPendingPublish, isPublishConfirmation } from "@/lib/social-playbooks/publish-gate";
+import {
+  isMultilayerOrchestratorEnabled,
+  isMultilayerRequest,
+  runMultilayerOrchestrator,
+} from "@/lib/multilayer/executor";
 
 interface Routing {
   agents: string[];
@@ -1155,6 +1160,11 @@ export async function processCommand(text: string): Promise<string> {
       app.patchMessage(thoughtId, { pending: false });
       app.addMessage({ role: "assistant", text: target.reply });
       return target.reply;
+    }
+
+    /* 0ml — Multi-layer orchestrator: memory → split → execute → report (7–12 steps). */
+    if (isMultilayerOrchestratorEnabled() && isMultilayerRequest(trimmed)) {
+      return await runMultilayerOrchestrator(trimmed, thoughtId, history, settings);
     }
 
     /* 0d — Complex task → deep reasoning (plan → execute → reflect). */

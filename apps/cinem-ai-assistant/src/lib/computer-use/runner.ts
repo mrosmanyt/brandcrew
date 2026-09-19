@@ -3,6 +3,7 @@
  * Renderer + sidecar call into this for gating, logging, and limits.
  */
 import { requiresShellConfirm, validateFocusApp } from "./allowlist";
+import { chatGptPremierePlan, isChatGptPremierePlaybook } from "./playbooks/chatgpt-premiere";
 import type {
   ComputerUseAction,
   ComputerUseSession,
@@ -126,9 +127,12 @@ export function pauseOnMouseMove(session: ComputerUseSession): ComputerUseSessio
   return { ...session, status: "paused", currentAction: "Paused — you moved the mouse" };
 }
 
-/** Parse a minimal action plan from task text (MVP heuristic). */
+/** Parse a minimal action plan from task text (MVP heuristic + playbooks). */
 export function planFromTask(task: string): ComputerUseAction[] {
   const t = task.toLowerCase();
+  if (isChatGptPremierePlaybook(task)) {
+    return chatGptPremierePlan(task);
+  }
   const actions: ComputerUseAction[] = [];
   if (/\bexplorer\b|\bfile(s)?\b|\bfolder\b/.test(t)) {
     actions.push({ kind: "focus_app", app: "explorer", label: "Focus File Explorer" });

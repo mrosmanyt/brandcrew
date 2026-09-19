@@ -35,6 +35,8 @@ import { startWakeWord, stopWakeWord, wakeWordEnabled } from "@/lib/wakeWord";
 import { toggleVoiceCommand } from "@/lib/voice-command";
 import AssistantNavShell from "@/components/nav/AssistantNavShell";
 import ComputerUsePanel from "@/components/computer-use/ComputerUsePanel";
+import MultilayerProgressHud from "@/components/multilayer/MultilayerProgressHud";
+import AgentMapPanel from "@/components/multilayer/AgentMapPanel";
 import { cinemDesktopBridge } from "@/lib/desktop-shell";
 import { onComputerUseMousePause, useComputerUseStore } from "@/store/useComputerUseStore";
 
@@ -163,6 +165,7 @@ export default function App() {
         {/* Right column */}
         <aside className="flex min-h-0 flex-col gap-4">
           <ComputerUsePanel />
+          <AgentMapPanel />
           <ChatPanel />
           <SubAgentsPanel />
         </aside>
@@ -182,6 +185,7 @@ export default function App() {
       <AutopilotPanel />
       <CreatorOsPanel />
       <TeamHandoffPanel />
+      <MultilayerProgressHud />
       <TaskWindows />
       <CommandPalette />
       <Toasts />
