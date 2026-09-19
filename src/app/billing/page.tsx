@@ -2,18 +2,22 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { authHrefWithNext, workspaceBillingHref } from "@/lib/billing-ui";
 import {
+  assistantBillingPath,
+  parseAssistantBillingPlanId,
+} from "@/lib/cinem-ai-assistant-billing";
+import {
   assistantCheckoutPlanFromQuery,
-  CINEM_AI_ASSISTANT_PRODUCT,
-  cinemAiAssistantBillingPath,
+  cinemAiAssistantUpgradeUrl,
+  isCinemAiAssistantProduct,
 } from "@/lib/cinem-ai-assistant";
 import { createDemoWorkspace, listUserWorkspaces, withMemberRole } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Upgrade deep link for Cinem AI Assistant (and any signed-in checkout).
- * `/billing?plan=pro&product=cinem-ai-assistant` → existing $20 Pro (starter)
- * Whop checkout on the desk billing page. Signed out → login with next= back here.
+ * Billing deep links.
+ * Assistant product → standalone /cinem-ai-assistant/billing (separate from desk plans).
+ * Legacy desk plan query params still redirect to workspace billing when product is absent.
  */
 export default async function BillingDeepLinkPage({
   searchParams,
@@ -21,12 +25,23 @@ export default async function BillingDeepLinkPage({
   searchParams: Promise<{ plan?: string; product?: string }>;
 }) {
   const query = await searchParams;
-  const product = query.product?.trim() || CINEM_AI_ASSISTANT_PRODUCT;
+  const product = query.product?.trim() || "";
+  const assistantPlan = parseAssistantBillingPlanId(query.plan);
+  const isAssistant = isCinemAiAssistantProduct(product) || Boolean(assistantPlan);
+
+  if (isAssistant) {
+    const plan = assistantPlan || "monthly";
+    const selfPath = assistantBillingPath(plan);
+    const user = await getCurrentUser();
+    if (!user) {
+      redirect(authHrefWithNext("/login", selfPath));
+    }
+    redirect(selfPath);
+  }
+
   const checkoutPlan =
-    assistantCheckoutPlanFromQuery(query.plan, product) ||
-    assistantCheckoutPlanFromQuery("pro", CINEM_AI_ASSISTANT_PRODUCT) ||
-    "starter";
-  const selfPath = cinemAiAssistantBillingPath(query.plan?.trim() || "pro");
+    assistantCheckoutPlanFromQuery(query.plan, product) || "starter";
+  const selfPath = cinemAiAssistantUpgradeUrl(undefined, query.plan?.trim() || "pro");
 
   const user = await getCurrentUser();
   if (!user) {

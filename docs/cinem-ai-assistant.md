@@ -1,19 +1,22 @@
 # Cinem AI Assistant
 
-Windows-only native assistant for CINEM Pro. This is a **feature entitlement** on the existing desk plans — not a new Whop product.
+Windows-only native assistant for CINEM Pro. **Standalone billing** lives at [`/cinem-ai-assistant/billing`](/cinem-ai-assistant/billing) — separate from CINEM Pro desk plans (`/about#pricing`).
 
-**Same CINEM Pro account = same plan on desktop.** Sign into Desk or AI Assistant with the account that bought Pro / Pro Plus / Ultra on the website and that paid plan carries over — no second checkout and no false Free wall.
+**Same CINEM Pro account = same login on desktop.** Sign into Desk or AI Assistant with your website account. Desk plans may still include assistant usage; paid assistant subscriptions are tracked in `AssistantSubscription`.
 
-| Plan (customer name) | Internal id | Assistant |
+| Plan | Price (USD) | Notes |
 | --- | --- | --- |
-| Free | `demo` | 500 chat/voice turns per UTC month |
-| Pro ($20) | `starter` | Included (high monthly cap) |
-| Pro Plus ($79) | `pro` | Included |
-| Ultra ($200) | `ultra` | Included |
+| Free | $0 | 500 chat/voice turns per UTC month |
+| Monthly | $20/mo | All agents, voice, themes |
+| 3 months | $53.40 total | ~$17.80/mo, save 11% |
+| 6 months | $86.40 total | ~$14.40/mo, save 28% |
+| 1 year | $168 total | ~$14/mo, save 30% |
 
-Checkout reuses `WHOP_STARTER_PLAN_ID` / `WHOP_STARTER_PRODUCT_ID` for Pro, and the existing `WHOP_PRO_*` / `WHOP_ULTRA_*` ids for the other paid desks. **Do not create a Cinem AI Assistant SKU.**
+Whop env (optional — inline plans are created when ids are unset): `WHOP_ASSISTANT_PRODUCT_ID`, `WHOP_ASSISTANT_MONTHLY_PLAN_ID`, `WHOP_ASSISTANT_3MO_PLAN_ID`, `WHOP_ASSISTANT_6MO_PLAN_ID`, `WHOP_ASSISTANT_1YR_PLAN_ID`. Checkout: `POST /api/billing/assistant-checkout` with `{ "plan": "monthly" | "3mo" | "6mo" | "1yr" }`.
 
-Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/download`](/download). Upgrade deep link: [`/billing?plan=pro&product=cinem-ai-assistant`](/billing?plan=pro&product=cinem-ai-assistant).
+Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/download`](/download). Upgrade deep link: [`/billing?plan=monthly&product=cinem-ai-assistant`](/billing?plan=monthly&product=cinem-ai-assistant) → billing page.
+
+Admin HQ: [`/admin/assistant-queries`](/admin/assistant-queries) — approve/reject incoming registration requests (Supabase `registration_requests`, service role required).
 
 ## Unified Windows installer
 

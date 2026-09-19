@@ -11,61 +11,70 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useMarketingAuth } from "@/components/marketing/use-signed-in";
 import {
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
   cinemAiAssistantDownloadHref,
 } from "@/lib/cinem-ai-assistant";
 import {
-  GUEST_ASSISTANT_DOWNLOAD_PROMPT_DISMISS_KEY,
+  GUEST_ASSISTANT_DOWNLOAD_COMPLETE_KEY,
   shouldShowGuestAssistantDownloadPrompt,
 } from "@/lib/guest-assistant-download-prompt";
 
-function readDismissed(): boolean {
+function readDownloaded(): boolean {
   try {
-    return localStorage.getItem(GUEST_ASSISTANT_DOWNLOAD_PROMPT_DISMISS_KEY) === "1";
+    return localStorage.getItem(GUEST_ASSISTANT_DOWNLOAD_COMPLETE_KEY) === "1";
   } catch {
     return false;
   }
 }
 
-function persistDismissed() {
+function persistDownloaded() {
   try {
-    localStorage.setItem(GUEST_ASSISTANT_DOWNLOAD_PROMPT_DISMISS_KEY, "1");
+    localStorage.setItem(GUEST_ASSISTANT_DOWNLOAD_COMPLETE_KEY, "1");
   } catch {
     /* private mode */
   }
 }
 
 /**
- * Blocking first-visit modal on the guest chat landing (`/`).
- * Reuses the unified Windows installer CTA — same href as /download and desk build gate.
+ * Blocking modal on the guest chat landing (`/`).
+ * Re-shown on every tab refresh until the guest uses Download.
+ * Signed-in users are skipped; packaged Electron/Tauri shells are skipped.
  */
 export function CinemAiAssistantDownloadPrompt() {
+  const { signedIn } = useMarketingAuth();
+  const [authReady, setAuthReady] = useState(false);
   const [open, setOpen] = useState(false);
   const downloadHref = cinemAiAssistantDownloadHref();
 
   useEffect(() => {
+    setAuthReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
     const offer = shouldShowGuestAssistantDownloadPrompt({
-      dismissed: readDismissed(),
+      downloaded: readDownloaded(),
+      signedIn,
       userAgent: navigator.userAgent || "",
     });
     setOpen(offer);
-  }, []);
+  }, [authReady, signedIn]);
 
-  function dismiss() {
-    persistDismissed();
+  function onDownload() {
+    persistDownloaded();
     setOpen(false);
   }
 
-  function onOpenChange(next: boolean) {
-    if (!next) dismiss();
-    else setOpen(true);
+  function onNotNow() {
+    setOpen(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md gap-5 sm:max-w-md">
+    <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : undefined)}>
+      <DialogContent className="max-w-md gap-5 sm:max-w-md" showCloseButton={false}>
         <DialogHeader className="items-center text-center sm:text-center">
           <div className="mx-auto mb-1 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Sparkles className="size-6" aria-hidden />
@@ -89,14 +98,14 @@ export function CinemAiAssistantDownloadPrompt() {
                 download={CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={dismiss}
+                onClick={onDownload}
               />
             }
           >
             <Download className="size-4" />
             Download now
           </Button>
-          <Button type="button" variant="outline" size="lg" className="w-full" onClick={dismiss}>
+          <Button type="button" variant="outline" size="lg" className="w-full" onClick={onNotNow}>
             Not now
           </Button>
         </DialogFooter>

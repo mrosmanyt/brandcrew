@@ -57,7 +57,7 @@ export function FoundingSpotsBanner({
         ) : (
           <span>
             Founding spots are full. Cinem AI Assistant is included with Pro plans —{" "}
-            <Link href="/billing?product=cinem-ai-assistant" className="font-medium underline-offset-2 hover:underline">
+            <Link href="/cinem-ai-assistant/billing" className="font-medium underline-offset-2 hover:underline">
               upgrade
             </Link>
             .

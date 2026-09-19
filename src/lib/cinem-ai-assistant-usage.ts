@@ -39,6 +39,16 @@ export async function planForUser(userId: string, extra: WorkspacePlanRow[] = []
   );
 }
 
+async function activeAssistantSubscription(userId: string) {
+  const row = await prisma.assistantSubscription.findUnique({
+    where: { userId },
+    select: { status: true, currentPeriodEnd: true, plan: true },
+  });
+  if (!row || row.status !== "active") return null;
+  if (row.currentPeriodEnd && row.currentPeriodEnd.getTime() < Date.now()) return null;
+  return row;
+}
+
 async function referralBonusMonths(userId: string) {
   const row = await prisma.user.findUnique({
     where: { id: userId },
@@ -118,15 +128,17 @@ export async function getCinemAssistantUsage(
     select: { assistantFoundingMember: true, assistantRequiresPaid: true, referralBonusMonths: true },
   });
   const entitlement = await planForUser(caller.userId);
+  const subscription = await activeAssistantSubscription(caller.userId);
+  const included = entitlement.includedWithPlan || Boolean(subscription);
   return usageSnapshot({
     plan: caller.plan,
     used,
     period,
     upgradeUrl: cinemAiAssistantUpgradeUrl(originFromRequest(request)),
     workspaceId: caller.workspaceId,
-    includedWithPlan: entitlement.includedWithPlan,
+    includedWithPlan: included,
     foundingMember: entitlement.foundingMember,
-    gatePaidOnly: Boolean(userRow?.assistantRequiresPaid && !entitlement.includedWithPlan),
+    gatePaidOnly: Boolean(userRow?.assistantRequiresPaid && !included),
     referralBonusMonths: userRow?.referralBonusMonths ?? 0,
   });
 }
@@ -145,7 +157,9 @@ export async function incrementCinemAssistantUsage(
     select: { assistantFoundingMember: true, assistantRequiresPaid: true, referralBonusMonths: true },
   });
   const entitlement = await planForUser(caller.userId);
-  const gatePaidOnly = Boolean(userRow?.assistantRequiresPaid && !entitlement.includedWithPlan);
+  const subscription = await activeAssistantSubscription(caller.userId);
+  const included = entitlement.includedWithPlan || Boolean(subscription);
+  const gatePaidOnly = Boolean(userRow?.assistantRequiresPaid && !included);
   const referralBonus = userRow?.referralBonusMonths ?? 0;
   const effectiveLimit =
     gatePaidOnly && referralBonus <= 0
@@ -159,7 +173,7 @@ export async function incrementCinemAssistantUsage(
       period,
       upgradeUrl,
       workspaceId: caller.workspaceId,
-      includedWithPlan: entitlement.includedWithPlan,
+      includedWithPlan: included,
       foundingMember: entitlement.foundingMember,
       gatePaidOnly,
       referralBonusMonths: referralBonus,
@@ -190,7 +204,7 @@ export async function incrementCinemAssistantUsage(
     period,
     upgradeUrl,
     workspaceId: caller.workspaceId,
-    includedWithPlan: entitlement.includedWithPlan,
+    includedWithPlan: included,
     foundingMember: entitlement.foundingMember,
     gatePaidOnly,
     referralBonusMonths: referralBonus,

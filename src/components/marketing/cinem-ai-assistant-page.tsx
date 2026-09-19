@@ -8,7 +8,6 @@ import {
   cinemAiAssistantBillingPath,
   cinemAiAssistantDownloadHref,
 } from "@/lib/cinem-ai-assistant";
-import { PLANS } from "@/lib/constants";
 
 export function AssistantHeroCtas() {
   return (
@@ -31,9 +30,9 @@ export function AssistantHeroCtas() {
         variant="outline"
         className="h-11 px-5"
         nativeButton={false}
-        render={<Link href={cinemAiAssistantBillingPath("pro")} />}
+        render={<Link href={cinemAiAssistantBillingPath("monthly")} />}
       >
-        Upgrade to Pro
+        View pricing
       </Button>
     </div>
   );
@@ -101,57 +100,24 @@ export function AssistantProductFrames() {
   );
 }
 
-export function AssistantPricing() {
+export function AssistantPricingTeaser() {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
-        <p className="text-sm text-muted-foreground">Free</p>
-        <h2 className="font-heading mt-2 text-2xl tracking-tight">{PLANS.demo.name}</h2>
-        <p className="mt-3 text-4xl tracking-tight">
-          $0<span className="text-base text-muted-foreground">/mo</span>
-        </p>
-        <p className="mt-5 flex-1 text-sm leading-7 text-muted-foreground">
-          {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} chat/voice turns each month. When
-          that meter is empty, the Windows app shows Upgrade and opens this site’s existing
-          Pro checkout in the system browser.
-        </p>
-        <Button
-          size="lg"
-          variant="outline"
-          className="mt-6 h-11"
-          nativeButton={false}
-          render={<a href={cinemAiAssistantDownloadHref()} />}
-        >
-          Get the free Windows app
-        </Button>
-      </article>
-      <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
-        <p className="text-sm text-muted-foreground">Included with your CINEM Pro plan</p>
-        <h2 className="font-heading mt-2 text-2xl tracking-tight">{PLANS.starter.name}</h2>
-        <p className="mt-3 text-4xl tracking-tight">
-          ${PLANS.starter.price}
-          <span className="text-base text-muted-foreground">/mo</span>
-        </p>
-        <p className="mt-5 flex-1 text-sm leading-7 text-muted-foreground">
-          Pro, Pro Plus (${PLANS.pro.price}), and Ultra (${PLANS.ultra.price}) already include{" "}
-          {CINEM_AI_ASSISTANT_NAME}. Same Whop products as the desk — no separate purchase.
-        </p>
-        <Button
-          size="lg"
-          className="mkt-cta-pulse mt-6 h-11"
-          nativeButton={false}
-          render={<Link href={cinemAiAssistantBillingPath("pro")} />}
-        >
-          Upgrade to Pro
-        </Button>
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          Or pick{" "}
-          <Link href="/#pricing" className="underline underline-offset-4">
-            Pro Plus or Ultra
-          </Link>{" "}
-          on the existing pricing page.
-        </p>
-      </article>
+    <div className="rounded-xl border border-border bg-card p-8 text-center">
+      <p className="text-sm text-muted-foreground">Standalone billing</p>
+      <h2 className="font-heading mt-2 text-2xl tracking-tight">Every plan unlocks everything.</h2>
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground">
+        All fifteen agents, all themes, every feature. Plans start at $20/month — longer
+        commitments save up to 30%. Free tier includes {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()}{" "}
+        turns/month.
+      </p>
+      <Button
+        size="lg"
+        className="mkt-cta-pulse mt-6 h-11"
+        nativeButton={false}
+        render={<Link href={cinemAiAssistantBillingPath("monthly")} />}
+      >
+        See Cinem AI Assistant pricing
+      </Button>
     </div>
   );
 }

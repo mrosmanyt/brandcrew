@@ -5,6 +5,13 @@ import {
   whopPlanIdFor,
   whopProductIdFor,
 } from "@/lib/billing";
+import {
+  assistantBillingPlan,
+  whopAssistantPlanIdFor,
+  whopAssistantProductId,
+  type AssistantBillingPlanId,
+} from "@/lib/cinem-ai-assistant-billing";
+import { CINEM_AI_ASSISTANT_PRODUCT } from "@/lib/cinem-ai-assistant";
 import { COMPANY_NAME, PLANS, PRODUCT_NAME, type CheckoutPlanId } from "@/lib/constants";
 import { SUPPORT_KIND, whopSupportProductId } from "@/lib/support";
 
@@ -114,6 +121,54 @@ export async function createWhopCheckout(input: {
               renewal_price: PLANS[input.plan].price,
               initial_price: 0,
               title: `CINEM Pro ${PLANS[input.plan].name}`,
+              ...(productId ? { product_id: productId } : {}),
+            }),
+          }),
+        ),
+  );
+}
+
+export async function createWhopAssistantCheckout(input: {
+  userId: string;
+  email: string;
+  plan: AssistantBillingPlanId;
+  origin: string;
+}) {
+  const client = requireWhopClient();
+  const companyId = requireWhopCompanyId();
+  const product = assistantBillingPlan(input.plan);
+  const redirectUrl = `${input.origin}/cinem-ai-assistant/billing?plan=${input.plan}&status=success`;
+  const metadata = {
+    product: CINEM_AI_ASSISTANT_PRODUCT,
+    plan: input.plan,
+    userId: input.userId,
+    email: input.email,
+  };
+  const planId = whopAssistantPlanIdFor(input.plan);
+  const productId = whopAssistantProductId();
+
+  return purchaseUrlFromCheckout(() =>
+    planId
+      ? client.checkoutConfigurations.create(
+          withWhopCompany(companyId, {
+            plan_id: planId,
+            mode: "payment" as const,
+            metadata,
+            redirect_url: redirectUrl,
+          }),
+        )
+      : client.checkoutConfigurations.create(
+          withWhopCompany(companyId, {
+            mode: "payment" as const,
+            metadata,
+            redirect_url: redirectUrl,
+            plan: withWhopCompany(companyId, {
+              currency: "usd" as const,
+              plan_type: "renewal",
+              billing_period: product.billingPeriodDays,
+              renewal_price: product.priceTotal,
+              initial_price: 0,
+              title: `Cinem AI Assistant ${product.name}`,
               ...(productId ? { product_id: productId } : {}),
             }),
           }),
