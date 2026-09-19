@@ -53,6 +53,16 @@ export type CinemDesktopBridge = {
     setAutoUpdate: (enabled: boolean) => Promise<CinemUpdatePayload>;
     onStatus: (handler: (payload: CinemUpdatePayload) => void) => () => void;
   };
+  computerUse?: {
+    envEnabled: () => Promise<boolean>;
+    startSidecar: () => Promise<{ ok?: boolean; error?: string }>;
+    startSession: (payload: { task?: string; maxSteps?: number }) => Promise<{ ok?: boolean }>;
+    syncHud: (payload: Record<string, unknown>) => Promise<{ ok?: boolean }>;
+    terminate: () => Promise<{ ok?: boolean }>;
+    stopSession: () => Promise<{ ok?: boolean }>;
+    onMousePause: (handler: () => void) => () => void;
+    onTerminated: (handler: (payload: { reason?: string }) => void) => () => void;
+  };
 };
 
 export const ELECTRON_SHELL_PING = "CINEM Pro core online";

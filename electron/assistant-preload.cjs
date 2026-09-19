@@ -70,6 +70,38 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
       return ipcRenderer.invoke("cinem:wake-word:install-model", sourcePath);
     },
   },
+  computerUse: {
+    async envEnabled() {
+      return ipcRenderer.invoke("cinem:computer-use:env-enabled");
+    },
+    async startSidecar() {
+      return ipcRenderer.invoke("cinem:computer-use:start-sidecar");
+    },
+    async startSession(payload) {
+      return ipcRenderer.invoke("cinem:computer-use:start-session", payload || {});
+    },
+    async syncHud(payload) {
+      return ipcRenderer.invoke("cinem:computer-use:sync-hud", payload || {});
+    },
+    async terminate() {
+      return ipcRenderer.invoke("cinem:computer-use:terminate");
+    },
+    async stopSession() {
+      return ipcRenderer.invoke("cinem:computer-use:stop-session");
+    },
+    onMousePause(handler) {
+      if (typeof handler !== "function") return () => undefined;
+      const listen = () => handler();
+      ipcRenderer.on("cinem:computer-use:mouse-pause", listen);
+      return () => ipcRenderer.removeListener("cinem:computer-use:mouse-pause", listen);
+    },
+    onTerminated(handler) {
+      if (typeof handler !== "function") return () => undefined;
+      const listen = (_event, payload) => handler(payload || {});
+      ipcRenderer.on("cinem:computer-use:terminated", listen);
+      return () => ipcRenderer.removeListener("cinem:computer-use:terminated", listen);
+    },
+  },
   updates: {
     async getState() {
       return ipcRenderer.invoke("cinem:update:get");

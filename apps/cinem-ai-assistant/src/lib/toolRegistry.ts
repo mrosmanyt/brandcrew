@@ -95,6 +95,22 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     description: "Text-to-image via Cloudflare Workers AI or GeminiGen Nano Banana (server proxy).",
     requires: "CINEM_IMAGE_GEN_* or GEMINIGEN_API_KEY on server, or BYOK keys in Settings",
   },
+  {
+    id: "computer_use",
+    name: "Computer use (supervised)",
+    triggers: ["control my desktop", "computer use", "open explorer", "focus chrome"],
+    description:
+      "Supervised Windows desktop session with HUD, allowlisted apps, step log, and kill switch (Ctrl+Alt+Esc).",
+    requires: "Windows Electron + COMPUTER_USE_ENABLED=1",
+    limits: "Allowlist-first; PowerShell needs UI confirm; no distinct AI cursor on Windows",
+  },
+  {
+    id: "prompt_expansion",
+    name: "Creative prompt expansion",
+    triggers: ["expand prompt", "prompt for chatgpt", "enrich my ask"],
+    description: "Turns a short creative ask into a richer prompt before typing into ChatGPT.",
+    requires: "Gemini or Ollama or BYOK in Settings",
+  },
 ];
 
 /** Compact catalog for LLM routing prompts. */

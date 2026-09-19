@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CINEM Computer Use</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: rgba(8, 12, 20, 0.92);
+      color: #e8f4ff;
+      border: 1px solid rgba(0, 255, 200, 0.35);
+      border-radius: 10px;
+      padding: 10px 14px;
+      width: 320px;
+      -webkit-app-region: drag;
+      user-select: none;
+      backdrop-filter: blur(8px);
+    }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .status {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .status.working { color: #00ffc8; }
+    .status.paused { color: #ffb020; }
+    .status.idle { color: #7a9bb8; }
+    .status.terminated { color: #ff4466; }
+    .ai-badge {
+      font-size: 9px;
+      background: rgba(0, 255, 200, 0.15);
+      border: 1px solid rgba(0, 255, 200, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #00ffc8;
+    }
+    .action {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #b8d4e8;
+      min-height: 2.6em;
+    }
+    .steps { margin-top: 4px; font-size: 10px; color: #6a8aa8; letter-spacing: 0.08em; }
+    .hints {
+      margin-top: 8px;
+      font-size: 9px;
+      color: #5a7a98;
+      line-height: 1.4;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 6px;
+    }
+    kbd {
+      background: rgba(255,255,255,0.08);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <span id="status" class="status idle">Idle</span>
+    <span class="ai-badge">AI DRIVING</span>
+  </div>
+  <div id="action" class="action">Waiting for task…</div>
+  <div id="steps" class="steps">Step 0 of 50</div>
+  <div class="hints">
+    <kbd>Ctrl+Alt+Esc</kbd> terminate · Move mouse to pause · Red TERMINATE in Assistant
+  </div>
+  <script>
+    const { ipcRenderer } = require("electron");
+    const statusEl = document.getElementById("status");
+    const actionEl = document.getElementById("action");
+    const stepsEl = document.getElementById("steps");
+    ipcRenderer.on("cinem:computer-use:hud", (_e, payload) => {
+      const s = payload || {};
+      const st = s.status || "idle";
+      statusEl.textContent = st.charAt(0).toUpperCase() + st.slice(1);
+      statusEl.className = "status " + st;
+      actionEl.textContent = s.currentAction || s.task || "—";
+      stepsEl.textContent = "Step " + (s.step || 0) + " of " + (s.maxSteps || 50);
+    });
+  </script>
+</body>
+</html>
