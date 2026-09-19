@@ -4,10 +4,12 @@ import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { SiteFooter } from "@/components/marketing/home-sections";
 import {
+  AssistantDesktopControlSection,
   AssistantFeatureGrid,
   AssistantHeroCtas,
   AssistantPricingTeaser,
   AssistantProductFrames,
+  AssistantSafetySection,
 } from "@/components/marketing/cinem-ai-assistant-page";
 import {
   CINEM_AI_ASSISTANT_FREE_TURNS,
@@ -22,7 +24,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: `${CINEM_AI_ASSISTANT_NAME} for Windows`,
   description:
-    "Windows-only desktop assistant included with your CINEM Pro plan. Voice, agents, and vision — Free starts with 500 turns a month.",
+    "Windows desktop assistant with voice, agents, vision, and supervised computer-use. Hey Cinem wake word, floating HUD, kill switch, prompt expansion, and Memory · Skills · Voices · Settings hub. Free starts with 500 turns/month.",
 };
 
 export default function CinemAiAssistantPage() {
@@ -37,13 +39,14 @@ export default function CinemAiAssistantPage() {
           <h1 className="mkt-hero-title font-heading mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
             Your Windows AI assistant.
             <br />
-            Included with the desk.
+            Voice, vision, and supervised desktop control.
           </h1>
-          <p className="mkt-hero-lead mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
-            Voice, agents, and vision on Windows — same CINEM Pro account as the website.
+          <p className="mkt-hero-lead mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+            Talk with “Hey Cinem”, hand off to a computer-use agent, expand short creative asks,
+            and tune Memory · Skills · Voices · Settings — same CINEM Pro account as the website.
             Full native features are Windows only. Free includes{" "}
-            {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} turns/month — paid plans are billed
-            separately from CINEM Pro desk plans.
+            {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} turns/month — paid assistant plans
+            are billed separately from CINEM Pro desk plans.
           </p>
           <div className="mkt-hero-cta mt-10">
             <AssistantHeroCtas />
@@ -69,9 +72,9 @@ export default function CinemAiAssistantPage() {
               What it looks like
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-              The Windows app talks to app.cinem.tech with the same auth bridge as desktop
-              cloud shell. When Free turns run out, Upgrade opens your logged-in billing
-              page in the system browser.
+              Voice wake, floating HUD during desktop control, agent handoffs, prompt expansion,
+              and the settings hub — all in the unified Windows installer. When Free turns run
+              out, Upgrade opens your logged-in billing page in the system browser.
             </p>
             <div className="mt-10">
               <AssistantProductFrames />
@@ -79,14 +82,51 @@ export default function CinemAiAssistantPage() {
           </div>
         </section>
 
-        <section className="scroll-mt-20 border-t border-border">
+        <section id="features" className="scroll-mt-20 border-t border-border">
           <div className="mx-auto w-full max-w-5xl px-6 py-20 md:py-24">
             <p className="text-sm text-muted-foreground">Features</p>
             <h2 className="font-heading mt-3 text-3xl tracking-tight md:text-4xl">
-              Built for the desk, not a second product
+              Everything in one Windows assistant
             </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              Supervised MVP badges mark computer-use capabilities that roll out behind{" "}
+              <code className="font-mono text-xs">COMPUTER_USE_ENABLED</code>. Roadmap items are
+              labeled honestly — we do not claim unshipped pipelines as live.
+            </p>
             <div className="mt-10">
               <AssistantFeatureGrid />
+            </div>
+          </div>
+        </section>
+
+        <section id="desktop-control" className="scroll-mt-20 border-t border-border">
+          <div className="mx-auto w-full max-w-5xl px-6 py-20 md:py-24">
+            <p className="text-sm text-muted-foreground">Desktop control</p>
+            <h2 className="font-heading mt-3 text-3xl tracking-tight md:text-4xl">
+              Supervised computer-use on Windows
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              The assistant can focus allowlisted apps and log every step — with explicit user
+              confirmation before PowerShell. This is an MVP, not unrestricted desktop takeover.
+            </p>
+            <div className="mt-10">
+              <AssistantDesktopControlSection />
+            </div>
+          </div>
+        </section>
+
+        <section id="safety" className="scroll-mt-20 border-t border-border">
+          <div className="mx-auto w-full max-w-5xl px-6 py-20 md:py-24">
+            <p className="text-sm text-muted-foreground">Safety</p>
+            <h2 className="font-heading mt-3 text-3xl tracking-tight md:text-4xl">
+              HUD, kill switch, and pause
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              You always see when automation is running, how far it has gotten, and how to stop or
+              pause it instantly.
+            </p>
+            <div className="mt-10">
+              <AssistantSafetySection />
             </div>
           </div>
         </section>
@@ -98,8 +138,12 @@ export default function CinemAiAssistantPage() {
               Plans for {CINEM_AI_ASSISTANT_NAME}
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-              Assistant billing is separate from CINEM Pro desk plans. Founding members may
-              still qualify for free access — see the full pricing page for current spots.
+              Assistant billing is separate from CINEM Pro desk plans. Every paid tier unlocks the
+              full feature set — founding members may still qualify for free access. See{" "}
+              <Link href="/cinem-ai-assistant/billing" className="underline underline-offset-4">
+                standalone pricing
+              </Link>{" "}
+              for monthly, 3‑month, 6‑month, and annual options.
             </p>
             <div className="mt-10">
               <AssistantPricingTeaser />

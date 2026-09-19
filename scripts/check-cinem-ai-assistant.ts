@@ -128,11 +128,28 @@ assert.equal(assistantUsageHttpStatus(paidAtCap), 200);
 assert.equal(shouldPromptAssistantUpgrade(paidAtCap), false);
 assert.equal(assistantUsageHttpStatus(snap), 402);
 assert.equal(shouldPromptAssistantUpgrade(snap), true);
-assert.ok(CINEM_AI_ASSISTANT_FEATURES.length >= 6);
+assert.ok(CINEM_AI_ASSISTANT_FEATURES.length >= 10);
+const featureIds = CINEM_AI_ASSISTANT_FEATURES.map((f) => f.id);
+for (const id of [
+  "computer-use",
+  "hud",
+  "safety",
+  "voice",
+  "prompt-expansion",
+  "hub",
+  "agents",
+  "workflows",
+]) {
+  assert.ok(featureIds.includes(id), `missing feature id: ${id}`);
+}
 console.log("ok: usage snapshot + feature list");
 
 const page = readFileSync("src/app/cinem-ai-assistant/page.tsx", "utf8");
 assert.match(page, /Plans for|standalone|billing/i);
+assert.match(page, /desktop-control|Desktop control/i);
+assert.match(page, /kill switch|Safety/i);
+assert.match(page, /Hey Cinem|wake word/i);
+assert.match(page, /COMPUTER_USE_ENABLED/);
 assert.doesNotMatch(page, /mickey|cinempro\.site|OpenAI|Claude|Gemini|Google/i);
 const download = readFileSync("src/app/download/page.tsx", "utf8");
 assert.match(download, /CINEM-Pro-Setup\.exe|CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME|WIN_SETUP_FILENAME/);

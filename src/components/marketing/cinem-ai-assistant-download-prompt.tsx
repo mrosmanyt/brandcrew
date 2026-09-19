@@ -83,8 +83,8 @@ export function CinemAiAssistantDownloadPrompt() {
             {CINEM_AI_ASSISTANT_NAME}
           </DialogTitle>
           <DialogDescription className="text-center text-[15px] leading-relaxed">
-            Your personal AI assistant on Windows — voice, vision, and agents with the same CINEM
-            Pro account. Included in the desktop installer.
+            Your personal AI assistant on Windows — voice, vision, agents, and supervised desktop
+            control with the same CINEM Pro account. Included in the desktop installer.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
