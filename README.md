@@ -353,6 +353,7 @@ See [`.env.example`](./.env.example). Summary:
 | `WHOP_COMPANY_ID` | no | Business id (`biz_…`). Required for live `checkoutConfigurations.create` (`company_id` / `plan.company_id`). Alias: `WHOP_ACCOUNT_ID`. |
 | `WHOP_WEBHOOK_SECRET` | no | Signing secret (`ws_…`) for `POST /api/webhooks/whop`. |
 | `WHOP_STARTER_PLAN_ID` / `WHOP_PRO_PLAN_ID` / `WHOP_ULTRA_PLAN_ID` | no | Existing Whop plan ids. If unset, checkout creates a $20 / $79 / $200 monthly renewal. |
+| `WHOP_ASSISTANT_PRODUCT_ID` / `WHOP_ASSISTANT_MONTHLY_PLAN_ID` / `WHOP_ASSISTANT_3MO_PLAN_ID` / `WHOP_ASSISTANT_6MO_PLAN_ID` / `WHOP_ASSISTANT_1YR_PLAN_ID` | no | Cinem AI Assistant standalone billing (`/cinem-ai-assistant/billing`). Required for live checkout — see `docs/cinem-ai-assistant.md`. |
 | `WHOP_SUPPORT_PRODUCT_ID` / `WHOP_SUPPORT_PLAN_ID` | no | Support (tips) product/plan. Checkout always sends a one-time `initial_price` of $1–$99,999. See `docs/whop-support.md`. |
 | `WHOP_SANDBOX` | no | `true` sends API calls to `sandbox-api.whop.com`. |
 | `STRIPE_SECRET_KEY` | no | Stripe Checkout fallback when Whop is not configured (and optional Stripe plugin env). |

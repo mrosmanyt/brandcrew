@@ -2,12 +2,17 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import {
   assistantBillingPath,
-  assistantBillingPlan,
+  assistantCheckoutMisconfiguredMessage,
   assistantSubscriptionPeriodEnd,
   parseAssistantBillingPlanId,
   type AssistantBillingPlanId,
 } from "@/lib/cinem-ai-assistant-billing";
-import { billingIsMock, billingProvider, originFromRequest } from "@/lib/billing";
+import {
+  billingIsMock,
+  billingProvider,
+  originFromRequest,
+  whopIsConfigured,
+} from "@/lib/billing";
 import { CINEM_AI_ASSISTANT_PRODUCT } from "@/lib/cinem-ai-assistant";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
@@ -45,12 +50,18 @@ export async function POST(request: Request) {
       return jsonError(new Error("Choose a valid assistant plan."));
     }
 
-    const product = assistantBillingPlan(plan);
     const provider = billingProvider();
     const origin = originFromRequest(request);
     const successPath = `${assistantBillingPath(plan)}&status=success`;
 
     if (billingIsMock()) {
+      if (process.env.BILLING_MOCK !== "true") {
+        return jsonError(
+          new Error(
+            "Live assistant billing is not configured. Set WHOP_API_KEY, WHOP_COMPANY_ID, WHOP_ASSISTANT_PRODUCT_ID, and WHOP_ASSISTANT_* plan IDs in Vercel, or set BILLING_MOCK=true for local demo.",
+          ),
+        );
+      }
       await applyMockAssistantSubscription(user.id, plan);
       return jsonOk({
         mock: true,
@@ -61,21 +72,26 @@ export async function POST(request: Request) {
       });
     }
 
-    if (provider === "whop") {
-      const checkout = await createWhopAssistantCheckout({
-        userId: user.id,
-        email: user.email,
-        plan,
-        origin,
-      });
-      return jsonOk({ url: checkout.url, mock: false, provider: "whop", plan });
+    if (provider !== "whop" || !whopIsConfigured()) {
+      return jsonError(
+        new Error(
+          "Live assistant billing uses Whop. Set WHOP_API_KEY and WHOP_COMPANY_ID, or BILLING_MOCK=true for local demo.",
+        ),
+      );
     }
 
-    return jsonError(
-      new Error(
-        "Live assistant billing needs WHOP_API_KEY and WHOP_ASSISTANT_* plan IDs, or BILLING_MOCK=true.",
-      ),
-    );
+    const misconfigured = assistantCheckoutMisconfiguredMessage(plan);
+    if (misconfigured) {
+      return jsonError(new Error(misconfigured));
+    }
+
+    const checkout = await createWhopAssistantCheckout({
+      userId: user.id,
+      email: user.email,
+      plan,
+      origin,
+    });
+    return jsonOk({ url: checkout.url, mock: false, provider: "whop", plan });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return jsonError(new Error("Choose monthly, 3 months, 6 months, or 1 year."));

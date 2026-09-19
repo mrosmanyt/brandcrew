@@ -40,8 +40,10 @@ function PlanCard({ planId }: { planId: AssistantBillingPlanId }) {
         return;
       }
       if (data.mock) {
-        window.location.href = `${assistantBillingPath(planId)}&status=success`;
+        window.location.href = data.redirect || `${assistantBillingPath(planId)}&status=success`;
+        return;
       }
+      throw new Error("Checkout did not return a Whop payment URL.");
     } catch (e) {
       alert(e instanceof Error ? e.message : "Checkout failed.");
     } finally {

@@ -19,14 +19,24 @@ import {
 } from "../src/lib/whop";
 import {
   extractWhopResource,
+  isAssistantProductCheckout,
   isMembershipDeactivatedEvent,
   isPaidUnlockEvent,
   isSupportCheckout,
   normalizeWhopEventType,
   parseWhopEnvelope,
+  resolveAssistantPlanFromWhop,
   resolvePaidPlanFromWhop,
   shouldDowngradeToDemo,
 } from "../src/lib/billing-events";
+import {
+  assistantCheckoutMisconfiguredMessage,
+  missingWhopAssistantEnvForPlan,
+  whopAssistantLiveBillingReady,
+  whopAssistantPlanIdFor,
+  WHOP_ASSISTANT_PLAN_ENV,
+  WHOP_ASSISTANT_PRODUCT_ENV,
+} from "../src/lib/cinem-ai-assistant-billing";
 import {
   assistantCheckoutPlanFromQuery,
   cinemAiAssistantBillingPath,
@@ -66,6 +76,11 @@ const KEYS = [
   "WHOP_PRO_PLAN_ID",
   "WHOP_ULTRA_PLAN_ID",
   "WHOP_GROWTH_PLAN_ID",
+  "WHOP_ASSISTANT_PRODUCT_ID",
+  "WHOP_ASSISTANT_MONTHLY_PLAN_ID",
+  "WHOP_ASSISTANT_3MO_PLAN_ID",
+  "WHOP_ASSISTANT_6MO_PLAN_ID",
+  "WHOP_ASSISTANT_1YR_PLAN_ID",
 ] as const;
 
 const saved = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
@@ -136,6 +151,42 @@ assert.equal(whopCompanyId(), "biz_VrtL8S4duREQg4");
 assert.equal(whopAccountId(), "biz_VrtL8S4duREQg4");
 console.log("ok: live Whop checkout requires company id (WHOP_ACCOUNT_ID alias)");
 
+resetEnv();
+assert.deepEqual(missingWhopAssistantEnvForPlan("monthly"), [
+  WHOP_ASSISTANT_PRODUCT_ENV,
+  WHOP_ASSISTANT_PLAN_ENV.monthly,
+]);
+assert.equal(whopAssistantLiveBillingReady("monthly"), false);
+process.env.WHOP_ASSISTANT_PRODUCT_ID = "prod_assistant";
+process.env.WHOP_ASSISTANT_MONTHLY_PLAN_ID = "plan_monthly";
+assert.equal(whopAssistantLiveBillingReady("monthly"), true);
+assert.equal(whopAssistantPlanIdFor("monthly"), "plan_monthly");
+assert.match(
+  assistantCheckoutMisconfiguredMessage("3mo"),
+  /WHOP_ASSISTANT_3MO_PLAN_ID/,
+);
+console.log("ok: assistant checkout requires Whop product + plan ids");
+
+assert.equal(
+  isAssistantProductCheckout({ product: CINEM_AI_ASSISTANT_PRODUCT, plan: "monthly" }),
+  true,
+);
+assert.equal(isAssistantProductCheckout({ plan: "pro" }), false);
+assert.equal(
+  resolveAssistantPlanFromWhop({
+    metadata: { product: CINEM_AI_ASSISTANT_PRODUCT, plan: "6mo" },
+    planId: "plan_other",
+  }),
+  "6mo",
+);
+process.env.WHOP_ASSISTANT_6MO_PLAN_ID = "plan_6mo";
+assert.equal(
+  resolveAssistantPlanFromWhop({ metadata: { product: CINEM_AI_ASSISTANT_PRODUCT }, planId: "plan_6mo" }),
+  "6mo",
+);
+console.log("ok: assistant webhook metadata resolves plan");
+resetEnv();
+
 assert.equal(billingCheckoutLabel("Pro", "mock"), "Apply Pro (mock)");
 assert.equal(billingCheckoutLabel("Pro Plus", "whop"), "Checkout Pro Plus with Whop");
 assert.equal(billingCheckoutLabel("Ultra", "stripe"), "Checkout Ultra");
@@ -164,17 +215,17 @@ assert.equal(checkoutPlanFromNextPath("/desk?checkout=ultra"), "ultra");
 assert.equal(checkoutPlanFromNextPath("https://evil.example/?checkout=pro"), null);
 assert.equal(authHrefWithNext("/login", "/desk?checkout=pro"), "/login?next=%2Fdesk%3Fcheckout%3Dpro");
 assert.equal(assistantCheckoutPlanFromQuery("pro", CINEM_AI_ASSISTANT_PRODUCT), "starter");
-assert.equal(cinemAiAssistantBillingPath("pro"), "/billing?plan=pro&product=cinem-ai-assistant");
+assert.equal(cinemAiAssistantBillingPath("pro"), "/cinem-ai-assistant/billing?plan=monthly");
 assert.equal(
   cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
-  "https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant",
+  "https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant",
 );
 assert.equal(
   checkoutPlanFromNextPath("/billing?plan=pro&product=cinem-ai-assistant"),
   "starter",
 );
 console.log("ok: marketing Get {plan} hrefs go through signup next then desk billing");
-console.log("ok: Cinem AI Assistant upgrade uses existing Pro ($20) checkout path");
+console.log("ok: Cinem AI Assistant upgrade uses standalone assistant billing path");
 
 assert.equal(normalizeWhopEventType("payment_succeeded"), "payment.succeeded");
 assert.equal(isPaidUnlockEvent("payment.succeeded"), true);
@@ -337,6 +388,14 @@ assert.match(readFileSync(".env.example", "utf8"), /WHOP_API_KEY=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_WEBHOOK_SECRET=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PRODUCT_ID=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PLAN_ID=/);
+assert.match(readFileSync(".env.example", "utf8"), /WHOP_ASSISTANT_1YR_PLAN_ID=/);
+const assistantCheckout = readFileSync("src/server/api/billing/assistant-checkout.ts", "utf8");
+assert.match(assistantCheckout, /assistantCheckoutMisconfiguredMessage/);
+assert.match(assistantCheckout, /BILLING_MOCK !== "true"/);
+assert.match(readFileSync("src/lib/whop.ts", "utf8"), /plan_id: planId/);
+assert.doesNotMatch(readFileSync("src/lib/whop.ts", "utf8"), /Cinem AI Assistant \$\{product\.name\}/);
+assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /isAssistantProductCheckout/);
+assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyAssistantSubscription/);
 assert.match(router, /api", "billing", "support/);
 const whopSrc = readFileSync("src/lib/whop.ts", "utf8");
 assert.match(whopSrc, /createWhopSupportCheckout/);
