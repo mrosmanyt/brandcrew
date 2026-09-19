@@ -108,6 +108,15 @@ export function formatAssistantPrice(amount: number) {
   return amount % 1 === 0 ? `$${amount.toFixed(0)}` : `$${amount.toFixed(2)}`;
 }
 
+export const WHOP_ASSISTANT_PRODUCT_ENV = "WHOP_ASSISTANT_PRODUCT_ID";
+
+export const WHOP_ASSISTANT_PLAN_ENV: Record<AssistantBillingPlanId, string> = {
+  monthly: "WHOP_ASSISTANT_MONTHLY_PLAN_ID",
+  "3mo": "WHOP_ASSISTANT_3MO_PLAN_ID",
+  "6mo": "WHOP_ASSISTANT_6MO_PLAN_ID",
+  "1yr": "WHOP_ASSISTANT_1YR_PLAN_ID",
+};
+
 export function whopAssistantPlanIdFor(plan: AssistantBillingPlanId) {
   const envMap: Record<AssistantBillingPlanId, string | undefined> = {
     monthly: process.env.WHOP_ASSISTANT_MONTHLY_PLAN_ID,
@@ -120,6 +129,24 @@ export function whopAssistantPlanIdFor(plan: AssistantBillingPlanId) {
 
 export function whopAssistantProductId() {
   return process.env.WHOP_ASSISTANT_PRODUCT_ID?.trim() || "";
+}
+
+/** Env vars missing for live Whop assistant checkout on the chosen plan. */
+export function missingWhopAssistantEnvForPlan(plan: AssistantBillingPlanId) {
+  const missing: string[] = [];
+  if (!whopAssistantProductId()) missing.push(WHOP_ASSISTANT_PRODUCT_ENV);
+  if (!whopAssistantPlanIdFor(plan)) missing.push(WHOP_ASSISTANT_PLAN_ENV[plan]);
+  return missing;
+}
+
+export function whopAssistantLiveBillingReady(plan: AssistantBillingPlanId) {
+  return missingWhopAssistantEnvForPlan(plan).length === 0;
+}
+
+export function assistantCheckoutMisconfiguredMessage(plan: AssistantBillingPlanId) {
+  const missing = missingWhopAssistantEnvForPlan(plan);
+  if (!missing.length) return "";
+  return `Live assistant billing needs ${missing.join(", ")} in Vercel (Whop product + plan ids). Set BILLING_MOCK=true for local demo without payment.`;
 }
 
 export function resolveAssistantBillingPlanFromWhopPlanId(

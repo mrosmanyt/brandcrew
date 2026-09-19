@@ -12,7 +12,19 @@ Windows-only native assistant for CINEM Pro. **Standalone billing** lives at [`/
 | 6 months | $86.40 total | ~$14.40/mo, save 28% |
 | 1 year | $168 total | ~$14/mo, save 30% |
 
-Whop env (optional — inline plans are created when ids are unset): `WHOP_ASSISTANT_PRODUCT_ID`, `WHOP_ASSISTANT_MONTHLY_PLAN_ID`, `WHOP_ASSISTANT_3MO_PLAN_ID`, `WHOP_ASSISTANT_6MO_PLAN_ID`, `WHOP_ASSISTANT_1YR_PLAN_ID`. Checkout: `POST /api/billing/assistant-checkout` with `{ "plan": "monthly" | "3mo" | "6mo" | "1yr" }`.
+Whop env for live checkout at [`/cinem-ai-assistant/billing`](/cinem-ai-assistant/billing) (reuse desk keys `WHOP_API_KEY`, `WHOP_COMPANY_ID`, `WHOP_WEBHOOK_SECRET`):
+
+| Variable | Example prices | Purpose |
+| --- | --- | --- |
+| `WHOP_ASSISTANT_PRODUCT_ID` | — | Whop product (`prod_…`) for Cinem AI Assistant |
+| `WHOP_ASSISTANT_MONTHLY_PLAN_ID` | $20/mo | Monthly renewal plan (`plan_…`) |
+| `WHOP_ASSISTANT_3MO_PLAN_ID` | $53.40 / 90 days | 3-month renewal |
+| `WHOP_ASSISTANT_6MO_PLAN_ID` | $86.40 / 180 days | 6-month renewal |
+| `WHOP_ASSISTANT_1YR_PLAN_ID` | $168 / 365 days | 1-year renewal |
+
+Checkout: `POST /api/billing/assistant-checkout` with `{ "plan": "monthly" | "3mo" | "6mo" | "1yr" }` → Whop `purchase_url`. Without these ids (and without `BILLING_MOCK=true`) the API returns a clear configuration error — it does not silently grant access.
+
+Webhook: register the same `POST /api/webhooks/whop` endpoint for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Checkout metadata includes `product: "cinem-ai-assistant"`, `plan`, and `userId`; fulfillment upserts `AssistantSubscription`.
 
 Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/download`](/download). Upgrade deep link: [`/billing?plan=monthly&product=cinem-ai-assistant`](/billing?plan=monthly&product=cinem-ai-assistant) → billing page.
 

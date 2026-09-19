@@ -6,9 +6,8 @@ import {
   whopProductIdFor,
 } from "@/lib/billing";
 import {
-  assistantBillingPlan,
+  assistantCheckoutMisconfiguredMessage,
   whopAssistantPlanIdFor,
-  whopAssistantProductId,
   type AssistantBillingPlanId,
 } from "@/lib/cinem-ai-assistant-billing";
 import { CINEM_AI_ASSISTANT_PRODUCT } from "@/lib/cinem-ai-assistant";
@@ -136,7 +135,6 @@ export async function createWhopAssistantCheckout(input: {
 }) {
   const client = requireWhopClient();
   const companyId = requireWhopCompanyId();
-  const product = assistantBillingPlan(input.plan);
   const redirectUrl = `${input.origin}/cinem-ai-assistant/billing?plan=${input.plan}&status=success`;
   const metadata = {
     product: CINEM_AI_ASSISTANT_PRODUCT,
@@ -145,34 +143,20 @@ export async function createWhopAssistantCheckout(input: {
     email: input.email,
   };
   const planId = whopAssistantPlanIdFor(input.plan);
-  const productId = whopAssistantProductId();
+  if (!planId) {
+    const message = assistantCheckoutMisconfiguredMessage(input.plan);
+    throw new ClientError(message || "Whop assistant plan id is not configured.", 400);
+  }
 
   return purchaseUrlFromCheckout(() =>
-    planId
-      ? client.checkoutConfigurations.create(
-          withWhopCompany(companyId, {
-            plan_id: planId,
-            mode: "payment" as const,
-            metadata,
-            redirect_url: redirectUrl,
-          }),
-        )
-      : client.checkoutConfigurations.create(
-          withWhopCompany(companyId, {
-            mode: "payment" as const,
-            metadata,
-            redirect_url: redirectUrl,
-            plan: withWhopCompany(companyId, {
-              currency: "usd" as const,
-              plan_type: "renewal",
-              billing_period: product.billingPeriodDays,
-              renewal_price: product.priceTotal,
-              initial_price: 0,
-              title: `Cinem AI Assistant ${product.name}`,
-              ...(productId ? { product_id: productId } : {}),
-            }),
-          }),
-        ),
+    client.checkoutConfigurations.create(
+      withWhopCompany(companyId, {
+        plan_id: planId,
+        mode: "payment" as const,
+        metadata,
+        redirect_url: redirectUrl,
+      }),
+    ),
   );
 }
 
