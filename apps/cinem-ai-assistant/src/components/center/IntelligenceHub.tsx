@@ -3,8 +3,12 @@ import * as THREE from "three";
 import GlassPanel from "@/components/GlassPanel";
 import ConnectedNodes from "@/components/center/ConnectedNodes";
 import { useAppStore } from "@/store/useAppStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { voice } from "@/lib/voice";
 import { glowRGB, iceHex, neonHex, THEME_EVENT } from "@/lib/themes";
+import { resolveOrbState } from "@/lib/iris/orb-state";
+import { isIrisPackEnabled } from "@/lib/iris/feature";
+import SystemMetersStrip from "@/components/iris/SystemMetersStrip";
 
 /** Builds a soft radial-gradient sprite texture for the orb glow
  *  (resolved from the LIVE theme — rebuilt on every theme switch). */
@@ -28,6 +32,8 @@ function makeGlowTexture(): THREE.Texture {
 /** Center — "Visual Intelligence Hub": glowing Three.js neural orb. */
 export default function IntelligenceHub() {
   const mountRef = useRef<HTMLDivElement>(null);
+  const irisDev = useSettingsStore((s) => s.irisPackDevEnabled);
+  const irisOn = isIrisPackEnabled({ devEnabled: irisDev });
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -128,10 +134,12 @@ export default function IntelligenceHub() {
          idle      → slow teal breathing
          listening → quicker breathing that swells with mic level
          thinking  → tight, fast amber pulse (any pending thought block)
-         speaking  → audio-reactive bloom driven by TTS amplitude      */
+         speaking  → audio-reactive bloom driven by TTS amplitude
+         error     → red pulse (voice / tool failure)                  */
     const BASE = new THREE.Color(neonHex()); // theme accent (live)
     const AMBER = new THREE.Color(0xffc14d);
     const LISTEN = new THREE.Color(0x6df2b8);
+    const ERROR = new THREE.Color(0xff4d6d);
     const cur = BASE.clone();
     const shellMat = shell.material as THREE.PointsMaterial;
     const netMat = network.material as THREE.LineBasicMaterial;
@@ -155,31 +163,47 @@ export default function IntelligenceHub() {
     const animate = () => {
       const t = clock.getElapsedTime();
 
-      const { voiceStatus, messages } = useAppStore.getState();
+      const { voiceStatus, messages, orbError } = useAppStore.getState();
       const thinking = messages.some((m) => m.pending);
+      const orbState = resolveOrbState({ voiceStatus, thinking, error: orbError });
       const level = voice.getLevel(); // 0..1 — real mic / TTS amplitude
       smoothed += (level - smoothed) * 0.25;
 
       // mood → target color, pulse speed + amplitude, spin speed
       const target =
-        thinking ? AMBER : voiceStatus === "listening" ? LISTEN : BASE;
-      const speed = thinking ? 5.2 : voiceStatus === "speaking" ? 3 : 1.6;
+        orbState === "error"
+          ? ERROR
+          : orbState === "thinking"
+            ? AMBER
+            : orbState === "listening"
+              ? LISTEN
+              : BASE;
+      const speed =
+        orbState === "error"
+          ? 6.5
+          : orbState === "thinking"
+            ? 5.2
+            : orbState === "speaking"
+              ? 3
+              : 1.6;
       const amp =
-        voiceStatus === "speaking"
-          ? 0.1 + smoothed * 0.9
-          : voiceStatus === "listening"
-            ? 0.08 + smoothed * 0.5
-            : thinking
-              ? 0.12
-              : 0.07;
-      const spin = thinking ? 0.4 : 0.12;
+        orbState === "error"
+          ? 0.18
+          : orbState === "speaking"
+            ? 0.1 + smoothed * 0.9
+            : orbState === "listening"
+              ? 0.08 + smoothed * 0.5
+              : orbState === "thinking"
+                ? 0.12
+                : 0.07;
+      const spin = orbState === "thinking" || orbState === "error" ? 0.4 : 0.12;
 
       cur.lerp(target, 0.06);
       shellMat.color.copy(cur);
       netMat.color.copy(cur);
       ringMat.color.copy(cur);
 
-      shell.rotation.y = t * spin + (thinking ? Math.sin(t * 2) * 0.05 : 0);
+      shell.rotation.y = t * spin + (orbState === "thinking" ? Math.sin(t * 2) * 0.05 : 0);
       shell.rotation.x = Math.sin(t * 0.2) * 0.15;
       network.rotation.y = -t * spin * 0.7;
       ring.rotation.y = t * 0.25;
@@ -248,13 +272,13 @@ export default function IntelligenceHub() {
   }, []);
 
   return (
-    <GlassPanel className="flex-1" bodyClassName="relative overflow-hidden p-0">
+    <GlassPanel className="flex-1 iris-command-center" bodyClassName="relative overflow-hidden p-0">
       {/* Floating titles */}
       <h2 className="pointer-events-none absolute left-4 top-3 z-20 panel-title">
         Connected
       </h2>
-      <h2 className="pointer-events-none absolute left-1/2 top-1/4 z-20 -translate-x-1/2 font-display text-sm font-bold tracking-[0.3em] text-ice/90">
-        VISUAL&nbsp;INTELLIGENCE&nbsp;HUB
+      <h2 className="pointer-events-none absolute left-1/2 top-1/4 z-20 -translate-x-1/2 font-display text-sm font-bold tracking-[0.3em] text-ice/90 drop-shadow-[0_0_12px_rgba(var(--glow),0.35)]">
+        {irisOn ? "IRIS · COMMAND CENTER" : "VISUAL INTELLIGENCE HUB"}
       </h2>
 
       {/* Three.js mount */}
@@ -263,12 +287,15 @@ export default function IntelligenceHub() {
       {/* Connected nodes + animated neural wires into the orb */}
       <ConnectedNodes />
 
-      {/* Bottom telemetry strip */}
-      <div className="pointer-events-none absolute inset-x-6 bottom-3 z-10 flex justify-between font-display text-[0.6rem] tracking-[0.25em] text-neon-dim">
-        <span>CORE&nbsp;SYNC&nbsp;:&nbsp;98.4%</span>
-        <span>LATENCY&nbsp;:&nbsp;12MS</span>
-        <span>MODE&nbsp;:&nbsp;CINEM&nbsp;/&nbsp;LOCAL</span>
-      </div>
+      {irisOn ? (
+        <SystemMetersStrip />
+      ) : (
+        <div className="pointer-events-none absolute inset-x-6 bottom-3 z-10 flex justify-between font-display text-[0.6rem] tracking-[0.25em] text-neon-dim">
+          <span>CORE&nbsp;SYNC&nbsp;:&nbsp;98.4%</span>
+          <span>LATENCY&nbsp;:&nbsp;12MS</span>
+          <span>MODE&nbsp;:&nbsp;CINEM&nbsp;/&nbsp;LOCAL</span>
+        </div>
+      )}
     </GlassPanel>
   );
 }

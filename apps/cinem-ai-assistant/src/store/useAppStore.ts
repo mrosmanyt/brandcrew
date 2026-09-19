@@ -19,6 +19,14 @@ export interface ChatMessage {
 export type VoiceStatus = "idle" | "listening" | "transcribing" | "speaking";
 export type CenterView = "hub" | "world" | "player" | "radar";
 
+export interface LiveTranscriptEntry {
+  id: string;
+  heard: string;
+  reply?: string;
+  time: string;
+  interim?: boolean;
+}
+
 export interface PlayerVideo {
   id: string;
   title: string;
@@ -66,6 +74,16 @@ interface AppState {
   /* Voice */
   voiceStatus: VoiceStatus;
   setVoiceStatus: (v: VoiceStatus) => void;
+  /** IRIS orb error line — drives red error mood on IntelligenceHub. */
+  orbError: string | null;
+  setOrbError: (msg: string | null) => void;
+
+  /* IRIS live transcript sidebar */
+  liveTranscript: LiveTranscriptEntry[];
+  liveInterim: string;
+  pushLiveTranscript: (e: LiveTranscriptEntry) => void;
+  patchLiveTranscript: (id: string, patch: Partial<LiveTranscriptEntry>) => void;
+  setLiveInterim: (text: string) => void;
 
   /* Multi-language intelligence */
   /** Language of the user's LAST message — Cinem AI Assistant replies in this language. */
@@ -174,6 +192,19 @@ export const useAppStore = create<AppState>((set) => ({
 
   voiceStatus: "idle",
   setVoiceStatus: (v) => set({ voiceStatus: v }),
+
+  orbError: null,
+  setOrbError: (msg) => set({ orbError: msg }),
+
+  liveTranscript: [],
+  liveInterim: "",
+  pushLiveTranscript: (e) =>
+    set((s) => ({ liveTranscript: [...s.liveTranscript, e].slice(-24) })),
+  patchLiveTranscript: (id, patch) =>
+    set((s) => ({
+      liveTranscript: s.liveTranscript.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+    })),
+  setLiveInterim: (text) => set({ liveInterim: text }),
 
   language: DEFAULT_LANG,
   setLanguage: (l) => set({ language: l }),

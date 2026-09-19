@@ -88,6 +88,18 @@ import {
   runSocialPlaybookIntent,
 } from "@/lib/social-playbooks/runner";
 import { getPendingPublish, isPublishConfirmation } from "@/lib/social-playbooks/publish-gate";
+import { isIrisPackEnabled } from "@/lib/iris/feature";
+import {
+  formatSpatialLayoutReply,
+  isSpatialLayoutCommand,
+  parseSpatialLayoutCommand,
+} from "@/lib/iris/spatial-layout";
+import {
+  isWebAutopilotCommand,
+  parseWebAutopilot,
+  runWebAutopilot,
+} from "@/lib/iris/web-autopilot";
+import { executeSnapLayout } from "@/lib/computer-use/client";
 import {
   isMultilayerOrchestratorEnabled,
   isMultilayerRequest,
@@ -489,6 +501,46 @@ export async function processCommand(text: string): Promise<string> {
       const reply = `Expanded prompt:\n\n${expanded}`;
       app.addMessage({ role: "assistant", text: reply });
       return reply;
+    }
+
+    /* 0iris-snap — Spatial window layout (IRIS pack, Windows computer-use sidecar). */
+    if (
+      isIrisPackEnabled({ devEnabled: settings.irisPackDevEnabled }) &&
+      isSpatialLayoutCommand(trimmed)
+    ) {
+      const layout = parseSpatialLayoutCommand(trimmed);
+      app.patchMessage(thoughtId, { routedAgents: ["spatial-layout"] });
+      if (!layout?.length) {
+        app.patchMessage(thoughtId, { pending: false });
+        const reply = "Could not parse a window layout. Try: WhatsApp left, Chrome right.";
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      }
+      app.appendStep(thoughtId, `Snapping ${layout.map((l) => `${l.app} ${l.slot}`).join(", ")}`);
+      const snap = await executeSnapLayout(layout);
+      app.patchMessage(thoughtId, { pending: false });
+      const reply = snap.ok
+        ? formatSpatialLayoutReply(layout)
+        : snap.error || "Window snap failed — is the computer-use sidecar running on Windows?";
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
+    /* 0iris-web — Multi-step web autopilot fast paths (search → play / first result). */
+    if (
+      isIrisPackEnabled({ devEnabled: settings.irisPackDevEnabled }) &&
+      isWebAutopilotCommand(trimmed)
+    ) {
+      const cmd = parseWebAutopilot(trimmed);
+      if (cmd) {
+        app.patchMessage(thoughtId, { routedAgents: ["web-autopilot"] });
+        app.appendStep(thoughtId, `Web autopilot: ${cmd.kind} → "${cmd.query}"`);
+        postInstantAck({ thoughtId, message: "On it — opening the browser.", speak: true });
+        const result = await runWebAutopilot(cmd);
+        app.patchMessage(thoughtId, { pending: false });
+        app.addMessage({ role: "assistant", text: result.reply });
+        return result.reply;
+      }
     }
 
     /* 0cu — Supervised computer-use session (Windows Electron, feature-flagged). */

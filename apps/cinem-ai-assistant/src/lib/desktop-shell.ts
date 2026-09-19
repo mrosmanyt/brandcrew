@@ -54,6 +54,9 @@ export type CinemDesktopBridge = {
     setAutoUpdate: (enabled: boolean) => Promise<CinemUpdatePayload>;
     onStatus: (handler: (payload: CinemUpdatePayload) => void) => () => void;
   };
+  systemMeters?: {
+    read: () => Promise<{ cpuPercent: number | null; ramPercent: number | null; volumePercent: number | null }>;
+  };
   computerUse?: {
     envEnabled: () => Promise<boolean>;
     startSidecar: () => Promise<{ ok?: boolean; error?: string }>;

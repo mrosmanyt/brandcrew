@@ -2,8 +2,12 @@
  * Wake word "Hey Cinem" — Porcupine offline (Electron) + Web Speech fallback + deep sleep.
  */
 import { useSettingsStore } from "@/store/useSettingsStore";
+import { useAppStore } from "@/store/useAppStore";
 import { cinemDesktopBridge, isCinemElectron } from "@/lib/desktop-shell";
 import { speakQueued } from "@/lib/announcer";
+import { isIrisPackEnabled } from "@/lib/iris/feature";
+import { wakeAckLine } from "@/lib/iris/hinglish-persona";
+import { pushLiveTranscriptHeard } from "@/lib/iris/live-transcript";
 
 type SpeechRecognitionCtor = new () => SpeechRecognition;
 
@@ -27,10 +31,19 @@ let nativeUnsub: (() => void) | null = null;
 
 /** Optional TTS ack when wake word fires (voice chain; silent if no TTS provider). */
 function wakeWordTtsAck() {
-  void speakQueued("Yes?").catch(() => undefined);
+  const settings = useSettingsStore.getState();
+  const line = wakeAckLine(settings.hinglishBossPersona);
+  void speakQueued(line).catch(() => undefined);
 }
 
 function fireWakeTrigger(onTrigger: () => void) {
+  const settings = useSettingsStore.getState();
+  const irisOn = isIrisPackEnabled({ devEnabled: settings.irisPackDevEnabled });
+  if (irisOn) {
+    useAppStore.getState().setOrbError(null);
+    useAppStore.getState().setVoiceStatus("listening");
+    pushLiveTranscriptHeard("Hey Cinem", false);
+  }
   wakeWordTtsAck();
   onTrigger();
 }
