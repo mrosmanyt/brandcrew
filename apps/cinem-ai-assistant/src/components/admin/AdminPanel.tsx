@@ -14,6 +14,7 @@ import {
 } from "@/lib/db";
 import { DEFAULT_SOFT_LIMIT_INR, fmtQty } from "@/lib/costModel";
 import { cn } from "@/lib/utils";
+import ComputerUseApprovalsSection from "@/components/admin/ComputerUseApprovalsSection";
 
 const SESSION_KEY = "cinem-ai-assistant-admin-session";
 const POLL_MS = 3000; // real-time: signups appear within ~3 seconds
@@ -1008,7 +1009,7 @@ function SettingsTab() {
 
 /* ── Shell (header + tabs + data + connection state) ──────────────── */
 
-type Tab = "dashboard" | "users" | "pending" | "usage" | "activity" | "settings";
+type Tab = "dashboard" | "users" | "pending" | "usage" | "activity" | "computer_use" | "settings";
 
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: "dashboard", label: "DASHBOARD", icon: <LayoutDashboard className="size-3.5" /> },
@@ -1016,6 +1017,7 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: "pending", label: "PENDING REQUESTS", icon: <ListChecks className="size-3.5" /> },
   { id: "usage", label: "USAGE & BILLING", icon: <BarChart3 className="size-3.5" /> },
   { id: "activity", label: "ACTIVITY LOG", icon: <History className="size-3.5" /> },
+  { id: "computer_use", label: "COMPUTER USE", icon: <ShieldCheck className="size-3.5" /> },
   { id: "settings", label: "SETTINGS", icon: <Settings className="size-3.5" /> },
 ];
 
@@ -1178,6 +1180,8 @@ function Shell({ onLogout }: { onLogout: () => void }) {
                 <UsageTab usage={usage} refresh={refresh} />
               ) : tab === "activity" ? (
                 <ActivityTab activity={activity} refresh={refresh} />
+              ) : tab === "computer_use" ? (
+                <ComputerUseApprovalsSection />
               ) : (
                 <SettingsTab />
               )}

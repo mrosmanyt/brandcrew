@@ -14,6 +14,8 @@ const MOUSE_THRESHOLD_PX = 12;
 const MOUSE_POLL_MS = 200;
 
 /** @type {import('electron').BrowserWindow | null} */
+let cursorOverlay = null;
+/** @type {import('electron').BrowserWindow | null} */
 let hudWindow = null;
 /** @type {import('electron').WebContents | null} */
 let assistantWebContents = null;
@@ -45,6 +47,67 @@ function pushHud(payload) {
   } catch (error) {
     console.error("[computer-use] pushHud failed", error);
   }
+}
+
+function cursorOverlayPath() {
+  return path.join(__dirname, "ai-cursor-overlay.html");
+}
+
+function showCursorOverlay() {
+  try {
+    if (cursorOverlay && !cursorOverlay.isDestroyed()) {
+      cursorOverlay.show();
+      return cursorOverlay;
+    }
+    cursorOverlay = new BrowserWindow({
+      width: 32,
+      height: 32,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      focusable: false,
+      show: false,
+      hasShadow: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    });
+    cursorOverlay.setAlwaysOnTop(true, "screen-saver");
+    cursorOverlay.setIgnoreMouseEvents(true, { forward: true });
+    cursorOverlay.loadFile(cursorOverlayPath());
+    cursorOverlay.once("ready-to-show", () => {
+      if (cursorOverlay && !cursorOverlay.isDestroyed()) cursorOverlay.show();
+    });
+    return cursorOverlay;
+  } catch (error) {
+    console.error("[computer-use] showCursorOverlay failed", error);
+    return null;
+  }
+}
+
+function hideCursorOverlay() {
+  try {
+    if (cursorOverlay && !cursorOverlay.isDestroyed()) {
+      cursorOverlay.close();
+    }
+  } catch (error) {
+    console.error("[computer-use] hideCursorOverlay failed", error);
+  }
+  cursorOverlay = null;
+}
+
+function syncCursorOverlay() {
+  if (!sessionActive || sessionStatus !== "working") {
+    hideCursorOverlay();
+    return;
+  }
+  const win = showCursorOverlay();
+  if (!win || win.isDestroyed()) return;
+  const pt = screen.getCursorScreenPoint();
+  win.setBounds({ x: pt.x - 16, y: pt.y - 16, width: 32, height: 32 });
 }
 
 function showHud() {
@@ -101,6 +164,7 @@ function stopMousePoll() {
   }
   lastMouse = { x: -1, y: -1 };
   mousePausedThisGesture = false;
+  hideCursorOverlay();
 }
 
 function notifyRenderer(channel, payload) {
@@ -131,6 +195,7 @@ function startMousePoll() {
       notifyRenderer("cinem:computer-use:mouse-pause", {});
     }
     lastMouse = { x: pt.x, y: pt.y };
+    syncCursorOverlay();
   }, MOUSE_POLL_MS);
 }
 
@@ -222,6 +287,7 @@ function startSession(webContents, payload) {
   };
   pushHud(hud);
   startMousePoll();
+  syncCursorOverlay();
   return { ok: true };
 }
 
@@ -291,6 +357,7 @@ function cleanup() {
     stopMousePoll();
     unregisterKillShortcut();
     hideHud();
+    hideCursorOverlay();
     if (sidecarChild && !sidecarChild.killed) {
       sidecarChild.kill();
       sidecarChild = null;
