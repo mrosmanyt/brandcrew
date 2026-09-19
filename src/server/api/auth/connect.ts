@@ -9,7 +9,7 @@ import {
   startConnectTicket,
   withNativeCors,
 } from "@/lib/auth-native";
-import { jsonError } from "@/lib/http";
+import { jsonAuthBridgeError } from "@/lib/http";
 import { prisma } from "@/lib/db";
 import { parseConnectNonce } from "@/lib/auth-bridge";
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         NextResponse.json({ error: "surface is required (extension, desktop, or mobile)." }, { status: 400 }),
       );
     }
-    return withNativeCors(jsonError(error));
+    return withNativeCors(jsonAuthBridgeError(error));
   }
 }
 
@@ -96,6 +96,6 @@ export async function GET(request: Request) {
       }),
     );
   } catch (error) {
-    return withNativeCors(jsonError(error));
+    return withNativeCors(jsonAuthBridgeError(error));
   }
 }

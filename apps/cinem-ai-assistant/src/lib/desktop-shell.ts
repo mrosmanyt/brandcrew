@@ -25,6 +25,7 @@ export type CinemDesktopBridge = {
   onSession?: (handler: (payload: { refreshToken?: string }) => void) => () => void;
   setMode?: (mode: string) => void;
   openDesk?: () => void;
+  retryAssistant?: () => void;
   openUpdates?: () => void;
   getVoiceEnv?: () => { FISH_AUDIO_API_KEY?: string; DEEPGRAM_API_KEY?: string };
   wakeWord?: {

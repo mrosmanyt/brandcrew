@@ -39,44 +39,57 @@ function sidecarEntry() {
 }
 
 function pushHud(payload) {
-  if (!hudWindow || hudWindow.isDestroyed()) return;
-  hudWindow.webContents.send("cinem:computer-use:hud", payload);
+  try {
+    if (!hudWindow || hudWindow.isDestroyed()) return;
+    hudWindow.webContents.send("cinem:computer-use:hud", payload);
+  } catch (error) {
+    console.error("[computer-use] pushHud failed", error);
+  }
 }
 
 function showHud() {
-  if (hudWindow && !hudWindow.isDestroyed()) {
-    hudWindow.show();
+  try {
+    if (hudWindow && !hudWindow.isDestroyed()) {
+      hudWindow.show();
+      return hudWindow;
+    }
+    const { width } = screen.getPrimaryDisplay().workAreaSize;
+    hudWindow = new BrowserWindow({
+      width: 336,
+      height: 130,
+      x: width - 356,
+      y: 24,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      focusable: false,
+      show: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    });
+    hudWindow.setAlwaysOnTop(true, "screen-saver");
+    hudWindow.loadFile(hudHtmlPath());
+    hudWindow.once("ready-to-show", () => {
+      if (hudWindow && !hudWindow.isDestroyed()) hudWindow.show();
+    });
     return hudWindow;
+  } catch (error) {
+    console.error("[computer-use] showHud failed", error);
+    return null;
   }
-  const { width } = screen.getPrimaryDisplay().workAreaSize;
-  hudWindow = new BrowserWindow({
-    width: 336,
-    height: 130,
-    x: width - 356,
-    y: 24,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    focusable: false,
-    show: false,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  });
-  hudWindow.setAlwaysOnTop(true, "screen-saver");
-  hudWindow.loadFile(hudHtmlPath());
-  hudWindow.once("ready-to-show", () => {
-    if (hudWindow && !hudWindow.isDestroyed()) hudWindow.show();
-  });
-  return hudWindow;
 }
 
 function hideHud() {
-  if (hudWindow && !hudWindow.isDestroyed()) {
-    hudWindow.close();
+  try {
+    if (hudWindow && !hudWindow.isDestroyed()) {
+      hudWindow.close();
+    }
+  } catch (error) {
+    console.error("[computer-use] hideHud failed", error);
   }
   hudWindow = null;
 }
@@ -91,8 +104,12 @@ function stopMousePoll() {
 }
 
 function notifyRenderer(channel, payload) {
-  if (assistantWebContents && !assistantWebContents.isDestroyed()) {
-    assistantWebContents.send(channel, payload);
+  try {
+    if (assistantWebContents && !assistantWebContents.isDestroyed()) {
+      assistantWebContents.send(channel, payload);
+    }
+  } catch (error) {
+    console.error("[computer-use] notifyRenderer failed", channel, error);
   }
 }
 
@@ -123,10 +140,15 @@ function registerKillShortcut() {
   } catch {
     /* ignore */
   }
-  const ok = globalShortcut.register("Control+Alt+Escape", () => {
-    terminateSession("hotkey");
-  });
-  return ok;
+  try {
+    const ok = globalShortcut.register("Control+Alt+Escape", () => {
+      terminateSession("hotkey");
+    });
+    return ok;
+  } catch (error) {
+    console.error("[computer-use] registerKillShortcut failed", error);
+    return false;
+  }
 }
 
 function unregisterKillShortcut() {
@@ -138,40 +160,59 @@ function unregisterKillShortcut() {
 }
 
 function startSidecar() {
+  if (!isEnvEnabled()) {
+    return { ok: false, error: "Computer use is disabled (set COMPUTER_USE_ENABLED=1)." };
+  }
   if (sidecarChild && !sidecarChild.killed) return { ok: true };
   const entry = sidecarEntry();
   if (!fs.existsSync(entry)) {
     return { ok: false, error: `Sidecar not found: ${entry}` };
   }
-  sidecarChild = spawn(process.execPath, [entry], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
-    stdio: "ignore",
-    windowsHide: true,
-  });
-  sidecarChild.on("exit", () => {
-    sidecarChild = null;
-  });
-  return { ok: true };
+  try {
+    sidecarChild = spawn(process.execPath, [entry], {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    sidecarChild.on("exit", () => {
+      sidecarChild = null;
+    });
+    return { ok: true };
+  } catch (error) {
+    console.error("[computer-use] startSidecar failed", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function terminateSession(reason) {
-  sessionActive = false;
-  sessionStatus = "terminated";
-  stopMousePoll();
-  pushHud({ status: "terminated", currentAction: reason || "terminated" });
-  notifyRenderer("cinem:computer-use:terminated", { reason });
-  unregisterKillShortcut();
-  setTimeout(() => hideHud(), 1500);
+  try {
+    sessionActive = false;
+    sessionStatus = "terminated";
+    stopMousePoll();
+    pushHud({ status: "terminated", currentAction: reason || "terminated" });
+    notifyRenderer("cinem:computer-use:terminated", { reason });
+    unregisterKillShortcut();
+    setTimeout(() => hideHud(), 1500);
+  } catch (error) {
+    console.error("[computer-use] terminateSession failed", error);
+  }
 }
 
 function startSession(webContents, payload) {
+  if (!isEnvEnabled()) {
+    return { ok: false, error: "Computer use is disabled (set COMPUTER_USE_ENABLED=1)." };
+  }
   assistantWebContents = webContents;
   sessionActive = true;
   sessionStatus = "working";
   mousePausedThisGesture = false;
   showHud();
   registerKillShortcut();
-  startSidecar();
+  const sidecar = startSidecar();
+  if (!sidecar.ok) {
+    terminateSession(sidecar.error || "sidecar_offline");
+    return sidecar;
+  }
   const hud = {
     status: "working",
     task: payload?.task || "",
@@ -185,20 +226,30 @@ function startSession(webContents, payload) {
 }
 
 function syncHud(payload) {
-  if (payload?.status) sessionStatus = payload.status;
-  if (payload?.status === "working") mousePausedThisGesture = false;
-  pushHud(payload || {});
-  return { ok: true };
+  try {
+    if (payload?.status) sessionStatus = payload.status;
+    if (payload?.status === "working") mousePausedThisGesture = false;
+    pushHud(payload || {});
+    return { ok: true };
+  } catch (error) {
+    console.error("[computer-use] syncHud failed", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function stopSession() {
-  sessionActive = false;
-  sessionStatus = "idle";
-  stopMousePoll();
-  unregisterKillShortcut();
-  pushHud({ status: "idle", currentAction: "Session complete" });
-  setTimeout(() => hideHud(), 2000);
-  return { ok: true };
+  try {
+    sessionActive = false;
+    sessionStatus = "idle";
+    stopMousePoll();
+    unregisterKillShortcut();
+    pushHud({ status: "idle", currentAction: "Session complete" });
+    setTimeout(() => hideHud(), 2000);
+    return { ok: true };
+  } catch (error) {
+    console.error("[computer-use] stopSession failed", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function isEnvEnabled() {
@@ -206,27 +257,46 @@ function isEnvEnabled() {
   return v === "1" || v === "true" || v === "yes";
 }
 
+function safeHandle(handler) {
+  return (...args) => {
+    try {
+      return handler(...args);
+    } catch (error) {
+      console.error("[computer-use] ipc handler failed", error);
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+}
+
 function registerIpc(ipcMain) {
-  ipcMain.handle("cinem:computer-use:env-enabled", () => isEnvEnabled());
-  ipcMain.handle("cinem:computer-use:start-sidecar", () => startSidecar());
-  ipcMain.handle("cinem:computer-use:start-session", (event, payload) =>
-    startSession(event.sender, payload),
+  ipcMain.handle("cinem:computer-use:env-enabled", safeHandle(() => isEnvEnabled()));
+  ipcMain.handle("cinem:computer-use:start-sidecar", safeHandle(() => startSidecar()));
+  ipcMain.handle(
+    "cinem:computer-use:start-session",
+    safeHandle((event, payload) => startSession(event.sender, payload)),
   );
-  ipcMain.handle("cinem:computer-use:sync-hud", (_event, payload) => syncHud(payload));
-  ipcMain.handle("cinem:computer-use:terminate", () => {
-    terminateSession("ui");
-    return { ok: true };
-  });
-  ipcMain.handle("cinem:computer-use:stop-session", () => stopSession());
+  ipcMain.handle("cinem:computer-use:sync-hud", safeHandle((_event, payload) => syncHud(payload)));
+  ipcMain.handle(
+    "cinem:computer-use:terminate",
+    safeHandle(() => {
+      terminateSession("ui");
+      return { ok: true };
+    }),
+  );
+  ipcMain.handle("cinem:computer-use:stop-session", safeHandle(() => stopSession()));
 }
 
 function cleanup() {
-  stopMousePoll();
-  unregisterKillShortcut();
-  hideHud();
-  if (sidecarChild && !sidecarChild.killed) {
-    sidecarChild.kill();
-    sidecarChild = null;
+  try {
+    stopMousePoll();
+    unregisterKillShortcut();
+    hideHud();
+    if (sidecarChild && !sidecarChild.killed) {
+      sidecarChild.kill();
+      sidecarChild = null;
+    }
+  } catch (error) {
+    console.error("[computer-use] cleanup failed", error);
   }
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { claimConnectTicket, withNativeCors } from "@/lib/auth-native";
-import { jsonError } from "@/lib/http";
+import { jsonAuthBridgeError } from "@/lib/http";
 
 const schema = z.object({
   nonce: z.string().min(16).max(64),
@@ -57,6 +57,6 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return withNativeCors(NextResponse.json({ error: "nonce is required." }, { status: 400 }));
     }
-    return withNativeCors(jsonError(error));
+    return withNativeCors(jsonAuthBridgeError(error));
   }
 }

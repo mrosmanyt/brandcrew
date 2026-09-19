@@ -162,6 +162,10 @@ function assistantMissingPath() {
   return path.join(__dirname, "assistant-missing.html");
 }
 
+function assistantOfflinePagePath() {
+  return path.join(__dirname, "assistant-offline.html");
+}
+
 function iconPath() {
   const names =
     process.platform === "win32"
@@ -435,6 +439,14 @@ function showOfflinePage(entry) {
   void entry.view.webContents.loadFile(file);
 }
 
+function showAssistantOfflinePage(entry) {
+  if (!entry || !entry.view || entry.showingOffline) return;
+  const file = assistantOfflinePagePath();
+  if (!fs.existsSync(file)) return;
+  entry.showingOffline = true;
+  void entry.view.webContents.loadFile(file);
+}
+
 function showSignInWaiting(entry) {
   if (!entry || !entry.view || entry.view.webContents.isDestroyed()) return;
   const file = signInPagePath();
@@ -466,6 +478,7 @@ function loadAssistant(entry) {
   if (fs.existsSync(index)) {
     return entry.view.webContents.loadFile(index).catch((error) => {
       console.error("CINEM assistant load failed", error);
+      showAssistantOfflinePage(entry);
     });
   }
   if (!packaged()) {
@@ -473,11 +486,13 @@ function loadAssistant(entry) {
       if (fs.existsSync(assistantMissingPath())) {
         return entry.view.webContents.loadFile(assistantMissingPath());
       }
+      showAssistantOfflinePage(entry);
     });
   }
   if (fs.existsSync(assistantMissingPath())) {
     return entry.view.webContents.loadFile(assistantMissingPath());
   }
+  showAssistantOfflinePage(entry);
   return Promise.resolve();
 }
 
@@ -485,17 +500,18 @@ function attachViewEvents(entry) {
   entry.view.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      if (entry.mode !== "desk") return;
       if (!isMainFrame || isIgnorableLoadError(errorCode)) return;
       if (validatedURL && String(validatedURL).startsWith("file:")) return;
-      console.error("CINEM desktop did-fail-load", errorCode, errorDescription);
-      showOfflinePage(entry);
+      console.error("CINEM desktop did-fail-load", errorCode, errorDescription, entry.mode);
+      if (entry.mode === "desk") showOfflinePage(entry);
+      else if (entry.mode === "assistant") showAssistantOfflinePage(entry);
     },
   );
   entry.view.webContents.on("render-process-gone", (_event, details) => {
     if (details.reason === "clean-exit") return;
-    console.error("CINEM desktop renderer gone", details.reason);
+    console.error("CINEM desktop renderer gone", details.reason, entry.mode);
     if (entry.mode === "desk") showOfflinePage(entry);
+    else if (entry.mode === "assistant") showAssistantOfflinePage(entry);
   });
 }
 
@@ -1131,6 +1147,11 @@ function installAppMenu() {
     ipcMain.on("cinem:retry-desk", (event) => {
       const entry = shellFromContents(event.sender) || firstShell();
       void applyMode(entry, "desk");
+    });
+    ipcMain.on("cinem:retry-assistant", (event) => {
+      const entry = shellFromContents(event.sender) || firstShell();
+      if (!entry) return;
+      void applyMode(entry, "assistant");
     });
     ipcMain.on("cinem:open-desk-external", () => {
       void shell.openExternal(`${deskOrigin()}/desk`);

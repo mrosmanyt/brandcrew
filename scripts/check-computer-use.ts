@@ -74,6 +74,11 @@ async function main() {
   assert.match(mainSrc, /computerUse\.registerIpc/);
   const preload = readFileSync(path.join(root, "electron/assistant-preload.cjs"), "utf8");
   assert.match(preload, /computerUse:/);
+  assert.match(preload, /safeInvoke/);
+  assert.match(preload, /retryAssistant/);
+  const cuMain = readFileSync(path.join(root, "electron/computer-use.cjs"), "utf8");
+  assert.match(cuMain, /safeHandle/);
+  assert.match(cuMain, /Computer use is disabled/);
   const orchestrator = readFileSync(
     path.join(root, "apps/cinem-ai-assistant/src/lib/orchestrator.ts"),
     "utf8",

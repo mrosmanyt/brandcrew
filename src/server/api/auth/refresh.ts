@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthSurface, type AuthSurface } from "@/lib/auth-bridge";
 import { rotateRefreshToken, withNativeCors } from "@/lib/auth-native";
-import { jsonError } from "@/lib/http";
+import { jsonAuthBridgeError } from "@/lib/http";
 
 const schema = z.object({
   refreshToken: z.string().min(20),
@@ -31,6 +31,6 @@ export async function POST(request: Request) {
         NextResponse.json({ error: "refreshToken is required." }, { status: 400 }),
       );
     }
-    return withNativeCors(jsonError(error));
+    return withNativeCors(jsonAuthBridgeError(error));
   }
 }

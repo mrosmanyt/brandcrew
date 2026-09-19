@@ -12,21 +12,37 @@ function fmt(iso?: string | null) {
   return new Date(iso).toLocaleString();
 }
 
+async function readJson(res: Response): Promise<Record<string, unknown>> {
+  try {
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export function AdminAssistantQueries({ configured }: { configured: boolean }) {
   const [filter, setFilter] = useState<Filter>("pending");
   const [rows, setRows] = useState<AssistantRegistrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [serverConfigured, setServerConfigured] = useState(configured);
+
+  const effectiveConfigured = serverConfigured && configured;
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/assistant-queries?status=${filter}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load queries.");
-      setRows(Array.isArray(data.rows) ? data.rows : []);
+      const data = await readJson(res);
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "Failed to load queries.");
+      }
+      setServerConfigured(data.configured === true);
+      setNotice(typeof data.notice === "string" ? data.notice : null);
+      setRows(Array.isArray(data.rows) ? (data.rows as AssistantRegistrationRow[]) : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load queries.");
       setRows([]);
@@ -40,6 +56,10 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
   }, [refresh]);
 
   async function act(action: "approve" | "reject", requestId: string) {
+    if (!effectiveConfigured) {
+      setError("Supabase admin is not configured — approve/reject is disabled.");
+      return;
+    }
     setBusyId(requestId);
     setError(null);
     try {
@@ -48,8 +68,10 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, requestId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Action failed.");
+      const data = await readJson(res);
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "Action failed.");
+      }
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Action failed.");
@@ -76,12 +98,10 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
         </Button>
       </div>
 
-      {!configured && (
+      {!effectiveConfigured && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-          Supabase admin is not configured. Set{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code>,{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, and{" "}
-          <code className="font-mono text-xs">SUPABASE_SERVICE_ROLE_KEY</code> on the server.
+          {notice ||
+            "Supabase admin is not configured. Set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY on the server."}
         </div>
       )}
 
@@ -111,7 +131,11 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
           Loading queries…
         </div>
       ) : rows.length === 0 ? (
-        <p className="py-12 text-sm text-muted-foreground">No {filter} queries.</p>
+        <p className="py-12 text-sm text-muted-foreground">
+          {effectiveConfigured
+            ? `No ${filter} queries.`
+            : "No queries loaded — configure Supabase service role to enable this panel."}
+        </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -150,7 +174,7 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
                           <Button
                             type="button"
                             size="sm"
-                            disabled={busyId === row.id}
+                            disabled={!effectiveConfigured || busyId === row.id}
                             onClick={() => void act("approve", row.id)}
                           >
                             {busyId === row.id ? (
@@ -164,7 +188,7 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={busyId === row.id}
+                            disabled={!effectiveConfigured || busyId === row.id}
                             onClick={() => void act("reject", row.id)}
                           >
                             <X className="size-3.5" />

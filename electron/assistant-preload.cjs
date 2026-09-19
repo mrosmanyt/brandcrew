@@ -1,5 +1,14 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+async function safeInvoke(channel, payload) {
+  try {
+    return await ipcRenderer.invoke(channel, payload);
+  } catch (error) {
+    console.error("[cinemDesktop]", channel, error);
+    return { ok: false, error: "ipc_failed" };
+  }
+}
+
 contextBridge.exposeInMainWorld("cinemDesktop", {
   desktop: true,
   shell: "cinem-pro",
@@ -35,6 +44,9 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
   },
   openDesk() {
     ipcRenderer.send("cinem:set-mode", "desk");
+  },
+  retryAssistant() {
+    ipcRenderer.send("cinem:retry-assistant");
   },
   openUpdates() {
     ipcRenderer.send("cinem:open-updates");
@@ -72,22 +84,26 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
   },
   computerUse: {
     async envEnabled() {
-      return ipcRenderer.invoke("cinem:computer-use:env-enabled");
+      try {
+        return await ipcRenderer.invoke("cinem:computer-use:env-enabled");
+      } catch {
+        return false;
+      }
     },
     async startSidecar() {
-      return ipcRenderer.invoke("cinem:computer-use:start-sidecar");
+      return safeInvoke("cinem:computer-use:start-sidecar");
     },
     async startSession(payload) {
-      return ipcRenderer.invoke("cinem:computer-use:start-session", payload || {});
+      return safeInvoke("cinem:computer-use:start-session", payload || {});
     },
     async syncHud(payload) {
-      return ipcRenderer.invoke("cinem:computer-use:sync-hud", payload || {});
+      return safeInvoke("cinem:computer-use:sync-hud", payload || {});
     },
     async terminate() {
-      return ipcRenderer.invoke("cinem:computer-use:terminate");
+      return safeInvoke("cinem:computer-use:terminate");
     },
     async stopSession() {
-      return ipcRenderer.invoke("cinem:computer-use:stop-session");
+      return safeInvoke("cinem:computer-use:stop-session");
     },
     onMousePause(handler) {
       if (typeof handler !== "function") return () => undefined;
