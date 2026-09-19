@@ -6,7 +6,14 @@ const PRODUCTION_DESK_ORIGIN = "https://app.cinem.tech";
 const VERCEL_DESK_ORIGIN = "https://brandcrew.vercel.app";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 43180;
-const DESKTOP_SHELL_VERSION = "0.3.4";
+const DESKTOP_SHELL_VERSION = "0.3.5";
+/** Packaged Windows launch: enable assistant MVP flags unless already set in the environment. */
+const PACKAGED_LAUNCH_ENV = {
+  COMPUTER_USE_ENABLED: "1",
+  MULTILAYER_ORCHESTRATOR_ENABLED: "1",
+  SOCIAL_CHROME_PLAYBOOKS_ENABLED: "1",
+  REMOTE_PHONE_CONTROL_ENABLED: "1",
+};
 const SESSION_COOKIE = "brandcrew_session";
 const PROTOCOL = "cinem-pro";
 const GOOGLE_LOGIN_START_PATH = "/api/auth/google";
@@ -212,6 +219,29 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   });
 }
 
+function applyPackagedLaunchEnv({ packaged, env = process.env } = {}) {
+  if (!packaged) return;
+  for (const [key, value] of Object.entries(PACKAGED_LAUNCH_ENV)) {
+    if (env[key] == null || env[key] === "") {
+      env[key] = value;
+    }
+  }
+}
+
+function launchEnvEnabled(env = process.env, key) {
+  const v = String(env[key] || "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function packagedLaunchFlags(env = process.env) {
+  return {
+    computerUse: launchEnvEnabled(env, "COMPUTER_USE_ENABLED"),
+    multilayer: launchEnvEnabled(env, "MULTILAYER_ORCHESTRATOR_ENABLED"),
+    socialPlaybooks: launchEnvEnabled(env, "SOCIAL_CHROME_PLAYBOOKS_ENABLED"),
+    remoteControl: launchEnvEnabled(env, "REMOTE_PHONE_CONTROL_ENABLED"),
+  };
+}
+
 module.exports = {
   PRODUCTION_DESK_ORIGIN,
   VERCEL_DESK_ORIGIN,
@@ -236,4 +266,7 @@ module.exports = {
   isIgnorableLoadError,
   deskPath,
   fetchWithTimeout,
+  PACKAGED_LAUNCH_ENV,
+  applyPackagedLaunchEnv,
+  packagedLaunchFlags,
 };

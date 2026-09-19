@@ -111,10 +111,29 @@ export default function App() {
     }
     const bridge = cinemDesktopBridge();
     const unsubs: Array<() => void> = [];
-    if (bridge?.computerUse?.envEnabled) {
+    const flags = bridge?.getFeatureFlags?.();
+    if (flags?.computerUse) {
+      useComputerUseStore.getState().setEnvEnabled(true);
+    } else if (bridge?.computerUse?.envEnabled) {
       void bridge.computerUse.envEnabled().then((on) =>
         useComputerUseStore.getState().setEnvEnabled(Boolean(on)),
       );
+    }
+    if (flags?.multilayer) {
+      void import("@/lib/multilayer/feature").then((m) => m.setMultilayerLocalEnabled(true));
+    }
+    if (flags?.socialPlaybooks) {
+      void import("@/lib/social-playbooks/feature").then((m) =>
+        m.setSocialPlaybooksLocalEnabled(true),
+      );
+      useSettingsStore.setState({ socialPlaybooksDevEnabled: true });
+    }
+    if (flags?.remoteControl) {
+      void import("@/lib/remote-control/feature").then((m) =>
+        m.setRemoteControlLocalEnabled(true),
+      );
+      useSettingsStore.setState({ remoteControlDevEnabled: true });
+      void import("@/lib/remote-poll").then((m) => m.startRemotePoll());
     }
     if (bridge?.computerUse?.onMousePause) {
       unsubs.push(bridge.computerUse.onMousePause(() => onComputerUseMousePause()));

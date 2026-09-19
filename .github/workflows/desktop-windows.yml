@@ -37,6 +37,10 @@ jobs:
           VITE_CINEM_CLOUD_URL: https://app.cinem.tech
           VITE_CINEM_UPGRADE_URL: https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant
           CINEM_ELECTRON_ASSISTANT: "1"
+          COMPUTER_USE_ENABLED: "1"
+          MULTILAYER_ORCHESTRATOR_ENABLED: "1"
+          SOCIAL_CHROME_PLAYBOOKS_ENABLED: "1"
+          REMOTE_PHONE_CONTROL_ENABLED: "1"
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4

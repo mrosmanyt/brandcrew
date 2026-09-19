@@ -47,12 +47,12 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
   version: string;
   build: { win?: { icon?: string }; extraResources?: Array<{ filter?: string[] }>; asarUnpack?: string[] };
 };
-assert.equal(pkg.version, "0.3.4");
+assert.equal(pkg.version, "0.3.5");
 assert.match(pkg.build.win?.icon ?? "", /icon\.ico$/);
 assert.ok(pkg.build.extraResources?.some((item) => item.filter?.includes("icon.ico")));
 assert.ok((pkg.build.asarUnpack || []).some((g) => g.includes("electron-updater")));
 assert.match(readFileSync("electron/main.cjs", "utf8"), /icon\.ico/);
 assert.match(readFileSync("scripts/make-icon.mjs", "utf8"), /icon\.ico/);
-console.log("ok: Windows CINEM .ico + 0.3.4");
+console.log("ok: Windows CINEM .ico + 0.3.5");
 
 console.log("Assistant UX checks passed.");

@@ -17,7 +17,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
   };
 };
 
-assert.equal(pkg.version, "0.3.4");
+assert.equal(pkg.version, "0.3.5");
 assert.match(pkg.dependencies?.["electron-updater"] ?? "", /\d/);
 assert.equal(pkg.scripts?.["test:desktop-updater"], "tsx scripts/check-desktop-updater.ts");
 console.log("ok: version + electron-updater dependency");
@@ -95,6 +95,11 @@ const workflow = readFileSync(".github/workflows/desktop-windows.yml", "utf8");
 assert.match(workflow, /latest\.yml/);
 assert.match(workflow, /\*\.blockmap/);
 assert.match(workflow, /cinem-pro-releases/);
+assert.match(workflow, /CINEM_ELECTRON_ASSISTANT:\s*"1"/);
+assert.match(workflow, /COMPUTER_USE_ENABLED:\s*"1"/);
+assert.match(workflow, /MULTILAYER_ORCHESTRATOR_ENABLED:\s*"1"/);
+assert.match(workflow, /SOCIAL_CHROME_PLAYBOOKS_ENABLED:\s*"1"/);
+assert.match(workflow, /REMOTE_PHONE_CONTROL_ENABLED:\s*"1"/);
 
 const docs = readFileSync("docs/desktop-auto-update.md", "utf8");
 assert.match(docs, /cinem-pro-vX\.Y\.Z|cinem-pro-v0\.3/);
@@ -102,6 +107,8 @@ assert.match(docs, /latest\.yml/);
 assert.match(docs, /0\.3\.1/);
 assert.match(docs, /0\.3\.2/);
 assert.match(docs, /0\.3\.3/);
+assert.match(docs, /0\.3\.4/);
+assert.match(docs, /0\.3\.5/);
 assert.match(docs, /0\.3\.0/);
 assert.match(docs, /Auto Update/);
 assert.match(docs, /SmartScreen/);

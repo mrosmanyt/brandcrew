@@ -21,6 +21,7 @@ const {
   isIgnorableLoadError,
   deskPath,
   fetchWithTimeout,
+  applyPackagedLaunchEnv,
 } = require("./desk-shell.cjs");
 const localBuilder = require("./local-builder.cjs");
 const {
@@ -45,6 +46,8 @@ const HOST = "127.0.0.1";
 function packaged() {
   return app.isPackaged;
 }
+
+applyPackagedLaunchEnv({ packaged: app.isPackaged, env: process.env });
 
 function envMode() {
   return {
@@ -1222,7 +1225,7 @@ function installAppMenu() {
         Accept: "application/json, text/xml, */*",
         "User-Agent":
           chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent()) ||
-          "CINEMPro/0.3.4",
+          "CINEMPro/0.3.5",
       };
       const sentKey =
         payload && typeof payload.worldMonitorKey === "string" ? payload.worldMonitorKey.trim() : "";
