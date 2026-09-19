@@ -106,7 +106,7 @@ assert.match(footer, /href: "\/terms"/);
 assert.match(footer, /label: "Privacy"/);
 assert.match(footer, /label: "Terms"/);
 assert.match(footer, /From CINEM/);
-assert.match(footer, /AI employee desk/);
+assert.match(footer, /Cinem AI Assistant/);
 assert.doesNotMatch(footer, /not a robot that posts/i);
 assert.doesNotMatch(footer, /not a robot/i);
 assert.match(footer, /BrandMark/);
@@ -121,7 +121,7 @@ assert.doesNotMatch(landing, /nothing posts/i);
 assert.doesNotMatch(landing, /not a robot that posts/i);
 assert.doesNotMatch(nav, /\/privacy/);
 assert.match(nav, /Get started|Open desk/);
-console.log("ok: Privacy/Terms in footer; tagline sells the agent desk; top nav unchanged");
+console.log("ok: Privacy/Terms in footer; tagline leads with Assistant; top nav has Cinem Pro + assistant pricing");
 
 assert.ok(existsSync("src/app/privacy/page.tsx"));
 assert.ok(existsSync("src/app/support/page.tsx"));
