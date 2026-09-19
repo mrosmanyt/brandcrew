@@ -28,6 +28,12 @@ export type CinemDesktopBridge = {
   retryAssistant?: () => void;
   openUpdates?: () => void;
   getVoiceEnv?: () => { FISH_AUDIO_API_KEY?: string; DEEPGRAM_API_KEY?: string };
+  getFeatureFlags?: () => {
+    computerUse: boolean;
+    multilayer: boolean;
+    socialPlaybooks: boolean;
+    remoteControl: boolean;
+  };
   wakeWord?: {
     status: () => Promise<{
       engine: string;

@@ -13,7 +13,7 @@ This is **electron-updater**, not the leftover Tauri updater. The first build th
 
 ## How to ship an update
 
-1. Bump **`package.json` `version`** and `electron/desk-shell.cjs` `DESKTOP_SHELL_VERSION` to the same semver (example: `0.3.4`). electron-updater compares these strings to `latest.yml`.
+1. Bump **`package.json` `version`** and `electron/desk-shell.cjs` `DESKTOP_SHELL_VERSION` to the same semver (example: `0.3.5`). electron-updater compares these strings to `latest.yml`.
 2. Commit, then tag **`cinem-pro-vX.Y.Z`** (or `vX.Y.Z`) matching that version and push the tag.
 3. **Actions → CINEM Pro Windows** builds NSIS + portable. The job uploads:
    - `CINEM-Pro-Setup.exe`
@@ -24,14 +24,14 @@ This is **electron-updater**, not the leftover Tauri updater. The first build th
 
 ```bash
 # After Actions (or npm run desktop:build:win on Windows):
-gh release create cinem-pro-v0.3.4 \
+gh release create cinem-pro-v0.3.5 \
   dist/desktop/CINEM-Pro-Setup.exe \
   dist/desktop/CINEM-Pro-Portable.exe \
   dist/desktop/latest.yml \
   dist/desktop/CINEM-Pro-Setup.exe.blockmap \
   --repo mrosmanyt/cinem-pro-releases \
-  --title "CINEM Pro 0.3.4" \
-  --notes "Unified Desk + AI Assistant."
+  --title "CINEM Pro 0.3.5" \
+  --notes "Launch: computer-use, multilayer orchestrator, social playbooks, phone remote. Whop assistant checkout on web."
 ```
 
 `--publish never` in `desktop-build.mjs` still **writes** `latest.yml`. It does not push to GitHub. Do not put a GitHub token in the app or in this repo.
@@ -47,6 +47,7 @@ Feed the installed app reads: GitHub provider `owner=mrosmanyt` / `repo=cinem-pr
 | `0.3.2` | Lazy-init + retry on Check now. Tag **cinem-pro-v0.3.2** and publish `latest.yml` so 0.3.1 installs can pick this up. |
 | `0.3.3` | Frameless dark caption (no white Windows strip) + sweet multi-language character voices / optional Fish Audio. |
 | `0.3.4` | Desk Google sign-in uses Sign in with CINEM Pro (system browser + connect claim). One account for Desk and AI Assistant. |
+| `0.3.5` | Launch build: computer-use MVP, multilayer orchestrator, Chrome social playbooks, Telegram/WhatsApp phone remote (packaged launch env). Whop assistant checkout lives on web (`/cinem-ai-assistant/billing`). Tag **cinem-pro-v0.3.5**. Still **unsigned** until Azure Artifact Signing — see [windows-code-signing.md](./windows-code-signing.md). |
 
 ## Unsigned builds / SmartScreen
 

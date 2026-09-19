@@ -34,14 +34,20 @@ if (!existsSync(path.join(appDir, "node_modules"))) {
   run(npm, ["install"], { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1" });
 }
 
-console.log("Building Cinem AI Assistant Vite renderer for Electron…");
-run(npm, ["exec", "--", "vite", "build"], {
+const launchEnv = {
   CINEM_ELECTRON_ASSISTANT: "1",
   VITE_CINEM_CLOUD_URL: process.env.VITE_CINEM_CLOUD_URL || "https://app.cinem.tech",
   VITE_CINEM_UPGRADE_URL:
     process.env.VITE_CINEM_UPGRADE_URL ||
     "https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant",
-});
+  COMPUTER_USE_ENABLED: process.env.COMPUTER_USE_ENABLED || "1",
+  MULTILAYER_ORCHESTRATOR_ENABLED: process.env.MULTILAYER_ORCHESTRATOR_ENABLED || "1",
+  SOCIAL_CHROME_PLAYBOOKS_ENABLED: process.env.SOCIAL_CHROME_PLAYBOOKS_ENABLED || "1",
+  REMOTE_PHONE_CONTROL_ENABLED: process.env.REMOTE_PHONE_CONTROL_ENABLED || "1",
+};
+
+console.log("Building Cinem AI Assistant Vite renderer for Electron…");
+run(npm, ["exec", "--", "vite", "build"], launchEnv);
 
 const index = path.join(appDir, "dist", "index.html");
 if (!existsSync(index)) {

@@ -61,7 +61,10 @@ console.log("ok: download API redirects only (no serverless streaming)");
 const nextConfig = readFileSync("next.config.ts", "utf8");
 assert.match(nextConfig, /\/downloads\/\$\{WIN_SETUP_FILENAME\}/);
 assert.match(nextConfig, /DESKTOP_WIN_DOWNLOAD/);
-console.log("ok: /downloads/*.exe redirects to releases CDN");
+const redirects = readFileSync("src/lib/desktop-download-redirects.ts", "utf8");
+assert.match(redirects, /DESKTOP_CDN_BASE_URL/);
+assert.match(redirects, /releases\/latest\/download/);
+console.log("ok: /downloads/*.exe redirects to releases CDN (optional DESKTOP_CDN_BASE_URL)");
 
 const downloadsDir = join(process.cwd(), "public/downloads");
 const probe = join(downloadsDir, "CINEM-Pro-Setup.exe");

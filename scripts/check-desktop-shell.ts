@@ -29,6 +29,13 @@ const shell = require("../electron/desk-shell.cjs") as {
   chromeUserAgent: (raw: string) => string;
   isIgnorableLoadError: (code: number) => boolean;
   deskPath: (pathName?: string) => string;
+  applyPackagedLaunchEnv: (input: { packaged: boolean; env?: NodeJS.ProcessEnv }) => void;
+  packagedLaunchFlags: (env?: NodeJS.ProcessEnv) => {
+    computerUse: boolean;
+    multilayer: boolean;
+    socialPlaybooks: boolean;
+    remoteControl: boolean;
+  };
 };
 
 assert.equal(shell.PRODUCTION_DESK_ORIGIN, "https://app.cinem.tech");
@@ -36,7 +43,14 @@ assert.equal(shell.VERCEL_DESK_ORIGIN, "https://brandcrew.vercel.app");
 assert.equal(shell.SESSION_COOKIE, "brandcrew_session");
 assert.equal(shell.PROTOCOL, "cinem-pro");
 assert.match(shell.DESKTOP_SHELL_VERSION, /^\d+\.\d+\.\d+$/);
-console.log("ok: desktop shell constants");
+const launchEnv: NodeJS.ProcessEnv = {};
+shell.applyPackagedLaunchEnv({ packaged: true, env: launchEnv });
+assert.equal(launchEnv.COMPUTER_USE_ENABLED, "1");
+assert.equal(launchEnv.MULTILAYER_ORCHESTRATOR_ENABLED, "1");
+const flags = shell.packagedLaunchFlags(launchEnv);
+assert.equal(flags.computerUse, true);
+assert.equal(flags.multilayer, true);
+console.log("ok: desktop shell constants + packaged launch env");
 
 assert.equal(shell.isPublicHttpsOrigin("https://app.cinem.tech"), true);
 assert.equal(shell.isPublicHttpsOrigin("https://brandcrew.vercel.app"), true);

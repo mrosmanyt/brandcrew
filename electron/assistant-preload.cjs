@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { packagedLaunchFlags } = require("./desk-shell.cjs");
 
 async function safeInvoke(channel, payload) {
   try {
@@ -58,6 +59,9 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
       ).trim(),
       DEEPGRAM_API_KEY: String(process.env.DEEPGRAM_API_KEY || "").trim(),
     };
+  },
+  getFeatureFlags() {
+    return packagedLaunchFlags(process.env);
   },
   wakeWord: {
     async status() {
