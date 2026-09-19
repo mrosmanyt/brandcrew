@@ -122,7 +122,8 @@ export function CinemAiAssistantPricingSection() {
           Every plan unlocks everything.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-          All fifteen agents, all themes, every feature. You only choose how long to commit, and
+          All fifteen agents, voice, supervised desktop control (when enabled), prompt expansion,
+          and the Memory · Skills · Voices · Settings hub. You only choose how long to commit, and
           longer plans cost less each month.
         </p>
       </div>

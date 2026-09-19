@@ -69,44 +69,99 @@ export type CinemAiAssistantUsageSnapshot = {
   workspaceId: string | null;
 };
 
+export type CinemAiAssistantFeatureStatus = "shipped" | "mvp" | "roadmap";
+
 export type CinemAiAssistantFeature = {
   id: string;
   title: string;
   body: string;
+  /** Shipped today, supervised MVP (feature-flagged), or on the roadmap. */
+  status?: CinemAiAssistantFeatureStatus;
 };
 
 export const CINEM_AI_ASSISTANT_FEATURES: CinemAiAssistantFeature[] = [
   {
+    id: "computer-use",
+    title: "Windows desktop control",
+    status: "mvp",
+    body: "Supervised automation on Windows: open and focus allowlisted apps (Explorer, Chrome, Edge, Firefox, Notepad, Premiere, ChatGPT Desktop). MVP ships behind COMPUTER_USE_ENABLED — not unrestricted PowerShell or a full Antigravity clone.",
+  },
+  {
+    id: "hud",
+    title: "Floating HUD",
+    status: "mvp",
+    body: "Always-on-top status while computer-use runs: Working / Paused / Idle / Terminated, the current action, step N of 50, and an AI DRIVING badge.",
+  },
+  {
+    id: "safety",
+    title: "Kill switch & pause",
+    status: "mvp",
+    body: "Red TERMINATE, global Ctrl+Alt+Esc, and mouse-move pause (≥12 px while Working) stop or pause automation. PowerShell runs only after you click Allow PowerShell for that session.",
+  },
+  {
     id: "voice",
-    title: "Voice Jarvis",
-    body: "Talk to the assistant on Windows. Chat and voice share one monthly turn meter on Free.",
+    title: "Voice & wake word",
+    status: "shipped",
+    body: "Talk on Windows with Deepgram, Whisper, or browser STT. Say “Hey Cinem” for hands-free wake (Porcupine offline or Web Speech). Chat and voice share one monthly turn meter on Free.",
+  },
+  {
+    id: "prompt-expansion",
+    title: "Prompt expansion",
+    status: "mvp",
+    body: "Turn a short creative ask into a detailed production-ready prompt via your connected model (Gemini, Ollama, or BYOK).",
+  },
+  {
+    id: "hub",
+    title: "Memory · Skills · Voices · Settings",
+    status: "shipped",
+    body: "Bottom nav opens the settings hub: long-term memory, agent skills, voice/TTS picks, themes, and auto-update — one place to tune the assistant.",
   },
   {
     id: "agents",
-    title: "Agents",
-    body: "Spin up multi-step work from the same CINEM Pro account that runs the web desk.",
+    title: "Multi-agent handoff",
+    status: "shipped",
+    body: "Chat routes to specialized agents — including a computer-use agent when you ask to control the desktop. Orchestration stays high-level; no fixed persona map.",
+  },
+  {
+    id: "workflows",
+    title: "Cross-app workflows",
+    status: "roadmap",
+    body: "Roadmap: chained steps like generate → download → Premiere. Today’s MVP safely opens and focuses allowlisted apps — full pipelines ship later.",
   },
   {
     id: "vision",
     title: "Vision",
+    status: "shipped",
     body: "Show the assistant what is on screen. Perception stays on your machine until a turn is sent.",
   },
   {
     id: "chat",
     title: "Desk chat",
+    status: "shipped",
     body: "Same login as app.cinem.tech. Session JWT or device token — no second account.",
   },
   {
     id: "windows",
     title: "Windows native",
+    status: "shipped",
     body: "One Windows installer (CINEM-Pro-Setup.exe) opens Desk and AI Assistant. Mac and Linux use the web desk.",
   },
   {
     id: "upgrade",
     title: "Standalone plans",
-    body: "Free includes 500 turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing.",
+    status: "shipped",
+    body: "Free includes 500 turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing. Founding seats may still qualify for free access.",
   },
 ];
+
+export const CINEM_AI_ASSISTANT_FEATURE_STATUS_LABEL: Record<
+  CinemAiAssistantFeatureStatus,
+  string
+> = {
+  shipped: "Available",
+  mvp: "Supervised MVP",
+  roadmap: "Roadmap",
+};
 
 export function cinemAiAssistantPeriodUtc(now = new Date()) {
   const year = now.getUTCFullYear();

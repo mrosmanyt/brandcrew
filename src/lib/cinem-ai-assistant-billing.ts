@@ -24,6 +24,14 @@ export type AssistantBillingPlan = {
   badge?: string;
 };
 
+const ASSISTANT_PLAN_FEATURES = [
+  "All 15 agents + computer-use handoff",
+  "Voice, Hey Cinem wake word, and prompt expansion",
+  "Supervised desktop control (when enabled)",
+  "Memory · Skills · Voices · Settings hub",
+  "All 10 themes",
+] as const;
+
 export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBillingPlan> = {
   monthly: {
     id: "monthly",
@@ -32,12 +40,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     priceMonthly: 20,
     billingPeriodDays: 30,
     savePercent: null,
-    features: [
-      "All 15 agents",
-      "Voice and remote control",
-      "All 10 themes",
-      "Cancel anytime",
-    ],
+    features: [...ASSISTANT_PLAN_FEATURES, "Cancel anytime"],
     cta: "Choose Monthly",
   },
   "3mo": {
@@ -47,12 +50,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     priceMonthly: 17.8,
     billingPeriodDays: 90,
     savePercent: 11,
-    features: [
-      "All 15 agents",
-      "Voice and remote control",
-      "All 10 themes",
-      "Priority updates",
-    ],
+    features: [...ASSISTANT_PLAN_FEATURES, "Priority updates"],
     cta: "Choose 3 Months",
   },
   "6mo": {
@@ -62,12 +60,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     priceMonthly: 14.4,
     billingPeriodDays: 180,
     savePercent: 28,
-    features: [
-      "All 15 agents",
-      "Voice and remote control",
-      "All 10 themes",
-      "Priority updates",
-    ],
+    features: [...ASSISTANT_PLAN_FEATURES, "Priority updates"],
     cta: "Choose 6 Months",
   },
   "1yr": {
@@ -77,12 +70,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     priceMonthly: 14,
     billingPeriodDays: 365,
     savePercent: 30,
-    features: [
-      "All 15 agents",
-      "Voice and remote control",
-      "All 10 themes",
-      "Priority updates",
-    ],
+    features: [...ASSISTANT_PLAN_FEATURES, "Priority updates"],
     cta: "Choose 1 Year",
     highlighted: true,
     badge: "Best value",

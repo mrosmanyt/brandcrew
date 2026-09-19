@@ -58,7 +58,8 @@ export default function DownloadPage() {
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Install once. Open Desk (cloud at{" "}
               <code className="font-mono text-xs">app.cinem.tech</code>), AI Assistant, or
-              both. Same CINEM Pro login and plans. Installer{" "}
+              both. Same CINEM Pro login and plans. Voice, supervised desktop control, and the
+              Memory · Skills · Voices hub live in Assistant mode. Installer{" "}
               <code className="font-mono text-xs">{CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME}</code>.
               Unsigned builds: SmartScreen → More info → Run anyway.
             </p>
