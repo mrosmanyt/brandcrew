@@ -64,6 +64,7 @@
     "test:image-generation": "tsx scripts/check-image-generation.ts",
     "test:power-pack": "tsx scripts/check-power-pack.ts",
     "test:computer-use": "tsx scripts/check-computer-use.ts",
+    "test:multilayer": "tsx scripts/check-multilayer-orchestrator.ts",
     "test:referral-invites": "tsx scripts/check-referral-invites.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",

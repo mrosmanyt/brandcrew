@@ -11,6 +11,12 @@ import {
 } from "@/lib/computer-use/runner";
 import type { ComputerUseAction, ComputerUseSession } from "@/lib/computer-use/types";
 import { executeFocusApp, executeOpenUrl, executePowerShell } from "@/lib/computer-use/client";
+import { playbookRequiresUserConfirm } from "@/lib/computer-use/playbooks/chatgpt-premiere";
+import {
+  canStartComputerUseSession,
+  requestComputerUseApproval,
+} from "@/lib/computer-use/admin-approval";
+import { getDeviceUser } from "@/lib/db";
 import { cinemDesktopBridge } from "@/lib/desktop-shell";
 import { notify } from "@/store/useToastStore";
 
@@ -56,6 +62,9 @@ async function runAction(session: ComputerUseSession, action: ComputerUseAction)
       await new Promise((r) => setTimeout(r, action.ms ?? 500));
       result = { ok: true, detail: `waited ${action.ms ?? 500}ms` };
       break;
+    case "noop":
+      result = { ok: true, detail: action.label || "user step" };
+      break;
     default:
       result = { ok: true, detail: "noop" };
   }
@@ -93,12 +102,31 @@ export const useComputerUseStore = create<ComputerUseState>((set, get) => ({
   },
 
   runPlannedTask: async (task) => {
+    const gate = canStartComputerUseSession(task);
+    if (!gate.ok) {
+      if (gate.reason.includes("Admin approval required")) {
+        const u = await getDeviceUser().catch(() => null);
+        requestComputerUseApproval(task, u?.id ?? null, u?.name);
+        notify("info", "Computer-use session submitted for admin approval.");
+      }
+      return gate.reason;
+    }
+
     const { startSession } = get();
     await startSession(task);
     let session = get().session!;
     const actions = planFromTask(task);
     for (const action of actions) {
       if (session.status === "terminated" || session.step >= session.maxSteps) break;
+
+      if (playbookRequiresUserConfirm(action.label)) {
+        set({ pendingShell: true });
+        session = setSessionStatus(session, "paused");
+        set({ session });
+        await syncHud(session);
+        return `${action.label} — confirm in the Computer Use panel when ready, then re-run.`;
+      }
+
       if (action.kind === "shell_powershell" && !session.shellConfirmed) {
         set({ pendingShell: true });
         session = setSessionStatus(session, "paused");

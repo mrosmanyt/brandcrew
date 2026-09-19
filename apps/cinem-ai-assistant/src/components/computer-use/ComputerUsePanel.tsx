@@ -2,6 +2,11 @@ import { useEffect } from "react";
 import { OctagonX, Shield, Terminal } from "lucide-react";
 import { useComputerUseStore } from "@/store/useComputerUseStore";
 import { isComputerUseEnabled, setComputerUseLocalEnabled } from "@/lib/computer-use/feature";
+import {
+  isMultilayerOrchestratorEnabled,
+  multilayerLocalEnabled,
+  setMultilayerLocalEnabled,
+} from "@/lib/multilayer/feature";
 import { sessionStatusLabel } from "@/lib/computer-use/runner";
 import { cinemDesktopBridge, isCinemElectron } from "@/lib/desktop-shell";
 import { cn } from "@/lib/utils";
@@ -82,6 +87,18 @@ export default function ComputerUsePanel() {
         )}
       </div>
 
+      <label className="flex items-center gap-2 text-[0.65rem] text-neon-dim">
+        <input
+          type="checkbox"
+          defaultChecked={multilayerLocalEnabled() || isMultilayerOrchestratorEnabled()}
+          onChange={(e) => {
+            setMultilayerLocalEnabled(e.target.checked);
+            window.location.reload();
+          }}
+        />
+        Multi-layer orchestrator (dev)
+      </label>
+
       {!enabled && isCinemElectron() && (
         <label className="flex items-center gap-2 text-[0.65rem] text-neon-dim">
           <input
@@ -97,7 +114,7 @@ export default function ComputerUsePanel() {
 
       <p className="text-[0.6rem] leading-relaxed text-neon-dim/80">
         Kill switch: red Terminate, Ctrl+Alt+Esc, or move mouse while Working (pauses; does not
-        terminate). Distinct AI cursor is not available on Windows — HUD shows AI DRIVING.
+        terminate). Blue AI cursor overlay follows your pointer during Working sessions on Windows.
       </p>
     </div>
   );

@@ -88,6 +88,23 @@ export default function ByokDashboardTab() {
         Bring your own Gemini + Deepgram keys, Cloudflare image worker, or GeminiGen API key.
         Usage meter estimates spend from token/character counters.
       </p>
+      <div className="rounded border border-neon/15 bg-abyss/40 p-3 text-[0.62rem] text-neon-dim">
+        <p className="font-display text-[0.58rem] tracking-[0.15em] text-neon">VERCEL / SERVER ENV (no secrets in git)</p>
+        <ul className="mt-2 list-inside list-disc space-y-1">
+          <li>
+            <code className="text-ice/80">CINEM_IMAGE_GEN_URL</code> +{" "}
+            <code className="text-ice/80">CINEM_IMAGE_GEN_API_KEY</code> — Cloudflare Worker image gen
+          </li>
+          <li>
+            <code className="text-ice/80">GEMINIGEN_API_KEY</code> — GeminiGen provider fallback
+          </li>
+          <li>
+            Per-user overrides: save worker URL/key here (encrypted via{" "}
+            <code className="text-ice/80">/api/user/byok</code>)
+          </li>
+        </ul>
+        <p className="mt-2">See <code className="text-ice/80">docs/image-generation-byok.md</code>.</p>
+      </div>
       <div className="border border-neon/20 bg-abyss/50 p-3">
         <div className="mb-2 flex items-center gap-2 font-display text-[0.6rem] tracking-[0.2em] text-neon">
           <Gauge className="size-3.5" /> MONTHLY SPEND

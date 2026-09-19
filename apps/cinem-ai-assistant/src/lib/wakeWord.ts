@@ -3,6 +3,7 @@
  */
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { cinemDesktopBridge, isCinemElectron } from "@/lib/desktop-shell";
+import { speakQueued } from "@/lib/announcer";
 
 type SpeechRecognitionCtor = new () => SpeechRecognition;
 
@@ -23,6 +24,16 @@ let deepSleep = false;
 let recognition: SpeechRecognition | null = null;
 let onTriggerRef: (() => void) | null = null;
 let nativeUnsub: (() => void) | null = null;
+
+/** Optional TTS ack when wake word fires (voice chain; silent if no TTS provider). */
+function wakeWordTtsAck() {
+  void speakQueued("Yes?").catch(() => undefined);
+}
+
+function fireWakeTrigger(onTrigger: () => void) {
+  wakeWordTtsAck();
+  onTrigger();
+}
 
 export function wakeWordSupported() {
   if (isCinemElectron()) return true;
@@ -86,7 +97,7 @@ function startWebSpeech(onTrigger: () => void) {
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const text = event.results[i][0].transcript.toLowerCase();
       if (text.includes(WAKE_PHRASE)) {
-        onTrigger();
+        fireWakeTrigger(onTrigger);
         break;
       }
     }
@@ -124,7 +135,7 @@ function attachNativeListener(onTrigger: () => void) {
   const bridge = cinemDesktopBridge();
   if (!bridge?.wakeWord?.onDetected) return false;
   nativeUnsub = bridge.wakeWord.onDetected(() => {
-    if (!deepSleep) onTrigger();
+    if (!deepSleep) fireWakeTrigger(onTrigger);
   });
   return true;
 }
