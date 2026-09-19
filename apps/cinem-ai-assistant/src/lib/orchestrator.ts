@@ -73,6 +73,14 @@ import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 import { useAppStore } from "@/store/useAppStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useVisionStore } from "@/store/useVisionStore";
+import { isComputerUseCommand } from "@/lib/computer-use/intents";
+import { isComputerUseEnabled } from "@/lib/computer-use/feature";
+import {
+  expandCreativePrompt,
+  extractExpansionSubject,
+  isPromptExpansionRequest,
+} from "@/lib/computer-use/prompt-expansion";
+import { useComputerUseStore } from "@/store/useComputerUseStore";
 
 interface Routing {
   agents: string[];
@@ -459,6 +467,45 @@ export async function processCommand(text: string): Promise<string> {
   });
 
   try {
+    /* 0cu-prompt — Creative prompt expansion before ChatGPT typing. */
+    if (isPromptExpansionRequest(trimmed)) {
+      app.patchMessage(thoughtId, { routedAgents: ["Prompt expansion"] });
+      app.appendStep(thoughtId, "Expanding creative prompt…");
+      const subject = extractExpansionSubject(trimmed);
+      const expanded = await expandCreativePrompt(subject, settings);
+      app.patchMessage(thoughtId, { pending: false });
+      const reply = `Expanded prompt:\n\n${expanded}`;
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
+    /* 0cu — Supervised computer-use session (Windows Electron, feature-flagged). */
+    if (isComputerUseCommand(trimmed)) {
+      app.patchMessage(thoughtId, { routedAgents: ["computer-use"] });
+      if (!isComputerUseEnabled({ envEnabled: useComputerUseStore.getState().envEnabled })) {
+        app.appendStep(thoughtId, "Computer-use flag off");
+        app.patchMessage(thoughtId, { pending: false });
+        const reply =
+          "Computer-use is disabled. On Windows Electron set COMPUTER_USE_ENABLED=1 or enable the dev checkbox in the Computer Use panel.";
+        app.addMessage({ role: "assistant", text: reply });
+        return reply;
+      }
+      app.appendStep(thoughtId, "Handing off to computer-use agent…");
+      const impl = getAgentImpl("computer_use");
+      const reply = impl
+        ? (
+            await impl.run({
+              request: trimmed,
+              settings,
+              step: (t) => app.appendStep(thoughtId, t),
+            })
+          ).findings
+        : "Computer-use agent unavailable.";
+      app.patchMessage(thoughtId, { pending: false });
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
     /* 0a-yt — YouTube transport controls (pause / play / next). */
     const ytControl = parseYouTubeControl(trimmed);
     if (ytControl) {

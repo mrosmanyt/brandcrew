@@ -33,6 +33,10 @@ import SubAgentsPanel from "@/components/right/SubAgentsPanel";
 import VoiceCommandBar from "@/components/VoiceCommandBar";
 import { startWakeWord, stopWakeWord, wakeWordEnabled } from "@/lib/wakeWord";
 import { toggleVoiceCommand } from "@/lib/voice-command";
+import AssistantNavShell from "@/components/nav/AssistantNavShell";
+import ComputerUsePanel from "@/components/computer-use/ComputerUsePanel";
+import { cinemDesktopBridge } from "@/lib/desktop-shell";
+import { onComputerUseMousePause, useComputerUseStore } from "@/store/useComputerUseStore";
 
 /** Center view switcher — HUB ⇄ WORLD ⇄ PLAYER ⇄ RISK RADAR. */
 function CenterTabs() {
@@ -99,7 +103,33 @@ export default function App() {
     if (wakeWordEnabled()) {
       void startWakeWord(() => void toggleVoiceCommand());
     }
-    return () => stopWakeWord();
+    const bridge = cinemDesktopBridge();
+    const unsubs: Array<() => void> = [];
+    if (bridge?.computerUse?.envEnabled) {
+      void bridge.computerUse.envEnabled().then((on) =>
+        useComputerUseStore.getState().setEnvEnabled(Boolean(on)),
+      );
+    }
+    if (bridge?.computerUse?.onMousePause) {
+      unsubs.push(bridge.computerUse.onMousePause(() => onComputerUseMousePause()));
+    }
+    if (bridge?.computerUse?.onTerminated) {
+      unsubs.push(
+        bridge.computerUse.onTerminated(() => {
+          const cur = useComputerUseStore.getState().session;
+          if (cur && cur.status !== "terminated") {
+            useComputerUseStore.setState({
+              session: { ...cur, status: "terminated", endedAt: Date.now() },
+              pendingShell: false,
+            });
+          }
+        }),
+      );
+    }
+    return () => {
+      stopWakeWord();
+      unsubs.forEach((u) => u());
+    };
   }, []);
 
   return (
@@ -132,11 +162,13 @@ export default function App() {
 
         {/* Right column */}
         <aside className="flex min-h-0 flex-col gap-4">
+          <ComputerUsePanel />
           <ChatPanel />
           <SubAgentsPanel />
         </aside>
       </main>
 
+      <AssistantNavShell />
       <VoiceCommandBar />
 
       {/* Overlays */}

@@ -10,11 +10,13 @@ import type { AgentImpl } from "@/lib/agents/types";
 import { securityAgent } from "@/lib/agents/security";
 import { emailAgent } from "@/lib/agents/email";
 import { localAgent } from "@/lib/agents/local";
+import { computerUseAgent } from "@/lib/agents/computer-use";
 
 export const AGENT_IMPLS: Record<string, AgentImpl> = {
   [securityAgent.id]: securityAgent,
   [emailAgent.id]: emailAgent,
   [localAgent.id]: localAgent,
+  [computerUseAgent.id]: computerUseAgent,
 };
 
 export const getAgentImpl = (id: string): AgentImpl | undefined => AGENT_IMPLS[id];
