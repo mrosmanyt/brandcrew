@@ -5,11 +5,14 @@ import { enqueueCompanionCommand } from "@/lib/mobile-companion";
 import { withNativeCors } from "@/lib/auth-native";
 
 const schema = z.object({
-  action: z.enum(["research", "reminder"]),
+  action: z.enum(["research", "reminder", "assistant_command"]),
   token: z.string().min(10).max(200),
   query: z.string().max(500).optional(),
   reminderText: z.string().max(500).optional(),
   reminderAt: z.string().max(40).optional(),
+  text: z.string().max(4000).optional(),
+  channel: z.string().max(40).optional(),
+  sourceId: z.string().max(80).optional(),
 });
 
 /** Remote command from paired phone — requires short-lived companion token. */
@@ -23,6 +26,9 @@ export async function POST(request: Request) {
     if (body.query) payload.query = body.query;
     if (body.reminderText) payload.text = body.reminderText;
     if (body.reminderAt) payload.at = body.reminderAt;
+    if (body.text) payload.text = body.text;
+    if (body.channel) payload.channel = body.channel;
+    if (body.sourceId) payload.sourceId = body.sourceId;
 
     const result = await enqueueCompanionCommand({
       token,

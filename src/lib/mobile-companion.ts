@@ -97,8 +97,8 @@ export async function enqueueCompanionCommand(input: {
   if (!pair) return { ok: false as const, error: "Invalid or expired companion token." };
 
   const action = input.action.trim().toLowerCase();
-  if (action !== "research" && action !== "reminder") {
-    return { ok: false as const, error: "Unknown action. Use research or reminder." };
+  if (action !== "research" && action !== "reminder" && action !== "assistant_command") {
+    return { ok: false as const, error: "Unknown action. Use research, reminder, or assistant_command." };
   }
 
   const command = await prisma.mobileCompanionCommand.create({
@@ -113,6 +113,21 @@ export async function enqueueCompanionCommand(input: {
     where: { id: pair.id },
     data: { lastCommandAt: new Date() },
   });
+
+  if (action === "assistant_command") {
+    const text =
+      typeof input.payload?.text === "string" && input.payload.text.trim()
+        ? input.payload.text.trim()
+        : "";
+    if (!text) {
+      return { ok: false as const, error: "assistant_command requires payload.text." };
+    }
+    await prisma.mobileCompanionCommand.update({
+      where: { id: command.id },
+      data: { status: "queued" },
+    });
+    return { ok: true as const, commandId: command.id, pairId: pair.id, workspaceId: pair.workspaceId };
+  }
 
   if (action === "research") {
     const agent = await prisma.agent.findFirst({

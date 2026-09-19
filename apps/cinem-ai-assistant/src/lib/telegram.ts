@@ -14,12 +14,16 @@
  *      the reply is sent back to the same chat.
  *
  * Examples from your phone: "open google" · "morning briefing" ·
- * "research AI news" · "remember that my flight is on Sunday".
+ * "research AI news" · "post to instagram with caption 'Hello'" ·
+ * "remember that my flight is on Sunday".
  */
-import { processCommand } from "@/lib/orchestrator";
 import { useIntegrationsStore } from "@/store/useIntegrationsStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { notify } from "@/store/useToastStore";
+import { isRemoteControlEnabled } from "@/lib/remote-control/feature";
+import { generatePairCode, isAuthorizedTelegramChat, isFreshMessage } from "@/lib/remote-control/pairing";
+import { parseRemoteCommand } from "@/lib/remote-control/command-parser";
+import { executeRemoteText } from "@/lib/remote-control/queue";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -83,6 +87,10 @@ async function sendText(chatId: number, text: string): Promise<void> {
 /** Connect & start listening. Safe to call repeatedly (restarts cleanly). */
 export async function startTelegram(): Promise<void> {
   stopTelegram();
+  if (!isRemoteControlEnabled({ explicitOptIn: useSettingsStore.getState().telegramEnabled })) {
+    setTg({ tgState: "error", tgDetail: "Remote phone control is disabled. Enable REMOTE_PHONE_CONTROL_ENABLED or Settings." });
+    return;
+  }
   const { telegramToken, telegramChatId } = useSettingsStore.getState();
   if (!telegramToken.trim()) {
     setTg({ tgState: "error", tgDetail: "No bot token — paste one from @BotFather." });
@@ -108,7 +116,7 @@ export async function startTelegram(): Promise<void> {
   if (telegramChatId) {
     setTg({ tgState: "online", tgBotName: botName, tgDetail: `Linked — message @${botName} from your phone.`, tgPairCode: "" });
   } else {
-    pairCode = String(Math.floor(100000 + Math.random() * 900000));
+    pairCode = generatePairCode();
     setTg({ tgState: "pairing", tgBotName: botName, tgPairCode: pairCode,
       tgDetail: `Open @${botName} in Telegram and send the 6-digit code.` });
   }
@@ -152,7 +160,7 @@ async function pollLoop(): Promise<void> {
 
 async function handleMessage(msg: NonNullable<TgUpdate["message"]>): Promise<void> {
   const text = (msg.text ?? "").trim();
-  if (!text || msg.date < startedAt - 5) return; // ignore backlog from before start
+  if (!text || !isFreshMessage(msg.date, startedAt)) return;
 
   const settings = useSettingsStore.getState();
   const linkedId = settings.telegramChatId;
@@ -165,7 +173,7 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>): Promise<voi
         tgDetail: `Linked to ${msg.chat.first_name ?? "your phone"} — remote control active.` });
       notify("success", "Telegram paired — Cinem AI Assistant is now in your pocket.");
       await sendText(msg.chat.id,
-        "✅ Paired with Cinem AI Assistant.\n\nSend me any command:\n• open google\n• morning briefing\n• research <topic>\n• remember that <fact>\n• /status");
+        "✅ Paired with Cinem AI Assistant.\n\nSend me any command:\n• open google\n• morning briefing\n• post to instagram with caption 'Hello'\n• research <topic>\n• /status");
     } else {
       await sendText(msg.chat.id, "🔐 Cinem AI Assistant is in pairing mode. Send the 6-digit code shown in Settings → Integrations.");
     }
@@ -173,34 +181,37 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>): Promise<voi
   }
 
   /* — security: refuse every chat except the linked one — */
-  if (String(msg.chat.id) !== linkedId) {
+  if (!isAuthorizedTelegramChat(linkedId, msg.chat.id)) {
     await sendText(msg.chat.id, "⛔ Not authorized. This Cinem AI Assistant belongs to someone else.");
     return;
   }
 
-  /* — built-ins — */
-  if (text === "/start" || text === "/help") {
-    await sendText(msg.chat.id,
-      "🤖 Cinem AI Assistant remote control.\nJust type a command:\n• open youtube\n• morning briefing\n• research quantum computing\n• what do you remember about me?\n• /status — check the link\n• /unpair — unlink this chat");
-    return;
-  }
-  if (text === "/status") {
-    await sendText(msg.chat.id, "🟢 Cinem AI Assistant online — PC connected, all systems nominal.");
-    return;
-  }
-  if (text === "/unpair") {
-    await settings.update({ telegramChatId: "" });
-    await sendText(msg.chat.id, "🔓 Unpaired. Send the new code from Settings to re-link.");
-    pairCode = String(Math.floor(100000 + Math.random() * 900000));
-    setTg({ tgState: "pairing", tgPairCode: pairCode, tgDetail: "Unpaired — send the new code to re-link." });
-    return;
+  const parsed = parseRemoteCommand(text);
+
+  if (parsed.kind === "builtin") {
+    if (parsed.builtin === "start" || parsed.builtin === "help") {
+      await sendText(msg.chat.id,
+        "🤖 Cinem AI Assistant remote control.\nJust type a command:\n• open youtube\n• post to tiktok …\n• morning briefing\n• /status — check the link\n• /unpair — unlink this chat");
+      return;
+    }
+    if (parsed.builtin === "status") {
+      await sendText(msg.chat.id, "🟢 Cinem AI Assistant online — PC connected, all systems nominal.");
+      return;
+    }
+    if (parsed.builtin === "unpair") {
+      await settings.update({ telegramChatId: "" });
+      await sendText(msg.chat.id, "🔓 Unpaired. Send the new code from Settings to re-link.");
+      pairCode = generatePairCode();
+      setTg({ tgState: "pairing", tgPairCode: pairCode, tgDetail: "Unpaired — send the new code to re-link." });
+      return;
+    }
   }
 
   /* — full Cinem AI Assistant command (same pipeline as voice/chat) — */
   useIntegrationsStore.getState().bumpTg();
   await tgCall("sendChatAction", { chat_id: msg.chat.id, action: "typing" }, 8000).catch(() => undefined);
   try {
-    const reply = await processCommand(text);
+    const reply = await executeRemoteText(parsed.kind === "assistant" ? parsed.text : text);
     await sendText(msg.chat.id, reply || "✅ Done.");
   } catch (e) {
     await sendText(msg.chat.id, `⚠️ Command failed: ${e instanceof Error ? e.message : e}`);

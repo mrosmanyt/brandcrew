@@ -51,6 +51,8 @@ model User {
   inviteRedemptionsSent   InviteRedemption[] @relation("InviterRedemptions")
   inviteRedemptionReceived InviteRedemption? @relation("InviteeRedemption")
   mobileCompanionPairs    MobileCompanionPair[]
+  assistantWhatsAppLink   AssistantWhatsAppLink?
+  assistantRemoteCommands AssistantRemoteCommand[]
   invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
   invitees      User[]             @relation("UserInvites")
 
@@ -661,6 +663,32 @@ model MobileCompanionCommand {
   pair      MobileCompanionPair @relation(fields: [pairId], references: [id], onDelete: Cascade)
 
   @@index([pairId, status])
+}
+
+/// WhatsApp Cloud API — maps inbound `from` phone to a CINEM user for desktop routing.
+model AssistantWhatsAppLink {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  phoneE164 String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Cloud-queued remote commands for the desktop Assistant poller.
+model AssistantRemoteCommand {
+  id        String   @id @default(cuid())
+  userId    String
+  channel   String
+  sourceId  String   @default("")
+  text      String
+  status    String   @default("queued")
+  replyText String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status, createdAt])
 }
 
 /// Standalone Cinem AI Assistant subscription (separate from desk Workspace.plan).

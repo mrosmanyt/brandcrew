@@ -97,6 +97,8 @@ import * as userInvite from "./user/invite";
 import * as companionPair from "./companion/pair";
 import * as companionCommand from "./companion/command";
 import * as companionCommands from "./companion/commands";
+import * as whatsappWebhook from "./whatsapp/webhook";
+import * as assistantWhatsappLink from "./assistant/whatsapp-link";
 import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
@@ -163,6 +165,8 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "companion", "commands"], handlers: asHandlers(companionCommands) },
   { pattern: ["api", "companion", "command"], handlers: asHandlers(companionCommand) },
   { pattern: ["api", "companion", "pair"], handlers: asHandlers(companionPair) },
+  { pattern: ["api", "whatsapp", "webhook"], handlers: asHandlers(whatsappWebhook) },
+  { pattern: ["api", "assistant", "whatsapp-link"], handlers: asHandlers(assistantWhatsappLink) },
   { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
   { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
   {

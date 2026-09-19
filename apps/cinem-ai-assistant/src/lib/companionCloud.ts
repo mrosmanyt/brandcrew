@@ -51,10 +51,13 @@ export async function fetchCompanionStatus() {
 
 export async function sendCompanionCommand(input: {
   token: string;
-  action: "research" | "reminder";
+  action: "research" | "reminder" | "assistant_command";
   query?: string;
   reminderText?: string;
   reminderAt?: string;
+  text?: string;
+  channel?: string;
+  sourceId?: string;
 }) {
   return authedFetch("/api/companion/command", {
     method: "POST",
