@@ -21,6 +21,7 @@ import { sfx } from "@/lib/sfx";
 import { agentById, CEO } from "@/data/agents";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useAppStore } from "@/store/useAppStore";
+import { applySpeakPersona } from "@/lib/iris/hinglish-persona";
 
 /* ── Serialized speech queue ──────────────────────────────────────── */
 
@@ -37,10 +38,12 @@ export function speakQueued(text: string, opts?: SpeakOptions): Promise<void> {
     // Language hint follows the user's detected language (ElevenLabs
     // multilingual auto-detects from the text; Web Speech needs the tag).
     opts = { lang: app.language.bcp47, characterId: settings.characterVoice, ...opts };
+    const spoken = applySpeakPersona(text, settings);
     const prev = app.voiceStatus;
     if (prev === "idle") app.setVoiceStatus("speaking");
+    app.setOrbError(null);
     try {
-      await voice.speak(text, settings, opts);
+      await voice.speak(spoken, settings, opts);
     } catch (e) {
       console.warn("[announcer] speech failed:", e);
     } finally {

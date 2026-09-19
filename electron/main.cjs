@@ -38,6 +38,7 @@ const { startAutoUpdates, openUpdatesWindow } = require("./updater.cjs");
 const { browserWindowChromeOptions, chromeQuery } = require("./window-chrome.cjs");
 const wakeWord = require("./wake-word.cjs");
 const computerUse = require("./computer-use.cjs");
+const systemMeters = require("./system-meters.cjs");
 
 const HOST = "127.0.0.1";
 
@@ -1269,6 +1270,7 @@ function installAppMenu() {
       wakeWord.installWakeModel(String(sourcePath || "")),
     );
     computerUse.registerIpc(ipcMain);
+    systemMeters.registerSystemMetersIpc(ipcMain);
     ipcMain.handle("cinem:get-session", () => ({
       refreshToken: readStoredRefresh(),
     }));

@@ -79,6 +79,10 @@ export interface Settings {
   /** Dev toggles — mirror env feature flags in Settings → Remote. */
   remoteControlDevEnabled: boolean;
   socialPlaybooksDevEnabled: boolean;
+  /** IRIS-inspired UX pack (orb polish, live transcript, spatial snap, web autopilot). */
+  irisPackDevEnabled: boolean;
+  /** Sweet Hinglish "boss" casual TTS persona. */
+  hinglishBossPersona: boolean;
   /* NOVA video editor */
   /** Folder NOVA pulls clips from ("last 10 videos"). */
   clipsFolder: string;
@@ -141,6 +145,8 @@ export const DEFAULT_SETTINGS: Settings = {
   whatsappLinkedPhone: "",
   remoteControlDevEnabled: false,
   socialPlaybooksDevEnabled: false,
+  irisPackDevEnabled: false,
+  hinglishBossPersona: false,
   clipsFolder: "",
   capcutPath: "",
   alwaysOnTop: false,
@@ -260,6 +266,8 @@ const pickSettings = (s: SettingsState): Settings => ({
   whatsappLinkedPhone: s.whatsappLinkedPhone,
   remoteControlDevEnabled: s.remoteControlDevEnabled,
   socialPlaybooksDevEnabled: s.socialPlaybooksDevEnabled,
+  irisPackDevEnabled: s.irisPackDevEnabled,
+  hinglishBossPersona: s.hinglishBossPersona,
   clipsFolder: s.clipsFolder,
   capcutPath: s.capcutPath,
   alwaysOnTop: s.alwaysOnTop,

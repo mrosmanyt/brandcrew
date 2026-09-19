@@ -67,6 +67,7 @@
     "test:social-playbooks": "tsx scripts/check-social-playbooks.ts",
     "test:remote-control": "tsx scripts/check-remote-control.ts",
     "test:multilayer": "tsx scripts/check-multilayer-orchestrator.ts",
+    "test:iris-pack": "tsx scripts/check-iris-pack.ts",
     "test:referral-invites": "tsx scripts/check-referral-invites.ts",
     "composio:first-call": "tsx scripts/composio-first-call.ts",
     "test:installer-branding": "tsx scripts/check-installer-branding.ts",

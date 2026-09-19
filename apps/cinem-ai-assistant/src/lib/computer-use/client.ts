@@ -67,6 +67,21 @@ export async function executeOpenUrl(url: string): Promise<{ ok: boolean; detail
   return { ok: true, detail: (res.data as { detail?: string })?.detail };
 }
 
+export interface SnapLayoutAssignment {
+  app: string;
+  slot: "left" | "right" | "top" | "bottom" | "maximize";
+}
+
+export async function executeSnapLayout(
+  assignments: SnapLayoutAssignment[],
+): Promise<{ ok: boolean; detail?: string; error?: string }> {
+  const ready = await ensureComputerUseSidecar();
+  if (!ready) return { ok: false, error: "Computer-use sidecar offline" };
+  const res = await cuFetch("/snap-layout", { assignments });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, detail: (res.data as { detail?: string })?.detail };
+}
+
 export async function executePowerShell(
   script: string,
   confirmed: boolean,

@@ -798,6 +798,15 @@ function VoiceTab() {
       </div>
       <div className="flex items-center justify-between border border-neon/10 bg-abyss/50 px-3 py-3">
         <div>
+          <p className="text-sm font-semibold text-ice/90">Hinglish Boss Persona (TTS)</p>
+          <p className="text-xs text-neon-dim">
+            Sweet casual Hinglish replies and wake acks — &ldquo;Haan boss, boliye.&rdquo;
+          </p>
+        </div>
+        <Switch checked={s.hinglishBossPersona} onChange={(v) => s.update({ hinglishBossPersona: v })} />
+      </div>
+      <div className="flex items-center justify-between border border-neon/10 bg-abyss/50 px-3 py-3">
+        <div>
           <p className="text-sm font-semibold text-ice/90">UI Sound Effects</p>
           <p className="text-xs text-neon-dim">Subtle ticks, chirps and stings under key interactions.</p>
         </div>
@@ -1050,9 +1059,18 @@ function RemoteFeatureToggles() {
         />
         Chrome social playbooks (logged-in browser post/upload)
       </label>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={s.irisPackDevEnabled}
+          onChange={(e) => void s.update({ irisPackDevEnabled: e.target.checked })}
+        />
+        IRIS UX pack (live transcript, spatial snap, web autopilot, orb meters)
+      </label>
       <p className="text-[0.65rem] leading-relaxed">
         Docs: <span className="text-ice/80">docs/remote-phone-control.md</span> ·{" "}
-        <span className="text-ice/80">docs/chrome-social-playbooks.md</span>
+        <span className="text-ice/80">docs/chrome-social-playbooks.md</span> ·{" "}
+        <span className="text-ice/80">docs/iris-pack.md</span>
       </p>
     </div>
   );

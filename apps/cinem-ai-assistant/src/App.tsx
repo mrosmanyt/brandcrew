@@ -39,6 +39,8 @@ import MultilayerProgressHud from "@/components/multilayer/MultilayerProgressHud
 import AgentMapPanel from "@/components/multilayer/AgentMapPanel";
 import { cinemDesktopBridge } from "@/lib/desktop-shell";
 import { onComputerUseMousePause, useComputerUseStore } from "@/store/useComputerUseStore";
+import LiveTranscriptPanel from "@/components/iris/LiveTranscriptPanel";
+import { isIrisPackEnabled } from "@/lib/iris/feature";
 
 /** Center view switcher — HUB ⇄ WORLD ⇄ PLAYER ⇄ RISK RADAR. */
 function CenterTabs() {
@@ -82,6 +84,8 @@ function CenterTabs() {
 export default function App() {
   const centerView = useAppStore((s) => s.centerView);
   const showRadar = useSettingsStore((s) => s.showRadar);
+  const irisDev = useSettingsStore((s) => s.irisPackDevEnabled);
+  const irisOn = isIrisPackEnabled({ devEnabled: irisDev });
 
   // If the radar tab is open when its setting is switched off, fall back.
   useEffect(() => {
@@ -141,6 +145,7 @@ export default function App() {
       <main className="grid min-h-0 flex-1 grid-cols-[290px_minmax(0,1fr)_400px] gap-4 px-4 pb-3 pt-2">
         {/* Left sidebar */}
         <aside className="flex min-h-0 flex-col gap-4">
+          {irisOn && <LiveTranscriptPanel />}
           <MediaLink />
           <SatLinkFeed />
           <TodayHeadlines />

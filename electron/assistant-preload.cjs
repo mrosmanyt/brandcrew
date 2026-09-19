@@ -82,6 +82,11 @@ contextBridge.exposeInMainWorld("cinemDesktop", {
       return ipcRenderer.invoke("cinem:wake-word:install-model", sourcePath);
     },
   },
+  systemMeters: {
+    async read() {
+      return ipcRenderer.invoke("cinem:system-meters");
+    },
+  },
   computerUse: {
     async envEnabled() {
       try {

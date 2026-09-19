@@ -23,6 +23,18 @@ const ALLOWLIST = {
   chatgpt: { processes: ["chatgpt"], launch: "chatgpt.exe" },
   premiere: { processes: ["adobepremierepro", "adobe premiere pro"], launch: "Adobe Premiere Pro.exe" },
   notepad: { processes: ["notepad"], launch: "notepad.exe" },
+  whatsapp: { processes: ["whatsapp", "applicationframehost"], launch: "whatsapp:" },
+};
+
+const SNAP_PROCESS_HINTS = {
+  whatsapp: ["whatsapp"],
+  chrome: ["chrome"],
+  edge: ["msedge"],
+  firefox: ["firefox"],
+  explorer: ["explorer"],
+  notepad: ["notepad"],
+  chatgpt: ["chatgpt"],
+  premiere: ["adobepremierepro", "adobe premiere pro"],
 };
 
 function readBody(req) {
@@ -95,6 +107,78 @@ public class Win32 {
   return { ok: true, detail: result.out || result.err || "ok" };
 }
 
+function snapRect(slot, screen) {
+  const { x, y, width, height } = screen;
+  const halfW = Math.floor(width / 2);
+  const halfH = Math.floor(height / 2);
+  switch (slot) {
+    case "left":
+      return { x, y, w: halfW, h: height };
+    case "right":
+      return { x: x + halfW, y, w: width - halfW, h: height };
+    case "top":
+      return { x, y, w: width, h: halfH };
+    case "bottom":
+      return { x, y: y + halfH, w: width, h: height - halfH };
+    case "maximize":
+    default:
+      return { x, y, w: width, h: height };
+  }
+}
+
+/** Snap allowlisted app windows to screen regions (Windows). */
+async function snapLayout(assignments) {
+  if (!IS_WIN) return { ok: false, error: "snap-layout is Windows-only" };
+  const list = Array.isArray(assignments) ? assignments : [];
+  if (!list.length) return { ok: false, error: "empty assignments" };
+  const details = [];
+  for (const item of list) {
+    const appId = String(item.app || "").toLowerCase();
+    const slot = String(item.slot || "left").toLowerCase();
+    const hints = SNAP_PROCESS_HINTS[appId] || ALLOWLIST[appId]?.processes || [appId];
+    if (!hints.length) {
+      details.push(`skip:${appId}`);
+      continue;
+    }
+    const procs = hints.map((p) => `'${p.replace(/'/g, "''")}'`).join(",");
+    const script = `
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32Snap {
+  [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
+$screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+$rect = @{ left = @{x=$screen.X;y=$screen.Y;w=[math]::Floor($screen.Width/2);h=$screen.Height}; right = @{x=$screen.X+[math]::Floor($screen.Width/2);y=$screen.Y;w=$screen.Width-[math]::Floor($screen.Width/2);h=$screen.Height}; top = @{x=$screen.X;y=$screen.Y;w=$screen.Width;h=[math]::Floor($screen.Height/2)}; bottom = @{x=$screen.X;y=$screen.Y+[math]::Floor($screen.Height/2);w=$screen.Width;h=$screen.Height-[math]::Floor($screen.Height/2)}; maximize = @{x=$screen.X;y=$screen.Y;w=$screen.Width;h=$screen.Height} }
+$slotKey = "${slot}"
+if (-not $rect.ContainsKey($slotKey)) { $slotKey = "left" }
+$r = $rect[$slotKey]
+$names = @(${procs})
+$found = Get-Process -ErrorAction SilentlyContinue | Where-Object { $n = $_.ProcessName.ToLower(); $names | Where-Object { $n -like "*$_*" } } | Select-Object -First 1
+if (-not $found) {
+  $launch = "${ALLOWLIST[appId]?.launch || ""}"
+  if ($launch) { Start-Process $launch }
+  "launched:${appId}"
+} else {
+  $hwnd = $found.MainWindowHandle
+  if ($hwnd -ne [IntPtr]::Zero) {
+    [Win32Snap]::ShowWindow($hwnd, 9)
+    [Win32Snap]::MoveWindow($hwnd, $r.x, $r.y, $r.w, $r.h, $true) | Out-Null
+    [Win32Snap]::SetForegroundWindow($hwnd) | Out-Null
+    "snapped:$($found.ProcessName):$slotKey"
+  } else { "no-window:$($found.ProcessName)" }
+}
+`.trim();
+    const result = await runPowerShell(script);
+    details.push(result.out || result.err || appId);
+  }
+  return { ok: true, detail: details.join("; ") };
+}
+
 async function openUrl(url) {
   if (!/^https?:\/\//i.test(url)) return { ok: false, error: "Only http(s) URLs allowed" };
   if (!IS_WIN) {
@@ -135,6 +219,12 @@ async function handleRequest(req, res) {
   }
   if (url.pathname === "/open-url") {
     const r = await openUrl(String(body.url || ""));
+    res.writeHead(r.ok ? 200 : 400);
+    res.end(JSON.stringify(r));
+    return;
+  }
+  if (url.pathname === "/snap-layout") {
+    const r = await snapLayout(body.assignments);
     res.writeHead(r.ok ? 200 : 400);
     res.end(JSON.stringify(r));
     return;
