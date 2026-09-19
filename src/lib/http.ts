@@ -77,6 +77,32 @@ function publicInternalMessage(error: unknown) {
   return raw;
 }
 
+/** Prisma / Postgres connectivity or missing migration — auth bridge should not 500 HTML. */
+export function isDatabaseUnavailableError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as { code: unknown }).code)
+      : "";
+  return /P1001|P1017|P2021|P2022|ECONNREFUSED|Can't reach database|database server|Connection terminated|relation .* does not exist|table .* does not exist/i.test(
+    `${message} ${code}`,
+  );
+}
+
+/** JSON error for native auth bridge routes — maps DB outages to 503. */
+export function jsonAuthBridgeError(error: unknown) {
+  if (isDatabaseUnavailableError(error)) {
+    return NextResponse.json(
+      {
+        error: "Auth service is temporarily unavailable. Try again in a moment.",
+        code: "service_unavailable",
+      },
+      { status: 503 },
+    );
+  }
+  return jsonError(error);
+}
+
 export function jsonError(error: unknown) {
   if (
     error instanceof AuthError ||

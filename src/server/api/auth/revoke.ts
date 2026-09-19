@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
 import { revokeAllRefreshTokens, revokeRefreshToken, withNativeCors } from "@/lib/auth-native";
-import { jsonError } from "@/lib/http";
+import { jsonAuthBridgeError } from "@/lib/http";
 
 const schema = z.object({
   refreshToken: z.string().min(20).optional(),
@@ -35,6 +35,6 @@ export async function POST(request: Request) {
         NextResponse.json({ error: "Pass refreshToken or all: true." }, { status: 400 }),
       );
     }
-    return withNativeCors(jsonError(error));
+    return withNativeCors(jsonAuthBridgeError(error));
   }
 }

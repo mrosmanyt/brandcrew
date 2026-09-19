@@ -23,6 +23,7 @@ import {
 import { sensitiveRateLimit } from "../src/lib/rate-limit";
 import { ANDROID_PACKAGE_ID as SITE_ANDROID_PACKAGE, CHROME_EXTENSION_ZIP, SITE_ORIGIN, VERCEL_SITE_ORIGIN } from "../src/lib/site";
 import { API_ROUTES } from "../src/server/api/router";
+import { isDatabaseUnavailableError, jsonAuthBridgeError } from "../src/lib/http";
 
 assert.equal(DESKTOP_PROTOCOL, "cinem-pro");
 assert.equal(ANDROID_PACKAGE_ID, "tech.cinem.pro");
@@ -65,6 +66,17 @@ assert.ok(sensitiveRateLimit(["api", "auth", "token"], "POST"));
 assert.ok(sensitiveRateLimit(["api", "auth", "connect"], "POST"));
 assert.ok(sensitiveRateLimit(["api", "auth", "refresh"], "POST"));
 console.log("ok: native auth routes registered + rate-limited");
+
+assert.equal(isDatabaseUnavailableError({ code: "P1001", message: "Can't reach database server" }), true);
+assert.equal(isDatabaseUnavailableError(new Error("relation auth_refresh_token does not exist")), true);
+assert.equal(isDatabaseUnavailableError(new Error("bad password")), false);
+const dbOutage = jsonAuthBridgeError({ code: "P1001", message: "Can't reach database server" });
+assert.equal(dbOutage.status, 503);
+assert.match(readFileSync("src/lib/http.ts", "utf8"), /service_unavailable/);
+assert.match(readFileSync("src/server/api/auth/token.ts", "utf8"), /jsonAuthBridgeError/);
+assert.match(readFileSync("src/server/api/auth/refresh.ts", "utf8"), /jsonAuthBridgeError/);
+assert.match(readFileSync("src/server/api/auth/connect-claim.ts", "utf8"), /jsonAuthBridgeError/);
+console.log("ok: auth bridge maps database outages to 503 JSON");
 
 const auth = readFileSync("src/lib/auth.ts", "utf8");
 assert.match(auth, /readRequestSessionToken/);

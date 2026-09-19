@@ -27,9 +27,13 @@ interface ComputerUseState {
 }
 
 async function syncHud(session: ComputerUseSession | null) {
-  const bridge = cinemDesktopBridge();
-  if (!bridge?.computerUse?.syncHud) return;
-  await bridge.computerUse.syncHud(session);
+  try {
+    const bridge = cinemDesktopBridge();
+    if (!bridge?.computerUse?.syncHud) return;
+    await bridge.computerUse.syncHud(session ?? {});
+  } catch {
+    /* HUD sync is best-effort */
+  }
 }
 
 async function runAction(session: ComputerUseSession, action: ComputerUseAction): Promise<ComputerUseSession> {
@@ -77,7 +81,12 @@ export const useComputerUseStore = create<ComputerUseState>((set, get) => ({
     session = setSessionStatus(session, "working");
     set({ session, pendingShell: false });
     if (bridge?.computerUse?.startSession) {
-      await bridge.computerUse.startSession({ task, maxSteps: session.maxSteps });
+      const started = await bridge.computerUse.startSession({ task, maxSteps: session.maxSteps });
+      if (started && started.ok === false) {
+        session = terminateSession(session, started.error || "sidecar_offline");
+        set({ session });
+        return `Computer-use could not start: ${started.error || "sidecar offline"}`;
+      }
     }
     await syncHud(session);
     return `Computer-use session started: "${task}"`;
@@ -110,7 +119,9 @@ export const useComputerUseStore = create<ComputerUseState>((set, get) => ({
     set({ session });
     await syncHud(session);
     const bridge = cinemDesktopBridge();
-    if (bridge?.computerUse?.stopSession) await bridge.computerUse.stopSession();
+    if (bridge?.computerUse?.stopSession) {
+      await bridge.computerUse.stopSession().catch(() => undefined);
+    }
     const last = session.steps[session.steps.length - 1];
     return last?.ok
       ? `Done — ${session.step} step(s). Last: ${last.action}`
@@ -123,7 +134,9 @@ export const useComputerUseStore = create<ComputerUseState>((set, get) => ({
     set({ session, pendingShell: false });
     void syncHud(session);
     const bridge = cinemDesktopBridge();
-    if (bridge?.computerUse?.terminate) void bridge.computerUse.terminate();
+    if (bridge?.computerUse?.terminate) {
+      void bridge.computerUse.terminate().catch(() => undefined);
+    }
     notify("info", "Computer-use session terminated");
   },
 

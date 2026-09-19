@@ -12,7 +12,7 @@ import {
   withNativeCors,
 } from "@/lib/auth-native";
 import { honeypotFilled } from "@/lib/form-guard";
-import { jsonError } from "@/lib/http";
+import { jsonAuthBridgeError } from "@/lib/http";
 
 const schema = z.object({
   email: z.string().email().optional(),
@@ -116,6 +116,6 @@ export async function POST(request: Request) {
         NextResponse.json({ error: "Enter email and password, or use a signed-in session." }, { status: 400 }),
       );
     }
-    return withNativeCors(jsonError(error));
+    return withNativeCors(jsonAuthBridgeError(error));
   }
 }

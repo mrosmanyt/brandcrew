@@ -3,7 +3,7 @@
  * Prisma section smokes skipped if Postgres is down.
  */
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   ADMIN_SECTIONS,
@@ -207,6 +207,16 @@ async function main() {
   assert.match(opsDoc, /Point-in-time copy|not a restore|Live truth/i);
   assert.match(opsDoc, /app\.cinem\.tech/);
   assert.match(opsDoc, /forbidden\(\)/);
+  const assistantQueriesApi = readFileSync("src/server/api/admin/assistant-queries.ts", "utf8");
+  assert.match(assistantQueriesApi, /assistantRegistrationAdminConfigured/);
+  assert.match(assistantQueriesApi, /service_unconfigured/);
+  const assistantQueriesUi = readFileSync("src/components/admin/admin-assistant-queries.tsx", "utf8");
+  assert.match(assistantQueriesUi, /readJson/);
+  assert.match(assistantQueriesUi, /effectiveConfigured/);
+  assert.ok(existsSync("src/app/admin/assistant-queries/page.tsx"));
+  assert.ok(existsSync("src/app/desk/error.tsx"));
+  assert.ok(existsSync("src/app/global-error.tsx"));
+  console.log("ok: assistant-queries admin hardened + desk recoverable errors");
   console.log("ok: every /admin page and /api/admin method is server-gated");
   console.log("ok: docs/admin-ops.md covers allow-list and local backup copy");
 
