@@ -71,6 +71,14 @@ export interface Settings {
   /** User's own number with country code, e.g. +92300xxxxxxx. */
   waNumber: string;
   waEnabled: boolean;
+  /** WhatsApp Cloud API (Meta Business) — optional BYOK for desktop replies. */
+  whatsappToken: string;
+  whatsappPhoneNumberId: string;
+  /** Linked phone for Cloud API inbound routing (paired via desk). */
+  whatsappLinkedPhone: string;
+  /** Dev toggles — mirror env feature flags in Settings → Remote. */
+  remoteControlDevEnabled: boolean;
+  socialPlaybooksDevEnabled: boolean;
   /* NOVA video editor */
   /** Folder NOVA pulls clips from ("last 10 videos"). */
   clipsFolder: string;
@@ -128,6 +136,11 @@ export const DEFAULT_SETTINGS: Settings = {
   telegramEnabled: false,
   waNumber: "",
   waEnabled: false,
+  whatsappToken: "",
+  whatsappPhoneNumberId: "",
+  whatsappLinkedPhone: "",
+  remoteControlDevEnabled: false,
+  socialPlaybooksDevEnabled: false,
   clipsFolder: "",
   capcutPath: "",
   alwaysOnTop: false,
@@ -242,6 +255,11 @@ const pickSettings = (s: SettingsState): Settings => ({
   telegramEnabled: s.telegramEnabled,
   waNumber: s.waNumber,
   waEnabled: s.waEnabled,
+  whatsappToken: s.whatsappToken,
+  whatsappPhoneNumberId: s.whatsappPhoneNumberId,
+  whatsappLinkedPhone: s.whatsappLinkedPhone,
+  remoteControlDevEnabled: s.remoteControlDevEnabled,
+  socialPlaybooksDevEnabled: s.socialPlaybooksDevEnabled,
   clipsFolder: s.clipsFolder,
   capcutPath: s.capcutPath,
   alwaysOnTop: s.alwaysOnTop,
@@ -295,6 +313,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
       if (s.waEnabled && s.waNumber) {
         void import("@/lib/whatsapp").then((m) => m.startWhatsApp());
+      }
+      if (s.remoteControlDevEnabled) {
+        const { setRemoteControlLocalEnabled } = await import("@/lib/remote-control/feature");
+        setRemoteControlLocalEnabled(true);
+        void import("@/lib/remote-poll").then((m) => m.startRemotePoll());
+      }
+      if (s.socialPlaybooksDevEnabled) {
+        const { setSocialPlaybooksLocalEnabled } = await import("@/lib/social-playbooks/feature");
+        setSocialPlaybooksLocalEnabled(true);
       }
       // Update check shortly after boot (auto-download if enabled).
       setTimeout(() => {

@@ -1,24 +1,15 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { jsonError, jsonOk } from "@/lib/http";
-import { ackCompanionCommand, listPendingCompanionCommands } from "@/lib/mobile-companion";
+import { ackCompanionOrRemoteCommand, companionPollCommands } from "@/lib/remote-command-queue";
 import { withNativeCors } from "@/lib/auth-native";
 
-/** Assistant polls for reminder commands to run locally. */
+/** Assistant polls for queued remote commands (reminder + assistant_command + WhatsApp Cloud). */
 export async function GET() {
   try {
     const user = await requireUser();
-    const rows = await listPendingCompanionCommands(user.id);
-    return withNativeCors(
-      jsonOk({
-        commands: rows.map((row) => ({
-          id: row.id,
-          action: row.action,
-          payload: JSON.parse(row.payload || "{}"),
-          createdAt: row.createdAt.toISOString(),
-        })),
-      }),
-    );
+    const rows = await companionPollCommands(user.id);
+    return withNativeCors(jsonOk({ commands: rows }));
   } catch (error) {
     return jsonError(error);
   }
@@ -33,7 +24,7 @@ export async function PATCH(request: Request) {
   try {
     const user = await requireUser();
     const body = ackSchema.parse(await request.json());
-    const ok = await ackCompanionCommand(body.commandId, user.id, body.result ?? { ok: true });
+    const ok = await ackCompanionOrRemoteCommand(body.commandId, user.id, body.result ?? { ok: true });
     if (!ok) {
       return withNativeCors(jsonOk({ error: "Unknown command." }, 404));
     }

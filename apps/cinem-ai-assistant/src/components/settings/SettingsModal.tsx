@@ -1028,6 +1028,35 @@ function WhatsAppCard() {
   );
 }
 
+function RemoteFeatureToggles() {
+  const s = useSettingsStore();
+  return (
+    <div className="border border-neon/15 bg-abyss/50 p-3.5 space-y-2 text-xs text-neon-dim">
+      <p className="font-display text-[0.55rem] tracking-[0.2em] text-neon">FEATURE FLAGS (DEV)</p>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={s.remoteControlDevEnabled}
+          onChange={(e) => void s.update({ remoteControlDevEnabled: e.target.checked })}
+        />
+        Remote phone control + cloud command poll
+      </label>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={s.socialPlaybooksDevEnabled}
+          onChange={(e) => void s.update({ socialPlaybooksDevEnabled: e.target.checked })}
+        />
+        Chrome social playbooks (logged-in browser post/upload)
+      </label>
+      <p className="text-[0.65rem] leading-relaxed">
+        Docs: <span className="text-ice/80">docs/remote-phone-control.md</span> ·{" "}
+        <span className="text-ice/80">docs/chrome-social-playbooks.md</span>
+      </p>
+    </div>
+  );
+}
+
 function RemoteTab() {
   return (
     <div className="space-y-4">
@@ -1043,6 +1072,7 @@ function RemoteTab() {
           </p>
         </div>
       </div>
+      <RemoteFeatureToggles />
       <TelegramCard />
       <WhatsAppCard />
       <MobileCompanionPanel />

@@ -24,6 +24,8 @@ const PATTERNS: string[][] = [
   ["api", "companion", "commands"],
   ["api", "companion", "command"],
   ["api", "companion", "pair"],
+  ["api", "whatsapp", "webhook"],
+  ["api", "assistant", "whatsapp-link"],
   ["api", "v1"],
   ["api", "v1", "workspace"],
   ["api", "v1", "agents", ":agentId"],

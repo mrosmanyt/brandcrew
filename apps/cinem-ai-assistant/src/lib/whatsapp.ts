@@ -12,10 +12,11 @@
  *
  * From the phone: open WhatsApp → "Message yourself" → "open google".
  */
-import { processCommand } from "@/lib/orchestrator";
 import { useIntegrationsStore } from "@/store/useIntegrationsStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { notify } from "@/store/useToastStore";
+import { isRemoteControlEnabled } from "@/lib/remote-control/feature";
+import { executeRemoteText } from "@/lib/remote-control/queue";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const PW_BASE = "http://127.0.0.1:7878";
@@ -49,6 +50,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Start the WhatsApp bridge. Safe to call repeatedly. */
 export async function startWhatsApp(): Promise<void> {
   stopWhatsApp();
+  if (!isRemoteControlEnabled({ explicitOptIn: useSettingsStore.getState().waEnabled })) {
+    setWa({ waState: "error", waDetail: "Remote phone control is disabled. Enable REMOTE_PHONE_CONTROL_ENABLED or Settings." });
+    return;
+  }
   const { waNumber } = useSettingsStore.getState();
   if (!waNumber.trim()) {
     setWa({ waState: "error", waDetail: "Enter your own WhatsApp number first." });
@@ -131,7 +136,7 @@ async function pollLoop(): Promise<void> {
         if (!text || text.startsWith(BOT_PREFIX)) continue; // our own reply
         useIntegrationsStore.getState().bumpWa();
         try {
-          const reply = await processCommand(text);
+          const reply = await executeRemoteText(text);
           await wa("/wa/send", { text: `${BOT_PREFIX} ${reply || "✅ Done."}` }, 25000);
         } catch (e) {
           await wa("/wa/send", { text: `${BOT_PREFIX} ⚠️ Failed: ${e instanceof Error ? e.message : e}` }, 25000)

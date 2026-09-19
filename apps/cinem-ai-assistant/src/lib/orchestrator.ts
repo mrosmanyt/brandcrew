@@ -81,6 +81,13 @@ import {
   isPromptExpansionRequest,
 } from "@/lib/computer-use/prompt-expansion";
 import { useComputerUseStore } from "@/store/useComputerUseStore";
+import { isSocialPlaybooksEnabled } from "@/lib/social-playbooks/feature";
+import { matchSocialPlaybookIntent } from "@/lib/social-playbooks/intents";
+import {
+  confirmPendingSocialPublish,
+  runSocialPlaybookIntent,
+} from "@/lib/social-playbooks/runner";
+import { getPendingPublish, isPublishConfirmation } from "@/lib/social-playbooks/publish-gate";
 
 interface Routing {
   agents: string[];
@@ -697,6 +704,27 @@ export async function processCommand(text: string): Promise<string> {
       app.appendStep(thoughtId, "Generating thumbnails (Gemini Vision + ffmpeg)…");
       const reply = await useThumbStore.getState().generate(video);
       app.appendStep(thoughtId, "✓ Thumbnails ready");
+      app.patchMessage(thoughtId, { pending: false });
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
+    /* 0sp — Social Chrome playbook publish confirmation. */
+    if (getPendingPublish() && isPublishConfirmation(trimmed)) {
+      app.patchMessage(thoughtId, { routedAgents: ["Social Media Manager"] });
+      app.appendStep(thoughtId, "Confirmed → publishing via logged-in Chrome…");
+      const reply = await confirmPendingSocialPublish(settings, (t) => app.appendStep(thoughtId, t));
+      app.patchMessage(thoughtId, { pending: false });
+      app.addMessage({ role: "assistant", text: reply });
+      return reply;
+    }
+
+    /* 0sp0 — Chrome social playbooks (logged-in browser, no platform API keys). */
+    const socialIntent = matchSocialPlaybookIntent(trimmed);
+    if (socialIntent && isSocialPlaybooksEnabled({ explicitOptIn: settings.socialPlaybooksDevEnabled })) {
+      app.patchMessage(thoughtId, { routedAgents: ["Social Media Manager"] });
+      app.appendStep(thoughtId, `Social playbook → ${socialIntent.platforms.join(", ")}`);
+      const reply = await runSocialPlaybookIntent(socialIntent, settings, (t) => app.appendStep(thoughtId, t));
       app.patchMessage(thoughtId, { pending: false });
       app.addMessage({ role: "assistant", text: reply });
       return reply;
