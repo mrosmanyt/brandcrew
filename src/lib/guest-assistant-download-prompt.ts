@@ -1,10 +1,14 @@
 /**
  * Guest landing download prompt for Cinem AI Assistant.
- * Shown once per browser until dismissed (localStorage).
+ * Shown on every tab refresh until the guest clicks Download (localStorage).
  */
 
 export const GUEST_ASSISTANT_DOWNLOAD_PROMPT_DISMISS_KEY =
   "cinem-guest-assistant-download-dismiss";
+
+/** Set when the guest uses the Download CTA — suppresses future prompts. */
+export const GUEST_ASSISTANT_DOWNLOAD_COMPLETE_KEY =
+  "cinem-guest-assistant-download-complete";
 
 const PACKAGED_SHELL_UA = /Electron\/|\bTauri\b/i;
 
@@ -13,10 +17,12 @@ export function isPackagedDesktopShell(userAgent: string): boolean {
 }
 
 export function shouldShowGuestAssistantDownloadPrompt(input: {
-  dismissed: boolean;
+  downloaded: boolean;
+  signedIn?: boolean;
   userAgent?: string;
 }): boolean {
-  if (input.dismissed) return false;
+  if (input.signedIn) return false;
+  if (input.downloaded) return false;
   if (input.userAgent && isPackagedDesktopShell(input.userAgent)) return false;
   return true;
 }

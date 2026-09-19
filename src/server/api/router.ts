@@ -7,6 +7,7 @@ import * as adminRoot from "./admin/root";
 import * as adminBackup from "./admin/backup";
 import * as adminSupport from "./admin/support";
 import * as adminSupportThread from "./admin/support-thread";
+import * as adminAssistantQueries from "./admin/assistant-queries";
 import * as supportRoot from "./support/root";
 import * as supportPresence from "./support/presence";
 import * as supportThread from "./support/thread";
@@ -23,6 +24,7 @@ import * as authConnect from "./auth/connect";
 import * as authConnectApprove from "./auth/connect-approve";
 import * as authConnectClaim from "./auth/connect-claim";
 import * as billingCheckout from "./billing/checkout";
+import * as billingAssistantCheckout from "./billing/assistant-checkout";
 import * as billingSupport from "./billing/support";
 import * as whopWebhook from "./webhooks/whop";
 import * as geminigenImageWebhook from "./webhooks/geminigen-image";
@@ -137,6 +139,10 @@ export const API_ROUTES: RouteSpec[] = [
     pattern: ["api", "admin", "support", ":threadId"],
     handlers: asHandlers(adminSupportThread),
   },
+  {
+    pattern: ["api", "admin", "assistant-queries"],
+    handlers: asHandlers(adminAssistantQueries),
+  },
   { pattern: ["api", "support"], handlers: asHandlers(supportRoot) },
   { pattern: ["api", "support", "presence"], handlers: asHandlers(supportPresence) },
   { pattern: ["api", "support", ":threadId"], handlers: asHandlers(supportThread) },
@@ -189,6 +195,10 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "composio", "callback"], handlers: asHandlers(composioCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
+  {
+    pattern: ["api", "billing", "assistant-checkout"],
+    handlers: asHandlers(billingAssistantCheckout),
+  },
   { pattern: ["api", "billing", "support"], handlers: asHandlers(billingSupport) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
   {

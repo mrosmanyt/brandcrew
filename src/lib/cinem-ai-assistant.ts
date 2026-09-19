@@ -1,8 +1,13 @@
 /**
- * Cinem AI Assistant — Windows desktop feature on existing CINEM Pro plans.
- * Not a separate Whop product. Free is metered; Pro / Pro Plus / Ultra include it.
+ * Cinem AI Assistant — Windows desktop product.
+ * Standalone billing at /cinem-ai-assistant/billing. Desk plans may still include it.
  */
 
+import {
+  assistantBillingPath,
+  assistantCheckoutPath,
+  parseAssistantBillingPlanId,
+} from "@/lib/cinem-ai-assistant-billing";
 import { planDisplayName, type CheckoutPlanId, type PlanId } from "@/lib/constants";
 import { isPaidPlan, normalizePlanId } from "@/lib/limits";
 import {
@@ -98,8 +103,8 @@ export const CINEM_AI_ASSISTANT_FEATURES: CinemAiAssistantFeature[] = [
   },
   {
     id: "upgrade",
-    title: "Included with CINEM Pro",
-    body: "Free includes 500 turns / month. Pro, Pro Plus, and Ultra include the assistant — upgrade on the existing billing page.",
+    title: "Standalone plans",
+    body: "Free includes 500 turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing.",
   },
 ];
 
@@ -198,17 +203,15 @@ export function assistantCheckoutPlanFromQuery(
   return null;
 }
 
-export function cinemAiAssistantBillingPath(planDisplay = "pro") {
-  const params = new URLSearchParams({
-    plan: planDisplay,
-    product: CINEM_AI_ASSISTANT_PRODUCT,
-  });
-  return `/billing?${params.toString()}`;
+export function cinemAiAssistantBillingPath(planDisplay = "monthly") {
+  const plan = parseAssistantBillingPlanId(planDisplay) || "monthly";
+  return assistantBillingPath(plan);
 }
 
-export function cinemAiAssistantUpgradeUrl(origin?: string | null, planDisplay = "pro") {
+export function cinemAiAssistantUpgradeUrl(origin?: string | null, planDisplay = "monthly") {
   const base = (origin || siteOrigin() || SITE_ORIGIN).replace(/\/$/, "");
-  return `${base}${cinemAiAssistantBillingPath(planDisplay)}`;
+  const plan = parseAssistantBillingPlanId(planDisplay) || "monthly";
+  return `${base}${assistantCheckoutPath(plan)}`;
 }
 
 export function cinemAiAssistantSetupEnvUrl() {

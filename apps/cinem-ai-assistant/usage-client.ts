@@ -61,8 +61,8 @@ export async function fetchAssistantUsage(input: {
   return data;
 }
 
-/** Open the existing CINEM Pro Whop checkout in the system browser. */
+/** Open standalone Cinem AI Assistant billing in the system browser. */
 export function assistantUpgradeUrl(origin?: string) {
   const base = cloudOrigin(origin);
-  return `${base}/billing?plan=pro&product=${CINEM_AI_ASSISTANT_PRODUCT}`;
+  return `${base}/billing?plan=monthly&product=${CINEM_AI_ASSISTANT_PRODUCT}`;
 }

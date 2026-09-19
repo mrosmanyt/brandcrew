@@ -80,13 +80,10 @@ assert.equal(serverPlan("ultra", CINEM_AI_ASSISTANT_PRODUCT), "ultra");
 assert.equal(serverPlan("pro-plus", CINEM_AI_ASSISTANT_PRODUCT), "pro");
 assert.equal(PLANS.starter.price, 20);
 assert.equal(PLANS.starter.name, "Pro");
-assert.equal(
-  cinemAiAssistantBillingPath("pro"),
-  "/billing?plan=pro&product=cinem-ai-assistant",
-);
+assert.equal(cinemAiAssistantBillingPath("monthly"), "/cinem-ai-assistant/billing?plan=monthly");
 assert.equal(
   cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
-  "https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant",
+  "https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant",
 );
 assert.equal(
   checkoutPlanFromNextPath("/billing?plan=pro&product=cinem-ai-assistant"),
@@ -98,7 +95,7 @@ assert.equal(
   "/desk/ws_1/billing?plan=starter",
 );
 assert.equal(clientUpgradeUrl("https://app.cinem.tech"), cinemAiAssistantUpgradeUrl("https://app.cinem.tech"));
-console.log("ok: upgrade deep link is existing Pro ($20 / starter), not a new SKU");
+console.log("ok: upgrade deep link routes to standalone assistant billing");
 
 const snap = usageSnapshot({
   plan: "demo",
@@ -135,7 +132,7 @@ assert.ok(CINEM_AI_ASSISTANT_FEATURES.length >= 6);
 console.log("ok: usage snapshot + feature list");
 
 const page = readFileSync("src/app/cinem-ai-assistant/page.tsx", "utf8");
-assert.match(page, /Included with the desk|Included with your CINEM Pro plan/);
+assert.match(page, /Plans for|standalone|billing/i);
 assert.doesNotMatch(page, /mickey|cinempro\.site|OpenAI|Claude|Gemini|Google/i);
 const download = readFileSync("src/app/download/page.tsx", "utf8");
 assert.match(download, /CINEM-Pro-Setup\.exe|CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME|WIN_SETUP_FILENAME/);
@@ -143,13 +140,14 @@ assert.match(download, /Get CINEM Pro|Get desktop/);
 assert.match(download, /Cinem-AI-Assistant-Setup\.exe|CINEM_AI_ASSISTANT_SETUP_FILENAME/);
 const billingPage = readFileSync("src/app/billing/page.tsx", "utf8");
 assert.match(billingPage, /cinem-ai-assistant/);
-assert.match(billingPage, /workspaceBillingHref/);
+assert.match(billingPage, /assistantBillingPath|cinem-ai-assistant\/billing/);
 const docs = readFileSync("docs/cinem-ai-assistant.md", "utf8");
 assert.match(docs, /VITE_CINEM_CLOUD_URL/);
-assert.match(docs, /WHOP_STARTER_PLAN_ID/);
-assert.match(docs, /Do not create a Cinem AI Assistant SKU/);
+assert.match(docs, /WHOP_ASSISTANT_MONTHLY_PLAN_ID/);
+assert.match(docs, /\/cinem-ai-assistant\/billing/);
 assert.match(docs, /\/api\/cinem-ai-assistant\/usage/);
-assert.match(docs, /Same CINEM Pro account = same plan on desktop/);
+assert.match(docs, /Same CINEM Pro account = same login on desktop/);
+assert.match(docs, /\/admin\/assistant-queries/);
 assert.match(docs, /CINEM-Pro-Setup\.exe/);
 assert.match(docs, /windows-installer-branding/);
 assert.match(docs, /desktop-windows\.yml|CINEM Pro Windows/);
@@ -242,7 +240,7 @@ const eslint = readFileSync("eslint.config.mjs", "utf8");
 assert.match(eslint, /apps\/\*\*/);
 const schema = readFileSync("prisma/schema.prisma", "utf8");
 assert.match(schema, /model ProductUsage/);
-assert.doesNotMatch(schema, /WhopProduct|AssistantPlan/);
-console.log("ok: marketing, docs, imported Tauri app, Windows CI — no Mickey leftovers, no new Whop SKU");
+assert.match(schema, /model AssistantSubscription/);
+console.log("ok: marketing, docs, imported Tauri app, Windows CI — standalone assistant billing");
 
 console.log("Cinem AI Assistant checks passed.");

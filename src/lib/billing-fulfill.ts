@@ -1,10 +1,16 @@
 import { planBudget } from "@/lib/billing";
 import {
+  assistantSubscriptionPeriodEnd,
+  type AssistantBillingPlanId,
+} from "@/lib/cinem-ai-assistant-billing";
+import {
   extractWhopResource,
+  isAssistantProductCheckout,
   isMembershipDeactivatedEvent,
   isPaidUnlockEvent,
   isSupportCheckout,
   parseWhopEnvelope,
+  resolveAssistantPlanFromWhop,
   resolvePaidPlanFromWhop,
   shouldDowngradeToDemo,
 } from "@/lib/billing-events";
@@ -51,6 +57,30 @@ async function markProcessed(input: {
     }
     throw error;
   }
+}
+
+async function applyAssistantSubscription(input: {
+  userId: string;
+  plan: AssistantBillingPlanId;
+  membershipId: string | null;
+}) {
+  const periodEnd = assistantSubscriptionPeriodEnd(input.plan);
+  return prisma.assistantSubscription.upsert({
+    where: { userId: input.userId },
+    create: {
+      userId: input.userId,
+      plan: input.plan,
+      status: "active",
+      currentPeriodEnd: periodEnd,
+      whopMembershipId: input.membershipId,
+    },
+    update: {
+      plan: input.plan,
+      status: "active",
+      currentPeriodEnd: periodEnd,
+      ...(input.membershipId ? { whopMembershipId: input.membershipId } : {}),
+    },
+  });
 }
 
 async function applyPaidPlan(input: {
@@ -108,6 +138,25 @@ export async function fulfillWhopEvent(input: {
     };
   }
 
+  if (isPaidUnlockEvent(type) && isAssistantProductCheckout(resource.metadata)) {
+    const assistantPlan = resolveAssistantPlanFromWhop({
+      metadata: resource.metadata,
+      planId: resource.planId,
+    });
+    const userId = resource.userId;
+    if (!assistantPlan || !userId) {
+      await markProcessed({ id: dedupeId, eventType: type || "unknown", externalId });
+      return { outcome: "ignored" };
+    }
+    await applyAssistantSubscription({
+      userId,
+      plan: assistantPlan,
+      membershipId: resource.membershipId,
+    });
+    await markProcessed({ id: dedupeId, eventType: type, externalId });
+    return { outcome: "upgraded", plan: assistantPlan };
+  }
+
   if (isPaidUnlockEvent(type)) {
     const workspaceId = resource.workspaceId;
     const plan = resolvePaidPlanFromWhop({
@@ -133,6 +182,31 @@ export async function fulfillWhopEvent(input: {
     });
     await markProcessed({ id: dedupeId, eventType: type, externalId });
     return { outcome: "upgraded", workspaceId, plan };
+  }
+
+  if (isMembershipDeactivatedEvent(type) && isAssistantProductCheckout(resource.metadata)) {
+    const userId = resource.userId;
+    if (!userId) {
+      await markProcessed({ id: dedupeId, eventType: type, externalId });
+      return { outcome: "ignored" };
+    }
+    const existing = await prisma.assistantSubscription.findUnique({
+      where: { userId },
+      select: { whopMembershipId: true },
+    });
+    const membershipMatches = Boolean(
+      resource.membershipId && existing?.whopMembershipId === resource.membershipId,
+    );
+    if (membershipMatches || !resource.membershipId) {
+      await prisma.assistantSubscription.updateMany({
+        where: { userId },
+        data: { status: "cancelled", whopMembershipId: null },
+      });
+      await markProcessed({ id: dedupeId, eventType: type, externalId });
+      return { outcome: "downgraded", plan: "cancelled" };
+    }
+    await markProcessed({ id: dedupeId, eventType: type, externalId });
+    return { outcome: "ignored" };
   }
 
   if (isMembershipDeactivatedEvent(type)) {

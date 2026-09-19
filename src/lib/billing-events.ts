@@ -1,3 +1,8 @@
+import {
+  resolveAssistantBillingPlanFromWhopPlanId,
+  type AssistantBillingPlanId,
+} from "@/lib/cinem-ai-assistant-billing";
+import { CINEM_AI_ASSISTANT_PRODUCT } from "@/lib/cinem-ai-assistant";
 import type { CheckoutPlanId } from "@/lib/constants";
 import { normalizePlanId } from "@/lib/limits";
 import {
@@ -107,6 +112,22 @@ export function extractWhopResource(data: unknown) {
     amountUsd,
     amountCents: amountUsd !== null ? supportAmountCents(amountUsd) : 0,
   };
+}
+
+export function isAssistantProductCheckout(metadata?: unknown) {
+  const product = readMetaString(metadata, "product");
+  return product === CINEM_AI_ASSISTANT_PRODUCT;
+}
+
+export function resolveAssistantPlanFromWhop(input: {
+  metadata?: unknown;
+  planId?: string | null;
+}): AssistantBillingPlanId | null {
+  const hinted = readMetaString(input.metadata, "plan", "planId", "plan_id");
+  if (hinted === "monthly" || hinted === "3mo" || hinted === "6mo" || hinted === "1yr") {
+    return hinted;
+  }
+  return resolveAssistantBillingPlanFromWhopPlanId(input.planId);
 }
 
 export function isSupportCheckout(input: {

@@ -6,10 +6,11 @@ import { SiteFooter } from "@/components/marketing/home-sections";
 import {
   AssistantFeatureGrid,
   AssistantHeroCtas,
-  AssistantPricing,
+  AssistantPricingTeaser,
   AssistantProductFrames,
 } from "@/components/marketing/cinem-ai-assistant-page";
 import {
+  CINEM_AI_ASSISTANT_FREE_TURNS,
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
   CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
@@ -40,8 +41,9 @@ export default function CinemAiAssistantPage() {
           </h1>
           <p className="mkt-hero-lead mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
             Voice, agents, and vision on Windows — same CINEM Pro account as the website.
-            Full native features are Windows only. Purchases stay on this site: Free, then
-            the existing Pro / Pro Plus / Ultra plans.
+            Full native features are Windows only. Free includes{" "}
+            {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} turns/month — paid plans are billed
+            separately from CINEM Pro desk plans.
           </p>
           <div className="mkt-hero-cta mt-10">
             <AssistantHeroCtas />
@@ -93,14 +95,14 @@ export default function CinemAiAssistantPage() {
           <div className="mx-auto w-full max-w-5xl px-6 py-20 md:py-24">
             <p className="text-sm text-muted-foreground">Pricing</p>
             <h2 className="font-heading mt-3 text-3xl tracking-tight md:text-4xl">
-              Included with your CINEM Pro plan
+              Plans for {CINEM_AI_ASSISTANT_NAME}
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-              There is no standalone {CINEM_AI_ASSISTANT_NAME} SKU. Upgrade uses the same
-              Whop Pro checkout as Mission Control.
+              Assistant billing is separate from CINEM Pro desk plans. Founding members may
+              still qualify for free access — see the full pricing page for current spots.
             </p>
             <div className="mt-10">
-              <AssistantPricing />
+              <AssistantPricingTeaser />
             </div>
           </div>
         </section>
