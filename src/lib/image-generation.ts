@@ -5,7 +5,6 @@
 import {
   buildImageGenPublicStatus,
   imageGenSetupHint,
-  isPlaceholderSecret,
   normalizeImageGenProvider,
   normalizeImagePrompt,
   type ImageGenProviderId,

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { appOrigin } from "@/lib/crypto-secret";
-import { safeNextPath } from "@/lib/google-auth-shared";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureAppUser } from "@/lib/supabase/ensure-app-user";
 import { readSupabaseOAuthState } from "@/lib/supabase/oauth";
