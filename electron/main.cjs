@@ -40,6 +40,22 @@ const { browserWindowChromeOptions, chromeQuery } = require("./window-chrome.cjs
 const wakeWord = require("./wake-word.cjs");
 const computerUse = require("./computer-use.cjs");
 const systemMeters = require("./system-meters.cjs");
+const mainLog = require("./main-log.cjs");
+
+// Set before the first getPath("logs") call so logs land under "CINEM Pro",
+// not the package.json name ("brandcrew"). Also set again in whenReady() —
+// harmless, app.setName() is idempotent.
+app.setName("CINEM Pro");
+mainLog.logInfo(
+  app,
+  `CINEM Pro starting — version=${app.getVersion()} platform=${process.platform} arch=${process.arch}`,
+);
+process.on("uncaughtException", (error) => {
+  mainLog.logError(app, "uncaughtException", error);
+});
+process.on("unhandledRejection", (reason) => {
+  mainLog.logError(app, "unhandledRejection", reason);
+});
 
 const HOST = "127.0.0.1";
 
@@ -507,6 +523,10 @@ function attachViewEvents(entry) {
       if (!isMainFrame || isIgnorableLoadError(errorCode)) return;
       if (validatedURL && String(validatedURL).startsWith("file:")) return;
       console.error("CINEM desktop did-fail-load", errorCode, errorDescription, entry.mode);
+      mainLog.logInfo(
+        app,
+        `did-fail-load mode=${entry.mode} errorCode=${errorCode} errorDescription=${errorDescription}`,
+      );
       if (entry.mode === "desk") showOfflinePage(entry);
       else if (entry.mode === "assistant") showAssistantOfflinePage(entry);
     },
@@ -514,6 +534,7 @@ function attachViewEvents(entry) {
   entry.view.webContents.on("render-process-gone", (_event, details) => {
     if (details.reason === "clean-exit") return;
     console.error("CINEM desktop renderer gone", details.reason, entry.mode);
+    mainLog.logInfo(app, `render-process-gone mode=${entry.mode} reason=${details.reason}`);
     if (entry.mode === "desk") showOfflinePage(entry);
     else if (entry.mode === "assistant") showAssistantOfflinePage(entry);
   });
@@ -1095,6 +1116,7 @@ function installAppMenu() {
 }
 
   app.whenReady().then(() => {
+    try {
     app.setName("CINEM Pro");
     const ua = chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent());
     if (ua) {
@@ -1225,7 +1247,7 @@ function installAppMenu() {
         Accept: "application/json, text/xml, */*",
         "User-Agent":
           chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent()) ||
-          "CINEMPro/0.3.5",
+          "CINEMPro/0.3.6",
       };
       const sentKey =
         payload && typeof payload.worldMonitorKey === "string" ? payload.worldMonitorKey.trim() : "";
@@ -1330,8 +1352,18 @@ function installAppMenu() {
     if (protoArg) {
       app.once("browser-window-created", () => handleProtocolUrl(protoArg));
     }
+    } catch (error) {
+      mainLog.logError(app, "startup", error);
+      dialog.showErrorBox(
+        "CINEM Pro",
+        `CINEM Pro could not start.\n\n${error instanceof Error ? error.message : String(error)}\n\nLog file: ${mainLog.getLogFilePath(app)}`,
+      );
+      app.quit();
+      return;
+    }
     return boot().catch((error) => {
       console.error(error);
+      mainLog.logError(app, "boot", error);
       if (useCloudDesk()) {
         if (shells.size === 0) createShellWindow("desk");
         const entry = firstShell();
@@ -1339,7 +1371,10 @@ function installAppMenu() {
         if (entry && !entry.win.isDestroyed()) entry.win.show();
         return;
       }
-      dialog.showErrorBox("CINEM Pro", error instanceof Error ? error.message : String(error));
+      dialog.showErrorBox(
+        "CINEM Pro",
+        `${error instanceof Error ? error.message : String(error)}\n\nLog file: ${mainLog.getLogFilePath(app)}`,
+      );
       app.quit();
     });
   });

@@ -6,7 +6,7 @@ const PRODUCTION_DESK_ORIGIN = "https://app.cinem.tech";
 const VERCEL_DESK_ORIGIN = "https://brandcrew.vercel.app";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 43180;
-const DESKTOP_SHELL_VERSION = "0.3.5";
+const DESKTOP_SHELL_VERSION = "0.3.6";
 /** Packaged Windows launch: enable assistant MVP flags unless already set in the environment. */
 const PACKAGED_LAUNCH_ENV = {
   COMPUTER_USE_ENABLED: "1",

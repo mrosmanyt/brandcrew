@@ -17,7 +17,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
   };
 };
 
-assert.equal(pkg.version, "0.3.5");
+assert.equal(pkg.version, "0.3.6");
 assert.match(pkg.dependencies?.["electron-updater"] ?? "", /\d/);
 assert.equal(pkg.scripts?.["test:desktop-updater"], "tsx scripts/check-desktop-updater.ts");
 console.log("ok: version + electron-updater dependency");
