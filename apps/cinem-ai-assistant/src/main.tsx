@@ -4,6 +4,7 @@ import App from "./App";
 import CinemProGate from "./components/gate/CinemProGate";
 import GeminiOnboardingModal from "./components/gate/GeminiOnboardingModal";
 import UpgradeModal from "./components/gate/UpgradeModal";
+import AssistantProLock from "./components/gate/AssistantProLock";
 import IntegrityGuard from "./components/gate/IntegrityGuard";
 import AdminPanel from "./components/admin/AdminPanel";
 import "./index.css";
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <App />
           <GeminiOnboardingModal />
           <UpgradeModal />
+          <AssistantProLock />
         </CinemProGate>
       </IntegrityGuard>
     )}

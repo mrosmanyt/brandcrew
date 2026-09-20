@@ -36,12 +36,14 @@ export default function UpgradeModal() {
         >
           UPGRADE TO PRO
         </button>
-        <button
-          onClick={hide}
-          className="mt-2 w-full py-2 font-display text-[0.55rem] tracking-[0.2em] text-neon-dim hover:text-ice"
-        >
-          NOT NOW
-        </button>
+        {usage.proRequired ? null : (
+          <button
+            onClick={hide}
+            className="mt-2 w-full py-2 font-display text-[0.55rem] tracking-[0.2em] text-neon-dim hover:text-ice"
+          >
+            NOT NOW
+          </button>
+        )}
       </div>
     </div>
   );

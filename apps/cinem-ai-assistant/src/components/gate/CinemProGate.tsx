@@ -63,9 +63,9 @@ function SignInScreen() {
         SIGN IN WITH CINEM PRO
       </h2>
       <p className="mt-2 text-xs leading-relaxed text-neon-dim">
-        Cinem AI Assistant is included with your existing CINEM Pro plan. Sign in with the same
-        account you use at app.cinem.tech. Free includes 500 chat/voice turns per month; Pro,
-        Pro Plus, and Ultra include the assistant.
+        Cinem AI Assistant is included with Pro, Pro Plus, Ultra, an active assistant
+        subscription, or a founding membership. Sign in with the same account you use at
+        app.cinem.tech.
       </p>
 
       <button

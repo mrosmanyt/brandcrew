@@ -166,6 +166,16 @@ export async function fetchUsage(turns?: number): Promise<CinemAiAssistantUsageR
     if (res.status === 401) {
       throw new Error(data.error || "Unauthorized");
     }
+    if (data.code === "PRO_REQUIRED" || (res.status === 402 && data.error === "Pro required")) {
+      return {
+        ...data,
+        allowed: false,
+        proRequired: true,
+        code: "PRO_REQUIRED",
+        upgradeUrl: data.upgradeUrl || fallbackUpgradeUrl(),
+        whatsappUrl: data.whatsappUrl,
+      };
+    }
     if (!res.ok && !data.upgradeUrl) {
       throw new Error(data.error || `Usage request failed (${res.status})`);
     }
@@ -179,8 +189,13 @@ export async function fetchUsage(turns?: number): Promise<CinemAiAssistantUsageR
 /** Reserve one chat/voice turn. GET first so the last remaining turn still runs. */
 export async function consumeAssistantTurn(): Promise<CinemAiAssistantUsageResponse> {
   const before = await fetchUsage();
-  if (!before.allowed) return before;
+  if (before.proRequired || before.code === "PRO_REQUIRED" || !before.allowed) {
+    return { ...before, allowed: false };
+  }
   const after = await fetchUsage(1);
+  if (after.proRequired || after.code === "PRO_REQUIRED") {
+    return { ...after, allowed: false };
+  }
   return { ...after, allowed: true };
 }
 

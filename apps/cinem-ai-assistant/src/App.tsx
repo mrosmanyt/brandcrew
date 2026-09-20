@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import TopBar from "@/components/TopBar";
+import AssistantSunsetBanner from "@/components/gate/AssistantSunsetBanner";
 import SettingsModal from "@/components/settings/SettingsModal";
 import Toasts from "@/components/Toasts";
 import TaskWindows from "@/components/TaskWindows";
@@ -159,6 +160,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden">
+      <AssistantSunsetBanner />
       <TopBar />
 
       <main className="grid min-h-0 flex-1 grid-cols-[290px_minmax(0,1fr)_400px] gap-4 px-4 pb-3 pt-2">

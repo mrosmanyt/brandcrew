@@ -68,7 +68,11 @@ import { agentById } from "@/data/agents";
 import { detectLanguage, languageDirective } from "@/lib/language";
 import { logActivity, getDeviceUser } from "@/lib/db";
 import { reportUsage } from "@/lib/usage";
-import { shouldPromptAssistantUpgrade } from "../../usage-client";
+import {
+  hasClientAssistantAccess,
+  shouldHardLockAssistant,
+  shouldPromptAssistantUpgrade,
+} from "../../usage-client";
 import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 import { useAppStore } from "@/store/useAppStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
@@ -433,13 +437,20 @@ export async function processCommand(text: string): Promise<string> {
   if (!trimmed) return "";
 
   const cloud = useCinemCloudStore.getState();
+  // Client-side Pro check before consumeTurn / local BYOK. Server still gates the meter.
+  if (shouldHardLockAssistant(cloud.usage)) return "";
+  if (cloud.usage && !hasClientAssistantAccess(cloud.usage)) {
+    if (shouldPromptAssistantUpgrade(cloud.usage)) cloud.showUpgrade(cloud.usage);
+    return "";
+  }
   try {
     const usage = await cloud.consumeTurn();
-    if (!usage.allowed) {
+    if (shouldHardLockAssistant(usage) || !usage.allowed) {
       if (shouldPromptAssistantUpgrade(usage)) cloud.showUpgrade(usage);
       return "";
     }
   } catch (error) {
+    if (shouldHardLockAssistant(cloud.usage)) return "";
     if (shouldPromptAssistantUpgrade(cloud.usage)) cloud.showUpgrade(cloud.usage);
     useAppStore.getState().addMessage({
       role: "system",
