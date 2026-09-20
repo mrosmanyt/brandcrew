@@ -4,9 +4,16 @@
  * signAndEditExecutable only when complete signing credentials exist.
  * Also packs electron-updater (excluded by the default !node_modules filter).
  */
+// This file is executed directly by electron-builder as plain CommonJS (not
+// bundled/transpiled), so it must keep using require() — ESM import syntax
+// is invalid in this run context.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("node:path");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { createRequire } = require("node:module");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { config: loadEnv } = require("dotenv");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { applyWinSigning } = require("./win-code-signing.cjs");
 
 const root = path.join(__dirname, "..");
@@ -14,6 +21,7 @@ const requireFromRoot = createRequire(path.join(root, "package.json"));
 loadEnv({ path: path.join(root, ".env.local"), quiet: true });
 loadEnv({ path: path.join(root, ".env"), quiet: true });
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CommonJS build script executed directly by electron-builder
 const pkg = require(path.join(root, "package.json"));
 const { config } = applyWinSigning(structuredClone(pkg.build), process.env);
 
@@ -26,6 +34,7 @@ function updaterModuleGlobs() {
     names.add(name);
     try {
       const pkgPath = requireFromRoot.resolve(`${name}/package.json`);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- CommonJS build script executed directly by electron-builder
       const depPkg = require(pkgPath);
       for (const dep of Object.keys(depPkg.dependencies || {})) {
         queue.push(dep);
