@@ -52,7 +52,6 @@ import {
   missingRoleMarketplaceChips,
   PLANS,
   type GenerateAction,
-  type PlanId,
 } from "@/lib/constants";
 import type { AgentDTO, JobDTO, SkillDTO } from "@/lib/job-types";
 import { buildChatThread } from "@/lib/live-progress";

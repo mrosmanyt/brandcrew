@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useWorkspaceJobsPoll } from "@/components/desk/use-workspace-jobs-poll";
@@ -24,7 +24,13 @@ export function NotificationBell({
   initialItems: NeedsYouItem[];
 }) {
   const [items, setItems] = useState(initialItems);
+  const [prevInitialItems, setPrevInitialItems] = useState(initialItems);
   const [open, setOpen] = useState(false);
+
+  if (initialItems !== prevInitialItems) {
+    setPrevInitialItems(initialItems);
+    setItems(initialItems);
+  }
 
   const refresh = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/jobs`);
@@ -43,10 +49,6 @@ export function NotificationBell({
         })),
     );
   }, [workspaceId]);
-
-  useEffect(() => {
-    setItems(initialItems);
-  }, [initialItems]);
 
   useWorkspaceJobsPoll(workspaceId, (data) => {
     const jobs = Array.isArray(data.jobs) ? data.jobs : [];

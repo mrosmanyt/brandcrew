@@ -1,7 +1,7 @@
 /**
  * Mobile companion — pair code / deep link + short-lived command tokens.
  */
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { createJobFromChat } from "@/lib/job-runtime";
 import { hashCompanionToken } from "@/lib/referral-invites";

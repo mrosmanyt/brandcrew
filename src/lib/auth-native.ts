@@ -288,7 +288,7 @@ export async function approveConnectTicket(input: {
     deviceName,
   });
   if (!session.user) throw new ClientError("Account not found.", 401);
-  let workspaceId = input.workspaceId || null;
+  const workspaceId = input.workspaceId || null;
   if (workspaceId) await assertWorkspaceMember(input.userId, workspaceId);
   const payload: ConnectPayload = {
     type: "session",

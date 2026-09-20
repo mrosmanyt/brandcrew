@@ -8,7 +8,6 @@ export const WIN_DOWNLOAD_NUDGE_LOCAL_KEY = "cinem-win-download-nudge-hide";
 
 const WINDOWS_UA = /Windows NT|Win32|Win64/i;
 const WINDOWS_PLATFORM = /^(Win32|Win64|Windows)$/i;
-const MOBILE_UA = /Android|iPhone|iPad|iPod|IEMobile|Windows Phone|\bMobile\b/i;
 const APPLE_UA = /Macintosh|Mac OS X|\biOS\b/i;
 const LINUX_DESKTOP_UA = /\bLinux\b/i;
 /** Already running CINEM Pro desktop — do not advertise Setup.exe. */
