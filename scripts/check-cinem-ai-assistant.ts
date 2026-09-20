@@ -9,8 +9,10 @@ import {
   shouldPromptAssistantUpgrade as clientShouldPromptUpgrade,
 } from "../apps/cinem-ai-assistant/usage-client";
 import {
+  ASSISTANT_SUBSCRIPTION_GRACE_MS,
   evaluateAssistantProAccess,
   hasAssistantProAccess,
+  isActiveAssistantSubscription,
 } from "../src/lib/assistant-pro-access";
 import {
   assistantCheckoutPlanFromQuery as serverPlan,
@@ -95,6 +97,17 @@ for (const plan of ["starter", "pro", "ultra"] as const) {
   assert.equal(paidLock.allowed, true);
   assert.equal(shouldHardLockAssistant(paidLock), false);
 }
+const periodEnd = new Date("2026-09-26T12:00:00.000Z");
+const graceSub = { status: "active", currentPeriodEnd: periodEnd };
+assert.equal(isActiveAssistantSubscription(graceSub, new Date("2026-09-25T12:00:00.000Z")), true);
+assert.equal(
+  isActiveAssistantSubscription(graceSub, new Date(periodEnd.getTime() + ASSISTANT_SUBSCRIPTION_GRACE_MS)),
+  true,
+);
+assert.equal(
+  isActiveAssistantSubscription(graceSub, new Date(periodEnd.getTime() + ASSISTANT_SUBSCRIPTION_GRACE_MS + 1)),
+  false,
+);
 assert.equal(hasAssistantProAccess({ assistantFoundingMember: true, plan: "demo" }), true);
 assert.equal(
   evaluateAssistantProAccess({ assistantFoundingMember: true, plan: "demo" }, afterCutoff).allowed,

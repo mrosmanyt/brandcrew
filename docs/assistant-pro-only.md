@@ -7,7 +7,7 @@ There is no baked-in default cutoff date. Ship timestamp `2026-09-20T18:40:00.00
 
 ## Who is Pro
 
-- Active `AssistantSubscription` (`status = active` and `currentPeriodEnd` null or in the future)
+- Active `AssistantSubscription` (`status = active` and `currentPeriodEnd` null, in the future, or within a 2-day grace after end)
 - Paid desk plan (`starter` / `pro` / `ultra` via `isPaidPlan`)
 - Founding members (`User.assistantFoundingMember`) — lifetime included
 

@@ -11,11 +11,21 @@ import {
   ASSISTANT_PRO_REQUIRED_ERROR,
   ASSISTANT_SALES_WHATSAPP_E164,
   ASSISTANT_SALES_WHATSAPP_URL,
+  ASSISTANT_SUBSCRIPTION_GRACE_MS,
   assistantFreeCutoffAt,
   evaluateAssistantProAccess,
   hasAssistantProAccess,
+  isActiveAssistantSubscription,
   isAssistantFreeSunsetActive,
 } from "../src/lib/assistant-pro-access";
+import {
+  ASSISTANT_SUNSET_CTA,
+  ASSISTANT_SUNSET_DATED_PREFIX,
+  ASSISTANT_SUNSET_DATED_SUFFIX,
+  ASSISTANT_SUNSET_GENERIC,
+  assistantCutoffLabel,
+  assistantSunsetBannerText,
+} from "../src/lib/assistant-sunset-copy";
 import { usageSnapshot } from "../src/lib/cinem-ai-assistant";
 
 const MUST_GATE = [
@@ -187,6 +197,70 @@ withCutoffEnv(CUTOFF_ISO, () => {
   );
   assert.equal(cancelledSub.allowed, false);
   assert.equal(cancelledSub.proRequired, true);
+
+  const periodEnd = new Date("2026-09-26T12:00:00.000Z");
+  const inPeriodNow = new Date("2026-09-25T12:00:00.000Z");
+  const withinGraceNow = new Date(periodEnd.getTime() + 24 * 60 * 60 * 1000);
+  const graceBoundaryNow = new Date(periodEnd.getTime() + ASSISTANT_SUBSCRIPTION_GRACE_MS);
+  const pastGraceNow = new Date(periodEnd.getTime() + ASSISTANT_SUBSCRIPTION_GRACE_MS + 1);
+  const graceSub = { status: "active" as const, currentPeriodEnd: periodEnd };
+
+  assert.equal(
+    isActiveAssistantSubscription(graceSub, inPeriodNow),
+    true,
+    "in-period allowed",
+  );
+  assert.equal(
+    isActiveAssistantSubscription(graceSub, periodEnd),
+    true,
+    "at period end allowed",
+  );
+  assert.equal(
+    isActiveAssistantSubscription(graceSub, withinGraceNow),
+    true,
+    "within grace allowed",
+  );
+  assert.equal(
+    isActiveAssistantSubscription(graceSub, graceBoundaryNow),
+    true,
+    "exactly 2-day grace allowed",
+  );
+  assert.equal(
+    isActiveAssistantSubscription(graceSub, pastGraceNow),
+    false,
+    "past grace not active",
+  );
+  assert.equal(
+    isActiveAssistantSubscription({ status: "active", currentPeriodEnd: null }, pastGraceNow),
+    true,
+    "null currentPeriodEnd stays active",
+  );
+  assert.equal(
+    isActiveAssistantSubscription({ status: "cancelled", currentPeriodEnd: periodEnd }, inPeriodNow),
+    false,
+    "cancelled not active",
+  );
+
+  const inPeriodAccess = evaluateAssistantProAccess(
+    { plan: "demo", subscription: graceSub },
+    inPeriodNow,
+  );
+  assert.equal(inPeriodAccess.allowed, true, "in-period evaluate allowed");
+  assert.equal(inPeriodAccess.reason, "assistant_subscription");
+
+  const withinGraceAccess = evaluateAssistantProAccess(
+    { plan: "demo", subscription: graceSub },
+    withinGraceNow,
+  );
+  assert.equal(withinGraceAccess.allowed, true, "within grace evaluate allowed");
+  assert.equal(withinGraceAccess.reason, "assistant_subscription");
+
+  const pastGraceAccess = evaluateAssistantProAccess(
+    { plan: "demo", subscription: graceSub },
+    pastGraceNow,
+  );
+  assert.equal(pastGraceAccess.allowed, false, "past grace evaluate not allowed");
+  assert.equal(pastGraceAccess.proRequired, true);
 });
 
 withCutoffEnv(undefined, () => {
@@ -210,6 +284,34 @@ withCutoffEnv(undefined, () => {
   assert.equal(cancelledUnset.reason, "legacy_free");
 });
 console.log("ok: sunset / referral / subscription evaluation");
+console.log("ok: AssistantSubscription in-period / grace / past-grace");
+
+assert.equal(assistantCutoffLabel(null), null);
+assert.equal(assistantCutoffLabel(""), null);
+assert.equal(assistantCutoffLabel("not-a-date"), null);
+assert.equal(assistantSunsetBannerText(null), `${ASSISTANT_SUNSET_GENERIC} ${ASSISTANT_SUNSET_CTA}.`);
+assert.doesNotMatch(assistantSunsetBannerText(null), /27 Sep 2026|2026-09-27/);
+const dated = assistantSunsetBannerText(CUTOFF_ISO);
+assert.match(dated, new RegExp(ASSISTANT_SUNSET_DATED_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.match(dated, new RegExp(ASSISTANT_SUNSET_DATED_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.ok(assistantCutoffLabel(CUTOFF_ISO));
+assert.match(dated, new RegExp(assistantCutoffLabel(CUTOFF_ISO)!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+const webBanner = readFileSync("src/components/marketing/assistant-free-sunset-banner.tsx", "utf8");
+const desktopBanner = readFileSync(
+  "apps/cinem-ai-assistant/src/components/gate/AssistantSunsetBanner.tsx",
+  "utf8",
+);
+for (const [label, src] of [
+  ["web", webBanner],
+  ["desktop", desktopBanner],
+] as const) {
+  assert.match(src, new RegExp(ASSISTANT_SUNSET_GENERIC.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${label} generic copy`);
+  assert.match(src, new RegExp(ASSISTANT_SUNSET_DATED_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${label} dated prefix`);
+  assert.match(src, new RegExp(ASSISTANT_SUNSET_CTA.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${label} CTA`);
+  assert.doesNotMatch(src, /DEFAULT_CUTOFF|27 Sep 2026|2026-09-27T18:40:00/, `${label} no fake cutoff`);
+}
+console.log("ok: sunset banner copy has no fabricated cutoff date");
 
 for (const path of MUST_GATE) {
   const src = readFileSync(path, "utf8");

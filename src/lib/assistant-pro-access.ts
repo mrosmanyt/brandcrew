@@ -90,6 +90,9 @@ export function isAssistantFreeSunsetActive(now = new Date()): boolean {
   return now.getTime() >= cutoff.getTime();
 }
 
+/** Active AssistantSubscription stays valid for 2 days after `currentPeriodEnd`. */
+export const ASSISTANT_SUBSCRIPTION_GRACE_MS = 2 * 24 * 60 * 60 * 1000;
+
 export function isActiveAssistantSubscription(
   subscription?: AssistantSubscriptionInput,
   now = new Date(),
@@ -97,10 +100,10 @@ export function isActiveAssistantSubscription(
   if (!subscription || subscription.status !== "active") return false;
   const end = parseDate(subscription.currentPeriodEnd);
   if (!end) return true;
-  return end.getTime() >= now.getTime();
+  return end.getTime() + ASSISTANT_SUBSCRIPTION_GRACE_MS >= now.getTime();
 }
 
-/** Pure Pro check: founding, paid desk, or active AssistantSubscription. */
+/** Pure Pro check: founding, paid desk, or active AssistantSubscription (incl. 2-day grace). */
 export function hasAssistantProAccess(input: AssistantProAccessInput, now = new Date()): boolean {
   if (input.assistantFoundingMember) return true;
   if (isPaidPlan(input.plan)) return true;
