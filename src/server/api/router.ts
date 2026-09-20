@@ -476,7 +476,12 @@ export async function dispatchApi(
       },
     );
   }
-  const response = await handler(request, { params: Promise.resolve(matched.params) });
+  let response: Response;
+  try {
+    response = await handler(request, { params: Promise.resolve(matched.params) });
+  } catch (error) {
+    return jsonError(error);
+  }
   if (isNativeCorsPath(segments) && response instanceof NextResponse) {
     return withNativeCors(response);
   }
