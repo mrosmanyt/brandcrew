@@ -67,6 +67,15 @@ export type CinemAiAssistantUsageSnapshot = {
   allowed: boolean;
   upgradeUrl: string;
   workspaceId: string | null;
+  pro?: boolean;
+  foundingMember?: boolean;
+  proRequired?: boolean;
+  sunsetBanner?: boolean;
+  cutoffAt?: string | null;
+  whatsappUrl?: string;
+  referralBonusMonths?: number;
+  code?: string;
+  error?: string;
 };
 
 export type CinemAiAssistantFeatureStatus = "shipped" | "mvp" | "roadmap";
@@ -212,12 +221,25 @@ export function entitlementFromWorkspaces(
   };
 }
 
+/** Hard Pro lock — not dismissable. Distinct from the Free-turn upgrade sheet. */
+export function shouldHardLockAssistant(snapshot: {
+  proRequired?: boolean;
+  code?: string | null;
+}) {
+  return snapshot.proRequired === true || snapshot.code === "PRO_REQUIRED";
+}
+
 /** Upgrade wall / HTTP 402 is Free-only. Paid desks never see a false upgrade. */
 export function shouldPromptAssistantUpgrade(snapshot: {
   allowed: boolean;
   includedWithPlan?: boolean;
   plan?: string | null;
+  pro?: boolean;
+  proRequired?: boolean;
+  code?: string | null;
 }) {
+  if (shouldHardLockAssistant(snapshot)) return false;
+  if (snapshot.pro) return false;
   if (snapshot.includedWithPlan) return false;
   if (isPaidPlan(snapshot.plan)) return false;
   return snapshot.allowed === false;
@@ -227,7 +249,11 @@ export function assistantUsageHttpStatus(snapshot: {
   allowed: boolean;
   includedWithPlan?: boolean;
   plan?: string | null;
+  pro?: boolean;
+  proRequired?: boolean;
+  code?: string | null;
 }) {
+  if (shouldHardLockAssistant(snapshot)) return 402;
   return shouldPromptAssistantUpgrade(snapshot) ? 402 : 200;
 }
 
@@ -337,15 +363,26 @@ export function usageSnapshot(input: {
   gatePaidOnly?: boolean;
   /** Extra turns from viral +1 free month redemptions. */
   referralBonusMonths?: number;
+  pro?: boolean;
+  proRequired?: boolean;
+  sunsetBanner?: boolean;
+  cutoffAt?: string | null;
+  whatsappUrl?: string;
 }): CinemAiAssistantUsageSnapshot {
   const plan = normalizePlanId(input.plan);
   const paid = isPaidPlan(plan);
   const included =
     input.includedWithPlan ?? (paid || Boolean(input.foundingMember));
+  const pro = input.pro ?? included;
+  const proRequired = Boolean(input.proRequired && !pro);
   const gatePaidOnly = Boolean(input.gatePaidOnly && !included);
   const referralBonus = Math.max(0, Math.floor(input.referralBonusMonths ?? 0));
   const referralTurns = referralBonus * CINEM_AI_ASSISTANT_FREE_TURNS;
-  const limit = gatePaidOnly ? referralTurns : cinemAiAssistantTurnLimit(plan) + referralTurns;
+  const limit = proRequired
+    ? 0
+    : gatePaidOnly
+      ? referralTurns
+      : cinemAiAssistantTurnLimit(plan) + referralTurns;
   const used = Math.max(0, Math.floor(input.used));
   const remaining = Math.max(0, limit - used);
   return {
@@ -360,9 +397,17 @@ export function usageSnapshot(input: {
     used,
     limit,
     remaining,
-    allowed: gatePaidOnly ? false : remaining > 0,
+    allowed: proRequired ? false : gatePaidOnly ? false : remaining > 0,
     upgradeUrl: input.upgradeUrl,
     workspaceId: input.workspaceId ?? null,
+    pro,
+    foundingMember: Boolean(input.foundingMember),
+    proRequired,
+    sunsetBanner: Boolean(input.sunsetBanner) && !pro && !proRequired,
+    cutoffAt: input.cutoffAt ?? null,
+    whatsappUrl: input.whatsappUrl,
+    referralBonusMonths: referralBonus,
+    ...(proRequired ? { code: "PRO_REQUIRED", error: "Pro required" } : {}),
   };
 }
 

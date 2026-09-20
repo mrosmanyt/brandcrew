@@ -6,6 +6,10 @@ import { originFromRequest } from "@/lib/billing";
 import { normalizePlanId } from "@/lib/limits";
 import { listUserWorkspaces } from "@/lib/workspace";
 import {
+  loadAssistantProAccess,
+  type AssistantProAccess,
+} from "@/lib/assistant-pro-access";
+import {
   CINEM_AI_ASSISTANT_PRODUCT,
   CINEM_AI_ASSISTANT_FREE_TURNS,
   cinemAiAssistantPeriodUtc,
@@ -39,14 +43,42 @@ export async function planForUser(userId: string, extra: WorkspacePlanRow[] = []
   );
 }
 
-async function activeAssistantSubscription(userId: string) {
-  const row = await prisma.assistantSubscription.findUnique({
-    where: { userId },
-    select: { status: true, currentPeriodEnd: true, plan: true },
+function snapshotFromAccess(input: {
+  plan: ReturnType<typeof normalizePlanId>;
+  used: number;
+  period: string;
+  upgradeUrl: string;
+  workspaceId: string | null;
+  access: AssistantProAccess;
+}): CinemAiAssistantUsageSnapshot {
+  const referralOnly = input.access.reason === "referral_bonus";
+  return usageSnapshot({
+    plan: input.plan,
+    used: input.used,
+    period: input.period,
+    upgradeUrl: input.upgradeUrl,
+    workspaceId: input.workspaceId,
+    includedWithPlan: input.access.pro,
+    foundingMember: input.access.foundingMember,
+    gatePaidOnly: referralOnly && input.access.referralBonusMonths <= 0,
+    referralBonusMonths: input.access.referralBonusMonths,
+    pro: input.access.pro,
+    proRequired: input.access.proRequired,
+    sunsetBanner: input.access.sunsetBanner,
+    cutoffAt: input.access.cutoffAt,
+    whatsappUrl: input.access.whatsappUrl,
   });
-  if (!row || row.status !== "active") return null;
-  if (row.currentPeriodEnd && row.currentPeriodEnd.getTime() < Date.now()) return null;
-  return row;
+}
+
+function turnLimitForAccess(
+  plan: ReturnType<typeof normalizePlanId>,
+  access: AssistantProAccess,
+) {
+  if (access.proRequired) return 0;
+  const referralTurns = access.referralBonusMonths * CINEM_AI_ASSISTANT_FREE_TURNS;
+  if (access.reason === "referral_bonus") return referralTurns;
+  if (access.reason === "legacy_free") return CINEM_AI_ASSISTANT_FREE_TURNS + referralTurns;
+  return cinemAiAssistantTurnLimit(plan) + referralTurns;
 }
 
 async function ownerUserId(workspaceId: string) {
@@ -115,23 +147,14 @@ export async function getCinemAssistantUsage(
 ): Promise<CinemAiAssistantUsageSnapshot> {
   const period = cinemAiAssistantPeriodUtc();
   const used = await readUsed(caller.userId, period);
-  const userRow = await prisma.user.findUnique({
-    where: { id: caller.userId },
-    select: { assistantFoundingMember: true, assistantRequiresPaid: true, referralBonusMonths: true },
-  });
-  const entitlement = await planForUser(caller.userId);
-  const subscription = await activeAssistantSubscription(caller.userId);
-  const included = entitlement.includedWithPlan || Boolean(subscription);
-  return usageSnapshot({
+  const access = await loadAssistantProAccess(caller.userId);
+  return snapshotFromAccess({
     plan: caller.plan,
     used,
     period,
     upgradeUrl: cinemAiAssistantUpgradeUrl(originFromRequest(request)),
     workspaceId: caller.workspaceId,
-    includedWithPlan: included,
-    foundingMember: entitlement.foundingMember,
-    gatePaidOnly: Boolean(userRow?.assistantRequiresPaid && !included),
-    referralBonusMonths: userRow?.referralBonusMonths ?? 0,
+    access,
   });
 }
 
@@ -144,31 +167,17 @@ export async function incrementCinemAssistantUsage(
   const turns = clampUsageIncrement(turnsRaw);
   const current = await readUsed(caller.userId, period);
   const upgradeUrl = cinemAiAssistantUpgradeUrl(originFromRequest(request));
-  const userRow = await prisma.user.findUnique({
-    where: { id: caller.userId },
-    select: { assistantFoundingMember: true, assistantRequiresPaid: true, referralBonusMonths: true },
-  });
-  const entitlement = await planForUser(caller.userId);
-  const subscription = await activeAssistantSubscription(caller.userId);
-  const included = entitlement.includedWithPlan || Boolean(subscription);
-  const gatePaidOnly = Boolean(userRow?.assistantRequiresPaid && !included);
-  const referralBonus = userRow?.referralBonusMonths ?? 0;
-  const effectiveLimit =
-    gatePaidOnly && referralBonus <= 0
-      ? 0
-      : cinemAiAssistantTurnLimit(caller.plan) + referralBonus * CINEM_AI_ASSISTANT_FREE_TURNS;
+  const access = await loadAssistantProAccess(caller.userId);
+  const effectiveLimit = turnLimitForAccess(caller.plan, access);
 
-  if ((gatePaidOnly && referralBonus <= 0) || current >= effectiveLimit) {
-    return usageSnapshot({
+  if (access.proRequired || current >= effectiveLimit) {
+    return snapshotFromAccess({
       plan: caller.plan,
       used: current,
       period,
       upgradeUrl,
       workspaceId: caller.workspaceId,
-      includedWithPlan: included,
-      foundingMember: entitlement.foundingMember,
-      gatePaidOnly,
-      referralBonusMonths: referralBonus,
+      access,
     });
   }
 
@@ -190,15 +199,12 @@ export async function incrementCinemAssistantUsage(
     update: { used: nextUsed },
   });
 
-  return usageSnapshot({
+  return snapshotFromAccess({
     plan: caller.plan,
     used: nextUsed,
     period,
     upgradeUrl,
     workspaceId: caller.workspaceId,
-    includedWithPlan: included,
-    foundingMember: entitlement.foundingMember,
-    gatePaidOnly,
-    referralBonusMonths: referralBonus,
+    access,
   });
 }

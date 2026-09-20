@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { assertAssistantProAccessForUser } from "@/lib/assistant-pro-access";
 import { jsonError, jsonOk } from "@/lib/http";
 import { linkWhatsAppPhone } from "@/lib/whatsapp-cloud";
 import { withNativeCors } from "@/lib/auth-native";
@@ -12,6 +13,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
+    await assertAssistantProAccessForUser(user.id);
     const body = schema.parse(await request.json());
     const row = await linkWhatsAppPhone(user.id, body.phone);
     return withNativeCors(
