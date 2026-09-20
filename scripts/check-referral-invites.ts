@@ -2,6 +2,7 @@
  * Referral invite redemption — signup bonus months and abuse caps.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   REFERRAL_BONUS_MONTHS_DEFAULT,
   REFERRAL_INVITER_CAP,
@@ -32,5 +33,10 @@ const gated = usageSnapshot({
 });
 assert.equal(gated.limit, 0);
 assert.equal(gated.allowed, false);
+
+const redeem = readFileSync("src/lib/referral-invites.ts", "utf8");
+assert.doesNotMatch(redeem, /referralBonusMonths:\s*\{\s*increment/);
+assert.match(redeem, /inviterBonusMonths:\s*0/);
+assert.match(redeem, /inviteeBonusMonths:\s*0/);
 
 console.log("check-referral-invites: OK");

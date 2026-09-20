@@ -361,7 +361,7 @@ export function usageSnapshot(input: {
   foundingMember?: boolean;
   /** Post–first-50 demo users — assistant requires paid plan. */
   gatePaidOnly?: boolean;
-  /** Extra turns from viral +1 free month redemptions. */
+  /** Extra turns from existing referral bonus months (no new grants). */
   referralBonusMonths?: number;
   pro?: boolean;
   proRequired?: boolean;

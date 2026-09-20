@@ -13,7 +13,7 @@ type InvitePayload = {
   perk?: string;
 };
 
-/** Share invite link — +1 free month redemption wired to billing meter. */
+/** Share invite link. Existing bonus months still show; new grants are stopped. */
 export default function InviteSharePanel() {
   const [data, setData] = useState<InvitePayload | null>(null);
   const [copied, setCopied] = useState(false);
@@ -52,14 +52,14 @@ export default function InviteSharePanel() {
 
   if (!readSession()?.accessToken && !readSession()?.refreshToken) {
     return (
-      <p className="text-xs text-neon-dim">Sign in to share your invite link and earn +1 free month.</p>
+      <p className="text-xs text-neon-dim">Sign in to share your invite link.</p>
     );
   }
 
   return (
     <div className="space-y-2 rounded border border-neon/15 bg-abyss/40 p-3 text-xs">
       <p className="flex items-center gap-2 font-display text-[0.6rem] tracking-[0.2em] text-neon">
-        <Gift className="size-3.5" /> INVITE +1 FREE MONTH
+        <Gift className="size-3.5" /> INVITE A FRIEND
       </p>
       <p className="text-neon-dim">{data?.perk ?? "Loading invite perk…"}</p>
       {data?.inviteUrl ? (
