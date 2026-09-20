@@ -74,6 +74,7 @@
     "test:win-nudge": "tsx scripts/check-windows-download-nudge.ts",
     "test:guest-assistant-prompt": "tsx scripts/check-guest-assistant-download-prompt.ts",
     "test:direct-desktop-download": "tsx scripts/check-direct-desktop-download.ts",
+    "test:desktop-startup-safety": "tsx scripts/check-desktop-startup-safety.ts",
     "installer:art": "node scripts/make-installer-art.mjs",
     "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
     "desktop:cloud": "node scripts/desktop-cloud.mjs",
