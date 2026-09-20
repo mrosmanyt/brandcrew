@@ -153,10 +153,21 @@ export type AdminWorkspace360 = AdminWorkspaceRow & {
   recentUsage: AdminUsagePeek[];
 };
 
+export type AdminAssistantSubscription = {
+  status: string;
+  plan: string;
+  currentPeriodEnd: string | null;
+};
+
 export type AdminCustomer360 = {
   user: { id: string; email: string; name: string; createdAt: string };
   workspaces: AdminWorkspace360[];
+  assistantSubscription: AdminAssistantSubscription | null;
 };
+
+export const ASSISTANT_PRO_GRANT_DAYS_DEFAULT = 30;
+export const ADMIN_ASSIGN_ASSISTANT_PRO = "assign_assistant_pro";
+export const ADMIN_REVOKE_ASSISTANT_PRO = "revoke_assistant_pro";
 
 export type AdminJobFailureRow = {
   id: string;
@@ -922,6 +933,108 @@ export async function adminSetBudget(input: {
   return { workspaces };
 }
 
+function parseAssistantProExpiry(raw?: string | null): Date {
+  if (raw?.trim()) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+    throw new ClientError("Expiry must be a valid datetime.");
+  }
+  return new Date(Date.now() + ASSISTANT_PRO_GRANT_DAYS_DEFAULT * 24 * 60 * 60 * 1000);
+}
+
+async function userByEmail(email: string) {
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
+    select: { id: true, email: true },
+  });
+  if (!user) {
+    throw new ClientError("No user with that email.", 404, "not_found");
+  }
+  return user;
+}
+
+export async function adminAssignAssistantPro(input: {
+  actorEmail: string;
+  userEmail: string;
+  expiresAt?: string | null;
+}): Promise<{ subscription: AdminAssistantSubscription; userEmail: string }> {
+  const user = await userByEmail(input.userEmail);
+  const currentPeriodEnd = parseAssistantProExpiry(input.expiresAt);
+  const row = await prisma.assistantSubscription.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      plan: "monthly",
+      status: "active",
+      currentPeriodEnd,
+    },
+    update: {
+      plan: "monthly",
+      status: "active",
+      currentPeriodEnd,
+    },
+  });
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: ADMIN_ASSIGN_ASSISTANT_PRO,
+    targetId: user.id,
+    meta: {
+      userEmail: user.email,
+      plan: row.plan,
+      status: row.status,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    },
+  });
+  return {
+    userEmail: user.email,
+    subscription: {
+      status: row.status,
+      plan: row.plan,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    },
+  };
+}
+
+export async function adminRevokeAssistantPro(input: {
+  actorEmail: string;
+  userEmail: string;
+}): Promise<{ subscription: AdminAssistantSubscription; userEmail: string }> {
+  const user = await userByEmail(input.userEmail);
+  const now = new Date();
+  const row = await prisma.assistantSubscription.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      plan: "monthly",
+      status: "cancelled",
+      currentPeriodEnd: now,
+    },
+    update: {
+      status: "cancelled",
+      currentPeriodEnd: now,
+    },
+  });
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: ADMIN_REVOKE_ASSISTANT_PRO,
+    targetId: user.id,
+    meta: {
+      userEmail: user.email,
+      plan: row.plan,
+      status: row.status,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    },
+  });
+  return {
+    userEmail: user.email,
+    subscription: {
+      status: row.status,
+      plan: row.plan,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    },
+  };
+}
+
 export async function recordAdminBackupExport(input: {
   actorEmail: string;
   counts: Record<string, number>;
@@ -939,6 +1052,9 @@ async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null>
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
+      assistantSubscription: {
+        select: { status: true, plan: true, currentPeriodEnd: true },
+      },
       memberships: {
         include: {
           workspace: {
@@ -981,6 +1097,15 @@ async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null>
       name: user.name,
       createdAt: user.createdAt.toISOString(),
     },
+    assistantSubscription: user.assistantSubscription
+      ? {
+          status: user.assistantSubscription.status,
+          plan: user.assistantSubscription.plan,
+          currentPeriodEnd: user.assistantSubscription.currentPeriodEnd
+            ? user.assistantSubscription.currentPeriodEnd.toISOString()
+            : null,
+        }
+      : null,
     workspaces: user.memberships.map((membership) => {
       const ws = membership.workspace;
       return {
