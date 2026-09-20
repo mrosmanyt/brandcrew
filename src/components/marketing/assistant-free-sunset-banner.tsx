@@ -3,30 +3,29 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cinemAiAssistantBillingPath } from "@/lib/cinem-ai-assistant";
-
-/** Display-only notice date. Does not enable the hard Pro gate (that requires env). */
-const DEFAULT_CUTOFF = "2026-09-27T18:40:00.000Z";
+import {
+  ASSISTANT_SUNSET_CTA,
+  ASSISTANT_SUNSET_DATED_PREFIX,
+  ASSISTANT_SUNSET_DATED_SUFFIX,
+  ASSISTANT_SUNSET_GENERIC,
+  assistantCutoffLabel,
+} from "@/lib/assistant-sunset-copy";
 
 type MeFlags = {
   assistantPro?: boolean;
   foundingMember?: boolean;
   assistantFoundingMember?: boolean;
   assistantSunsetBanner?: boolean;
-  assistantCutoffAt?: string;
+  assistantCutoffAt?: string | null;
 };
 
-function cutoffLabel(iso?: string) {
-  const date = new Date(iso || DEFAULT_CUTOFF);
-  if (Number.isNaN(date.getTime())) return "27 Sep 2026";
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
-
 /**
- * 7-day notice for legacy Free users. Hidden for Pro / founding once /api/auth/me loads.
+ * Notice for legacy Free users. Hidden for Pro / founding once /api/auth/me loads.
+ * When cutoff is unset, copy stays generic (no fabricated date).
  */
 export function AssistantFreeSunsetBanner() {
   const [hidden, setHidden] = useState(false);
-  const [cutoff, setCutoff] = useState(DEFAULT_CUTOFF);
+  const [cutoff, setCutoff] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,16 +45,22 @@ export function AssistantFreeSunsetBanner() {
 
   if (hidden) return null;
 
+  const dateLabel = assistantCutoffLabel(cutoff);
+
   return (
     <div
       className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground"
       role="status"
     >
-      Free Cinem AI Assistant access for existing non-Pro accounts ends{" "}
-      <strong>{cutoffLabel(cutoff)}</strong>. After that, Pro, a paid desk plan, or founding
-      membership is required.{" "}
+      {dateLabel ? (
+        <>
+          {ASSISTANT_SUNSET_DATED_PREFIX} <strong>{dateLabel}</strong>. {ASSISTANT_SUNSET_DATED_SUFFIX}{" "}
+        </>
+      ) : (
+        <>{ASSISTANT_SUNSET_GENERIC} </>
+      )}
       <Link href={cinemAiAssistantBillingPath("monthly")} className="font-medium underline underline-offset-2">
-        View Pro plans
+        {ASSISTANT_SUNSET_CTA}
       </Link>
       .
     </div>
