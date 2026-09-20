@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import {
   CINEM_AI_ASSISTANT_FEATURES,
   CINEM_AI_ASSISTANT_FEATURE_STATUS_LABEL,
-  CINEM_AI_ASSISTANT_FREE_TURNS,
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
   type CinemAiAssistantFeatureStatus,
@@ -240,9 +239,8 @@ export function AssistantPricingTeaser() {
       <h2 className="font-heading mt-2 text-2xl tracking-tight">Every plan unlocks everything.</h2>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground">
         All fifteen agents, voice, desktop control (when enabled), themes, and prompt expansion.
-        Plans start at $20/month — longer commitments save up to 30%. Free tier includes{" "}
-        {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} turns/month. Founding seats may still
-        qualify — see the billing page for current spots.
+        Plans start at $20/month — longer commitments save up to 30%. Founding seats stay
+        included — see the billing page for current spots.
       </p>
       <Button
         size="lg"

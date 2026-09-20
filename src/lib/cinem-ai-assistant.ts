@@ -31,7 +31,7 @@ export const CINEM_AI_ASSISTANT_DOWNLOAD_API = "/api/downloads/cinem-ai-assistan
 export const CINEM_AI_ASSISTANT_USAGE_API = "/api/cinem-ai-assistant/usage";
 export const CINEM_AI_ASSISTANT_DOCS = "docs/cinem-ai-assistant.md";
 
-/** Free plan: 500 chat/voice turns per UTC month. */
+/** Legacy Free / referral month allotment: 500 chat/voice turns per UTC month. */
 export const CINEM_AI_ASSISTANT_FREE_TURNS = 500;
 
 /**
@@ -159,7 +159,7 @@ export const CINEM_AI_ASSISTANT_FEATURES: CinemAiAssistantFeature[] = [
     id: "upgrade",
     title: "Standalone plans",
     status: "shipped",
-    body: "Free includes 500 turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing. Founding seats may still qualify for free access.",
+    body: "Included with Pro, Pro Plus, Ultra, an active assistant subscription, or founding membership. Billed at /cinem-ai-assistant/billing. Legacy Free access has a short sunset, then Pro is required.",
   },
 ];
 

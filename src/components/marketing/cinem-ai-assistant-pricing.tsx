@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AssistantFreeSunsetBanner } from "@/components/marketing/assistant-free-sunset-banner";
 import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 import { useMarketingAuth } from "@/components/marketing/use-signed-in";
 import {

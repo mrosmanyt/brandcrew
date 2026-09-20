@@ -8,8 +8,8 @@ import {
   AssistantSafetySection,
 } from "@/components/marketing/cinem-ai-assistant-page";
 import { Button } from "@/components/ui/button";
+import { AssistantFreeSunsetBanner } from "@/components/marketing/assistant-free-sunset-banner";
 import {
-  CINEM_AI_ASSISTANT_FREE_TURNS,
   CINEM_AI_ASSISTANT_NAME,
   CINEM_AI_ASSISTANT_SETUP_FILENAME,
   CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
@@ -38,13 +38,16 @@ export function AssistantMarketingMain({ variant = "product" }: AssistantMarketi
         <p className="mkt-hero-lead mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
           Talk with “Hey Cinem”, hand off to a computer-use agent, expand short creative asks,
           and tune Memory · Skills · Voices · Settings. Full native features are Windows only.
-          Free includes {CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} turns/month — paid
-          assistant plans are billed separately from{" "}
+          Included with Pro, Pro Plus, Ultra, an active assistant subscription, or founding
+          membership — billed separately from{" "}
           <Link href="/about" className="underline underline-offset-4">
             Cinem Pro
           </Link>{" "}
           desk plans.
         </p>
+        <div className="mt-6 max-w-2xl">
+          <AssistantFreeSunsetBanner />
+        </div>
         <div className="mkt-hero-cta mt-10">
           <AssistantHeroCtas />
         </div>
@@ -93,8 +96,8 @@ export function AssistantMarketingMain({ variant = "product" }: AssistantMarketi
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
             Voice wake, floating HUD during desktop control, agent handoffs, prompt expansion,
-            and the settings hub — all in the unified Windows installer. When Free turns run
-            out, Upgrade opens your logged-in billing page in the system browser.
+            and the settings hub — all in the unified Windows installer. Upgrade opens your
+            logged-in billing page in the system browser.
           </p>
           <div className="mt-10">
             <AssistantProductFrames />

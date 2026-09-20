@@ -6,7 +6,7 @@ Windows-only native assistant for CINEM Pro. **Standalone billing** lives at [`/
 
 | Plan | Price (USD) | Notes |
 | --- | --- | --- |
-| Free | $0 | 500 chat/voice turns per UTC month |
+| Free (sunset) | $0 | Legacy Free ends **2026-09-27T18:40:00.000Z**. After cutoff: Pro required unless founding or remaining invite bonus months. |
 | Monthly | $20/mo | All agents, voice, themes |
 | 3 months | $53.40 total | ~$17.80/mo, save 11% |
 | 6 months | $86.40 total | ~$14.40/mo, save 28% |
@@ -98,8 +98,9 @@ Both return:
 - One meter: **chat/voice turns** (default increment `1`, max `50` per POST). The Windows app increments once per `processCommand` (typed chat or voice).
 - `upgradeUrl` is always an absolute `https://app.cinem.tech/…` URL (or the current origin). Open it with the **system browser** (Claude / Grok Bot style). Do not embed a card form in the app.
 - Signed-in website session on that origin starts existing desk Whop checkout for **Pro ($20)**. Signed out → login with `next=` back to `/billing`.
-- Exhausted Free: `allowed: false`, POST status `402`. The app shows an upgrade popup; **Upgrade to Pro** opens `upgradeUrl`.
-- Paid plans include the assistant. `includedWithPlan` is true. POST never returns `402` for `starter` / `pro` / `ultra`. Always-approved / desk write-gate rules are unchanged.
+- After the Free sunset, non-Pro non-founding users get HTTP `402` `{ "error": "Pro required", "code": "PRO_REQUIRED" }`. The desktop hard lock cannot be dismissed; **Payment check / Refresh** re-fetches entitlement.
+- Paid desk plans (`starter` / `pro` / `ultra`), an active `AssistantSubscription`, and founding members are included. POST never returns `PRO_REQUIRED` for those accounts. Always-approved / desk write-gate rules are unchanged.
+- Policy and BYOK note: [`docs/assistant-pro-only.md`](./assistant-pro-only.md).
 - Usage GET/POST is `Cache-Control: no-store`. After login the Windows app always re-fetches `/api/cinem-ai-assistant/usage` (and adopts the shared Electron refresh token when it differs from a stale local session).
 
 Shared TypeScript types: `src/lib/cinem-ai-assistant.ts`. Fetch helper: `apps/cinem-ai-assistant/usage-client.ts`. Renderer wiring: `apps/cinem-ai-assistant/src/lib/cinemCloud.ts`. Electron handshake: `apps/cinem-ai-assistant/src/lib/desktop-shell.ts`.

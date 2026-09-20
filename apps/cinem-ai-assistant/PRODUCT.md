@@ -3,5 +3,5 @@
 Windows-only premium desktop assistant for CINEM Pro.
 - Marketing face + purchase: https://app.cinem.tech
 - Shared CINEM Pro login
-- Free tier → when quota ends, upgrade popup opens browser to logged-in Whop Pro checkout
+- Pro required after the Free sunset → hard lock; Payment check / Refresh re-fetches entitlement; checkout opens the browser to logged-in assistant billing
 - Do NOT ship mickey-website / cinempro.site — inject into brandcrew only

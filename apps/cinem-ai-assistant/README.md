@@ -1,6 +1,6 @@
 # Cinem AI Assistant (Windows-only)
 
-Vite + React assistant UI for **CINEM Pro**. This is a feature on the existing Free / Pro / Pro Plus / Ultra plans — not a new Whop product.
+Vite + React assistant UI for **CINEM Pro**. Included with Pro / Pro Plus / Ultra, an active assistant subscription, or founding membership — not a forever-free 500-turn plan.
 
 **Production path:** the renderer is bundled inside the unified Electron app (`CINEM-Pro-Setup.exe`). Users switch **Desk** and **AI Assistant** in one install.
 
