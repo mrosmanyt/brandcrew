@@ -297,18 +297,28 @@ assert.match(dated, new RegExp(ASSISTANT_SUNSET_DATED_SUFFIX.replace(/[.*+?^${}(
 assert.ok(assistantCutoffLabel(CUTOFF_ISO));
 assert.match(dated, new RegExp(assistantCutoffLabel(CUTOFF_ISO)!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
+const copySrc = readFileSync("src/lib/assistant-sunset-copy.ts", "utf8");
 const webBanner = readFileSync("src/components/marketing/assistant-free-sunset-banner.tsx", "utf8");
 const desktopBanner = readFileSync(
   "apps/cinem-ai-assistant/src/components/gate/AssistantSunsetBanner.tsx",
   "utf8",
 );
+assert.match(webBanner, /assistant-sunset-copy/);
+assert.match(webBanner, /ASSISTANT_SUNSET_GENERIC/);
+assert.match(webBanner, /assistantCutoffLabel/);
 for (const [label, src] of [
-  ["web", webBanner],
+  ["copy", copySrc],
   ["desktop", desktopBanner],
 ] as const) {
   assert.match(src, new RegExp(ASSISTANT_SUNSET_GENERIC.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${label} generic copy`);
   assert.match(src, new RegExp(ASSISTANT_SUNSET_DATED_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${label} dated prefix`);
   assert.match(src, new RegExp(ASSISTANT_SUNSET_CTA.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${label} CTA`);
+}
+for (const [label, src] of [
+  ["web", webBanner],
+  ["desktop", desktopBanner],
+  ["copy", copySrc],
+] as const) {
   assert.doesNotMatch(src, /DEFAULT_CUTOFF|27 Sep 2026|2026-09-27T18:40:00/, `${label} no fake cutoff`);
 }
 console.log("ok: sunset banner copy has no fabricated cutoff date");
