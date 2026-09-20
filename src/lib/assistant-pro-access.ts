@@ -135,7 +135,7 @@ export function evaluateAssistantProAccess(
     return {
       ...base,
       allowed: true,
-      pro: true,
+      pro,
       reason: "founding",
       proRequired: false,
       sunsetBanner: false,
@@ -145,7 +145,7 @@ export function evaluateAssistantProAccess(
     return {
       ...base,
       allowed: true,
-      pro: true,
+      pro,
       reason: "paid_desk",
       proRequired: false,
       sunsetBanner: false,
@@ -155,7 +155,7 @@ export function evaluateAssistantProAccess(
     return {
       ...base,
       allowed: true,
-      pro: true,
+      pro,
       reason: "assistant_subscription",
       proRequired: false,
       sunsetBanner: false,
@@ -165,7 +165,7 @@ export function evaluateAssistantProAccess(
     return {
       ...base,
       allowed: true,
-      pro: false,
+      pro,
       reason: "referral_bonus",
       proRequired: false,
       sunsetBanner: !afterCutoff,
@@ -175,7 +175,7 @@ export function evaluateAssistantProAccess(
     return {
       ...base,
       allowed: true,
-      pro: false,
+      pro,
       reason: "legacy_free",
       proRequired: false,
       sunsetBanner: true,
@@ -184,7 +184,7 @@ export function evaluateAssistantProAccess(
   return {
     ...base,
     allowed: false,
-    pro: false,
+    pro,
     reason: "pro_required",
     proRequired: true,
     sunsetBanner: false,
