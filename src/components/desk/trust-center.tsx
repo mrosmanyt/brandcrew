@@ -17,25 +17,28 @@ export function TrustCenter({ workspaceId }: { workspaceId: string }) {
 
   async function exportAudit() {
     setExporting(true);
-    const res = await fetch(`/api/workspaces/${workspaceId}/audit/export`);
-    const data = await res.json();
-    setExporting(false);
-    if (!res.ok) {
-      toast.error(data.error || "Could not export audit.");
-      return;
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/audit/export`);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Could not export audit.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cinem-audit-${workspaceId.slice(0, 8)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(
+        data.meta?.certified === false
+          ? `Exported ${data.count} rows. Hash ${String(data.packHash || "").slice(0, 12)}… — not a certification.`
+          : "Audit exported.",
+      );
+    } finally {
+      setExporting(false);
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cinem-audit-${workspaceId.slice(0, 8)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(
-      data.meta?.certified === false
-        ? `Exported ${data.count} rows. Hash ${String(data.packHash || "").slice(0, 12)}… — not a certification.`
-        : "Audit exported.",
-    );
   }
 
   return (
