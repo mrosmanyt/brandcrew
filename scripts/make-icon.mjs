@@ -163,8 +163,6 @@ function encodeIco(pngs) {
 }
 
 const night = [26, 25, 21];
-const paper = [244, 243, 239];
-const ink = [17, 17, 17];
 const clear = [17, 17, 17, 0];
 const inkA = [17, 17, 17, 255];
 const paperA = [244, 243, 239, 255];

@@ -71,7 +71,7 @@ export async function ensureAppUser(
 
   const name = displayName(authUser, options.name);
   const inviteToken = options.inviteToken?.trim();
-  let invite = inviteToken
+  const invite = inviteToken
     ? await prisma.workspaceInvite.findUnique({ where: { token: inviteToken } })
     : null;
 

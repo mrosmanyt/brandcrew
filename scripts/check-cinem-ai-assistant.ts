@@ -22,7 +22,6 @@ import {
   CINEM_AI_ASSISTANT_UNIFIED_SETUP_FILENAME,
   CINEM_AI_ASSISTANT_TURN_LIMIT,
   cinemAiAssistantReleaseUrl,
-  CINEM_AI_ASSISTANT_USAGE_API,
   cinemAiAssistantBillingPath,
   cinemAiAssistantPeriodUtc,
   cinemAiAssistantTurnLimit,

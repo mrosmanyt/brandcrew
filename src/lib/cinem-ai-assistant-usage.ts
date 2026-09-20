@@ -49,14 +49,6 @@ async function activeAssistantSubscription(userId: string) {
   return row;
 }
 
-async function referralBonusMonths(userId: string) {
-  const row = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { referralBonusMonths: true },
-  });
-  return row?.referralBonusMonths ?? 0;
-}
-
 async function ownerUserId(workspaceId: string) {
   const owner = await prisma.workspaceMember.findFirst({
     where: { workspaceId, role: "owner" },

@@ -169,7 +169,7 @@ export async function crawlLinks(
 ): Promise<BrowsePage[]> {
   const depth = Math.min(Math.max(input.depth ?? 1, 1), CRAWL_MAX_DEPTH);
   const extra: BrowsePage[] = [];
-  let frontier: { url: string; depth: number }[] = pickCrawlTargets(start).map((url) => ({
+  const frontier: { url: string; depth: number }[] = pickCrawlTargets(start).map((url) => ({
     url,
     depth: 1,
   }));
