@@ -1247,7 +1247,7 @@ function installAppMenu() {
         Accept: "application/json, text/xml, */*",
         "User-Agent":
           chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent()) ||
-          "CINEMPro/0.3.5",
+          "CINEMPro/0.3.6",
       };
       const sentKey =
         payload && typeof payload.worldMonitorKey === "string" ? payload.worldMonitorKey.trim() : "";
