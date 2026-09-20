@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  adminAssignAssistantPro,
   adminAssignPlan,
+  adminRevokeAssistantPro,
   adminRevokePlan,
   adminSetBudget,
   adminSetFeatureFlag,
@@ -83,6 +85,8 @@ const mutateSchema = z.object({
     "unsuspend",
     "flag",
     "budget",
+    "assign_assistant_pro",
+    "revoke_assistant_pro",
   ]),
   plan: z.enum(["demo", "starter", "pro", "ultra", "growth"]).optional(),
   workspaceId: z.string().min(1).optional(),
@@ -91,6 +95,7 @@ const mutateSchema = z.object({
   enabled: z.boolean().optional(),
   note: z.string().max(240).optional(),
   tokenBudget: z.number().int().min(1).max(5_000_000).optional(),
+  expiresAt: z.string().max(40).optional(),
 });
 
 export async function POST(request: Request) {
@@ -129,6 +134,44 @@ export async function POST(request: Request) {
         userEmail: body.userEmail,
       });
       return jsonOk({ ok: true, action: "budget" as const, updated: result.workspaces });
+    }
+
+    if (body.action === "assign_assistant_pro") {
+      if (!body.userEmail) {
+        return NextResponse.json(
+          { error: "Choose a user email.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const result = await adminAssignAssistantPro({
+        actorEmail,
+        userEmail: body.userEmail,
+        expiresAt: body.expiresAt,
+      });
+      return jsonOk({
+        ok: true,
+        action: "assign_assistant_pro" as const,
+        subscription: result.subscription,
+        userEmail: result.userEmail,
+      });
+    }
+    if (body.action === "revoke_assistant_pro") {
+      if (!body.userEmail) {
+        return NextResponse.json(
+          { error: "Choose a user email.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const result = await adminRevokeAssistantPro({
+        actorEmail,
+        userEmail: body.userEmail,
+      });
+      return jsonOk({
+        ok: true,
+        action: "revoke_assistant_pro" as const,
+        subscription: result.subscription,
+        userEmail: result.userEmail,
+      });
     }
 
     if (body.action === "revoke") {

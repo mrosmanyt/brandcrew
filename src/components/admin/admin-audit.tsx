@@ -13,6 +13,8 @@ const ACTION_FILTERS = [
   "",
   "assign_plan",
   "revoke_plan",
+  "assign_assistant_pro",
+  "revoke_assistant_pro",
   "suspend",
   "unsuspend",
   "toggle_flag",

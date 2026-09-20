@@ -19,7 +19,24 @@ export type CinemAiAssistantUsageResponse = {
   period: string;
   includedWithPlan: boolean;
   meter: "chat_voice_turns";
+  pro?: boolean;
+  foundingMember?: boolean;
+  proRequired?: boolean;
+  sunsetBanner?: boolean;
+  cutoffAt?: string | null;
+  whatsappUrl?: string;
+  code?: string;
+  error?: string;
 };
+
+export const ASSISTANT_SALES_WHATSAPP_URL = "https://wa.me/923489057646";
+
+export function shouldHardLockAssistant(usage?: {
+  proRequired?: boolean;
+  code?: string | null;
+} | null) {
+  return Boolean(usage?.proRequired || usage?.code === "PRO_REQUIRED");
+}
 
 export function cloudOrigin(envUrl?: string) {
   return (envUrl || "https://app.cinem.tech").replace(/\/$/, "");
@@ -29,12 +46,24 @@ export function shouldPromptAssistantUpgrade(usage?: {
   allowed?: boolean;
   includedWithPlan?: boolean;
   plan?: string;
+  pro?: boolean;
+  proRequired?: boolean;
+  code?: string | null;
 } | null) {
   if (!usage) return false;
-  if (usage.includedWithPlan) return false;
+  if (shouldHardLockAssistant(usage)) return false;
+  if (usage.pro || usage.includedWithPlan) return false;
   const plan = String(usage.plan || "").toLowerCase();
   if (plan && plan !== "demo" && plan !== "free") return false;
   return usage.allowed === false;
+}
+
+/** Client-side Pro check before consumeTurn / local BYOK. Server still gates the meter. */
+export function hasClientAssistantAccess(usage?: CinemAiAssistantUsageResponse | null) {
+  if (!usage) return false;
+  if (shouldHardLockAssistant(usage)) return false;
+  if (usage.pro || usage.includedWithPlan || usage.foundingMember) return true;
+  return usage.allowed !== false;
 }
 
 export async function fetchAssistantUsage(input: {
@@ -55,6 +84,15 @@ export async function fetchAssistantUsage(input: {
     body: increment ? JSON.stringify({ turns: input.turns }) : undefined,
   });
   const data = (await res.json()) as CinemAiAssistantUsageResponse & { error?: string };
+  if (data.code === "PRO_REQUIRED" || (res.status === 402 && data.error === "Pro required")) {
+    return {
+      ...data,
+      allowed: false,
+      proRequired: true,
+      code: "PRO_REQUIRED",
+      upgradeUrl: data.upgradeUrl || assistantUpgradeUrl(base),
+    };
+  }
   if (!res.ok && !data.upgradeUrl) {
     throw new Error(data.error || `Usage request failed (${res.status})`);
   }

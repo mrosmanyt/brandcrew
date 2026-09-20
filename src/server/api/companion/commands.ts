@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { assertAssistantProAccessForUser } from "@/lib/assistant-pro-access";
 import { jsonError, jsonOk } from "@/lib/http";
 import { ackCompanionOrRemoteCommand, companionPollCommands } from "@/lib/remote-command-queue";
 import { withNativeCors } from "@/lib/auth-native";
@@ -8,6 +9,7 @@ import { withNativeCors } from "@/lib/auth-native";
 export async function GET() {
   try {
     const user = await requireUser();
+    await assertAssistantProAccessForUser(user.id);
     const rows = await companionPollCommands(user.id);
     return withNativeCors(jsonOk({ commands: rows }));
   } catch (error) {
@@ -23,6 +25,7 @@ const ackSchema = z.object({
 export async function PATCH(request: Request) {
   try {
     const user = await requireUser();
+    await assertAssistantProAccessForUser(user.id);
     const body = ackSchema.parse(await request.json());
     const ok = await ackCompanionOrRemoteCommand(body.commandId, user.id, body.result ?? { ok: true });
     if (!ok) {

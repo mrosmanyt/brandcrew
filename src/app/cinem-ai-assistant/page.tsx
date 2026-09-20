@@ -10,7 +10,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: `${CINEM_AI_ASSISTANT_NAME} for Windows`,
   description:
-    "Windows desktop assistant with voice, agents, vision, and supervised computer-use. Hey Cinem wake word, floating HUD, kill switch, prompt expansion, and Memory · Skills · Voices · Settings hub. Free starts with 500 turns/month.",
+    "Windows desktop assistant with voice, agents, vision, and supervised computer-use. Hey Cinem wake word, floating HUD, kill switch, prompt expansion, and Memory · Skills · Voices · Settings hub. Included with Pro, Pro Plus, Ultra, or founding membership.",
 };
 
 export default function CinemAiAssistantPage() {

@@ -14,6 +14,7 @@ import { supabaseGooglePublicStatus } from "@/lib/supabase/oauth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { isAdminEmail } from "@/lib/admin";
 import { assertPasswordAllowed } from "@/lib/password";
+import { loadAssistantProAccess } from "@/lib/assistant-pro-access";
 import { entitlementFromWorkspaces } from "@/lib/cinem-ai-assistant";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
 import { withNativeCors } from "@/lib/auth-native";
@@ -45,6 +46,7 @@ export async function GET() {
       workspaces.map((workspace) => ({ id: workspace.id, plan: workspace.plan })),
       { assistantFoundingMember: row?.assistantFoundingMember },
     );
+    const assistantAccess = await loadAssistantProAccess(user.id);
     const founding = await userFoundingBadge(user.id);
     const byok = await readByokSnapshot(user.id).catch(() => null);
     return withNativeCors(
@@ -62,9 +64,14 @@ export async function GET() {
         workspaces: workspaces.map(serializeWorkspace),
         plan: entitlement.plan,
         planName: entitlement.planName,
-        includedWithPlan: entitlement.includedWithPlan,
+        includedWithPlan: entitlement.includedWithPlan || assistantAccess.pro,
         foundingMember: entitlement.foundingMember,
         workspaceId: entitlement.workspaceId,
+        assistantPro: assistantAccess.pro,
+        assistantProRequired: assistantAccess.proRequired,
+        assistantSunsetBanner: assistantAccess.sunsetBanner,
+        assistantCutoffAt: assistantAccess.cutoffAt,
+        assistantWhatsappUrl: assistantAccess.whatsappUrl,
         founding,
         byok,
         googleLogin,

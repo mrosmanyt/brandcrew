@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { assistantProRequiredJson } from "@/lib/assistant-pro-access";
 import {
   assistantUsageHttpStatus,
+  shouldHardLockAssistant,
   type CinemAiAssistantUsageSnapshot,
 } from "@/lib/cinem-ai-assistant";
 import {
@@ -30,7 +32,11 @@ const incrementSchema = z
 export async function GET(request: Request) {
   try {
     const caller = await requireCinemAssistantCaller(request);
-    return jsonUsage(await getCinemAssistantUsage(request, caller));
+    const snapshot = await getCinemAssistantUsage(request, caller);
+    if (shouldHardLockAssistant(snapshot)) {
+      return assistantProRequiredJson(snapshot, { headers: USAGE_HEADERS });
+    }
+    return jsonUsage(snapshot);
   } catch (error) {
     return jsonError(error);
   }
@@ -46,6 +52,12 @@ export async function POST(request: Request) {
       turns = body?.turns;
     }
     const snapshot = await incrementCinemAssistantUsage(request, caller, turns);
+    if (shouldHardLockAssistant(snapshot)) {
+      return assistantProRequiredJson(
+        { upgradeUrl: snapshot.upgradeUrl, whatsappUrl: snapshot.whatsappUrl },
+        { headers: USAGE_HEADERS },
+      );
+    }
     return jsonUsage(snapshot, assistantUsageHttpStatus(snapshot));
   } catch (error) {
     if (error instanceof z.ZodError) {

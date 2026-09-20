@@ -134,12 +134,27 @@ function CustomerProfile({
           User id {profile.user.id} · signed up {new Date(profile.user.createdAt).toLocaleString()} ·{" "}
           {workspaceCount} workspace{workspaceCount === 1 ? "" : "s"}
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Assistant subscription:{" "}
+          {profile.assistantSubscription
+            ? `${profile.assistantSubscription.status} · ${profile.assistantSubscription.plan}${
+                profile.assistantSubscription.currentPeriodEnd
+                  ? ` · ends ${new Date(profile.assistantSubscription.currentPeriodEnd).toLocaleString()}`
+                  : ""
+              }`
+            : "none"}
+        </p>
         {tokenLine ? <p className="mt-2 text-xs text-muted-foreground">{tokenLine}</p> : null}
         <div className="mt-3 flex flex-wrap gap-2">
           <PlanSelect
             label={`Assign plan for ${profile.user.email}`}
             disabled={busy}
             onAssign={(plan) => onPending({ kind: "assign-user", email: profile.user.email, plan })}
+          />
+          <AssistantProActions
+            email={profile.user.email}
+            disabled={busy}
+            onPending={onPending}
           />
           <Button
             size="sm"
@@ -227,5 +242,51 @@ function CustomerProfile({
         </article>
       ))}
     </section>
+  );
+}
+
+function AssistantProActions({
+  email,
+  disabled,
+  onPending,
+}: {
+  email: string;
+  disabled?: boolean;
+  onPending: ReturnType<typeof useAdminMutation>["setPending"];
+}) {
+  const [expiresAt, setExpiresAt] = useState("");
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <input
+        type="datetime-local"
+        value={expiresAt}
+        disabled={disabled}
+        aria-label={`Assistant Pro expiry for ${email}`}
+        className="h-8 rounded-lg border border-input bg-transparent px-2 text-xs"
+        onChange={(event) => setExpiresAt(event.target.value)}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() =>
+          onPending({
+            kind: "assign-assistant-pro",
+            email,
+            expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+          })
+        }
+      >
+        Assistant Pro do
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => onPending({ kind: "revoke-assistant-pro", email })}
+      >
+        Assistant Pro hatao
+      </Button>
+    </span>
   );
 }

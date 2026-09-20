@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { assertAssistantProAccessForUser } from "@/lib/assistant-pro-access";
 import { jsonError, jsonOk } from "@/lib/http";
 import { enqueueCompanionCommand } from "@/lib/mobile-companion";
 import { withNativeCors } from "@/lib/auth-native";
@@ -18,7 +19,8 @@ const schema = z.object({
 /** Remote command from paired phone — requires short-lived companion token. */
 export async function POST(request: Request) {
   try {
-    await requireUser();
+    const user = await requireUser();
+    await assertAssistantProAccessForUser(user.id);
     const headerToken = request.headers.get("x-companion-token") || "";
     const body = schema.parse(await request.json());
     const token = headerToken.trim() || body.token;

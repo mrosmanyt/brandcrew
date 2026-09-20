@@ -29,6 +29,8 @@ export type AdminPending =
   | { kind: "revoke-user"; email: string }
   | { kind: "suspend-user"; email: string }
   | { kind: "unsuspend-user"; email: string }
+  | { kind: "assign-assistant-pro"; email: string; expiresAt?: string }
+  | { kind: "revoke-assistant-pro"; email: string }
   | { kind: "flag"; key: string; enabled: boolean; note?: string };
 
 export async function fetchAdminJson<T>(path: string): Promise<T> {
@@ -319,6 +321,20 @@ export function UserActionList({
             />
             <Button
               size="sm"
+              variant="outline"
+              onClick={() => onPending({ kind: "assign-assistant-pro", email: row.email })}
+            >
+              Assistant Pro do
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onPending({ kind: "revoke-assistant-pro", email: row.email })}
+            >
+              Assistant Pro hatao
+            </Button>
+            <Button
+              size="sm"
               variant="destructive"
               onClick={() => onPending({ kind: "revoke-user", email: row.email })}
             >
@@ -412,6 +428,20 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
       body: `Clear the suspend flag on every workspace for ${pending.email}. Plans stay as-is.`,
     };
   }
+  if (pending.kind === "assign-assistant-pro") {
+    return {
+      title: "Assistant Pro do?",
+      body: pending.expiresAt
+        ? `Upsert AssistantSubscription for ${pending.email} as active until ${pending.expiresAt}. Desk Workspace.plan is unchanged.`
+        : `Upsert AssistantSubscription for ${pending.email} as active for 30 days. Desk Workspace.plan is unchanged.`,
+    };
+  }
+  if (pending.kind === "revoke-assistant-pro") {
+    return {
+      title: "Assistant Pro hatao?",
+      body: `Cancel AssistantSubscription for ${pending.email}. Desk Workspace.plan is unchanged.`,
+    };
+  }
   return {
     title: pending.enabled ? `Enable ${pending.key}?` : `Disable ${pending.key}?`,
     body: `Write FeatureFlag ${pending.key} = ${pending.enabled ? "on" : "off"} and record an audit row.`,
@@ -433,6 +463,7 @@ export function AdminConfirm({
   const destructive =
     pending?.kind === "revoke" ||
     pending?.kind === "revoke-user" ||
+    pending?.kind === "revoke-assistant-pro" ||
     pending?.kind === "suspend" ||
     pending?.kind === "suspend-user" ||
     (pending?.kind === "flag" && !pending.enabled);
@@ -492,6 +523,16 @@ export function useAdminMutation(onDone?: () => Promise<void> | void) {
       } else if (pending.kind === "unsuspend-user") {
         await postAdmin({ action: "unsuspend", userEmail: pending.email });
         toast.success("User workspaces unsuspended.");
+      } else if (pending.kind === "assign-assistant-pro") {
+        await postAdmin({
+          action: "assign_assistant_pro",
+          userEmail: pending.email,
+          expiresAt: pending.expiresAt,
+        });
+        toast.success("Assistant Pro granted.");
+      } else if (pending.kind === "revoke-assistant-pro") {
+        await postAdmin({ action: "revoke_assistant_pro", userEmail: pending.email });
+        toast.success("Assistant Pro revoked.");
       } else if (pending.kind === "budget") {
         await postAdmin({
           action: "budget",

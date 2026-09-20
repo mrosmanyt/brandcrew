@@ -1,6 +1,7 @@
 /**
- * Viral invite "+1 free month" — durable assistant entitlement, not Whop coupons.
- * One redemption per invitee; inviter capped to prevent abuse.
+ * Invite redemptions are still recorded (abuse cap + invite graph).
+ * New Assistant bonus months are no longer granted — existing
+ * `referralBonusMonths` balances keep working until exhausted.
  */
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
@@ -55,7 +56,7 @@ export async function referralStats(userId: string) {
   };
 }
 
-/** Grant +1 month to inviter and invitee when a valid ref signs up. Idempotent per invitee. */
+/** Record the invite redemption. Does not increment referralBonusMonths. */
 export async function redeemReferralOnSignup(userId: string, invitedByCode?: string | null) {
   const code = invitedByCode?.trim().toLowerCase();
   if (!code) return { redeemed: false as const, reason: "no_code" as const };
@@ -87,28 +88,21 @@ export async function redeemReferralOnSignup(userId: string, invitedByCode?: str
         inviteCode: code,
         inviterId: inviter.id,
         inviteeId: userId,
-        inviterBonusMonths: REFERRAL_BONUS_MONTHS_DEFAULT,
-        inviteeBonusMonths: REFERRAL_BONUS_MONTHS_DEFAULT,
+        inviterBonusMonths: 0,
+        inviteeBonusMonths: 0,
       },
-    });
-    await tx.user.update({
-      where: { id: inviter.id },
-      data: { referralBonusMonths: { increment: REFERRAL_BONUS_MONTHS_DEFAULT } },
     });
     await tx.user.update({
       where: { id: userId },
-      data: {
-        invitedByUserId: inviter.id,
-        referralBonusMonths: { increment: REFERRAL_BONUS_MONTHS_DEFAULT },
-      },
+      data: { invitedByUserId: inviter.id },
     });
   });
 
   return {
     redeemed: true as const,
     inviterId: inviter.id,
-    inviterBonusMonths: REFERRAL_BONUS_MONTHS_DEFAULT,
-    inviteeBonusMonths: REFERRAL_BONUS_MONTHS_DEFAULT,
+    inviterBonusMonths: 0,
+    inviteeBonusMonths: 0,
   };
 }
 

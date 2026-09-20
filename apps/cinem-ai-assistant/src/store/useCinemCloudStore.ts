@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import {
+  hasClientAssistantAccess,
+  shouldHardLockAssistant,
   shouldPromptAssistantUpgrade,
   type CinemAiAssistantUsageResponse,
 } from "../../usage-client";
@@ -17,6 +19,7 @@ import {
 type CloudPhase = "checking" | "signed_out" | "ready";
 
 function upgradeOpenFor(usage: CinemAiAssistantUsageResponse | null) {
+  if (shouldHardLockAssistant(usage)) return false;
   return shouldPromptAssistantUpgrade(usage);
 }
 
@@ -72,14 +75,25 @@ export const useCinemCloudStore = create<CloudState>((set, get) => ({
   refreshUsage: async () => {
     try {
       const usage = await fetchUsage();
-      set({ usage, upgradeOpen: upgradeOpenFor(usage) });
+      set({ usage, upgradeOpen: upgradeOpenFor(usage), error: "" });
       return usage;
-    } catch {
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Could not refresh payment status.",
+      });
       return get().usage;
     }
   },
 
   consumeTurn: async () => {
+    const current = get().usage;
+    if (shouldHardLockAssistant(current) || (current && !hasClientAssistantAccess(current))) {
+      set({ usage: current, upgradeOpen: false });
+      if (!current) {
+        throw new Error("Pro required");
+      }
+      return { ...current, allowed: false, proRequired: true };
+    }
     const usage = await consumeAssistantTurn();
     set({ usage, upgradeOpen: upgradeOpenFor(usage) });
     return usage;

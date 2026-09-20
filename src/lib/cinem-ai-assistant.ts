@@ -31,7 +31,7 @@ export const CINEM_AI_ASSISTANT_DOWNLOAD_API = "/api/downloads/cinem-ai-assistan
 export const CINEM_AI_ASSISTANT_USAGE_API = "/api/cinem-ai-assistant/usage";
 export const CINEM_AI_ASSISTANT_DOCS = "docs/cinem-ai-assistant.md";
 
-/** Free plan: 500 chat/voice turns per UTC month. */
+/** Legacy Free / referral month allotment: 500 chat/voice turns per UTC month. */
 export const CINEM_AI_ASSISTANT_FREE_TURNS = 500;
 
 /**
@@ -67,6 +67,15 @@ export type CinemAiAssistantUsageSnapshot = {
   allowed: boolean;
   upgradeUrl: string;
   workspaceId: string | null;
+  pro?: boolean;
+  foundingMember?: boolean;
+  proRequired?: boolean;
+  sunsetBanner?: boolean;
+  cutoffAt?: string | null;
+  whatsappUrl?: string;
+  referralBonusMonths?: number;
+  code?: string;
+  error?: string;
 };
 
 export type CinemAiAssistantFeatureStatus = "shipped" | "mvp" | "roadmap";
@@ -150,7 +159,7 @@ export const CINEM_AI_ASSISTANT_FEATURES: CinemAiAssistantFeature[] = [
     id: "upgrade",
     title: "Standalone plans",
     status: "shipped",
-    body: "Free includes 500 turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing. Founding seats may still qualify for free access.",
+    body: "Included with Pro, Pro Plus, Ultra, an active assistant subscription, or founding membership. Billed at /cinem-ai-assistant/billing. Legacy Free access has a short sunset, then Pro is required.",
   },
 ];
 
@@ -212,12 +221,25 @@ export function entitlementFromWorkspaces(
   };
 }
 
+/** Hard Pro lock — not dismissable. Distinct from the Free-turn upgrade sheet. */
+export function shouldHardLockAssistant(snapshot: {
+  proRequired?: boolean;
+  code?: string | null;
+}) {
+  return snapshot.proRequired === true || snapshot.code === "PRO_REQUIRED";
+}
+
 /** Upgrade wall / HTTP 402 is Free-only. Paid desks never see a false upgrade. */
 export function shouldPromptAssistantUpgrade(snapshot: {
   allowed: boolean;
   includedWithPlan?: boolean;
   plan?: string | null;
+  pro?: boolean;
+  proRequired?: boolean;
+  code?: string | null;
 }) {
+  if (shouldHardLockAssistant(snapshot)) return false;
+  if (snapshot.pro) return false;
   if (snapshot.includedWithPlan) return false;
   if (isPaidPlan(snapshot.plan)) return false;
   return snapshot.allowed === false;
@@ -227,7 +249,11 @@ export function assistantUsageHttpStatus(snapshot: {
   allowed: boolean;
   includedWithPlan?: boolean;
   plan?: string | null;
+  pro?: boolean;
+  proRequired?: boolean;
+  code?: string | null;
 }) {
+  if (shouldHardLockAssistant(snapshot)) return 402;
   return shouldPromptAssistantUpgrade(snapshot) ? 402 : 200;
 }
 
@@ -335,17 +361,28 @@ export function usageSnapshot(input: {
   foundingMember?: boolean;
   /** Post–first-50 demo users — assistant requires paid plan. */
   gatePaidOnly?: boolean;
-  /** Extra turns from viral +1 free month redemptions. */
+  /** Extra turns from existing referral bonus months (no new grants). */
   referralBonusMonths?: number;
+  pro?: boolean;
+  proRequired?: boolean;
+  sunsetBanner?: boolean;
+  cutoffAt?: string | null;
+  whatsappUrl?: string;
 }): CinemAiAssistantUsageSnapshot {
   const plan = normalizePlanId(input.plan);
   const paid = isPaidPlan(plan);
   const included =
     input.includedWithPlan ?? (paid || Boolean(input.foundingMember));
+  const pro = input.pro ?? included;
+  const proRequired = Boolean(input.proRequired && !pro);
   const gatePaidOnly = Boolean(input.gatePaidOnly && !included);
   const referralBonus = Math.max(0, Math.floor(input.referralBonusMonths ?? 0));
   const referralTurns = referralBonus * CINEM_AI_ASSISTANT_FREE_TURNS;
-  const limit = gatePaidOnly ? referralTurns : cinemAiAssistantTurnLimit(plan) + referralTurns;
+  const limit = proRequired
+    ? 0
+    : gatePaidOnly
+      ? referralTurns
+      : cinemAiAssistantTurnLimit(plan) + referralTurns;
   const used = Math.max(0, Math.floor(input.used));
   const remaining = Math.max(0, limit - used);
   return {
@@ -360,9 +397,17 @@ export function usageSnapshot(input: {
     used,
     limit,
     remaining,
-    allowed: gatePaidOnly ? false : remaining > 0,
+    allowed: proRequired ? false : gatePaidOnly ? false : remaining > 0,
     upgradeUrl: input.upgradeUrl,
     workspaceId: input.workspaceId ?? null,
+    pro,
+    foundingMember: Boolean(input.foundingMember),
+    proRequired,
+    sunsetBanner: Boolean(input.sunsetBanner) && !pro && !proRequired,
+    cutoffAt: input.cutoffAt ?? null,
+    whatsappUrl: input.whatsappUrl,
+    referralBonusMonths: referralBonus,
+    ...(proRequired ? { code: "PRO_REQUIRED", error: "Pro required" } : {}),
   };
 }
 

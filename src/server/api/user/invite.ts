@@ -1,16 +1,11 @@
 import { requireUser } from "@/lib/auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { userFoundingBadge } from "@/lib/founding-members";
-import {
-  ensureUserInviteCode,
-  referralStats,
-  REFERRAL_BONUS_MONTHS_DEFAULT,
-  REFERRAL_TURNS_PER_MONTH,
-} from "@/lib/referral-invites";
+import { ensureUserInviteCode, referralStats } from "@/lib/referral-invites";
 import { withNativeCors } from "@/lib/auth-native";
 import { siteOrigin } from "@/lib/site";
 
-/** Shareable invite link — +1 free month on redemption at signup. */
+/** Shareable invite link. New redemptions no longer grant Assistant bonus months. */
 export async function GET() {
   try {
     const user = await requireUser();
@@ -29,7 +24,7 @@ export async function GET() {
         inviterCap: stats.inviterCap,
         inviterCapReached: stats.inviterCapReached,
         redeemedAsInvitee: stats.redeemedAsInvitee,
-        perk: `Invite a friend — you both get +${REFERRAL_BONUS_MONTHS_DEFAULT} free month (+${REFERRAL_TURNS_PER_MONTH} assistant turns/month each). One redemption per friend; capped at ${stats.inviterCap} invites.`,
+        perk: `Share your invite link. New invites no longer add Assistant bonus months. Any bonus months you already have (${stats.referralBonusMonths}) still apply until they run out. Capped at ${stats.inviterCap} recorded invites.`,
       }),
     );
   } catch (error) {
