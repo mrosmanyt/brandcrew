@@ -58,6 +58,7 @@
     "test:desktop-updater": "tsx scripts/check-desktop-updater.ts",
     "test:voices": "tsx scripts/check-character-voices.ts",
     "test:cinem-ai": "tsx scripts/check-cinem-ai-assistant.ts",
+    "test:assistant-pro-gate": "tsx scripts/check-assistant-pro-gate.ts",
     "test:assistant-ux": "tsx scripts/check-assistant-ux.ts",
     "test:assistant-browser": "tsx scripts/check-assistant-browser-loop.ts",
     "test:jarvis-features": "tsx scripts/check-jarvis-features.ts",

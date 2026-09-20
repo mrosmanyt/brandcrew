@@ -9,10 +9,15 @@ import {
   shouldPromptAssistantUpgrade as clientShouldPromptUpgrade,
 } from "../apps/cinem-ai-assistant/usage-client";
 import {
+  evaluateAssistantProAccess,
+  hasAssistantProAccess,
+} from "../src/lib/assistant-pro-access";
+import {
   assistantCheckoutPlanFromQuery as serverPlan,
   assistantUsageHttpStatus,
   bestPlanId,
   entitlementFromWorkspaces,
+  shouldHardLockAssistant,
   shouldPromptAssistantUpgrade,
   CINEM_AI_ASSISTANT_FEATURES,
   CINEM_AI_ASSISTANT_FREE_TURNS,
@@ -67,6 +72,25 @@ assert.equal(clientShouldPromptUpgrade(mockedProSnap), false);
 const mockedPlus = entitlementFromWorkspaces([{ id: "ws_plus", plan: "pro" }]);
 assert.equal(mockedPlus.planName, "Pro Plus");
 assert.equal(entitlementFromWorkspaces([{ id: "ws_ultra", plan: "ultra" }]).planName, "Ultra");
+const afterCutoff = new Date("2026-09-28T00:00:00.000Z");
+for (const plan of ["starter", "pro", "ultra"] as const) {
+  assert.equal(hasAssistantProAccess({ plan }), true);
+  assert.equal(evaluateAssistantProAccess({ plan }, afterCutoff).allowed, true);
+  const paidLock = usageSnapshot({
+    plan,
+    used: 0,
+    upgradeUrl: "https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant",
+    pro: true,
+    includedWithPlan: true,
+  });
+  assert.equal(paidLock.allowed, true);
+  assert.equal(shouldHardLockAssistant(paidLock), false);
+}
+assert.equal(hasAssistantProAccess({ assistantFoundingMember: true, plan: "demo" }), true);
+assert.equal(
+  evaluateAssistantProAccess({ assistantFoundingMember: true, plan: "demo" }, afterCutoff).allowed,
+  true,
+);
 console.log("ok: mocked Pro ($20 / starter) desktop entitlement");
 assert.equal(clampUsageIncrement(undefined), 1);
 assert.equal(clampUsageIncrement(999), 50);
@@ -178,6 +202,8 @@ assert.ok(existsSync("apps/cinem-ai-assistant/usage-client.ts"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/lib/cinemCloud.ts"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/lib/desktop-shell.ts"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/components/gate/CinemProGate.tsx"));
+assert.ok(existsSync("docs/assistant-pro-only.md"));
+assert.ok(existsSync("scripts/check-assistant-pro-gate.ts"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src/components/gate/UpgradeModal.tsx"));
 assert.ok(existsSync("apps/cinem-ai-assistant/src-tauri/tauri.conf.json"));
 assert.ok(existsSync("apps/cinem-ai-assistant/postcss.config.mjs"));
@@ -226,6 +252,8 @@ assert.match(readFileSync("src/lib/cinem-ai-assistant-usage.ts", "utf8"), /entit
 assert.match(readFileSync("src/lib/cinem-ai-assistant-usage.ts", "utf8"), /getUserFromRequest/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/store/useCinemCloudStore.ts", "utf8"), /shouldPromptAssistantUpgrade/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/components/gate/UpgradeModal.tsx", "utf8"), /shouldPromptAssistantUpgrade/);
+assert.ok(existsSync("apps/cinem-ai-assistant/src/components/gate/AssistantProLock.tsx"));
+assert.match(readFileSync("src/server/api/cinem-ai-assistant/usage.ts", "utf8"), /assistant-pro-access|assistantProRequiredJson/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/components/TopBar.tsx", "utf8"), /planName\.toUpperCase/);
 assert.match(readFileSync("src/server/api/auth/me.ts", "utf8"), /entitlementFromWorkspaces/);
 assert.match(readFileSync("src/components/auth/connect-client.tsx", "utf8"), /Same CINEM Pro account = same plan on desktop/);

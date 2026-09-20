@@ -166,6 +166,15 @@ async function main() {
 
   const adminApi = readFileSync("src/server/api/admin/root.ts", "utf8");
   assert.ok([...adminApi.matchAll(/await requireAdmin\(\)/g)].length >= 2);
+  assert.match(adminApi, /assign_assistant_pro/);
+  assert.match(adminApi, /revoke_assistant_pro/);
+  assert.match(adminApi, /adminAssignAssistantPro/);
+  assert.match(adminApi, /adminRevokeAssistantPro/);
+  const customersUi = readFileSync("src/components/admin/admin-customers.tsx", "utf8");
+  assert.match(customersUi, /Assistant Pro do/);
+  assert.match(customersUi, /Assistant Pro hatao/);
+  assert.match(readFileSync("src/lib/admin.ts", "utf8"), /assign_assistant_pro/);
+  assert.match(readFileSync("src/lib/admin.ts", "utf8"), /ASSISTANT_PRO_GRANT_DAYS_DEFAULT/);
   const backupApi = readFileSync("src/server/api/admin/backup.ts", "utf8");
   assert.match(backupApi, /await requireAdmin\(\)/);
   assert.match(backupApi, /buildAdminBackup/);
