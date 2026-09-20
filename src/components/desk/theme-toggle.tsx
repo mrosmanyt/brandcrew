@@ -15,6 +15,9 @@ export function DeskThemeToggle({ className }: { className?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // SSR hydration guard: theme/resolvedTheme differ between server and
+    // client, so this must stay an effect to avoid a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
