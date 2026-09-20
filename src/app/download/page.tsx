@@ -125,6 +125,9 @@ export default function DownloadPage() {
               >
                 Portable .exe
               </Button>
+              <p className="text-xs leading-5 text-muted-foreground">
+                If Windows shows &quot;protected your PC,&quot; click More info, then Run anyway.
+              </p>
             </div>
           </article>
 

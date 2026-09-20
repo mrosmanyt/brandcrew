@@ -282,7 +282,7 @@ export function DownloadSection() {
             <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
           </p>
         </div>
-        <div className="mt-6 flex shrink-0 flex-wrap gap-3 md:mt-0">
+        <div className="mt-6 flex shrink-0 flex-col gap-2 md:mt-0">
           <Button
             size="lg"
             className="mkt-cta-pulse h-11 px-5"
@@ -291,6 +291,9 @@ export function DownloadSection() {
           >
             Get CINEM Pro
           </Button>
+          <p className="text-xs leading-5 text-muted-foreground">
+            If Windows shows &quot;protected your PC,&quot; click More info, then Run anyway.
+          </p>
         </div>
       </article>
       <div className="grid gap-6 md:grid-cols-3">
