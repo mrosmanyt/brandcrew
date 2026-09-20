@@ -1116,6 +1116,7 @@ function installAppMenu() {
 }
 
   app.whenReady().then(() => {
+    try {
     app.setName("CINEM Pro");
     const ua = chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent());
     if (ua) {
@@ -1350,6 +1351,15 @@ function installAppMenu() {
     const protoArg = process.argv.find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}:`));
     if (protoArg) {
       app.once("browser-window-created", () => handleProtocolUrl(protoArg));
+    }
+    } catch (error) {
+      mainLog.logError(app, "startup", error);
+      dialog.showErrorBox(
+        "CINEM Pro",
+        `CINEM Pro could not start.\n\n${error instanceof Error ? error.message : String(error)}\n\nLog file: ${mainLog.getLogFilePath(app)}`,
+      );
+      app.quit();
+      return;
     }
     return boot().catch((error) => {
       console.error(error);
