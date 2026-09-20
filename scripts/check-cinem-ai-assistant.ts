@@ -73,6 +73,15 @@ const mockedPlus = entitlementFromWorkspaces([{ id: "ws_plus", plan: "pro" }]);
 assert.equal(mockedPlus.planName, "Pro Plus");
 assert.equal(entitlementFromWorkspaces([{ id: "ws_ultra", plan: "ultra" }]).planName, "Ultra");
 const afterCutoff = new Date("2026-09-28T00:00:00.000Z");
+const prevCutoffEnv = process.env.ASSISTANT_FREE_CUTOFF_AT;
+delete process.env.ASSISTANT_FREE_CUTOFF_AT;
+assert.equal(
+  evaluateAssistantProAccess({ plan: "demo" }, afterCutoff).allowed,
+  true,
+  "unset ASSISTANT_FREE_CUTOFF_AT must not hard-lock Free",
+);
+if (prevCutoffEnv === undefined) delete process.env.ASSISTANT_FREE_CUTOFF_AT;
+else process.env.ASSISTANT_FREE_CUTOFF_AT = prevCutoffEnv;
 for (const plan of ["starter", "pro", "ultra"] as const) {
   assert.equal(hasAssistantProAccess({ plan }), true);
   assert.equal(evaluateAssistantProAccess({ plan }, afterCutoff).allowed, true);

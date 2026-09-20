@@ -1,7 +1,9 @@
 # Cinem AI Assistant — Pro-only access
 
-Cutoff for legacy Free (non-Pro, non-founding): **`2026-09-27T18:40:00.000Z`**
-(ship `2026-09-20T18:40:00.000Z` + 7 days). Override with env `ASSISTANT_FREE_CUTOFF_AT`.
+Hard Pro gate is **off** until env `ASSISTANT_FREE_CUTOFF_AT` is set to a valid ISO-8601 datetime.
+Unset or empty: banner only (legacy Free still works; no `PRO_REQUIRED` lock).
+Set to an ISO instant: after that time, non-Pro non-founding users get `PRO_REQUIRED`.
+There is no baked-in default cutoff date. Ship timestamp `2026-09-20T18:40:00.000Z` is informational only.
 
 ## Who is Pro
 

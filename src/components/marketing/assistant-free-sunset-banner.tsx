@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cinemAiAssistantBillingPath } from "@/lib/cinem-ai-assistant";
 
-/** Mirrors `ASSISTANT_FREE_CUTOFF_AT` — do not import the server helper from client. */
+/** Display-only notice date. Does not enable the hard Pro gate (that requires env). */
 const DEFAULT_CUTOFF = "2026-09-27T18:40:00.000Z";
 
 type MeFlags = {

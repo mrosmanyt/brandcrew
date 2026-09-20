@@ -6,7 +6,7 @@ Windows-only native assistant for CINEM Pro. **Standalone billing** lives at [`/
 
 | Plan | Price (USD) | Notes |
 | --- | --- | --- |
-| Free (sunset) | $0 | Legacy Free ends **2026-09-27T18:40:00.000Z**. After cutoff: Pro required unless founding or remaining invite bonus months. |
+| Free (sunset) | $0 | Banner-only until `ASSISTANT_FREE_CUTOFF_AT` is set. After that ISO instant: Pro required unless founding, paid desk, active AssistantSubscription, or remaining invite bonus months. |
 | Monthly | $20/mo | All agents, voice, themes |
 | 3 months | $53.40 total | ~$17.80/mo, save 11% |
 | 6 months | $86.40 total | ~$14.40/mo, save 28% |

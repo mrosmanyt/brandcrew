@@ -21,13 +21,10 @@ export const ASSISTANT_SALES_WHATSAPP_E164 = "+923489057646";
 export const ASSISTANT_SALES_WHATSAPP_URL = "https://wa.me/923489057646";
 
 /**
- * Ship timestamp for this Pro-only change.
- * Default cutoff is 7 days later. Override with env `ASSISTANT_FREE_CUTOFF_AT`.
+ * Ship timestamp for this Pro-only change (informational).
+ * Hard lock is **not** derived from this date.
  */
 export const ASSISTANT_PRO_ONLY_SHIPPED_AT = "2026-09-20T18:40:00.000Z";
-
-/** Default Free sunset: 2026-09-27T18:40:00.000Z (ship + 7 days). */
-export const ASSISTANT_FREE_CUTOFF_AT = "2026-09-27T18:40:00.000Z";
 
 export const ASSISTANT_PRO_REQUIRED_BODY = {
   error: ASSISTANT_PRO_REQUIRED_ERROR,
@@ -65,7 +62,7 @@ export type AssistantProAccess = {
   reason: AssistantProReason;
   proRequired: boolean;
   sunsetBanner: boolean;
-  cutoffAt: string;
+  cutoffAt: string | null;
   whatsappUrl: string;
   code?: typeof ASSISTANT_PRO_REQUIRED_CODE;
 };
@@ -76,17 +73,21 @@ function parseDate(raw?: Date | string | null): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function assistantFreeCutoffAt(): Date {
+/**
+ * Hard-gate cutoff from env `ASSISTANT_FREE_CUTOFF_AT` only.
+ * Unset, empty, or invalid ISO → `null` (soft period: banner may show, no lock).
+ */
+export function assistantFreeCutoffAt(): Date | null {
   const env = process.env.ASSISTANT_FREE_CUTOFF_AT?.trim();
-  if (env) {
-    const parsed = new Date(env);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-  return new Date(ASSISTANT_FREE_CUTOFF_AT);
+  if (!env) return null;
+  const parsed = new Date(env);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 export function isAssistantFreeSunsetActive(now = new Date()): boolean {
-  return now.getTime() >= assistantFreeCutoffAt().getTime();
+  const cutoff = assistantFreeCutoffAt();
+  if (!cutoff) return false;
+  return now.getTime() >= cutoff.getTime();
 }
 
 export function isActiveAssistantSubscription(
@@ -115,7 +116,7 @@ export function evaluateAssistantProAccess(
   const activeSubscription = isActiveAssistantSubscription(input.subscription, now);
   const referralBonusMonths = Math.max(0, Math.floor(input.referralBonusMonths ?? 0));
   const afterCutoff = isAssistantFreeSunsetActive(now);
-  const cutoffAt = assistantFreeCutoffAt().toISOString();
+  const cutoffAt = assistantFreeCutoffAt()?.toISOString() ?? null;
   const pro = foundingMember || paidDesk || activeSubscription;
 
   const base = {
