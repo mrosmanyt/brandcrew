@@ -67,6 +67,9 @@ export function WindowsDownloadNudge({
       sessionDismissed: readFlag(sessionStorage, WIN_DOWNLOAD_NUDGE_SESSION_KEY),
       localHidden: readFlag(localStorage, WIN_DOWNLOAD_NUDGE_LOCAL_KEY),
     });
+    // SSR hydration guard: navigator/sessionStorage/localStorage are
+    // browser-only, so this must run post-mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(offer);
   }, [pathname]);
 

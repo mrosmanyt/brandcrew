@@ -50,6 +50,9 @@ export function CinemAiAssistantDownloadPrompt() {
   const downloadHref = cinemAiAssistantDownloadHref();
 
   useEffect(() => {
+    // SSR hydration guard: gates the effect below until after the client
+    // mount, so signedIn (from an async /api/auth/me check) has settled.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthReady(true);
   }, []);
 
@@ -60,6 +63,9 @@ export function CinemAiAssistantDownloadPrompt() {
       signedIn,
       userAgent: navigator.userAgent || "",
     });
+    // SSR hydration guard: localStorage/navigator are browser-only, so
+    // this must run post-mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(offer);
   }, [authReady, signedIn]);
 

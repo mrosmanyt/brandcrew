@@ -13,6 +13,9 @@ export function usePersistedPaneWidth(
   const [width, setWidth] = useState(fallback);
 
   useEffect(() => {
+    // SSR hydration guard: window.localStorage is browser-only, so the
+    // real width must be read post-mount to avoid a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWidth(readStoredPaneWidth(window.localStorage.getItem(storageKey), fallback, min, max));
   }, [fallback, max, min, storageKey]);
 
@@ -35,6 +38,10 @@ export function usePersistedCollapsed(storageKey: string, collapsedToken = "coll
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
+    // SSR hydration guard: window.localStorage is browser-only, so the
+    // real collapsed state must be read post-mount to avoid a hydration
+    // mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCollapsed(isStoredCollapsed(window.localStorage.getItem(storageKey)));
   }, [storageKey]);
 

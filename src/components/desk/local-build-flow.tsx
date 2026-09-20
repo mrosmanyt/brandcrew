@@ -50,7 +50,7 @@ export function useLocalBuildFlow() {
       }
 
       const perm = await bridge.getBuildPermission?.();
-      let projectFolder = perm?.folder || folder;
+      const projectFolder = perm?.folder || folder;
       if (!perm?.granted || !projectFolder) {
         return new Promise((resolve) => {
           setPending({ intent, message, resolve });

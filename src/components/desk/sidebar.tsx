@@ -15,7 +15,7 @@ import {
   Settings,
   Terminal,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
 import { AgentAvatar } from "@/components/desk/agent-avatar";
@@ -500,9 +500,12 @@ export function DeskSidebar(props: {
     DESK_LEFT_PANE.maxWidth,
   );
 
-  useEffect(() => {
+  const routeKey = `${pathname}?${search}`;
+  const [prevRouteKey, setPrevRouteKey] = useState(routeKey);
+  if (routeKey !== prevRouteKey) {
+    setPrevRouteKey(routeKey);
     setMenuOpen(false);
-  }, [pathname, search]);
+  }
 
   function toggle() {
     setCollapsed((value) => !value);

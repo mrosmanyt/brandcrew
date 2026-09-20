@@ -130,17 +130,6 @@ function friendlyRaw(message: string): string {
   return trimmed.length > 140 ? `${trimmed.slice(0, 137)}…` : trimmed;
 }
 
-function toneForType(type: string, tool?: string): LiveProgressTone {
-  if (type === "error" || type === "domain_abort") return "error";
-  if (type === "ask_user" || tool === "ask_user") return "wait";
-  if (type === "user_reply") return "success";
-  if (type === "narration" || type === "step_start" || type === "created" || type === "tool_call") {
-    return type === "created" ? "info" : "working";
-  }
-  if (type === "tool_result" || type === "status" || type === "plan") return "success";
-  return "info";
-}
-
 function createdAtMs(value: string | Date | undefined) {
   if (!value) return 0;
   const ms = new Date(value).getTime();
