@@ -32,6 +32,7 @@ A signed-in address missing from the effective list receives HTTP 403. There is 
 | Section | Live data (Postgres / env — never fake KPIs) |
 | --- | --- |
 | **Overview** | Users, paid vs free, jobs running / needs_you / failed 24h, token + chat sums, Support + webhook counts, helpdesk open/live, recent failures, approvals, workspaces. **Download backup**. Assign / revoke / suspend / set token budget. |
+| **Insights** | Privacy-safe aggregates (`AnalyticsEvent`). Opt-in cohort vs anonymous login/billing totals as separate widgets. Keyword topics (Support + guest chat). Server error codes. On-demand weekly CSV/JSON — no Blob, no weekly-report table. Forward-only. |
 | **Customers** | Recent users (or email search) → plan, usage, memberships, jobs. Suspend disables jobs. Accounts are not hard-deleted. |
 | **Billing** | Paid workspaces + Whop membership id, `BrandSupport` tips, `ProcessedWebhook` events. |
 | **Support** | Product helpdesk from the Help widget (`SupportThread`). Reply, close, or join live chat. Not Whop tips. See `docs/helpdesk.md`. |

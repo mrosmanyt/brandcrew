@@ -8,6 +8,7 @@ import * as adminBackup from "./admin/backup";
 import * as adminSupport from "./admin/support";
 import * as adminSupportThread from "./admin/support-thread";
 import * as adminAssistantQueries from "./admin/assistant-queries";
+import * as adminInsights from "./admin/insights";
 import * as supportRoot from "./support/root";
 import * as supportPresence from "./support/presence";
 import * as supportThread from "./support/thread";
@@ -145,6 +146,7 @@ export const API_ROUTES: RouteSpec[] = [
     pattern: ["api", "admin", "assistant-queries"],
     handlers: asHandlers(adminAssistantQueries),
   },
+  { pattern: ["api", "admin", "insights"], handlers: asHandlers(adminInsights) },
   { pattern: ["api", "support"], handlers: asHandlers(supportRoot) },
   { pattern: ["api", "support", "presence"], handlers: asHandlers(supportPresence) },
   { pattern: ["api", "support", ":threadId"], handlers: asHandlers(supportThread) },

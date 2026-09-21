@@ -6,6 +6,7 @@ import {
   Flag,
   KeyRound,
   LayoutDashboard,
+  LineChart,
   MessageSquareQuote,
   Receipt,
   ScrollText,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/insights", label: "Insights", icon: LineChart },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/billing", label: "Billing", icon: Receipt },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
