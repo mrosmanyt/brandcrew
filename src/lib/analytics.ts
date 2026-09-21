@@ -1,8 +1,8 @@
 /**
  * Privacy-safe Admin Insights.
  *
- * Storage choice: aggregates only (`AnalyticsEvent`). There is no detail/log
- * table and no AnalyticsWeeklyReport. The 4-week detail-retention job is a
+ * Storage choice: aggregates only (`AnalyticsEvent`). No detail/log table
+ * and no AnalyticsWeeklyReport. The 4-week detail-retention job is a
  * documented no-op. Weekly CSV/JSON is built on demand from these rows.
  * Forward-only — no backfill of historical Support / guest / login data.
  *

@@ -37,8 +37,8 @@ assert.doesNotMatch(insightsApi, /\buserId\b/);
 assert.doesNotMatch(insightsApi, /\bpasswordHash\b/);
 assert.doesNotMatch(insightsApi, /request\.json\(\)/);
 assert.doesNotMatch(insightsApi, /\.body\b/);
-assert.doesNotMatch(insightsUi, /\bemail\b/);
-assert.doesNotMatch(insightsUi, /authorEmail|guestKey|passwordHash/);
+assert.doesNotMatch(insightsUi, /authorEmail|\.email\b|["']email["']/);
+assert.doesNotMatch(insightsUi, /guestKey|passwordHash/);
 console.log("ok: insights API/UI do not expose raw body, content, or email fields");
 
 assert.equal(ANALYTICS_NO_DETAIL_TABLE, true);

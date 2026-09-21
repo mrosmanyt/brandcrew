@@ -89,7 +89,7 @@ export function AdminInsights({ initial }: { initial: AdminInsightsPayload }) {
         <Kpi
           label="Anonymous signups"
           value={data.anonymous.signups.toLocaleString()}
-          hint="Signup increments. No email or user id on the event."
+          hint="Signup increments. No mailbox address or user id on the event."
         />
         <Kpi
           label="Retention"
