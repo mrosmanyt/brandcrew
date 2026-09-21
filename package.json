@@ -20,6 +20,7 @@
     "test:llm": "tsx scripts/check-llm-router.ts",
     "test:models": "tsx scripts/check-model-catalog.ts",
     "test:admin": "tsx scripts/check-admin.ts",
+    "test:analytics": "tsx scripts/check-analytics-privacy.ts",
     "test:helpdesk": "tsx scripts/check-helpdesk.ts",
     "test:jobs": "tsx scripts/check-job-runtime.ts",
     "test:companions": "tsx scripts/check-companions.ts",
