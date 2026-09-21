@@ -3,10 +3,12 @@
  * boot() failures and process-level crashes get logged to a file, and
  * every electron/*.cjs and *.html file main.cjs actually loads is present
  * in package.json's build.files array (else it's silently missing from
- * the packaged app). Source-only — no Electron runtime here.
+ * the packaged app). Also asserts computer-use-server is packed as
+ * extraResources at the path sidecarEntry() spawns. Source-only — no
+ * Electron runtime here.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 
@@ -15,7 +17,10 @@ const root = process.cwd();
 const mainSrc = readFileSync(join(root, "electron/main.cjs"), "utf8");
 const logSrc = readFileSync(join(root, "electron/main-log.cjs"), "utf8");
 const pkg = require("../package.json") as {
-  build: { files: string[] };
+  build: {
+    files: string[];
+    extraResources?: Array<{ from?: string; to?: string }>;
+  };
 };
 
 // Kaam 1: the whenReady() setup code (installAppMenu, ipcMain registrations,
@@ -64,6 +69,38 @@ for (const name of [...new Set(referencedHtml)]) {
 }
 assert.ok(filesSet.has("main-log.cjs"), "electron/main-log.cjs missing from build.files");
 console.log("ok: every electron/*.cjs and *.html file main.cjs loads is packaged in build.files");
+
+// Packaged computer-use sidecar: electron/computer-use.cjs sidecarEntry()
+// looks for process.resourcesPath/computer-use-server/index.js. If that
+// directory is not in extraResources, startSidecar() fails in the installer
+// even though local `apps/.../computer-use-server/index.js` works in dev.
+const computerUseSrc = readFileSync(join(root, "electron/computer-use.cjs"), "utf8");
+const packagedSidecar = computerUseSrc.match(
+  /path\.join\(\s*process\.resourcesPath(?:\s*\|\|\s*"")?\s*,\s*"([^"]+)"\s*,\s*"index\.js"\s*\)/,
+);
+assert.ok(
+  packagedSidecar,
+  "electron/computer-use.cjs sidecarEntry() must spawn process.resourcesPath/<dir>/index.js",
+);
+const sidecarResourceDir = packagedSidecar[1];
+assert.equal(
+  sidecarResourceDir,
+  "computer-use-server",
+  `sidecarEntry() packaged dir must be computer-use-server, got ${sidecarResourceDir}`,
+);
+assert.ok(
+  existsSync(join(root, "apps/cinem-ai-assistant/computer-use-server/index.js")),
+  "apps/cinem-ai-assistant/computer-use-server/index.js is missing",
+);
+assert.ok(
+  pkg.build.extraResources?.some(
+    (item) => item.from === "apps/cinem-ai-assistant/computer-use-server" && item.to === sidecarResourceDir,
+  ),
+  `build.extraResources must pack apps/cinem-ai-assistant/computer-use-server to ${sidecarResourceDir} (resources/${sidecarResourceDir}/index.js)`,
+);
+console.log(
+  `ok: computer-use-server is extraResources → resources/${sidecarResourceDir}/ matching sidecarEntry()`,
+);
 
 // Kaam 3: SmartScreen guidance sits near a Windows download button, in the
 // site's existing small-note style (matches the Android card's pattern),
