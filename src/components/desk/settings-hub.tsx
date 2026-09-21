@@ -34,6 +34,7 @@ type AccountUser = {
   isAdmin?: boolean;
   supporter?: boolean;
   supporterTotalCents?: number;
+  analyticsOptIn?: boolean;
 };
 
 export function SettingsHub({
@@ -61,12 +62,13 @@ export function SettingsHub({
   const [workspaceTitle, setWorkspaceTitle] = useState(workspaceName);
   const [clientLabel, setClientLabel] = useState(clientName);
   const [deskKind, setDeskKind] = useState<"agency" | "client">(workspaceKind);
+  const [analyticsOptIn, setAnalyticsOptIn] = useState(Boolean(user.analyticsOptIn));
   const [busy, setBusy] = useState<string | null>(null);
   const categories = settingsDeskCategories(workspaceId);
 
   const hasPassword = user.hasPassword !== false;
 
-  async function patchAccount(body: Record<string, string>) {
+  async function patchAccount(body: Record<string, string | boolean>) {
     const payload = { ...body };
     if (!payload.currentPassword) delete payload.currentPassword;
     const res = await fetch("/api/auth/me", {
@@ -244,6 +246,52 @@ export function SettingsHub({
             </Field>
           </div>
         ) : null}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-sm font-medium">Product analytics</h2>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Off by default. When on, CINEM may count Support topics for this account in Admin Insights.
+          Guest chat always records anonymous topic counts (no id, no message text). Applies to CINEM
+          Pro desk and Cinem AI Assistant on this CINEM account.{" "}
+          <Link href="/privacy" className="underline underline-offset-4">
+            Privacy
+          </Link>
+          .
+        </p>
+        <label className="mt-4 flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1 size-4 accent-primary"
+            checked={analyticsOptIn}
+            disabled={busy === "analytics"}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setBusy("analytics");
+              void (async () => {
+                try {
+                  const updated = await patchAccount({ analyticsOptIn: next });
+                  setAnalyticsOptIn(Boolean(updated.analyticsOptIn));
+                  toast.success(next ? "Analytics opted in." : "Analytics opted out.");
+                  router.refresh();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : "Could not update analytics preference.",
+                  );
+                } finally {
+                  setBusy(null);
+                }
+              })();
+            }}
+          />
+          <span>
+            <span className="font-medium">Share product analytics</span>
+            <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+              Keyword tags and counts only. We do not store Support message bodies or emails in
+              Insights.
+            </span>
+          </span>
+        </label>
       </section>
 
       <div className="mt-6">

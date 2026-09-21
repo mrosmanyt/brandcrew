@@ -65,6 +65,14 @@ export const DATA_PROCESSING_ROWS: ProcessingRow[] = [
     examples: "Scripts load only when an analytics env var is set and the banner choice is Accept. Essential-only skips them.",
   },
   {
+    category: "Admin Insights (first-party)",
+    location: "server",
+    leavesDevice: true,
+    purpose: "Privacy-safe product counts for CINEM staff",
+    examples:
+      "Signed-in Support topics only if the account opts in (Settings). Guest chat stores anonymous keyword counts — no guest id and no raw text. Login/billing widgets are totals, not a user list. Error analytics store server error codes only. Daily aggregates; no message bodies or emails.",
+  },
+  {
     category: "Billing",
     location: "processor",
     leavesDevice: true,

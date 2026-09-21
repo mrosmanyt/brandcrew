@@ -38,6 +38,7 @@ export async function GET() {
         assistantFoundingMember: true,
         assistantFoundingNumber: true,
         inviteCode: true,
+        analyticsOptIn: true,
       },
     });
     const workspaces = await listUserWorkspaces(user.id);
@@ -58,6 +59,7 @@ export async function GET() {
           assistantFoundingMember: Boolean(row?.assistantFoundingMember),
           assistantFoundingNumber: row?.assistantFoundingNumber ?? null,
           inviteCode: row?.inviteCode ?? null,
+          analyticsOptIn: Boolean(row?.analyticsOptIn),
         },
         workspaces: workspaces.map(serializeWorkspace),
         plan: entitlement.plan,
@@ -83,7 +85,10 @@ export async function PATCH(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
     }
-    if (user.passwordHash) {
+    const preferenceOnly =
+      typeof body.analyticsOptIn === "boolean" && !body.email && !body.name && !body.newPassword;
+
+    if (user.passwordHash && !preferenceOnly) {
       if (
         !body.currentPassword ||
         !(await verifyPassword(body.currentPassword, user.passwordHash))
@@ -95,7 +100,17 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const data: { email?: string; name?: string; passwordHash?: string } = {};
+    const data: {
+      email?: string;
+      name?: string;
+      passwordHash?: string;
+      analyticsOptIn?: boolean;
+      analyticsOptedAt?: Date | null;
+    } = {};
+    if (typeof body.analyticsOptIn === "boolean") {
+      data.analyticsOptIn = body.analyticsOptIn;
+      data.analyticsOptedAt = body.analyticsOptIn ? new Date() : null;
+    }
     if (body.email) {
       const email = body.email.toLowerCase().trim();
       const taken = await prisma.user.findFirst({
@@ -123,7 +138,12 @@ export async function PATCH(request: Request) {
       data,
     });
     return jsonOk({
-      user: { id: updated.id, email: updated.email, name: updated.name },
+      user: {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        analyticsOptIn: updated.analyticsOptIn,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

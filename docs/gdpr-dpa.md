@@ -6,6 +6,7 @@ In-product:
 - DPA template: `/dpa` (not a signed agreement, not legal advice)
 - Security / subprocessors: listed on Privacy (public `/security` redirects there; do not republish SOC scaffolding)
 - Cookie banner: essential session cookie vs optional analytics (only if an analytics env var is set **and** the user accepts)
+- First-party Admin Insights: opt-in Support topic counts; guest chat anonymous topic counts (disclosed on `/privacy`); login/billing totals without a user list
 - Whop checkout pixel: always in the document head (`t.whop.tw`, business `biz_VrtL8S4duREQg4`) for membership attribution — not cookie-gated
 
 Repo source of truth for the processing table: `src/lib/gdpr.ts`.

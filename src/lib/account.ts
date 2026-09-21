@@ -11,10 +11,15 @@ export const accountPatchSchema = z
     email: z.string().email().optional(),
     name: z.string().min(1).max(80).optional(),
     newPassword: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH).optional(),
+    analyticsOptIn: z.boolean().optional(),
   })
-  .refine((body) => Boolean(body.email || body.name || body.newPassword), {
-    message: "Change email, name, or password.",
-  })
+  .refine(
+    (body) =>
+      Boolean(body.email || body.name || body.newPassword || typeof body.analyticsOptIn === "boolean"),
+    {
+      message: "Change email, name, password, or analytics preference.",
+    },
+  )
   .superRefine((body, ctx) => {
     if (!body.newPassword) return;
     const weak = assertStrongPassword(body.newPassword, body.email);

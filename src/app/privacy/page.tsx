@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="13 September 2026">
+    <LegalPage title="Privacy policy" updated="21 September 2026">
       <p>
         This policy describes how <strong>CINEM</strong> (“we”) handles information when you
         use <strong>CINEM Pro</strong> at{" "}
@@ -50,6 +50,25 @@ export default function PrivacyPage() {
       <p>
         The website, desktop app, Android app, and Chrome extension use the same
         CINEM account. We do not sell browsing data.
+      </p>
+
+      <h2>Optional product analytics</h2>
+      <p>
+        Admin Insights uses privacy-safe counts. Product analytics for a signed-in CINEM
+        account are <strong>off by default</strong>. You can turn them on in desk Settings.
+        That preference also covers Cinem AI Assistant on the same CINEM account. When you
+        opt in, we may store keyword <em>tags</em> from Support messages (not the message
+        text, not your email). We do not tag desk conversation messages.
+      </p>
+      <p>
+        Guest chat on the marketing site records <strong>anonymous topic counts only</strong>
+        — no guest id, no raw message text. Topics are matched with keywords, not an LLM.
+        Login and billing widgets in Admin Insights are anonymous totals (how many logins or
+        workspaces by plan), never a user list.
+      </p>
+      <p>
+        We keep those daily aggregates. We do not store a separate detail log of analytics
+        events. There is no backfill of activity from before this feature shipped.
       </p>
 
       <h2>Retention</h2>

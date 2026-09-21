@@ -211,7 +211,7 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
 
   const account = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { passwordHash: true, googleId: true, supporter: true, supporterTotalCents: true },
+    select: { passwordHash: true, googleId: true, supporter: true, supporterTotalCents: true, analyticsOptIn: true },
   });
 
   const [jobs, agents] = await Promise.all([
@@ -244,6 +244,7 @@ async function SettingsPage({ workspaceId }: { workspaceId: string }) {
         supporter: Boolean(account?.supporter) || Boolean(workspace.supporter),
         supporterTotalCents:
           (account?.supporterTotalCents ?? 0) || workspace.supporterTotalCents,
+        analyticsOptIn: Boolean(account?.analyticsOptIn),
       }}
       initialJobs={jobs.map(serializeJob)}
       agents={agents.map(serializeAgent)}

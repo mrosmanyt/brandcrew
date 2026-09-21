@@ -191,6 +191,10 @@ assert.ok(accountPatchSchema.safeParse({ newPassword: "newpass99" }).success);
 assert.equal(accountPatchSchema.safeParse({ newPassword: "password1" }).success, false);
 assert.equal(accountPatchSchema.safeParse({ newPassword: "short" }).success, false);
 assert.equal(accountPatchSchema.safeParse({}).success, false);
+assert.ok(accountPatchSchema.safeParse({ analyticsOptIn: true }).success);
+assert.ok(accountPatchSchema.safeParse({ analyticsOptIn: false }).success);
+assert.match(hub, /Product analytics/);
+assert.match(hub, /analyticsOptIn/);
 assert.equal(
   accountPatchSchema.safeParse({ currentPassword: "x", newPassword: "short" }).success,
   false,
