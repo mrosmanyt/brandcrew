@@ -24,7 +24,9 @@ export async function GET(request: Request) {
     const result = await runDueSchedules();
     const { runDueEventTriggers } = await import("@/lib/event-triggers");
     const triggers = await runDueEventTriggers();
-    return jsonOk({ ...result, triggers, note: SCHEDULE_SERVERLESS_NOTE });
+    const { pruneAnalyticsDetails } = await import("@/lib/analytics");
+    const analyticsRetention = await pruneAnalyticsDetails();
+    return jsonOk({ ...result, triggers, analyticsRetention, note: SCHEDULE_SERVERLESS_NOTE });
   } catch (error) {
     return jsonError(error);
   }

@@ -58,6 +58,9 @@ export async function POST(request: Request) {
         payload.refreshToken = native.refreshToken;
         payload.expiresIn = native.expiresIn;
       }
+      void import("@/lib/analytics")
+        .then((mod) => mod.recordAnonymousAnalytics({ kind: "login", key: "login" }))
+        .catch(() => undefined);
       return NextResponse.json(payload);
     }
 
@@ -94,6 +97,9 @@ export async function POST(request: Request) {
       payload.refreshToken = native.refreshToken;
       payload.expiresIn = native.expiresIn;
     }
+    void import("@/lib/analytics")
+      .then((mod) => mod.recordAnonymousAnalytics({ kind: "login", key: "login" }))
+      .catch(() => undefined);
     return NextResponse.json(payload);
   } catch (error) {
     if (error instanceof z.ZodError) {

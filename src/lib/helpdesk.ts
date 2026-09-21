@@ -247,8 +247,9 @@ async function addMessage(input: {
   role: "user" | "ai" | "founder";
   body: string;
   authorEmail?: string;
+  analyticsUserId?: string | null;
 }) {
-  return prisma.supportMessage.create({
+  const row = await prisma.supportMessage.create({
     data: {
       threadId: input.threadId,
       role: input.role,
@@ -256,6 +257,17 @@ async function addMessage(input: {
       authorEmail: input.authorEmail ?? "",
     },
   });
+  if (input.role === "user") {
+    void import("@/lib/analytics")
+      .then((mod) =>
+        mod.recordSupportMessageTopics({
+          text: input.body,
+          userId: input.analyticsUserId,
+        }),
+      )
+      .catch(() => undefined);
+  }
+  return row;
 }
 
 export async function listViewerThreads(input: {
@@ -352,6 +364,7 @@ export async function createHelpdeskThread(input: {
     role: "user",
     body,
     authorEmail: email,
+    analyticsUserId: input.user?.id ?? null,
   });
   await addMessage({
     threadId: thread.id,
@@ -396,6 +409,7 @@ export async function appendViewerMessage(input: {
       role: "user",
       body,
       authorEmail: input.user?.email || existing.email,
+      analyticsUserId: input.user?.id ?? existing.userId,
     });
   }
 

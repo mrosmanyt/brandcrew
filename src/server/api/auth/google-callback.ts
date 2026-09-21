@@ -75,6 +75,14 @@ export async function GET(request: Request) {
       intent,
     });
     await setSessionCookie(user.id);
+    void import("@/lib/analytics")
+      .then((mod) =>
+        mod.recordAnonymousAnalytics({
+          kind: created ? "signup" : "login",
+          key: created ? "signup" : "login",
+        }),
+      )
+      .catch(() => undefined);
     return NextResponse.redirect(new URL(finished.path, `${appOrigin()}/`).toString());
   } catch (error) {
     const message =

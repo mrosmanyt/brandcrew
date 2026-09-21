@@ -131,6 +131,28 @@ export function jsonError(error: unknown) {
   );
 }
 
+/** Fire-and-forget error-code aggregate. Codes only — no message/stack. Skips 4xx and DB outages. */
+export function recordJsonErrorCode(error: unknown) {
+  if (
+    error instanceof AuthError ||
+    error instanceof ForbiddenError ||
+    error instanceof ClientError ||
+    error instanceof ApiAuthError ||
+    error instanceof ApiRateLimitError ||
+    error instanceof BudgetError ||
+    isDatabaseUnavailableError(error)
+  ) {
+    return;
+  }
+  const code =
+    error && typeof error === "object" && "code" in error && typeof error.code === "string"
+      ? error.code
+      : "internal_error";
+  void import("@/lib/analytics")
+    .then((mod) => mod.recordServerErrorCode(code || "internal_error"))
+    .catch(() => undefined);
+}
+
 export function jsonOk<T>(data: T, status = 200) {
   return NextResponse.json(data, { status });
 }

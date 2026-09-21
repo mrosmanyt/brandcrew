@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { answerGuestChat, normalizeGuestKey } from "@/lib/guest-chat";
 import { GUEST_CHAT_MESSAGE_MAX } from "@/lib/guest-chat-pure";
-import { jsonError, jsonOk } from "@/lib/http";
+import { jsonError, jsonOk, recordJsonErrorCode } from "@/lib/http";
 import { LLM_ROUTING_PREFERENCES } from "@/lib/llm-routing";
 import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
 
@@ -45,6 +45,9 @@ export async function POST(request: Request) {
   try {
     await enforceSensitiveRateLimit(request, ["api", "guest", "chat"], "POST");
     const body = postSchema.parse(await request.json());
+    void import("@/lib/analytics")
+      .then((mod) => mod.recordGuestChatTopics(body.message))
+      .catch(() => undefined);
     const result = await answerGuestChat({
       request,
       guestKey: guestKeyFrom(request, body.guestKey),
@@ -60,6 +63,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    recordJsonErrorCode(error);
     return jsonError(error);
   }
 }

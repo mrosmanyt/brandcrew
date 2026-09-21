@@ -98,6 +98,9 @@ async function legacySignup(body: z.infer<typeof schema>) {
   const referral = await redeemReferralOnSignup(user.id, body.memberInvite);
   const spots = await foundingSpotsSnapshot();
   await setSessionCookie(user.id);
+  void import("@/lib/analytics")
+    .then((mod) => mod.recordAnonymousAnalytics({ kind: "signup", key: "signup" }))
+    .catch(() => undefined);
   return NextResponse.json({
     user: { id: user.id, email: user.email, name: user.name },
     workspaceId,
@@ -177,6 +180,9 @@ export async function POST(request: Request) {
       ? { redeemed: (await referralStats(ensured.user.id)).redeemedAsInvitee }
       : { redeemed: false as const, reason: "no_code" as const };
 
+    void import("@/lib/analytics")
+      .then((mod) => mod.recordAnonymousAnalytics({ kind: "signup", key: "signup" }))
+      .catch(() => undefined);
     return NextResponse.json({
       user: ensured.user,
       workspaceId: ensured.workspaceId,

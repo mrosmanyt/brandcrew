@@ -8,7 +8,7 @@ import {
   listViewerThreads,
   viewerFromUser,
 } from "@/lib/helpdesk";
-import { jsonError, jsonOk } from "@/lib/http";
+import { jsonError, jsonOk, recordJsonErrorCode } from "@/lib/http";
 
 function guestKeyFrom(request: Request) {
   return request.headers.get("x-cinem-help-key")?.trim() || "";
@@ -28,6 +28,7 @@ export async function GET(request: Request) {
       threads,
     });
   } catch (error) {
+    recordJsonErrorCode(error);
     return jsonError(error);
   }
 }
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    recordJsonErrorCode(error);
     return jsonError(error);
   }
 }

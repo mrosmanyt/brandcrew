@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { honeypotFilled } from "@/lib/form-guard";
 import { appendViewerMessage, getViewerThread, viewerFromUser } from "@/lib/helpdesk";
-import { jsonError, jsonOk } from "@/lib/http";
+import { jsonError, jsonOk, recordJsonErrorCode } from "@/lib/http";
 
 function guestKeyFrom(request: Request) {
   return request.headers.get("x-cinem-help-key")?.trim() || "";
@@ -23,6 +23,7 @@ export async function GET(
     });
     return jsonOk({ thread, viewer: viewerFromUser(user) });
   } catch (error) {
+    recordJsonErrorCode(error);
     return jsonError(error);
   }
 }
@@ -67,6 +68,7 @@ export async function POST(
         { status: 400 },
       );
     }
+    recordJsonErrorCode(error);
     return jsonError(error);
   }
 }
