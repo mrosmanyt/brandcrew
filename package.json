@@ -192,6 +192,10 @@
         "to": "assistant"
       },
       {
+        "from": "apps/cinem-ai-assistant/computer-use-server",
+        "to": "computer-use-server"
+      },
+      {
         "from": "electron/resources",
         "to": "brandcrew",
         "filter": [
