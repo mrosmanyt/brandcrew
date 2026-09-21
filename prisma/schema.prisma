@@ -24,6 +24,10 @@ model User {
   language      String             @default("en")
   /// desk | assistant | both — desktop mode chooser preference.
   preferredMode String             @default("desk")
+  /// Product analytics for Admin Insights. Default off. No backfill of past activity.
+  analyticsOptIn   Boolean   @default(false)
+  /// Set when the user last turned analytics on. Null while opted out.
+  analyticsOptedAt DateTime?
   /// True after a successful Support (tip) payment webhook — not from the thank-you page alone.
   supporter          Boolean   @default(false)
   supporterAt        DateTime?
@@ -814,6 +818,29 @@ model UserProviderKey {
   spendCapUsd      Float    @default(25)
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Daily privacy-safe aggregates for Admin Insights.
+/// Unique on (day, kind, key, planBucket). Counts only — never raw text, emails, or user ids.
+/// No detail/log table: 4-week "detail retention" is a no-op. Aggregates are kept forever.
+/// Weekly reports are generated on demand from these rows (no Blob/bucket, no AnalyticsWeeklyReport).
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  /// UTC calendar day (date-only).
+  day        DateTime @db.Date
+  /// login | signup | topic_support | topic_guest | error
+  kind       String
+  /// Topic tag, error code, or event name. Never a message body or email.
+  key        String
+  /// Plan id bucket (demo/starter/pro/ultra/guest/unknown). Not a user or workspace id.
+  planBucket String   @default("")
+  count      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([day, kind, key, planBucket])
+  @@index([day, kind])
+  @@index([kind, key])
 }
 
 /// Short-lived GeminiGen webhook / poll cache (async image jobs).
