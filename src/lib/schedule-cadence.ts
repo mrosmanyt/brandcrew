@@ -1,4 +1,4 @@
-import { addDays, nextFriday, nextMonday } from "date-fns";
+import { addDays } from "date-fns";
 
 export const SCHEDULE_CADENCES = [
   { id: "weekly_monday", label: "Every Monday 09:00", cron: "0 9 * * 1" },
@@ -90,6 +90,22 @@ function dayOfWeekInZone(date: Date, timeZone: string): number {
 }
 
 /**
+ * Next date (strictly after `date`) whose weekday in `timeZone` is
+ * `targetDow` (0=Sun..6=Sat), at 09:00 in that zone. Walks day-by-day using
+ * the same zoned day-of-week helper as the "weekdays" branch below, instead
+ * of date-fns's nextMonday/nextFriday — those read the JS Date's local
+ * (server) day-of-week, which can already be tomorrow/yesterday relative to
+ * a distant timezone's "today," off-by-one near local midnight.
+ */
+function nextWeekdayInZone(date: Date, timeZone: string, targetDow: number): Date {
+  let cursor = addDays(startOfDayInZone(date, timeZone), 1);
+  while (dayOfWeekInZone(cursor, timeZone) !== targetDow) {
+    cursor = addDays(cursor, 1);
+  }
+  return nineAmInZone(cursor, timeZone);
+}
+
+/**
  * Next occurrence matching the cadence, 09:00 in `timezone` (IANA name,
  * default UTC — matches the ScheduledJob.timezone column default).
  */
@@ -122,12 +138,12 @@ export function computeNextRunAt(
 
   if (cadence === "weekly_monday") {
     if (dow === 1 && now < todayNine) return todayNine;
-    return nineAmInZone(nextMonday(now), timezone);
+    return nextWeekdayInZone(now, timezone, 1);
   }
 
   if (cadence === "weekly_friday") {
     if (dow === 5 && now < todayNine) return todayNine;
-    return nineAmInZone(nextFriday(now), timezone);
+    return nextWeekdayInZone(now, timezone, 5);
   }
 
   return nineAmInZone(addDays(startOfDayInZone(now, timezone), 1), timezone);

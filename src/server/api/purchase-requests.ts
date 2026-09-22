@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 
+const MAX_REQUESTS_PER_DAY = 500; // same crude abuse guard as the funnel/crash-report beacons
+
 const postSchema = z.object({
   name: z.string().min(1).max(120),
   note: z.string().max(2000).optional(),
@@ -13,6 +15,11 @@ const postSchema = z.object({
 export async function POST(request: Request) {
   try {
     const body = postSchema.parse(await request.json());
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const countToday = await prisma.purchaseRequest.count({ where: { createdAt: { gte: since } } });
+    if (countToday >= MAX_REQUESTS_PER_DAY) {
+      return NextResponse.json({ error: "Rate limited." }, { status: 429 });
+    }
     const row = await prisma.purchaseRequest.create({
       data: {
         name: body.name.trim(),
