@@ -5,6 +5,10 @@ import { isPaidPlan, normalizePlanId } from "@/lib/limits";
 import type { PlanId } from "@/lib/constants";
 import { PLANS } from "@/lib/constants";
 import { ClientError } from "@/lib/http";
+import {
+  parseAssistantBillingPlanId,
+  type AssistantBillingPlanId,
+} from "@/lib/cinem-ai-assistant-billing";
 import { hasAnthropic, hasGemini, hasOpenAI, hasXai } from "@/lib/llm";
 import {
   describeProviderModel,
@@ -155,6 +159,11 @@ export type AdminWorkspace360 = AdminWorkspaceRow & {
 
 export type AdminCustomer360 = {
   user: { id: string; email: string; name: string; createdAt: string };
+  assistantPro: {
+    status: string;
+    plan: string;
+    currentPeriodEnd: string | null;
+  } | null;
   workspaces: AdminWorkspace360[];
 };
 
@@ -810,6 +819,81 @@ export async function adminRevokePlan(input: {
   return { workspaces };
 }
 
+async function resolveUserIdByEmail(email: string) {
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
+    select: { id: true, email: true },
+  });
+  if (!user) {
+    throw new ClientError("No user with that email.", 404, "not_found");
+  }
+  return user;
+}
+
+export async function adminGrantAssistantPro(input: {
+  actorEmail: string;
+  userEmail: string;
+  plan?: string | null;
+}): Promise<{
+  userId: string;
+  email: string;
+  assistantPro: AdminCustomer360["assistantPro"];
+}> {
+  const user = await resolveUserIdByEmail(input.userEmail);
+  const plan: AssistantBillingPlanId =
+    parseAssistantBillingPlanId(input.plan) || "monthly";
+  const row = await prisma.assistantSubscription.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      plan,
+      status: "active",
+      currentPeriodEnd: null,
+      whopMembershipId: null,
+    },
+    update: {
+      plan,
+      status: "active",
+      currentPeriodEnd: null,
+      whopMembershipId: null,
+    },
+    select: { status: true, plan: true, currentPeriodEnd: true },
+  });
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "assistant_pro_grant",
+    targetId: user.id,
+    meta: { userEmail: user.email, plan },
+  });
+  return {
+    userId: user.id,
+    email: user.email,
+    assistantPro: {
+      status: row.status,
+      plan: row.plan,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    },
+  };
+}
+
+export async function adminRevokeAssistantPro(input: {
+  actorEmail: string;
+  userEmail: string;
+}): Promise<{ userId: string; email: string }> {
+  const user = await resolveUserIdByEmail(input.userEmail);
+  await prisma.assistantSubscription.updateMany({
+    where: { userId: user.id },
+    data: { status: "cancelled", whopMembershipId: null },
+  });
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "assistant_pro_revoke",
+    targetId: user.id,
+    meta: { userEmail: user.email },
+  });
+  return { userId: user.id, email: user.email };
+}
+
 export async function adminSuspendWorkspace(input: {
   actorEmail: string;
   workspaceId?: string | null;
@@ -939,6 +1023,9 @@ async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null>
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
+      assistantSubscription: {
+        select: { status: true, plan: true, currentPeriodEnd: true },
+      },
       memberships: {
         include: {
           workspace: {
@@ -974,6 +1061,7 @@ async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null>
     },
   });
   if (!user) return null;
+  const sub = user.assistantSubscription;
   return {
     user: {
       id: user.id,
@@ -981,6 +1069,13 @@ async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null>
       name: user.name,
       createdAt: user.createdAt.toISOString(),
     },
+    assistantPro: sub
+      ? {
+          status: sub.status,
+          plan: sub.plan,
+          currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+        }
+      : null,
     workspaces: user.memberships.map((membership) => {
       const ws = membership.workspace;
       return {

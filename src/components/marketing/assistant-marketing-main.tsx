@@ -94,7 +94,7 @@ export function AssistantMarketingMain({ variant = "product" }: AssistantMarketi
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
             Voice wake, floating HUD during desktop control, agent handoffs, prompt expansion,
             and the settings hub — all in the unified Windows installer. When Free turns run
-            out, Upgrade opens your logged-in billing page in the system browser.
+            out, Upgrade opens WhatsApp sales in the system browser (geo-routed).
           </p>
           <div className="mt-10">
             <AssistantProductFrames />

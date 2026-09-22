@@ -135,7 +135,31 @@ function CustomerProfile({
           {workspaceCount} workspace{workspaceCount === 1 ? "" : "s"}
         </p>
         {tokenLine ? <p className="mt-2 text-xs text-muted-foreground">{tokenLine}</p> : null}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Assistant Pro:{" "}
+          {profile.assistantPro?.status === "active"
+            ? `active (${profile.assistantPro.plan})`
+            : profile.assistantPro
+              ? `${profile.assistantPro.status} (${profile.assistantPro.plan})`
+              : "none"}
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => onPending({ kind: "assistant-grant", email: profile.user.email })}
+          >
+            Grant Assistant Pro
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => onPending({ kind: "assistant-revoke", email: profile.user.email })}
+          >
+            Revoke Assistant Pro
+          </Button>
           <PlanSelect
             label={`Assign plan for ${profile.user.email}`}
             disabled={busy}

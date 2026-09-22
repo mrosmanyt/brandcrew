@@ -5,9 +5,9 @@
 
 import {
   assistantBillingPath,
-  assistantCheckoutPath,
   parseAssistantBillingPlanId,
 } from "@/lib/cinem-ai-assistant-billing";
+import { assistantProSalesWhatsAppUrl } from "@/lib/geo-whatsapp";
 import { planDisplayName, type CheckoutPlanId, type PlanId } from "@/lib/constants";
 import { isPaidPlan, normalizePlanId } from "@/lib/limits";
 import {
@@ -263,10 +263,12 @@ export function cinemAiAssistantBillingPath(planDisplay = "monthly") {
   return assistantBillingPath(plan);
 }
 
-export function cinemAiAssistantUpgradeUrl(origin?: string | null, planDisplay = "monthly") {
+export function cinemAiAssistantUpgradeUrl(origin?: string | null, countryCode?: string | null) {
   const base = (origin || siteOrigin() || SITE_ORIGIN).replace(/\/$/, "");
-  const plan = parseAssistantBillingPlanId(planDisplay) || "monthly";
-  return `${base}${assistantCheckoutPath(plan)}`;
+  if (base) {
+    return `${base}/api/geo/whatsapp?redirect=1`;
+  }
+  return assistantProSalesWhatsAppUrl(countryCode);
 }
 
 export function cinemAiAssistantSetupEnvUrl() {

@@ -1,5 +1,6 @@
 /**
  * Cinem AI Assistant standalone billing — separate from CINEM Pro desk plans.
+ * Live activation is admin grant/revoke + WhatsApp sales (no Whop checkout).
  */
 
 import { CINEM_AI_ASSISTANT_PRODUCT } from "@/lib/cinem-ai-assistant";
@@ -15,7 +16,7 @@ export type AssistantBillingPlan = {
   priceTotal: number;
   /** Effective monthly price for display. */
   priceMonthly: number;
-  /** Whop billing period in days (inline plan creation). */
+  /** Reference billing period in days (sales / admin metadata). */
   billingPeriodDays: number;
   savePercent: number | null;
   features: string[];
@@ -40,8 +41,8 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     priceMonthly: 20,
     billingPeriodDays: 30,
     savePercent: null,
-    features: [...ASSISTANT_PLAN_FEATURES, "Cancel anytime"],
-    cta: "Choose Monthly",
+    features: [...ASSISTANT_PLAN_FEATURES, "Contact us on WhatsApp to activate"],
+    cta: "Contact on WhatsApp",
   },
   "3mo": {
     id: "3mo",
@@ -51,7 +52,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     billingPeriodDays: 90,
     savePercent: 11,
     features: [...ASSISTANT_PLAN_FEATURES, "Priority updates"],
-    cta: "Choose 3 Months",
+    cta: "Contact on WhatsApp",
   },
   "6mo": {
     id: "6mo",
@@ -61,7 +62,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     billingPeriodDays: 180,
     savePercent: 28,
     features: [...ASSISTANT_PLAN_FEATURES, "Priority updates"],
-    cta: "Choose 6 Months",
+    cta: "Contact on WhatsApp",
   },
   "1yr": {
     id: "1yr",
@@ -71,7 +72,7 @@ export const ASSISTANT_BILLING_PLANS: Record<AssistantBillingPlanId, AssistantBi
     billingPeriodDays: 365,
     savePercent: 30,
     features: [...ASSISTANT_PLAN_FEATURES, "Priority updates"],
-    cta: "Choose 1 Year",
+    cta: "Contact on WhatsApp",
     highlighted: true,
     badge: "Best value",
   },
@@ -96,6 +97,7 @@ export function assistantBillingPath(plan: AssistantBillingPlanId = "monthly") {
   return `/cinem-ai-assistant/billing?plan=${plan}`;
 }
 
+/** Legacy deep-link path — redirects to standalone pricing (no Whop checkout). */
 export function assistantCheckoutPath(plan: AssistantBillingPlanId = "monthly") {
   const params = new URLSearchParams({
     plan,
@@ -106,58 +108,6 @@ export function assistantCheckoutPath(plan: AssistantBillingPlanId = "monthly") 
 
 export function formatAssistantPrice(amount: number) {
   return amount % 1 === 0 ? `$${amount.toFixed(0)}` : `$${amount.toFixed(2)}`;
-}
-
-export const WHOP_ASSISTANT_PRODUCT_ENV = "WHOP_ASSISTANT_PRODUCT_ID";
-
-export const WHOP_ASSISTANT_PLAN_ENV: Record<AssistantBillingPlanId, string> = {
-  monthly: "WHOP_ASSISTANT_MONTHLY_PLAN_ID",
-  "3mo": "WHOP_ASSISTANT_3MO_PLAN_ID",
-  "6mo": "WHOP_ASSISTANT_6MO_PLAN_ID",
-  "1yr": "WHOP_ASSISTANT_1YR_PLAN_ID",
-};
-
-export function whopAssistantPlanIdFor(plan: AssistantBillingPlanId) {
-  const envMap: Record<AssistantBillingPlanId, string | undefined> = {
-    monthly: process.env.WHOP_ASSISTANT_MONTHLY_PLAN_ID,
-    "3mo": process.env.WHOP_ASSISTANT_3MO_PLAN_ID,
-    "6mo": process.env.WHOP_ASSISTANT_6MO_PLAN_ID,
-    "1yr": process.env.WHOP_ASSISTANT_1YR_PLAN_ID,
-  };
-  return envMap[plan]?.trim() || "";
-}
-
-export function whopAssistantProductId() {
-  return process.env.WHOP_ASSISTANT_PRODUCT_ID?.trim() || "";
-}
-
-/** Env vars missing for live Whop assistant checkout on the chosen plan. */
-export function missingWhopAssistantEnvForPlan(plan: AssistantBillingPlanId) {
-  const missing: string[] = [];
-  if (!whopAssistantProductId()) missing.push(WHOP_ASSISTANT_PRODUCT_ENV);
-  if (!whopAssistantPlanIdFor(plan)) missing.push(WHOP_ASSISTANT_PLAN_ENV[plan]);
-  return missing;
-}
-
-export function whopAssistantLiveBillingReady(plan: AssistantBillingPlanId) {
-  return missingWhopAssistantEnvForPlan(plan).length === 0;
-}
-
-export function assistantCheckoutMisconfiguredMessage(plan: AssistantBillingPlanId) {
-  const missing = missingWhopAssistantEnvForPlan(plan);
-  if (!missing.length) return "";
-  return `Live assistant billing needs ${missing.join(", ")} in Vercel (Whop product + plan ids). Set BILLING_MOCK=true for local demo without payment.`;
-}
-
-export function resolveAssistantBillingPlanFromWhopPlanId(
-  planId?: string | null,
-): AssistantBillingPlanId | null {
-  const id = planId?.trim();
-  if (!id) return null;
-  for (const plan of ASSISTANT_BILLING_PLAN_IDS) {
-    if (whopAssistantPlanIdFor(plan) === id) return plan;
-  }
-  return null;
 }
 
 export function assistantSubscriptionPeriodEnd(

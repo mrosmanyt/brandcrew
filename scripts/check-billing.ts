@@ -19,30 +19,21 @@ import {
 } from "../src/lib/whop";
 import {
   extractWhopResource,
-  isAssistantProductCheckout,
   isMembershipDeactivatedEvent,
   isPaidUnlockEvent,
   isSupportCheckout,
   normalizeWhopEventType,
   parseWhopEnvelope,
-  resolveAssistantPlanFromWhop,
   resolvePaidPlanFromWhop,
   shouldDowngradeToDemo,
 } from "../src/lib/billing-events";
-import {
-  assistantCheckoutMisconfiguredMessage,
-  missingWhopAssistantEnvForPlan,
-  whopAssistantLiveBillingReady,
-  whopAssistantPlanIdFor,
-  WHOP_ASSISTANT_PLAN_ENV,
-  WHOP_ASSISTANT_PRODUCT_ENV,
-} from "../src/lib/cinem-ai-assistant-billing";
 import {
   assistantCheckoutPlanFromQuery,
   cinemAiAssistantBillingPath,
   cinemAiAssistantUpgradeUrl,
   CINEM_AI_ASSISTANT_PRODUCT,
 } from "../src/lib/cinem-ai-assistant";
+import { salesWhatsAppUrl } from "../src/lib/geo-whatsapp";
 import {
   authHrefWithNext,
   billingCheckoutLabel,
@@ -152,40 +143,7 @@ assert.equal(whopAccountId(), "biz_VrtL8S4duREQg4");
 console.log("ok: live Whop checkout requires company id (WHOP_ACCOUNT_ID alias)");
 
 resetEnv();
-assert.deepEqual(missingWhopAssistantEnvForPlan("monthly"), [
-  WHOP_ASSISTANT_PRODUCT_ENV,
-  WHOP_ASSISTANT_PLAN_ENV.monthly,
-]);
-assert.equal(whopAssistantLiveBillingReady("monthly"), false);
-process.env.WHOP_ASSISTANT_PRODUCT_ID = "prod_assistant";
-process.env.WHOP_ASSISTANT_MONTHLY_PLAN_ID = "plan_monthly";
-assert.equal(whopAssistantLiveBillingReady("monthly"), true);
-assert.equal(whopAssistantPlanIdFor("monthly"), "plan_monthly");
-assert.match(
-  assistantCheckoutMisconfiguredMessage("3mo"),
-  /WHOP_ASSISTANT_3MO_PLAN_ID/,
-);
-console.log("ok: assistant checkout requires Whop product + plan ids");
-
-assert.equal(
-  isAssistantProductCheckout({ product: CINEM_AI_ASSISTANT_PRODUCT, plan: "monthly" }),
-  true,
-);
-assert.equal(isAssistantProductCheckout({ plan: "pro" }), false);
-assert.equal(
-  resolveAssistantPlanFromWhop({
-    metadata: { product: CINEM_AI_ASSISTANT_PRODUCT, plan: "6mo" },
-    planId: "plan_other",
-  }),
-  "6mo",
-);
-process.env.WHOP_ASSISTANT_6MO_PLAN_ID = "plan_6mo";
-assert.equal(
-  resolveAssistantPlanFromWhop({ metadata: { product: CINEM_AI_ASSISTANT_PRODUCT }, planId: "plan_6mo" }),
-  "6mo",
-);
-console.log("ok: assistant webhook metadata resolves plan");
-resetEnv();
+console.log("ok: assistant Pro activates via admin grant + WhatsApp sales (no Whop checkout)");
 
 assert.equal(billingCheckoutLabel("Pro", "mock"), "Apply Pro (mock)");
 assert.equal(billingCheckoutLabel("Pro Plus", "whop"), "Checkout Pro Plus with Whop");
@@ -218,14 +176,15 @@ assert.equal(assistantCheckoutPlanFromQuery("pro", CINEM_AI_ASSISTANT_PRODUCT), 
 assert.equal(cinemAiAssistantBillingPath("pro"), "/cinem-ai-assistant/billing?plan=monthly");
 assert.equal(
   cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
-  "https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant",
+  "https://app.cinem.tech/api/geo/whatsapp?redirect=1",
 );
+assert.equal(salesWhatsAppUrl("IN").startsWith("https://wa.me/917202860041"), true);
 assert.equal(
   checkoutPlanFromNextPath("/billing?plan=pro&product=cinem-ai-assistant"),
   "starter",
 );
 console.log("ok: marketing Get {plan} hrefs go through signup next then desk billing");
-console.log("ok: Cinem AI Assistant upgrade uses standalone assistant billing path");
+console.log("ok: Cinem AI Assistant upgrade uses geo WhatsApp redirect");
 
 assert.equal(normalizeWhopEventType("payment_succeeded"), "payment.succeeded");
 assert.equal(isPaidUnlockEvent("payment.succeeded"), true);
@@ -388,14 +347,14 @@ assert.match(readFileSync(".env.example", "utf8"), /WHOP_API_KEY=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_WEBHOOK_SECRET=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PRODUCT_ID=/);
 assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PLAN_ID=/);
-assert.match(readFileSync(".env.example", "utf8"), /WHOP_ASSISTANT_1YR_PLAN_ID=/);
-const assistantCheckout = readFileSync("src/server/api/billing/assistant-checkout.ts", "utf8");
-assert.match(assistantCheckout, /assistantCheckoutMisconfiguredMessage/);
-assert.match(assistantCheckout, /BILLING_MOCK !== "true"/);
-assert.match(readFileSync("src/lib/whop.ts", "utf8"), /plan_id: planId/);
-assert.doesNotMatch(readFileSync("src/lib/whop.ts", "utf8"), /Cinem AI Assistant \$\{product\.name\}/);
-assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /isAssistantProductCheckout/);
-assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyAssistantSubscription/);
+assert.match(readFileSync(".env.example", "utf8"), /WHOP_SUPPORT_PLAN_ID=/);
+assert.doesNotMatch(readFileSync("src/server/api/router.ts", "utf8"), /assistant-checkout/);
+assert.match(readFileSync("src/lib/geo-whatsapp.ts", "utf8"), /917202860041/);
+assert.match(readFileSync("src/lib/geo-whatsapp.ts", "utf8"), /923489057646/);
+assert.match(readFileSync("src/server/api/geo/whatsapp.ts", "utf8"), /x-vercel-ip-country/);
+assert.match(readFileSync("src/lib/admin.ts", "utf8"), /adminGrantAssistantPro/);
+assert.match(readFileSync("src/lib/admin.ts", "utf8"), /adminRevokeAssistantPro/);
+assert.doesNotMatch(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyAssistantSubscription/);
 assert.match(router, /api", "billing", "support/);
 const whopSrc = readFileSync("src/lib/whop.ts", "utf8");
 assert.match(whopSrc, /createWhopSupportCheckout/);
@@ -404,6 +363,7 @@ assert.match(whopSrc, /company_id: companyId/);
 assert.match(whopSrc, /account_id: companyId/);
 assert.match(whopSrc, /requireWhopCompanyId/);
 assert.match(whopSrc, /withWhopCompany/);
+assert.doesNotMatch(whopSrc, /createWhopAssistantCheckout/);
 assert.match(readFileSync("docs/whop-support.md", "utf8"), /plan\.company_id/);
 assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /isSupportCheckout/);
 assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyPaidSupport/);

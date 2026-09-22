@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   adminAssignPlan,
   adminRevokePlan,
+  adminGrantAssistantPro,
+  adminRevokeAssistantPro,
   adminSetBudget,
   adminSetFeatureFlag,
   adminSuspendWorkspace,
@@ -79,12 +81,15 @@ const mutateSchema = z.object({
   action: z.enum([
     "assign",
     "revoke",
+    "assistant_grant",
+    "assistant_revoke",
     "suspend",
     "unsuspend",
     "flag",
     "budget",
   ]),
   plan: z.enum(["demo", "starter", "pro", "ultra", "growth"]).optional(),
+  assistantPlan: z.enum(["monthly", "3mo", "6mo", "1yr"]).optional(),
   workspaceId: z.string().min(1).optional(),
   userEmail: z.string().email().optional(),
   flagKey: z.string().min(1).max(80).optional(),
@@ -129,6 +134,34 @@ export async function POST(request: Request) {
         userEmail: body.userEmail,
       });
       return jsonOk({ ok: true, action: "budget" as const, updated: result.workspaces });
+    }
+
+    if (body.action === "assistant_grant") {
+      if (!body.userEmail?.trim()) {
+        return NextResponse.json(
+          { error: "User email is required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const result = await adminGrantAssistantPro({
+        actorEmail,
+        userEmail: body.userEmail,
+        plan: body.assistantPlan,
+      });
+      return jsonOk({ ok: true, action: "assistant_grant" as const, ...result });
+    }
+    if (body.action === "assistant_revoke") {
+      if (!body.userEmail?.trim()) {
+        return NextResponse.json(
+          { error: "User email is required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const result = await adminRevokeAssistantPro({
+        actorEmail,
+        userEmail: body.userEmail,
+      });
+      return jsonOk({ ok: true, action: "assistant_revoke" as const, ...result });
     }
 
     if (body.action === "revoke") {

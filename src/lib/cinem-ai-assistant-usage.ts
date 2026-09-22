@@ -2,7 +2,7 @@ import { getUserFromRequest, AuthError } from "@/lib/auth";
 import { requireDevice, readDeviceToken } from "@/lib/device-auth";
 import { DEVICE_TOKEN_PREFIX } from "@/lib/device-protocol";
 import { prisma } from "@/lib/db";
-import { originFromRequest } from "@/lib/billing";
+import { assistantProSalesWhatsAppUrlFromRequest } from "@/lib/geo-whatsapp";
 import { normalizePlanId } from "@/lib/limits";
 import { listUserWorkspaces } from "@/lib/workspace";
 import {
@@ -10,7 +10,6 @@ import {
   CINEM_AI_ASSISTANT_FREE_TURNS,
   cinemAiAssistantPeriodUtc,
   cinemAiAssistantTurnLimit,
-  cinemAiAssistantUpgradeUrl,
   clampUsageIncrement,
   entitlementFromWorkspaces,
   usageSnapshot,
@@ -122,11 +121,12 @@ export async function getCinemAssistantUsage(
   const entitlement = await planForUser(caller.userId);
   const subscription = await activeAssistantSubscription(caller.userId);
   const included = entitlement.includedWithPlan || Boolean(subscription);
+  const upgradeUrl = assistantProSalesWhatsAppUrlFromRequest(request);
   return usageSnapshot({
     plan: caller.plan,
     used,
     period,
-    upgradeUrl: cinemAiAssistantUpgradeUrl(originFromRequest(request)),
+    upgradeUrl,
     workspaceId: caller.workspaceId,
     includedWithPlan: included,
     foundingMember: entitlement.foundingMember,
@@ -143,7 +143,7 @@ export async function incrementCinemAssistantUsage(
   const period = cinemAiAssistantPeriodUtc();
   const turns = clampUsageIncrement(turnsRaw);
   const current = await readUsed(caller.userId, period);
-  const upgradeUrl = cinemAiAssistantUpgradeUrl(originFromRequest(request));
+  const upgradeUrl = assistantProSalesWhatsAppUrlFromRequest(request);
   const userRow = await prisma.user.findUnique({
     where: { id: caller.userId },
     select: { assistantFoundingMember: true, assistantRequiresPaid: true, referralBonusMonths: true },

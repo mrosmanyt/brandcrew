@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
-import { useMarketingAuth } from "@/components/marketing/use-signed-in";
+import { WhatsAppSalesButton } from "@/components/marketing/whatsapp-sales-button";
 import {
   ASSISTANT_BILLING_PLAN_IDS,
   ASSISTANT_BILLING_PLANS,
@@ -17,39 +15,7 @@ import { cn } from "@/lib/utils";
 
 function PlanCard({ planId }: { planId: AssistantBillingPlanId }) {
   const plan = ASSISTANT_BILLING_PLANS[planId];
-  const { signedIn } = useMarketingAuth();
-  const [busy, setBusy] = useState(false);
   const highlighted = Boolean(plan.highlighted);
-
-  async function checkout() {
-    if (!signedIn) {
-      window.location.href = `/login?next=${encodeURIComponent(assistantBillingPath(planId))}`;
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await fetch("/api/billing/assistant-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Checkout failed.");
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      if (data.mock) {
-        window.location.href = data.redirect || `${assistantBillingPath(planId)}&status=success`;
-        return;
-      }
-      throw new Error("Checkout did not return a Whop payment URL.");
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Checkout failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const priceLabel =
     plan.id === "monthly"
@@ -58,7 +24,7 @@ function PlanCard({ planId }: { planId: AssistantBillingPlanId }) {
 
   const detail =
     plan.id === "monthly"
-      ? "Billed monthly"
+      ? "Billed monthly after we activate you"
       : `${formatAssistantPrice(plan.priceMonthly)} / month · save ${plan.savePercent}%`;
 
   return (
@@ -96,19 +62,15 @@ function PlanCard({ planId }: { planId: AssistantBillingPlanId }) {
           </li>
         ))}
       </ul>
-      <Button
-        type="button"
-        size="lg"
+      <WhatsAppSalesButton
         className={cn(
           "mt-6 h-11 w-full",
           highlighted ? "bg-background text-foreground hover:bg-background/90" : "",
         )}
         variant={highlighted ? "secondary" : "outline"}
-        disabled={busy}
-        onClick={() => void checkout()}
       >
-        {busy ? <Loader2 className="size-4 animate-spin" /> : plan.cta}
-      </Button>
+        {plan.cta}
+      </WhatsAppSalesButton>
     </article>
   );
 }
@@ -125,8 +87,8 @@ export function CinemAiAssistantPricingSection() {
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
           All fifteen agents, voice, supervised desktop control (when enabled), prompt expansion,
-          and the Memory · Skills · Voices · Settings hub. You only choose how long to commit, and
-          longer plans cost less each month.
+          and the Memory · Skills · Voices · Settings hub. Contact us on WhatsApp with your CINEM
+          account email — we activate Assistant Pro manually (no instant checkout).
         </p>
       </div>
 
@@ -139,7 +101,8 @@ export function CinemAiAssistantPricingSection() {
       </div>
 
       <p className="text-center text-xs text-muted-foreground">
-        Prices are in USD. Each licence is bound to one device.{" "}
+        Prices are in USD. Each licence is bound to one device. Sales routing uses your region when
+        we can detect it (VPN may show a different country).{" "}
         <Link href="/cinem-ai-assistant" className="underline underline-offset-4">
           Product overview
         </Link>

@@ -1,6 +1,6 @@
 # Cinem AI Assistant
 
-Windows-only native assistant for CINEM Pro. **Standalone billing** lives at [`/cinem-ai-assistant/billing`](/cinem-ai-assistant/billing) — separate from CINEM Pro desk plans (`/about#pricing`).
+Windows-only native assistant for CINEM Pro. **Standalone pricing** lives at [`/cinem-ai-assistant/billing`](/cinem-ai-assistant/billing) — separate from CINEM Pro desk plans (`/about#pricing`).
 
 **Same CINEM Pro account = same login on desktop.** Sign into Desk or AI Assistant with your website account. Desk plans may still include assistant usage; paid assistant subscriptions are tracked in `AssistantSubscription`.
 
@@ -12,21 +12,12 @@ Windows-only native assistant for CINEM Pro. **Standalone billing** lives at [`/
 | 6 months | $86.40 total | ~$14.40/mo, save 28% |
 | 1 year | $168 total | ~$14/mo, save 30% |
 
-Whop env for live checkout at [`/cinem-ai-assistant/billing`](/cinem-ai-assistant/billing) (reuse desk keys `WHOP_API_KEY`, `WHOP_COMPANY_ID`, `WHOP_WEBHOOK_SECRET`):
+**Assistant Pro activation (no Whop checkout):**
 
-| Variable | Example prices | Purpose |
-| --- | --- | --- |
-| `WHOP_ASSISTANT_PRODUCT_ID` | — | Whop product (`prod_…`) for Cinem AI Assistant |
-| `WHOP_ASSISTANT_MONTHLY_PLAN_ID` | $20/mo | Monthly renewal plan (`plan_…`) |
-| `WHOP_ASSISTANT_3MO_PLAN_ID` | $53.40 / 90 days | 3-month renewal |
-| `WHOP_ASSISTANT_6MO_PLAN_ID` | $86.40 / 180 days | 6-month renewal |
-| `WHOP_ASSISTANT_1YR_PLAN_ID` | $168 / 365 days | 1-year renewal |
+1. User contacts sales on **WhatsApp** (geo-routed via `GET /api/geo/whatsapp` — India vs Pakistan/international default).
+2. Admin HQ → **Customers** → search email → **Grant Assistant Pro** (`assistant_pro_grant` audit). **Revoke Assistant Pro** sets `AssistantSubscription.status = cancelled` (row retained).
 
-Checkout: `POST /api/billing/assistant-checkout` with `{ "plan": "monthly" | "3mo" | "6mo" | "1yr" }` → Whop `purchase_url`. Without these ids (and without `BILLING_MOCK=true`) the API returns a clear configuration error — it does not silently grant access.
-
-Webhook: register the same `POST /api/webhooks/whop` endpoint for `payment.succeeded`, `membership.activated`, and `membership.deactivated`. Checkout metadata includes `product: "cinem-ai-assistant"`, `plan`, and `userId`; fulfillment upserts `AssistantSubscription`.
-
-Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/download`](/download). Upgrade deep link: [`/billing?plan=monthly&product=cinem-ai-assistant`](/billing?plan=monthly&product=cinem-ai-assistant) → billing page.
+Public face: [`/cinem-ai-assistant`](/cinem-ai-assistant). Downloads: [`/download`](/download). Upgrade / quota popup opens `upgradeUrl` from the usage API (geo-routed `wa.me` link, or `/api/geo/whatsapp?redirect=1` from marketing defaults).
 
 Admin HQ: [`/admin/assistant-queries`](/admin/assistant-queries) — approve/reject incoming registration requests (Supabase `registration_requests`, service role required).
 
@@ -56,7 +47,7 @@ Vercel / `next build` ignores this folder — Rust is never compiled on the Next
 | Variable | Where | Purpose |
 | --- | --- | --- |
 | `VITE_CINEM_CLOUD_URL` | Assistant renderer | Cloud origin, default `https://app.cinem.tech` |
-| `VITE_CINEM_UPGRADE_URL` | Assistant renderer | Optional override; default is `/billing?plan=pro&product=cinem-ai-assistant` |
+| `VITE_CINEM_UPGRADE_URL` | Assistant renderer | Optional override; default is `/api/geo/whatsapp?redirect=1` on the cloud origin |
 | `CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro server | Optional absolute URL for the **unified** installer |
 | `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro (public) | Same, if the marketing CTA should skip the releases host |
 | `CINEM_START_MODE` | Electron | `desk` (default), `assistant`, or `both` |
@@ -86,7 +77,7 @@ Both return:
   "planName": "Free",
   "allowed": true,
   "remaining": 499,
-  "upgradeUrl": "https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant",
+  "upgradeUrl": "https://app.cinem.tech/api/geo/whatsapp?redirect=1",
   "meter": "chat_voice_turns",
   "limit": 500,
   "used": 1,
@@ -96,9 +87,9 @@ Both return:
 ```
 
 - One meter: **chat/voice turns** (default increment `1`, max `50` per POST). The Windows app increments once per `processCommand` (typed chat or voice).
-- `upgradeUrl` is always an absolute `https://app.cinem.tech/…` URL (or the current origin). Open it with the **system browser** (Claude / Grok Bot style). Do not embed a card form in the app.
-- Signed-in website session on that origin starts existing desk Whop checkout for **Pro ($20)**. Signed out → login with `next=` back to `/billing`.
-- Exhausted Free: `allowed: false`, POST status `402`. The app shows an upgrade popup; **Upgrade to Pro** opens `upgradeUrl`.
+- `upgradeUrl` is a geo-routed WhatsApp sales URL (`wa.me`, with optional prefill) from `GET/POST /api/cinem-ai-assistant/usage`, or `/api/geo/whatsapp?redirect=1` from static marketing defaults. Open it with the **system browser**.
+- No instant checkout for Assistant Pro — contact WhatsApp; Admin **Grant Assistant Pro** activates `AssistantSubscription`.
+- Exhausted Free: `allowed: false`, POST status `402`. The app shows an upgrade popup; **Contact on WhatsApp** opens `upgradeUrl`.
 - Paid plans include the assistant. `includedWithPlan` is true. POST never returns `402` for `starter` / `pro` / `ultra`. Always-approved / desk write-gate rules are unchanged.
 - Usage GET/POST is `Cache-Control: no-store`. After login the Windows app always re-fetches `/api/cinem-ai-assistant/usage` (and adopts the shared Electron refresh token when it differs from a stale local session).
 

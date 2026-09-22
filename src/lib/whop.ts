@@ -5,12 +5,6 @@ import {
   whopPlanIdFor,
   whopProductIdFor,
 } from "@/lib/billing";
-import {
-  assistantCheckoutMisconfiguredMessage,
-  whopAssistantPlanIdFor,
-  type AssistantBillingPlanId,
-} from "@/lib/cinem-ai-assistant-billing";
-import { CINEM_AI_ASSISTANT_PRODUCT } from "@/lib/cinem-ai-assistant";
 import { COMPANY_NAME, PLANS, PRODUCT_NAME, type CheckoutPlanId } from "@/lib/constants";
 import { SUPPORT_KIND, whopSupportProductId } from "@/lib/support";
 
@@ -124,39 +118,6 @@ export async function createWhopCheckout(input: {
             }),
           }),
         ),
-  );
-}
-
-export async function createWhopAssistantCheckout(input: {
-  userId: string;
-  email: string;
-  plan: AssistantBillingPlanId;
-  origin: string;
-}) {
-  const client = requireWhopClient();
-  const companyId = requireWhopCompanyId();
-  const redirectUrl = `${input.origin}/cinem-ai-assistant/billing?plan=${input.plan}&status=success`;
-  const metadata = {
-    product: CINEM_AI_ASSISTANT_PRODUCT,
-    plan: input.plan,
-    userId: input.userId,
-    email: input.email,
-  };
-  const planId = whopAssistantPlanIdFor(input.plan);
-  if (!planId) {
-    const message = assistantCheckoutMisconfiguredMessage(input.plan);
-    throw new ClientError(message || "Whop assistant plan id is not configured.", 400);
-  }
-
-  return purchaseUrlFromCheckout(() =>
-    client.checkoutConfigurations.create(
-      withWhopCompany(companyId, {
-        plan_id: planId,
-        mode: "payment" as const,
-        metadata,
-        redirect_url: redirectUrl,
-      }),
-    ),
   );
 }
 

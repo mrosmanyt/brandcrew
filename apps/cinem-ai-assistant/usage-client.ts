@@ -61,8 +61,8 @@ export async function fetchAssistantUsage(input: {
   return data;
 }
 
-/** Open standalone Cinem AI Assistant billing in the system browser. */
+/** Open geo-routed WhatsApp sales (via cloud API redirect or direct wa.me fallback). */
 export function assistantUpgradeUrl(origin?: string) {
   const base = cloudOrigin(origin);
-  return `${base}/billing?plan=monthly&product=${CINEM_AI_ASSISTANT_PRODUCT}`;
+  return `${base}/api/geo/whatsapp?redirect=1`;
 }

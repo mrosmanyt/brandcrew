@@ -27,6 +27,8 @@ export type AdminPending =
   | { kind: "budget"; workspaceId: string; name: string; tokenBudget: number }
   | { kind: "assign-user"; email: string; plan: PlanId }
   | { kind: "revoke-user"; email: string }
+  | { kind: "assistant-grant"; email: string; plan?: "monthly" | "3mo" | "6mo" | "1yr" }
+  | { kind: "assistant-revoke"; email: string }
   | { kind: "suspend-user"; email: string }
   | { kind: "unsuspend-user"; email: string }
   | { kind: "flag"; key: string; enabled: boolean; note?: string };
@@ -400,6 +402,18 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
       body: `Every workspace for ${pending.email} is forced to Free with a reset budget.`,
     };
   }
+  if (pending.kind === "assistant-grant") {
+    return {
+      title: "Grant Assistant Pro?",
+      body: `Upsert an active AssistantSubscription for ${pending.email}. This is the primary activation path (no Whop checkout).`,
+    };
+  }
+  if (pending.kind === "assistant-revoke") {
+    return {
+      title: "Revoke Assistant Pro?",
+      body: `Mark Assistant Pro cancelled for ${pending.email}. The row is kept for audit — usage falls back to Free unless a desk plan includes the assistant.`,
+    };
+  }
   if (pending.kind === "suspend-user") {
     return {
       title: "Suspend this user?",
@@ -486,6 +500,16 @@ export function useAdminMutation(onDone?: () => Promise<void> | void) {
       } else if (pending.kind === "revoke-user") {
         await postAdmin({ action: "revoke", userEmail: pending.email });
         toast.success("Plans revoked to Free.");
+      } else if (pending.kind === "assistant-grant") {
+        await postAdmin({
+          action: "assistant_grant",
+          userEmail: pending.email,
+          assistantPlan: pending.plan,
+        });
+        toast.success("Assistant Pro granted.");
+      } else if (pending.kind === "assistant-revoke") {
+        await postAdmin({ action: "assistant_revoke", userEmail: pending.email });
+        toast.success("Assistant Pro revoked.");
       } else if (pending.kind === "suspend-user") {
         await postAdmin({ action: "suspend", userEmail: pending.email });
         toast.success("User workspaces suspended.");

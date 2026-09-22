@@ -10,7 +10,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: `${CINEM_AI_ASSISTANT_NAME} pricing`,
   description:
-    "Standalone Cinem AI Assistant billing. Monthly from $20 — all agents, voice, and themes included.",
+    "Standalone Cinem AI Assistant pricing. Contact sales on WhatsApp — we activate Assistant Pro on your account.",
 };
 
 export default function CinemAiAssistantBillingPage() {

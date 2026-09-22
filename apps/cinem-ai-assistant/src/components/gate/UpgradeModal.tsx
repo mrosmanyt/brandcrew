@@ -4,8 +4,8 @@ import { openUpgrade } from "@/lib/cinemCloud";
 import { useCinemCloudStore } from "@/store/useCinemCloudStore";
 
 /**
- * Claude / Grok-style upgrade sheet. Opens the existing Pro checkout in the
- * system browser — never embeds a card form.
+ * Upgrade sheet when Free turns are exhausted. Opens geo-routed WhatsApp sales
+ * in the system browser — never embeds a card form.
  */
 export default function UpgradeModal() {
   const open = useCinemCloudStore((s) => s.upgradeOpen);
@@ -24,17 +24,18 @@ export default function UpgradeModal() {
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-ice/80">
           You&apos;ve used {usage.used} of {usage.limit} Free chat/voice turns this month
-          ({usage.period}). Cinem AI Assistant is included with Pro, Pro Plus, and Ultra —
-          the same plans as the web desk.
+          ({usage.period}). Message us on WhatsApp with your CINEM account email — we activate
+          Assistant Pro on your account (no instant checkout).
         </p>
         <p className="mt-2 text-xs text-neon-dim">
-          Checkout opens in your browser, already pointed at your CINEM Pro account.
+          WhatsApp opens in your browser with a pre-filled message. Include the email you signed in
+          with.
         </p>
         <button
           onClick={() => void openUpgrade(usage.upgradeUrl)}
           className="mt-6 flex w-full items-center justify-center border border-neon/50 bg-neon/15 py-2.5 font-display text-[0.65rem] font-bold tracking-[0.25em] text-neon transition-all hover:bg-neon/25"
         >
-          UPGRADE TO PRO
+          CONTACT ON WHATSAPP
         </button>
         <button
           onClick={hide}

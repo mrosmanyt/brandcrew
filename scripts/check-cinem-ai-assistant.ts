@@ -82,19 +82,10 @@ assert.equal(PLANS.starter.name, "Pro");
 assert.equal(cinemAiAssistantBillingPath("monthly"), "/cinem-ai-assistant/billing?plan=monthly");
 assert.equal(
   cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
-  "https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant",
-);
-assert.equal(
-  checkoutPlanFromNextPath("/billing?plan=pro&product=cinem-ai-assistant"),
-  "starter",
-);
-assert.equal(checkoutPlanFromNextPath("/desk?checkout=pro"), "pro");
-assert.equal(
-  marketingPlanCtaHref({ signedIn: true, workspaceId: "ws_1", plan: "starter" }),
-  "/desk/ws_1/billing?plan=starter",
+  "https://app.cinem.tech/api/geo/whatsapp?redirect=1",
 );
 assert.equal(clientUpgradeUrl("https://app.cinem.tech"), cinemAiAssistantUpgradeUrl("https://app.cinem.tech"));
-console.log("ok: upgrade deep link routes to standalone assistant billing");
+console.log("ok: upgrade opens geo-routed WhatsApp sales");
 
 const snap = usageSnapshot({
   plan: "demo",
@@ -106,8 +97,7 @@ const snap = usageSnapshot({
 assert.equal(snap.allowed, false);
 assert.equal(snap.remaining, 0);
 assert.equal(snap.includedWithPlan, false);
-assert.match(snap.upgradeUrl, /^https:\/\/app\.cinem\.tech\/billing\?/);
-assert.match(snap.upgradeUrl, /product=cinem-ai-assistant/);
+assert.match(snap.upgradeUrl, /\/api\/geo\/whatsapp\?redirect=1$/);
 const paid = usageSnapshot({
   plan: "starter",
   used: 10,
@@ -159,9 +149,14 @@ assert.match(download, /Cinem-AI-Assistant-Setup\.exe|CINEM_AI_ASSISTANT_SETUP_F
 const billingPage = readFileSync("src/app/billing/page.tsx", "utf8");
 assert.match(billingPage, /cinem-ai-assistant/);
 assert.match(billingPage, /assistantBillingPath|cinem-ai-assistant\/billing/);
+const pricingUi = readFileSync("src/components/marketing/cinem-ai-assistant-pricing.tsx", "utf8");
+assert.match(pricingUi, /WhatsAppSalesButton/);
+assert.doesNotMatch(pricingUi, /assistant-checkout/);
 const docs = readFileSync("docs/cinem-ai-assistant.md", "utf8");
 assert.match(docs, /VITE_CINEM_CLOUD_URL/);
-assert.match(docs, /WHOP_ASSISTANT_MONTHLY_PLAN_ID/);
+assert.match(docs, /\/api\/geo\/whatsapp/);
+assert.match(docs, /adminGrantAssistantPro|Grant Assistant Pro|assistant_pro_grant/i);
+assert.doesNotMatch(docs, /WHOP_ASSISTANT_MONTHLY_PLAN_ID/);
 assert.match(docs, /\/cinem-ai-assistant\/billing/);
 assert.match(docs, /\/api\/cinem-ai-assistant\/usage/);
 assert.match(docs, /Same CINEM Pro account = same login on desktop/);
@@ -226,6 +221,7 @@ assert.match(readFileSync("src/lib/cinem-ai-assistant-usage.ts", "utf8"), /entit
 assert.match(readFileSync("src/lib/cinem-ai-assistant-usage.ts", "utf8"), /getUserFromRequest/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/store/useCinemCloudStore.ts", "utf8"), /shouldPromptAssistantUpgrade/);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/components/gate/UpgradeModal.tsx", "utf8"), /shouldPromptAssistantUpgrade/);
+assert.match(readFileSync("apps/cinem-ai-assistant/src/components/gate/UpgradeModal.tsx", "utf8"), /WHATSAPP/i);
 assert.match(readFileSync("apps/cinem-ai-assistant/src/components/TopBar.tsx", "utf8"), /planName\.toUpperCase/);
 assert.match(readFileSync("src/server/api/auth/me.ts", "utf8"), /entitlementFromWorkspaces/);
 assert.match(readFileSync("src/components/auth/connect-client.tsx", "utf8"), /Same CINEM Pro account = same plan on desktop/);
