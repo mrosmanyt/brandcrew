@@ -8,6 +8,7 @@ import { displayAgentName } from "@/lib/constants";
 import { FEATURED_JOB_TEMPLATES } from "@/lib/job-templates";
 import type { AgentDTO } from "@/lib/job-types";
 import { SCHEDULE_CADENCES } from "@/lib/schedule-cadence";
+import { PanelEmpty, PanelLoading } from "@/components/desk/panel-states";
 
 type ScheduleRow = {
   id: string;
@@ -38,6 +39,7 @@ export function ScheduleJobs({
   agents: AgentDTO[];
 }) {
   const [rows, setRows] = useState<ScheduleRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
   const [templateId, setTemplateId] = useState(FEATURED_JOB_TEMPLATES[0]?.id ?? "");
@@ -47,11 +49,15 @@ export function ScheduleJobs({
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const res = await fetch(`/api/workspaces/${workspaceId}/schedules`);
-    if (!res.ok) return;
-    const data = await res.json();
-    setRows(data.schedules ?? []);
-    if (data.note) setNote(data.note);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/schedules`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setRows(data.schedules ?? []);
+      if (data.note) setNote(data.note);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -195,8 +201,10 @@ export function ScheduleJobs({
           </Button>
         </div>
       </form>
-      {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No schedules yet.</p>
+      {loading ? (
+        <PanelLoading label="Loading schedules…" />
+      ) : rows.length === 0 ? (
+        <PanelEmpty>No schedules yet.</PanelEmpty>
       ) : (
         <ul className="mt-4 divide-y divide-border">
           {rows.map((row) => (

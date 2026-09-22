@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { displayAgentName } from "@/lib/constants";
 import type { AgentDTO } from "@/lib/job-types";
+import { PanelLoading } from "@/components/desk/panel-states";
 
 /**
  * Extracts text from a PDF/text file and hands it to an agent as a normal
@@ -94,7 +95,9 @@ export function FileActionsPanel({
           </Button>
         </div>
       </form>
-      {lastJobId ? (
+      {busy ? (
+        <PanelLoading label="Extracting and starting the job…" />
+      ) : lastJobId ? (
         <p className="mt-3 text-xs text-muted-foreground">
           Started job <code>{lastJobId}</code> — open Mission Control to review the draft.
         </p>

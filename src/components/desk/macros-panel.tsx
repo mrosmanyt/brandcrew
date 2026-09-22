@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PanelEmpty, PanelLoading } from "@/components/desk/panel-states";
 
 type RoutineRow = {
   id: string;
@@ -22,16 +23,21 @@ type RoutineRow = {
  */
 export function MacrosPanel({ workspaceId }: { workspaceId: string }) {
   const [rows, setRows] = useState<RoutineRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [jobIdToSave, setJobIdToSave] = useState("");
   const [macroName, setMacroName] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function refresh() {
-    const res = await fetch(`/api/workspaces/${workspaceId}/routines`);
-    if (!res.ok) return;
-    const data = await res.json();
-    setRows(data.routines ?? []);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/routines`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setRows(data.routines ?? []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -127,8 +133,10 @@ export function MacrosPanel({ workspaceId }: { workspaceId: string }) {
         </div>
       </form>
 
-      {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No macros yet.</p>
+      {loading ? (
+        <PanelLoading label="Loading macros…" />
+      ) : rows.length === 0 ? (
+        <PanelEmpty>No macros yet.</PanelEmpty>
       ) : (
         <ul className="mt-4 divide-y divide-border">
           {rows.map((row) => (
