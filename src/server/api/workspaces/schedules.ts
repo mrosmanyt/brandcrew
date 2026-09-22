@@ -19,10 +19,20 @@ const schema = z.object({
   playbookKey: z.string().max(80).optional(),
   skillId: z.string().max(80).optional(),
   cadence: z.string().min(1),
+  timezone: z.string().max(64).optional(),
   deliverSlack: z.boolean().optional(),
   deliverEmail: z.boolean().optional(),
   slackChannel: z.string().max(80).optional(),
 });
+
+function isValidTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(
   _request: Request,
@@ -58,6 +68,10 @@ export async function POST(
     if (!isScheduleCadence(body.cadence)) {
       return NextResponse.json({ error: "Choose a supported cadence." }, { status: 400 });
     }
+    const timezone = body.timezone?.trim() || "UTC";
+    if (!isValidTimezone(timezone)) {
+      return NextResponse.json({ error: "Unrecognized timezone." }, { status: 400 });
+    }
     const agent = await prisma.agent.findFirst({
       where: { id: body.agentId, workspaceId, status: { not: "archived" } },
     });
@@ -76,7 +90,8 @@ export async function POST(
         deliverEmail: Boolean(body.deliverEmail),
         slackChannel: body.slackChannel?.trim() || "",
         cadence: body.cadence,
-        nextRunAt: computeNextRunAt(body.cadence),
+        timezone,
+        nextRunAt: computeNextRunAt(body.cadence, new Date(), timezone),
       },
     });
     return jsonOk({ schedule: serializeSchedule(row), note: SCHEDULE_SERVERLESS_NOTE });

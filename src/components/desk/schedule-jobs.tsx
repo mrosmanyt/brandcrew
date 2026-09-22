@@ -14,9 +14,21 @@ type ScheduleRow = {
   title: string;
   cadenceLabel: string;
   nextRunAt: string;
+  timezone: string;
   enabled: boolean;
   lastRunAt: string | null;
+  isOverdue?: boolean;
 };
+
+const CUSTOM_INTERVAL_VALUE = "custom";
+
+function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
 
 export function ScheduleJobs({
   workspaceId,
@@ -29,9 +41,9 @@ export function ScheduleJobs({
   const [note, setNote] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
   const [templateId, setTemplateId] = useState(FEATURED_JOB_TEMPLATES[0]?.id ?? "");
-  const [cadence, setCadence] = useState<(typeof SCHEDULE_CADENCES)[number]["id"]>(
-    "weekly_monday",
-  );
+  const [cadence, setCadence] = useState<string>("weekly_monday");
+  const [intervalDays, setIntervalDays] = useState(2);
+  const [timezone, setTimezone] = useState(() => browserTimezone());
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
@@ -58,6 +70,8 @@ export function ScheduleJobs({
       return;
     }
     setBusy(true);
+    const effectiveCadence =
+      cadence === CUSTOM_INTERVAL_VALUE ? `interval:${Math.max(1, intervalDays)}` : cadence;
     const res = await fetch(`/api/workspaces/${workspaceId}/schedules`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,7 +80,8 @@ export function ScheduleJobs({
         title: template.title,
         message: template.message,
         playbookKey: template.playbookKey,
-        cadence,
+        cadence: effectiveCadence,
+        timezone,
       }),
     });
     const data = await res.json();
@@ -107,7 +122,7 @@ export function ScheduleJobs({
     <section className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-sm font-medium">Scheduled jobs</h2>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-        Example: every Monday LinkedIn week. Times are 09:00 UTC.{" "}
+        Example: every Monday LinkedIn week. Times are 09:00 in the schedule&apos;s timezone.{" "}
         {note ||
           "Serverless hosts are not always-on — we check when you open the desk, plus an optional daily cron."}
       </p>
@@ -144,16 +159,35 @@ export function ScheduleJobs({
           <select
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
             value={cadence}
-            onChange={(e) =>
-              setCadence(e.target.value as (typeof SCHEDULE_CADENCES)[number]["id"])
-            }
+            onChange={(e) => setCadence(e.target.value)}
           >
             {SCHEDULE_CADENCES.map((row) => (
               <option key={row.id} value={row.id}>
                 {row.label}
               </option>
             ))}
+            <option value={CUSTOM_INTERVAL_VALUE}>Every N days…</option>
           </select>
+        </Field>
+        {cadence === CUSTOM_INTERVAL_VALUE ? (
+          <Field label="Repeat every N days">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={intervalDays}
+              onChange={(e) => setIntervalDays(Number(e.target.value) || 1)}
+            />
+          </Field>
+        ) : null}
+        <Field label="Timezone">
+          <input
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            placeholder="e.g. Asia/Karachi"
+          />
         </Field>
         <div className="flex items-end">
           <Button type="submit" disabled={busy || !agentId}>
@@ -170,8 +204,10 @@ export function ScheduleJobs({
               <div>
                 <p className="text-sm">{row.title}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  {row.cadenceLabel} · next {new Date(row.nextRunAt).toUTCString()}
+                  {row.cadenceLabel} ({row.timezone || "UTC"}) · next{" "}
+                  {new Date(row.nextRunAt).toLocaleString()}
                   {row.enabled ? "" : " · paused"}
+                  {row.isOverdue ? " · overdue — open the desk or hit /api/cron/jobs" : ""}
                 </p>
               </div>
               <div className="flex gap-1">

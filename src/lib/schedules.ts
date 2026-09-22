@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { createJobFromChat } from "@/lib/job-runtime";
 import {
+  cadenceIntervalMs,
   cadenceLabel,
   computeNextRunAt,
   isScheduleCadence,
@@ -10,8 +11,10 @@ import { BudgetError } from "@/lib/usage";
 export {
   SCHEDULE_CADENCES,
   SCHEDULE_SERVERLESS_NOTE,
+  cadenceIntervalMs,
   cadenceLabel,
   computeNextRunAt,
+  intervalCadenceDays,
   isScheduleCadence,
   type ScheduleCadence,
 } from "@/lib/schedule-cadence";
@@ -35,6 +38,7 @@ export function serializeSchedule(row: {
   enabled: boolean;
   createdAt: Date;
 }) {
+  const overdueBy = row.enabled ? Date.now() - row.nextRunAt.getTime() : 0;
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -54,6 +58,9 @@ export function serializeSchedule(row: {
     slackChannel: row.slackChannel || "",
     enabled: row.enabled,
     createdAt: row.createdAt.toISOString(),
+    // Flags a schedule nobody has triggered (desk visit / cron hit) in over
+    // 2x its expected cadence gap — see SCHEDULE_SERVERLESS_NOTE.
+    isOverdue: overdueBy > cadenceIntervalMs(row.cadence) * 2,
   };
 }
 
@@ -80,6 +87,7 @@ export async function runDueSchedules(workspaceId?: string) {
     const next = computeNextRunAt(
       isScheduleCadence(row.cadence) ? row.cadence : "weekly_monday",
       now,
+      row.timezone || "UTC",
     );
     const claimed = await prisma.scheduledJob.updateMany({
       where: {
