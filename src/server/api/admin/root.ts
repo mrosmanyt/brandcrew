@@ -10,6 +10,7 @@ import {
   getAdminAccess,
   getAdminAudit,
   getAdminBilling,
+  getAdminCrashReports,
   getAdminCustomers,
   getAdminDashboard,
   getAdminFlags,
@@ -68,6 +69,9 @@ export async function GET(request: Request) {
     }
     if (section === "flags") {
       return jsonOk(await getAdminFlags());
+    }
+    if (section === "crashreports") {
+      return jsonOk(await getAdminCrashReports());
     }
     return jsonOk(await getAdminDashboard(q));
   } catch (error) {

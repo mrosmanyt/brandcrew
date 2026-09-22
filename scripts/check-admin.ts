@@ -82,6 +82,7 @@ async function main() {
     "audit",
     "trust",
     "flags",
+    "crashreports",
   ]);
   assert.equal(sanitizeFlagKey(" Jobs_Kill.Switch "), "jobs_kill.switch");
   assert.equal(sanitizeFlagKey("$$$"), "");

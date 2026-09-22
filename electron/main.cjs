@@ -537,6 +537,7 @@ function attachViewEvents(entry) {
     console.error("CINEM desktop renderer gone", details.reason, entry.mode);
     mainLog.logInfo(app, `render-process-gone mode=${entry.mode} reason=${details.reason}`);
     safeMode.recordCrash(app, details.reason);
+    safeMode.reportCrash(app, deskOrigin(), details.reason, `mode=${entry.mode}`);
     if (entry.mode === "desk") showOfflinePage(entry);
     else if (entry.mode === "assistant") showAssistantOfflinePage(entry);
   });
@@ -1112,6 +1113,14 @@ function installAppMenu() {
           label: "Updates",
           click: () => {
             openUpdatesWindow();
+          },
+        },
+        {
+          label: "Report crashes (opt-in)",
+          type: "checkbox",
+          checked: safeMode.crashReportingEnabled(app),
+          click: (item) => {
+            safeMode.setCrashReportingEnabled(app, item.checked);
           },
         },
         {

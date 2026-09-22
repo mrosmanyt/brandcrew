@@ -18,6 +18,58 @@ function statePath(app) {
   }
 }
 
+function settingsPath(app) {
+  try {
+    return path.join(app.getPath("userData"), "crash-reporting.json");
+  } catch {
+    return path.join(require("node:os").tmpdir(), "cinem-pro-crash-reporting.json");
+  }
+}
+
+/** Opt-in crash reporting is off by default — never send anything until the user turns it on. */
+function crashReportingEnabled(app) {
+  try {
+    const raw = fs.readFileSync(settingsPath(app), "utf8");
+    return JSON.parse(raw).enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+function setCrashReportingEnabled(app, enabled) {
+  try {
+    fs.mkdirSync(path.dirname(settingsPath(app)), { recursive: true });
+    fs.writeFileSync(settingsPath(app), JSON.stringify({ enabled: Boolean(enabled) }));
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Fire-and-forget upload — only when the user opted in. Never blocks the crash path. */
+function reportCrash(app, origin, reason, detail) {
+  if (!crashReportingEnabled(app)) return;
+  try {
+    const body = JSON.stringify({
+      platform: process.platform,
+      appVersion: app.getVersion(),
+      reason: String(reason || "unknown").slice(0, 120),
+      detail: String(detail || "").slice(0, 4000),
+    });
+    const url = new URL("/api/crash-reports", origin);
+    const mod = url.protocol === "https:" ? require("node:https") : require("node:http");
+    const req = mod.request(
+      url,
+      { method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } },
+      (res) => res.resume(),
+    );
+    req.on("error", () => {});
+    req.write(body);
+    req.end();
+  } catch {
+    /* best-effort — a failed crash report must never crash the app further */
+  }
+}
+
 function readState(app) {
   try {
     const raw = fs.readFileSync(statePath(app), "utf8");
@@ -79,4 +131,13 @@ async function repair(app, session) {
   writeState(app, { crashes: [] });
 }
 
-module.exports = { shouldEnterSafeMode, recordCrash, scheduleStabilityMark, repair, statePath };
+module.exports = {
+  shouldEnterSafeMode,
+  recordCrash,
+  scheduleStabilityMark,
+  repair,
+  statePath,
+  crashReportingEnabled,
+  setCrashReportingEnabled,
+  reportCrash,
+};

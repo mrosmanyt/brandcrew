@@ -93,6 +93,7 @@ import * as downloadsExtension from "./downloads/extension";
 import * as downloadsCinemAiAssistant from "./downloads/cinem-ai-assistant";
 import * as cinemAiAssistantUsage from "./cinem-ai-assistant/usage";
 import * as guestChat from "./guest/chat";
+import * as crashReports from "./crash-reports";
 import * as imageGenerate from "./image/generate";
 import * as foundingSpots from "./founding/spots";
 import * as userByok from "./user/byok";
@@ -161,6 +162,7 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(cinemAiAssistantUsage),
   },
   { pattern: ["api", "guest", "chat"], handlers: asHandlers(guestChat) },
+  { pattern: ["api", "crash-reports"], handlers: asHandlers(crashReports) },
   { pattern: ["api", "image", "generate"], handlers: asHandlers(imageGenerate) },
   { pattern: ["api", "founding", "spots"], handlers: asHandlers(foundingSpots) },
   { pattern: ["api", "user", "byok"], handlers: asHandlers(userByok) },

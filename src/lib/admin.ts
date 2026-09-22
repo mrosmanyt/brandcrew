@@ -27,6 +27,7 @@ export const ADMIN_SECTIONS = [
   "audit",
   "trust",
   "flags",
+  "crashreports",
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
@@ -307,6 +308,21 @@ export type AdminFlagRow = {
 export type AdminFlagsPayload = {
   section: "flags";
   flags: AdminFlagRow[];
+};
+
+export type AdminCrashReportRow = {
+  id: string;
+  userEmail: string | null;
+  platform: string;
+  appVersion: string;
+  reason: string;
+  detail: string;
+  createdAt: string;
+};
+
+export type AdminCrashReportsPayload = {
+  section: "crashreports";
+  reports: AdminCrashReportRow[];
 };
 
 const workspaceListInclude = {
@@ -1269,6 +1285,26 @@ export async function getAdminFlags(): Promise<AdminFlagsPayload> {
       note: row.note,
       updatedAt: row.updatedAt.toISOString(),
       updatedBy: row.updatedBy,
+    })),
+  };
+}
+
+export async function getAdminCrashReports(): Promise<AdminCrashReportsPayload> {
+  const reports = await prisma.crashReport.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { user: { select: { email: true } } },
+  });
+  return {
+    section: "crashreports",
+    reports: reports.map((row) => ({
+      id: row.id,
+      userEmail: row.user?.email ?? null,
+      platform: row.platform,
+      appVersion: row.appVersion,
+      reason: row.reason,
+      detail: row.detail,
+      createdAt: row.createdAt.toISOString(),
     })),
   };
 }

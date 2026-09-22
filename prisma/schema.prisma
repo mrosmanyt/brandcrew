@@ -55,6 +55,7 @@ model User {
   assistantRemoteCommands AssistantRemoteCommand[]
   invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
   invitees      User[]             @relation("UserInvites")
+  crashReports  CrashReport[]
 
   @@index([supporter])
   @@index([assistantFoundingMember])
@@ -824,4 +825,21 @@ model ImageGenAsyncResult {
   errorMessage String   @default("")
   createdAt    DateTime @default(now())
   expiresAt    DateTime
+}
+
+/// Opt-in desktop crash report. Self-hosted (no third-party subprocessor) —
+/// userId is optional and never required; no free-text PII fields exist here.
+model CrashReport {
+  id          String   @id @default(cuid())
+  userId      String?
+  platform    String
+  appVersion  String
+  /// Short machine reason, e.g. Electron render-process-gone "reason".
+  reason      String
+  /// Truncated stack/context — never the full renderer DOM or user content.
+  detail      String   @default("")
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
