@@ -24,7 +24,9 @@ export function AdminTrust({
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [data, setData] = useState(initial);
-  const [searched, setSearched] = useState(Boolean(initialQuery));
+  // The unfiltered load now returns recently suspended workspaces by
+  // default, so there's something to show even before a search.
+  const [searched, setSearched] = useState(true);
 
   async function load(nextQuery: string) {
     const params = new URLSearchParams({ section: "trust" });
@@ -51,7 +53,7 @@ export function AdminTrust({
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Trust & safety"
-      hint="Ban-lite only: search a user or workspace, then force Free / suspend. There is no separate abuse pipeline yet."
+      hint="Ban-lite only: recently suspended workspaces below by default — search a user or workspace to force Free / suspend. There is no separate abuse pipeline yet."
     >
       <form onSubmit={onSearch} className="flex w-full max-w-lg items-end gap-2">
         <div className="min-w-0 flex-1 space-y-1.5">

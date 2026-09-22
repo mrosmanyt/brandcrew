@@ -71,13 +71,25 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
   }
 
   useEffect(() => {
-    void heartbeat();
-    const pulse = window.setInterval(() => {
+    // Polling every 5s from a backgrounded tab wastes founder-admin API
+    // budget and keeps "presence" (live support) stuck on indefinitely —
+    // pause while the tab is hidden, catch up once it's visible again.
+    function tick() {
+      if (document.hidden) return;
       void heartbeat();
       loadInbox().catch(() => undefined);
       if (selectedId) loadThread(selectedId).catch(() => undefined);
-    }, 5000);
-    return () => window.clearInterval(pulse);
+    }
+    tick();
+    const pulse = window.setInterval(tick, 5000);
+    function onVisibility() {
+      if (!document.hidden) tick();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(pulse);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [selectedId, q, status]);
 
   useEffect(() => {

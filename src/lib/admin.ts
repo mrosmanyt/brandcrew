@@ -1255,7 +1255,15 @@ export async function getAdminTrust(input: {
 }): Promise<AdminTrustPayload> {
   const q = input.q?.trim() || "";
   if (!q) {
-    return { section: "trust", users: [], workspaces: [] };
+    // Default view: recently suspended workspaces, so trust & safety has
+    // something to browse before the admin already knows who to search for.
+    const suspended = await prisma.workspace.findMany({
+      where: { suspended: true },
+      take: 25,
+      orderBy: { updatedAt: "desc" },
+      include: workspaceListInclude,
+    });
+    return { section: "trust", users: [], workspaces: suspended.map(serializeWorkspaceRow) };
   }
   const [users, workspaces] = await Promise.all([
     prisma.user.findMany({
