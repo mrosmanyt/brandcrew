@@ -276,75 +276,100 @@ export function WorkspaceTable({
   if (!rows.length) {
     return <p className="px-5 py-4 text-sm text-muted-foreground">{empty}</p>;
   }
+
+  function actionsFor(row: AdminWorkspaceRow) {
+    return (
+      <WorkspaceActions
+        row={row}
+        disabled={disabled}
+        onAssign={(plan) => onPending({ kind: "assign", workspaceId: row.id, name: row.name, plan })}
+        onRevoke={() => onPending({ kind: "revoke", workspaceId: row.id, name: row.name })}
+        onSuspend={() => onPending({ kind: "suspend", workspaceId: row.id, name: row.name })}
+        onUnsuspend={() => onPending({ kind: "unsuspend", workspaceId: row.id, name: row.name })}
+        onBudget={(tokenBudget) =>
+          onPending({ kind: "budget", workspaceId: row.id, name: row.name, tokenBudget })
+        }
+      />
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[56rem] text-left text-sm">
-        <thead className="text-xs text-muted-foreground">
-          <tr className="border-b border-border">
-            <th className="px-5 py-2 font-medium">Workspace</th>
-            <th className="px-3 py-2 font-medium">Owner</th>
-            <th className="px-3 py-2 font-medium">Plan</th>
-            <th className="px-3 py-2 font-medium">Tokens</th>
-            <th className="px-3 py-2 font-medium">Whop</th>
-            <th className="px-5 py-2 font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className="border-b border-border last:border-0">
-              <td className="px-5 py-3">
-                <p className="font-medium">{row.name}</p>
-                <p className="font-mono text-[11px] text-muted-foreground">{row.id}</p>
-                {row.suspended ? (
-                  <p className="mt-0.5 text-[11px] text-destructive">Suspended</p>
-                ) : null}
-              </td>
-              <td className="px-3 py-3 text-muted-foreground">{row.ownerEmail || "—"}</td>
-              <td className="px-3 py-3">
-                <span className={cn(row.paid && "text-chart-2")}>{planModeName(row.plan)}</span>
-              </td>
-              <td className="px-3 py-3 text-muted-foreground">
+    <>
+      {/* Below sm: card rows instead of a horizontally-scrolling wide table. */}
+      <ul className="divide-y divide-border sm:hidden">
+        {rows.map((row) => (
+          <li key={row.id} className="space-y-2 px-4 py-3 text-sm">
+            <div>
+              <p className="font-medium">{row.name}</p>
+              <p className="font-mono text-[11px] text-muted-foreground">{row.id}</p>
+              {row.suspended ? <p className="mt-0.5 text-[11px] text-destructive">Suspended</p> : null}
+            </div>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <dt>Owner</dt>
+              <dd className="text-right">{row.ownerEmail || "—"}</dd>
+              <dt>Plan</dt>
+              <dd className={cn("text-right", row.paid && "text-chart-2")}>{planModeName(row.plan)}</dd>
+              <dt>Tokens</dt>
+              <dd className="text-right">
                 {row.tokenUsed.toLocaleString()} / {row.tokenBudget.toLocaleString()}
-                {row.chatTokenUsed ? (
-                  <span className="block text-[11px]">
-                    chat {row.chatTokenUsed.toLocaleString()}
-                  </span>
-                ) : null}
-              </td>
-              <td className="px-3 py-3 font-mono text-[11px] text-muted-foreground">
-                {row.whopMembershipId || "—"}
-              </td>
-              <td className="px-5 py-3">
-                <WorkspaceActions
-                  row={row}
-                  disabled={disabled}
-                  onAssign={(plan) =>
-                    onPending({ kind: "assign", workspaceId: row.id, name: row.name, plan })
-                  }
-                  onRevoke={() =>
-                    onPending({ kind: "revoke", workspaceId: row.id, name: row.name })
-                  }
-                  onSuspend={() =>
-                    onPending({ kind: "suspend", workspaceId: row.id, name: row.name })
-                  }
-                  onUnsuspend={() =>
-                    onPending({ kind: "unsuspend", workspaceId: row.id, name: row.name })
-                  }
-                  onBudget={(tokenBudget) =>
-                    onPending({
-                      kind: "budget",
-                      workspaceId: row.id,
-                      name: row.name,
-                      tokenBudget,
-                    })
-                  }
-                />
-              </td>
+              </dd>
+              {row.whopMembershipId ? (
+                <>
+                  <dt>Whop</dt>
+                  <dd className="text-right font-mono">{row.whopMembershipId}</dd>
+                </>
+              ) : null}
+            </dl>
+            {actionsFor(row)}
+          </li>
+        ))}
+      </ul>
+
+      {/* sm and up: the dense table. */}
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full min-w-[56rem] text-left text-sm">
+          <thead className="text-xs text-muted-foreground">
+            <tr className="border-b border-border">
+              <th className="px-5 py-2 font-medium">Workspace</th>
+              <th className="px-3 py-2 font-medium">Owner</th>
+              <th className="px-3 py-2 font-medium">Plan</th>
+              <th className="px-3 py-2 font-medium">Tokens</th>
+              <th className="px-3 py-2 font-medium">Whop</th>
+              <th className="px-5 py-2 font-medium">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="border-b border-border last:border-0">
+                <td className="px-5 py-3">
+                  <p className="font-medium">{row.name}</p>
+                  <p className="font-mono text-[11px] text-muted-foreground">{row.id}</p>
+                  {row.suspended ? (
+                    <p className="mt-0.5 text-[11px] text-destructive">Suspended</p>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 text-muted-foreground">{row.ownerEmail || "—"}</td>
+                <td className="px-3 py-3">
+                  <span className={cn(row.paid && "text-chart-2")}>{planModeName(row.plan)}</span>
+                </td>
+                <td className="px-3 py-3 text-muted-foreground">
+                  {row.tokenUsed.toLocaleString()} / {row.tokenBudget.toLocaleString()}
+                  {row.chatTokenUsed ? (
+                    <span className="block text-[11px]">
+                      chat {row.chatTokenUsed.toLocaleString()}
+                    </span>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 font-mono text-[11px] text-muted-foreground">
+                  {row.whopMembershipId || "—"}
+                </td>
+                <td className="px-5 py-3">{actionsFor(row)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

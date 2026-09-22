@@ -96,44 +96,71 @@ function BillingEventTable({
       {rows.length === 0 ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{empty}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr className="border-b border-border">
-                <th className="px-5 py-2 font-medium">When</th>
-                <th className="px-3 py-2 font-medium">Status / type</th>
-                <th className="px-3 py-2 font-medium">Amount</th>
-                <th className="px-5 py-2 font-medium">Id</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={`${row.kind}-${row.id}`} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3 text-muted-foreground">
+        <>
+          {/* Below sm: card rows instead of a horizontally-scrolling wide table. */}
+          <ul className="divide-y divide-border sm:hidden">
+            {rows.map((row) => (
+              <li key={`${row.kind}-${row.id}`} className="px-4 py-3 text-sm">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span>{row.eventType || row.status}</span>
+                  <span className="text-xs text-muted-foreground">
                     {new Date(row.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-3 py-3">
-                    {row.eventType || row.status}
-                    {row.email ? (
-                      <span className="block text-[11px] text-muted-foreground">{row.email}</span>
-                    ) : null}
-                    {row.provider ? (
-                      <span className="block text-[11px] text-muted-foreground">{row.provider}</span>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {typeof row.amountCents === "number"
-                      ? `${(row.amountCents / 100).toFixed(2)} ${row.currency || "usd"}`
-                      : "—"}
-                  </td>
-                  <td className="px-5 py-3 font-mono text-[11px] text-muted-foreground">
-                    {row.externalId || row.id}
-                  </td>
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {typeof row.amountCents === "number"
+                    ? `${(row.amountCents / 100).toFixed(2)} ${row.currency || "usd"}`
+                    : "—"}
+                  {row.email ? ` · ${row.email}` : ""}
+                  {row.provider ? ` · ${row.provider}` : ""}
+                </p>
+                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  {row.externalId || row.id}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          {/* sm and up: the dense table. */}
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead className="text-xs text-muted-foreground">
+                <tr className="border-b border-border">
+                  <th className="px-5 py-2 font-medium">When</th>
+                  <th className="px-3 py-2 font-medium">Status / type</th>
+                  <th className="px-3 py-2 font-medium">Amount</th>
+                  <th className="px-5 py-2 font-medium">Id</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={`${row.kind}-${row.id}`} className="border-b border-border last:border-0">
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-3">
+                      {row.eventType || row.status}
+                      {row.email ? (
+                        <span className="block text-[11px] text-muted-foreground">{row.email}</span>
+                      ) : null}
+                      {row.provider ? (
+                        <span className="block text-[11px] text-muted-foreground">{row.provider}</span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {typeof row.amountCents === "number"
+                        ? `${(row.amountCents / 100).toFixed(2)} ${row.currency || "usd"}`
+                        : "—"}
+                    </td>
+                    <td className="px-5 py-3 font-mono text-[11px] text-muted-foreground">
+                      {row.externalId || row.id}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );
