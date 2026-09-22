@@ -456,6 +456,10 @@ export function PricingSection() {
         </Link>{" "}
         is a one-time $1–$99,999 checkout. It does not replace Pro / Pro Plus / Ultra.
       </p>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        Already on the desk? Invite a friend and you both get a free month —
+        find your link under Settings.
+      </p>
     </Section>
   );
 }

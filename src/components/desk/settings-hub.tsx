@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { KeyRound, Mail } from "lucide-react";
 import { InviteTeam } from "@/components/desk/invite-team";
+import { ReferralPanel } from "@/components/desk/referral-panel";
 import { ExtensionStatusChip } from "@/components/desk/extension-status";
 import { CLIENT_ISOLATION_FACTS } from "@/lib/client-workspaces";
 import { toast } from "sonner";
@@ -249,6 +250,8 @@ export function SettingsHub({
       <div className="mt-6">
         <InviteTeam workspaceId={workspaceId} />
       </div>
+
+      <ReferralPanel />
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-medium">Workspace</h2>
