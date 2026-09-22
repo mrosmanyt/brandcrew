@@ -3,13 +3,28 @@ import { z } from "zod";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
-import { computeNextRunAt, isScheduleCadence, serializeSchedule } from "@/lib/schedules";
+import {
+  computeNextRunAt,
+  isScheduleCadence,
+  serializeSchedule,
+  type ScheduleCadence,
+} from "@/lib/schedules";
 
 const schema = z.object({
   enabled: z.boolean().optional(),
   cadence: z.string().optional(),
+  timezone: z.string().max(64).optional(),
   title: z.string().min(1).max(120).optional(),
 });
+
+function isValidTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function PATCH(
   request: Request,
@@ -28,17 +43,29 @@ export async function PATCH(
     if (body.cadence && !isScheduleCadence(body.cadence)) {
       return NextResponse.json({ error: "Choose a supported cadence." }, { status: 400 });
     }
-    const cadence = body.cadence && isScheduleCadence(body.cadence) ? body.cadence : existing.cadence;
+    if (body.timezone && !isValidTimezone(body.timezone)) {
+      return NextResponse.json({ error: "Unrecognized timezone." }, { status: 400 });
+    }
+    const cadence: ScheduleCadence =
+      body.cadence && isScheduleCadence(body.cadence)
+        ? body.cadence
+        : isScheduleCadence(existing.cadence)
+          ? existing.cadence
+          : "weekly_monday";
+    const timezone = body.timezone?.trim() || existing.timezone;
+    const cadenceOrTimezoneChanged = Boolean(
+      (body.cadence && isScheduleCadence(body.cadence)) || body.timezone,
+    );
     const row = await prisma.scheduledJob.update({
       where: { id: existing.id },
       data: {
         enabled: body.enabled ?? existing.enabled,
         cadence,
+        timezone,
         title: body.title?.trim() || existing.title,
-        nextRunAt:
-          body.cadence && isScheduleCadence(body.cadence)
-            ? computeNextRunAt(body.cadence)
-            : existing.nextRunAt,
+        nextRunAt: cadenceOrTimezoneChanged
+          ? computeNextRunAt(cadence, new Date(), timezone)
+          : existing.nextRunAt,
       },
     });
     return jsonOk({ schedule: serializeSchedule(row) });

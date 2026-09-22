@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  adminApprovePurchaseRequest,
   adminAssignPlan,
   adminRevokePlan,
   adminSetBudget,
@@ -10,9 +11,11 @@ import {
   getAdminAccess,
   getAdminAudit,
   getAdminBilling,
+  getAdminCrashReports,
   getAdminCustomers,
   getAdminDashboard,
   getAdminFlags,
+  getAdminFunnel,
   getAdminModels,
   getAdminTrust,
   exportAdminAudit,
@@ -69,6 +72,12 @@ export async function GET(request: Request) {
     if (section === "flags") {
       return jsonOk(await getAdminFlags());
     }
+    if (section === "crashreports") {
+      return jsonOk(await getAdminCrashReports());
+    }
+    if (section === "funnel") {
+      return jsonOk(await getAdminFunnel());
+    }
     return jsonOk(await getAdminDashboard(q));
   } catch (error) {
     return jsonError(error);
@@ -83,6 +92,7 @@ const mutateSchema = z.object({
     "unsuspend",
     "flag",
     "budget",
+    "purchase_request",
   ]),
   plan: z.enum(["demo", "starter", "pro", "ultra", "growth"]).optional(),
   workspaceId: z.string().min(1).optional(),
@@ -91,6 +101,8 @@ const mutateSchema = z.object({
   enabled: z.boolean().optional(),
   note: z.string().max(240).optional(),
   tokenBudget: z.number().int().min(1).max(5_000_000).optional(),
+  purchaseRequestId: z.string().min(1).optional(),
+  approved: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -98,6 +110,21 @@ export async function POST(request: Request) {
     const actor = await requireAdmin();
     const body = mutateSchema.parse(await request.json());
     const actorEmail = actor.email;
+
+    if (body.action === "purchase_request") {
+      if (!body.purchaseRequestId || typeof body.approved !== "boolean") {
+        return NextResponse.json(
+          { error: "purchaseRequestId and approved are required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const row = await adminApprovePurchaseRequest({
+        actorEmail,
+        id: body.purchaseRequestId,
+        approved: body.approved,
+      });
+      return jsonOk({ ok: true, action: "purchase_request" as const, request: row });
+    }
 
     if (body.action === "flag") {
       if (!body.flagKey || typeof body.enabled !== "boolean") {

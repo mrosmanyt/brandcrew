@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { InviteTeam } from "@/components/desk/invite-team";
 import { ScheduleJobs } from "@/components/desk/schedule-jobs";
+import { FileActionsPanel } from "@/components/desk/file-actions-panel";
+import { MacrosPanel } from "@/components/desk/macros-panel";
 import { UsageChart } from "@/components/desk/usage-chart";
 import { usageLookbackLabel } from "@/lib/credits";
 import { publicModelLabel } from "@/lib/model-catalog";
@@ -199,6 +201,12 @@ export function UsageDashboard({
       </div>
       <div className="mt-6">
         <ScheduleJobs workspaceId={workspaceId} agents={agents} />
+      </div>
+      <div className="mt-6">
+        <FileActionsPanel workspaceId={workspaceId} agents={agents} />
+      </div>
+      <div className="mt-6">
+        <MacrosPanel workspaceId={workspaceId} />
       </div>
     </div>
   );

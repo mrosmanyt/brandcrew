@@ -41,6 +41,7 @@ const wakeWord = require("./wake-word.cjs");
 const computerUse = require("./computer-use.cjs");
 const systemMeters = require("./system-meters.cjs");
 const mainLog = require("./main-log.cjs");
+const safeMode = require("./safe-mode.cjs");
 
 // Set before the first getPath("logs") call so logs land under "CINEM Pro",
 // not the package.json name ("brandcrew"). Also set again in whenReady() —
@@ -535,8 +536,13 @@ function attachViewEvents(entry) {
     if (details.reason === "clean-exit") return;
     console.error("CINEM desktop renderer gone", details.reason, entry.mode);
     mainLog.logInfo(app, `render-process-gone mode=${entry.mode} reason=${details.reason}`);
+    safeMode.recordCrash(app, details.reason);
+    safeMode.reportCrash(app, deskOrigin(), details.reason, `mode=${entry.mode}`);
     if (entry.mode === "desk") showOfflinePage(entry);
     else if (entry.mode === "assistant") showAssistantOfflinePage(entry);
+  });
+  entry.view.webContents.once("did-finish-load", () => {
+    safeMode.scheduleStabilityMark(app);
   });
 }
 
@@ -1109,6 +1115,33 @@ function installAppMenu() {
             openUpdatesWindow();
           },
         },
+        {
+          label: "Report crashes (opt-in)",
+          type: "checkbox",
+          checked: safeMode.crashReportingEnabled(app),
+          click: (item) => {
+            safeMode.setCrashReportingEnabled(app, item.checked);
+          },
+        },
+        {
+          label: "Repair (clear local cache)",
+          click: async () => {
+            const choice = await dialog.showMessageBox({
+              type: "question",
+              buttons: ["Cancel", "Repair and restart"],
+              defaultId: 1,
+              cancelId: 0,
+              title: "Repair CINEM Pro",
+              message: "Clear local caches and restart?",
+              detail:
+                "This clears local browser cache and storage on this machine only — your workspace, Brand Kit, and jobs stay on the server and are not affected.",
+            });
+            if (choice.response !== 1) return;
+            await safeMode.repair(app, session);
+            app.relaunch();
+            app.exit(0);
+          },
+        },
       ],
     },
   ];
@@ -1117,6 +1150,18 @@ function installAppMenu() {
 
   app.whenReady().then(() => {
     try {
+    global.__cinemSafeMode = safeMode.shouldEnterSafeMode(app);
+    if (global.__cinemSafeMode) {
+      mainLog.logInfo(app, "safe-mode: crash loop detected, starting in safe mode");
+      dialog.showMessageBox({
+        type: "warning",
+        title: "CINEM Pro — Safe mode",
+        message: "CINEM Pro crashed repeatedly and is starting in safe mode.",
+        detail:
+          "Use Help > Repair to clear local caches, or just keep using the app — safe mode clears itself once it stays open for 15 seconds.",
+        buttons: ["Continue"],
+      }).catch(() => {});
+    }
     app.setName("CINEM Pro");
     const ua = chromeUserAgent(app.userAgentFallback || session.defaultSession.getUserAgent());
     if (ua) {

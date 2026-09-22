@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { recordWorkspaceAudit } from "@/lib/audit";
 import { gmailCreateDraft } from "@/lib/gmail";
 import { getConnectedPlugin } from "@/lib/plugins";
+import { createJobFromChat } from "@/lib/job-runtime";
 import { parsePlan } from "@/lib/job-playbooks";
 import { resetPlaybook } from "@/lib/job-playbooks";
 import { asAgentRoleSafe } from "@/lib/routines-pure";
@@ -176,6 +177,71 @@ export async function listRoutines(workspaceId: string) {
     take: 40,
   });
   return rows.map(serializeRoutine);
+}
+
+/**
+ * The macro "replay" button: re-runs a saved routine on demand, outside its
+ * cadence. Goes through the same createJobFromChat pipeline as every other
+ * job — the write-gate (approval pause on destructive steps) and budget
+ * checks apply exactly as they would to a fresh job, recording once never
+ * pre-approves anything on replay.
+ */
+export async function runRoutineNow(input: { workspaceId: string; routineId: string }) {
+  const routine = await prisma.routine.findFirst({
+    where: { id: input.routineId, workspaceId: input.workspaceId },
+  });
+  if (!routine) throw new Error("Routine not found.");
+  if (!routine.enabled) throw new Error("This macro is paused. Resume it first.");
+  if (!routine.agentId) throw new Error("This macro has no agent to run.");
+
+  const result = await createJobFromChat({
+    workspaceId: input.workspaceId,
+    agentId: routine.agentId,
+    message: routine.message,
+    playbookKey: routine.playbookKey || undefined,
+    skillId: routine.skillId || undefined,
+    routineId: routine.id,
+  });
+
+  await prisma.routine.update({
+    where: { id: routine.id },
+    data: { lastJobId: result.job.id },
+  });
+  await recordWorkspaceAudit({
+    workspaceId: input.workspaceId,
+    jobId: result.job.id,
+    actor: "user",
+    action: "run_routine",
+    detail: `Ran macro “${routine.title}” on demand.`,
+    data: { routineId: routine.id },
+  });
+
+  return { jobId: result.job.id };
+}
+
+export async function setRoutineEnabled(input: {
+  workspaceId: string;
+  routineId: string;
+  enabled: boolean;
+}) {
+  const routine = await prisma.routine.findFirst({
+    where: { id: input.routineId, workspaceId: input.workspaceId },
+  });
+  if (!routine) throw new Error("Routine not found.");
+  const row = await prisma.routine.update({
+    where: { id: routine.id },
+    data: { enabled: input.enabled },
+  });
+  return serializeRoutine(row);
+}
+
+export async function deleteRoutine(input: { workspaceId: string; routineId: string }) {
+  const routine = await prisma.routine.findFirst({
+    where: { id: input.routineId, workspaceId: input.workspaceId },
+  });
+  if (!routine) throw new Error("Routine not found.");
+  await prisma.routine.delete({ where: { id: routine.id } });
+  return { ok: true };
 }
 
 /**

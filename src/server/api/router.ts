@@ -62,6 +62,7 @@ import * as workspaceJobReply from "./workspaces/job-reply";
 import * as workspaceJobs from "./workspaces/jobs";
 import * as workspaceSchedule from "./workspaces/schedule";
 import * as workspaceSchedules from "./workspaces/schedules";
+import * as workspaceFileActions from "./workspaces/file-actions";
 import * as workspaceUsage from "./workspaces/usage";
 import * as workspaceMarketplace from "./workspaces/marketplace";
 import * as workspaceMarketplaceBots from "./workspaces/marketplace-bots";
@@ -83,6 +84,8 @@ import * as workspaceApprovals from "./workspaces/approvals";
 import * as workspaceAudit from "./workspaces/audit";
 import * as workspacePhase2 from "./workspaces/phase2";
 import * as workspaceRoutines from "./workspaces/routines";
+import * as workspaceRoutine from "./workspaces/routine";
+import * as workspaceRoutineRun from "./workspaces/routine-run";
 import * as workspaceJobReplay from "./workspaces/job-replay";
 import * as workspaceTriggers from "./workspaces/triggers";
 import * as workspaceTriggerFire from "./workspaces/trigger-fire";
@@ -90,6 +93,9 @@ import * as downloadsExtension from "./downloads/extension";
 import * as downloadsCinemAiAssistant from "./downloads/cinem-ai-assistant";
 import * as cinemAiAssistantUsage from "./cinem-ai-assistant/usage";
 import * as guestChat from "./guest/chat";
+import * as crashReports from "./crash-reports";
+import * as funnel from "./funnel";
+import * as purchaseRequests from "./purchase-requests";
 import * as imageGenerate from "./image/generate";
 import * as foundingSpots from "./founding/spots";
 import * as userByok from "./user/byok";
@@ -158,6 +164,9 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(cinemAiAssistantUsage),
   },
   { pattern: ["api", "guest", "chat"], handlers: asHandlers(guestChat) },
+  { pattern: ["api", "crash-reports"], handlers: asHandlers(crashReports) },
+  { pattern: ["api", "funnel"], handlers: asHandlers(funnel) },
+  { pattern: ["api", "purchase-requests"], handlers: asHandlers(purchaseRequests) },
   { pattern: ["api", "image", "generate"], handlers: asHandlers(imageGenerate) },
   { pattern: ["api", "founding", "spots"], handlers: asHandlers(foundingSpots) },
   { pattern: ["api", "user", "byok"], handlers: asHandlers(userByok) },
@@ -274,6 +283,14 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(workspaceRoutines),
   },
   {
+    pattern: ["api", "workspaces", ":workspaceId", "routines", ":routineId", "run"],
+    handlers: asHandlers(workspaceRoutineRun),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "routines", ":routineId"],
+    handlers: asHandlers(workspaceRoutine),
+  },
+  {
     pattern: ["api", "workspaces", ":workspaceId", "triggers", "fire"],
     handlers: asHandlers(workspaceTriggerFire),
   },
@@ -288,6 +305,10 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "schedules"],
     handlers: asHandlers(workspaceSchedules),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "file-actions"],
+    handlers: asHandlers(workspaceFileActions),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],

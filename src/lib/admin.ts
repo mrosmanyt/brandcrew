@@ -27,6 +27,8 @@ export const ADMIN_SECTIONS = [
   "audit",
   "trust",
   "flags",
+  "crashreports",
+  "funnel",
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
@@ -307,6 +309,44 @@ export type AdminFlagRow = {
 export type AdminFlagsPayload = {
   section: "flags";
   flags: AdminFlagRow[];
+};
+
+export type AdminCrashReportRow = {
+  id: string;
+  userEmail: string | null;
+  platform: string;
+  appVersion: string;
+  reason: string;
+  detail: string;
+  createdAt: string;
+};
+
+export type AdminCrashReportsPayload = {
+  section: "crashreports";
+  reports: AdminCrashReportRow[];
+};
+
+export type AdminFunnelDayRow = {
+  date: string;
+  siteVisits: number;
+  whatsappClicks: number;
+};
+
+export type AdminPurchaseRequestRow = {
+  id: string;
+  name: string;
+  note: string;
+  status: string;
+  createdAt: string;
+  approvedAt: string | null;
+  approvedBy: string;
+};
+
+export type AdminFunnelPayload = {
+  section: "funnel";
+  days: AdminFunnelDayRow[];
+  totals: { siteVisits: number; whatsappClicks: number; requests: number; approved: number };
+  requests: AdminPurchaseRequestRow[];
 };
 
 const workspaceListInclude = {
@@ -1215,7 +1255,15 @@ export async function getAdminTrust(input: {
 }): Promise<AdminTrustPayload> {
   const q = input.q?.trim() || "";
   if (!q) {
-    return { section: "trust", users: [], workspaces: [] };
+    // Default view: recently suspended workspaces, so trust & safety has
+    // something to browse before the admin already knows who to search for.
+    const suspended = await prisma.workspace.findMany({
+      where: { suspended: true },
+      take: 25,
+      orderBy: { updatedAt: "desc" },
+      include: workspaceListInclude,
+    });
+    return { section: "trust", users: [], workspaces: suspended.map(serializeWorkspaceRow) };
   }
   const [users, workspaces] = await Promise.all([
     prisma.user.findMany({
@@ -1271,6 +1319,88 @@ export async function getAdminFlags(): Promise<AdminFlagsPayload> {
       updatedBy: row.updatedBy,
     })),
   };
+}
+
+export async function getAdminCrashReports(): Promise<AdminCrashReportsPayload> {
+  const reports = await prisma.crashReport.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { user: { select: { email: true } } },
+  });
+  return {
+    section: "crashreports",
+    reports: reports.map((row) => ({
+      id: row.id,
+      userEmail: row.user?.email ?? null,
+      platform: row.platform,
+      appVersion: row.appVersion,
+      reason: row.reason,
+      detail: row.detail,
+      createdAt: row.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function getAdminFunnel(): Promise<AdminFunnelPayload> {
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const [events, requests, approvedCount, requestCount] = await Promise.all([
+    prisma.funnelEvent.findMany({
+      where: { createdAt: { gte: since } },
+      select: { kind: true, createdAt: true },
+    }),
+    prisma.purchaseRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.purchaseRequest.count({ where: { status: "approved" } }),
+    prisma.purchaseRequest.count(),
+  ]);
+
+  const byDay = new Map<string, { siteVisits: number; whatsappClicks: number }>();
+  for (const row of events) {
+    const day = row.createdAt.toISOString().slice(0, 10);
+    const entry = byDay.get(day) ?? { siteVisits: 0, whatsappClicks: 0 };
+    if (row.kind === "site_visit") entry.siteVisits += 1;
+    else if (row.kind === "whatsapp_click") entry.whatsappClicks += 1;
+    byDay.set(day, entry);
+  }
+  const days = [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, counts]) => ({ date, ...counts }));
+
+  return {
+    section: "funnel",
+    days,
+    totals: {
+      siteVisits: events.filter((row) => row.kind === "site_visit").length,
+      whatsappClicks: events.filter((row) => row.kind === "whatsapp_click").length,
+      requests: requestCount,
+      approved: approvedCount,
+    },
+    requests: requests.map((row) => ({
+      id: row.id,
+      name: row.name,
+      note: row.note,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+      approvedAt: row.approvedAt?.toISOString() ?? null,
+      approvedBy: row.approvedBy,
+    })),
+  };
+}
+
+export async function adminApprovePurchaseRequest(input: {
+  actorEmail: string;
+  id: string;
+  approved: boolean;
+}) {
+  const row = await prisma.purchaseRequest.update({
+    where: { id: input.id },
+    data: input.approved
+      ? { status: "approved", approvedAt: new Date(), approvedBy: input.actorEmail }
+      : { status: "pending", approvedAt: null, approvedBy: "" },
+  });
+  return row;
 }
 
 export async function isFeatureEnabled(key: string): Promise<boolean> {

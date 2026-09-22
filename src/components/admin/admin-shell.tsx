@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  AlertTriangle,
   Flag,
+  Funnel,
   KeyRound,
   LayoutDashboard,
   MessageSquareQuote,
@@ -28,6 +30,8 @@ const NAV = [
   { href: "/admin/audit", label: "Audit", icon: ScrollText },
   { href: "/admin/trust", label: "Trust & safety", icon: ShieldAlert },
   { href: "/admin/flags", label: "Feature flags", icon: Flag },
+  { href: "/admin/crash-reports", label: "Crash reports", icon: AlertTriangle },
+  { href: "/admin/funnel", label: "Conversion funnel", icon: Funnel },
 ] as const;
 
 function navActive(pathname: string, href: string) {

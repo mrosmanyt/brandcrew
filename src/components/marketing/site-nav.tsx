@@ -9,6 +9,7 @@ const NAV = [
   { href: "/", label: "Assistant" },
   { href: "/cinem-ai-assistant/billing", label: "Pricing" },
   { href: "/about", label: "Cinem Pro" },
+  { href: "/case-studies", label: "Case studies" },
   { href: "/download", label: "Download" },
   { href: "/login", label: "Login" },
 ] as const;

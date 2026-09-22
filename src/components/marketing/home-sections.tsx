@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/logo";
 import { GetStartedButton, PricingDemoCta, PricingPlanCta } from "@/components/marketing/home-ctas";
+import { WhatsAppCta } from "@/components/marketing/whatsapp-cta";
 import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
 import {
@@ -456,6 +457,13 @@ export function PricingSection() {
         </Link>{" "}
         is a one-time $1–$99,999 checkout. It does not replace Pro / Pro Plus / Ultra.
       </p>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        Already on the desk? Invite a friend and you both get a free month —
+        find your link under Settings.
+      </p>
+      <div className="mt-6">
+        <WhatsAppCta />
+      </div>
     </Section>
   );
 }
