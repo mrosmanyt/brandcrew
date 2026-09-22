@@ -450,19 +450,30 @@ export function PricingSection() {
           Free: {PLANS.demo.seats} seat · {PLANS.demo.tokenBudget.toLocaleString()} tokens
         </p>
       </div>
-      <p className="mt-6 text-sm leading-6 text-muted-foreground">
-        Want to back the brand without a subscription?{" "}
-        <Link href="/support" className="underline">
-          Support CINEM
-        </Link>{" "}
-        is a one-time $1–$99,999 checkout. It does not replace Pro / Pro Plus / Ultra.
-      </p>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-        Already on the desk? Invite a friend and you both get a free month —
-        find your link under Settings.
-      </p>
-      <div className="mt-6">
-        <WhatsAppCta />
+
+      <div className="mt-10 grid gap-6 border-t border-border pt-8 sm:grid-cols-3">
+        <div className="text-sm leading-6 text-muted-foreground">
+          <p className="font-medium text-foreground">Already a customer?</p>
+          <p className="mt-1">
+            Invite a friend and you both get a free month — find your link under
+            desk Settings.
+          </p>
+        </div>
+        <div className="text-sm leading-6 text-muted-foreground">
+          <p className="font-medium text-foreground">Want to back the brand?</p>
+          <p className="mt-1">
+            <Link href="/support" className="underline">
+              Support CINEM
+            </Link>{" "}
+            is a one-time $1–$99,999 checkout — it doesn't replace a plan.
+          </p>
+        </div>
+        <div className="text-sm leading-6 text-muted-foreground">
+          <p className="font-medium text-foreground">Have questions first?</p>
+          <div className="mt-1">
+            <WhatsAppCta />
+          </div>
+        </div>
       </div>
     </Section>
   );
