@@ -22,8 +22,9 @@ export default function CaseStudiesPage() {
           Case studies
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-          Real teams, real jobs. Content below is a placeholder structure —
-          client copy lands here as it becomes available.
+          Real jobs, honestly described. We're starting with our own team's
+          story below — client case studies land here as customers agree to
+          be named.
         </p>
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
           {CASE_STUDIES.map((entry) => (
