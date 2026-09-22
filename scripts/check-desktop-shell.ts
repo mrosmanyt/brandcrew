@@ -202,6 +202,11 @@ assert.ok(existsSync("electron/offline.html"));
 assert.ok(existsSync("electron/assistant-offline.html"));
 assert.match(readFileSync("electron/assistant-offline.html", "utf8"), /Assistant couldn't load/);
 assert.match(readFileSync("electron/assistant-preload.cjs", "utf8"), /retryAssistant/);
+assert.doesNotMatch(
+  readFileSync("electron/assistant-preload.cjs", "utf8"),
+  /require\("\.\/desk-shell\.cjs"\)/,
+  "sandboxed assistant preload cannot require sibling desk-shell.cjs",
+);
 assert.match(main, /assistant-offline\.html/);
 assert.match(main, /showAssistantOfflinePage/);
 assert.match(main, /cinem:retry-assistant/);

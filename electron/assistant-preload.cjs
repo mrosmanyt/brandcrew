@@ -1,5 +1,19 @@
 const { contextBridge, ipcRenderer } = require("electron");
-const { packagedLaunchFlags } = require("./desk-shell.cjs");
+
+/** Inlined from desk-shell.cjs — sandboxed preloads cannot require sibling .cjs files. */
+function launchEnvEnabled(env, key) {
+  const v = String(env[key] || "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function packagedLaunchFlags(env = process.env) {
+  return {
+    computerUse: launchEnvEnabled(env, "COMPUTER_USE_ENABLED"),
+    multilayer: launchEnvEnabled(env, "MULTILAYER_ORCHESTRATOR_ENABLED"),
+    socialPlaybooks: launchEnvEnabled(env, "SOCIAL_CHROME_PLAYBOOKS_ENABLED"),
+    remoteControl: launchEnvEnabled(env, "REMOTE_PHONE_CONTROL_ENABLED"),
+  };
+}
 
 async function safeInvoke(channel, payload) {
   try {
