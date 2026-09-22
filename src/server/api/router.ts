@@ -62,6 +62,7 @@ import * as workspaceJobReply from "./workspaces/job-reply";
 import * as workspaceJobs from "./workspaces/jobs";
 import * as workspaceSchedule from "./workspaces/schedule";
 import * as workspaceSchedules from "./workspaces/schedules";
+import * as workspaceFileActions from "./workspaces/file-actions";
 import * as workspaceUsage from "./workspaces/usage";
 import * as workspaceMarketplace from "./workspaces/marketplace";
 import * as workspaceMarketplaceBots from "./workspaces/marketplace-bots";
@@ -288,6 +289,10 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "schedules"],
     handlers: asHandlers(workspaceSchedules),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "file-actions"],
+    handlers: asHandlers(workspaceFileActions),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "api-keys", ":keyId"],
