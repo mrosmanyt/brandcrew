@@ -144,6 +144,7 @@
     "files": [
       "electron/main.cjs",
       "electron/main-log.cjs",
+      "electron/safe-mode.cjs",
       "electron/preload.cjs",
       "electron/desk-shell.cjs",
       "electron/modes.cjs",
