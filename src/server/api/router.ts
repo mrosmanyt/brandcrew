@@ -24,7 +24,6 @@ import * as authConnect from "./auth/connect";
 import * as authConnectApprove from "./auth/connect-approve";
 import * as authConnectClaim from "./auth/connect-claim";
 import * as billingCheckout from "./billing/checkout";
-import * as billingAssistantCheckout from "./billing/assistant-checkout";
 import * as billingSupport from "./billing/support";
 import * as whopWebhook from "./webhooks/whop";
 import * as geminigenImageWebhook from "./webhooks/geminigen-image";
@@ -99,6 +98,7 @@ import * as companionCommand from "./companion/command";
 import * as companionCommands from "./companion/commands";
 import * as whatsappWebhook from "./whatsapp/webhook";
 import * as assistantWhatsappLink from "./assistant/whatsapp-link";
+import * as geoWhatsapp from "./geo/whatsapp";
 import * as deviceClaim from "./device/claim";
 import * as deviceHeartbeat from "./device/heartbeat";
 import * as deviceCommands from "./device/commands";
@@ -167,6 +167,7 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "companion", "pair"], handlers: asHandlers(companionPair) },
   { pattern: ["api", "whatsapp", "webhook"], handlers: asHandlers(whatsappWebhook) },
   { pattern: ["api", "assistant", "whatsapp-link"], handlers: asHandlers(assistantWhatsappLink) },
+  { pattern: ["api", "geo", "whatsapp"], handlers: asHandlers(geoWhatsapp) },
   { pattern: ["api", "v1"], handlers: asHandlers(v1Root) },
   { pattern: ["api", "v1", "workspace"], handlers: asHandlers(v1Workspace) },
   {
@@ -199,10 +200,6 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "oauth", "callback"], handlers: asHandlers(oauthCallback) },
   { pattern: ["api", "composio", "callback"], handlers: asHandlers(composioCallback) },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
-  {
-    pattern: ["api", "billing", "assistant-checkout"],
-    handlers: asHandlers(billingAssistantCheckout),
-  },
   { pattern: ["api", "billing", "support"], handlers: asHandlers(billingSupport) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
   {
