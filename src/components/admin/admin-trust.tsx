@@ -34,7 +34,7 @@ export function AdminTrust({
     setData(await fetchAdminJson<AdminTrustPayload>(`/api/admin?${params}`));
   }
 
-  const { busy, setBusy, pending, setPending, runPending } = useAdminMutation(() => load(query));
+  const { busy, setBusy, pending, setPending, setPendingOrRun, runPending } = useAdminMutation(() => load(query));
 
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +76,7 @@ export function AdminTrust({
         <>
           <section className="mt-6 rounded-2xl border border-border bg-card p-5">
             <h2 className="text-sm font-medium">Users</h2>
-            <UserActionList rows={data.users} onPending={setPending} />
+            <UserActionList rows={data.users} onPending={setPendingOrRun} />
           </section>
           <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
             <div className="border-b border-border px-5 py-4">
@@ -86,7 +86,7 @@ export function AdminTrust({
               rows={data.workspaces}
               disabled={busy}
               empty="No workspaces match."
-              onPending={setPending}
+              onPending={setPendingOrRun}
             />
           </section>
         </>

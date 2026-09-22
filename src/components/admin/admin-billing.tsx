@@ -22,7 +22,7 @@ export function AdminBilling({ initial }: { initial: AdminBillingPayload }) {
     setData(await fetchAdminJson<AdminBillingPayload>(`/api/admin?${params}`));
   }
 
-  const { busy, pending, setPending, runPending } = useAdminMutation(() => load());
+  const { busy, pending, setPending, setPendingOrRun, runPending } = useAdminMutation(() => load());
 
   async function onPage(page: number) {
     try {
@@ -50,7 +50,7 @@ export function AdminBilling({ initial }: { initial: AdminBillingPayload }) {
           rows={data.paid}
           disabled={busy}
           empty="No paid workspaces in Postgres."
-          onPending={setPending}
+          onPending={setPendingOrRun}
         />
         <div className="px-5 pb-4">
           <AdminPager pageInfo={data.paidPageInfo} onPage={onPage} disabled={busy} />

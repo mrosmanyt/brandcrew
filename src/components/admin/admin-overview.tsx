@@ -25,7 +25,7 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
     setData(next);
   }
 
-  const { busy, pending, setPending, runPending } = useAdminMutation(refresh);
+  const { busy, pending, setPending, setPendingOrRun, runPending } = useAdminMutation(refresh);
 
   return (
     <AdminPageFrame
@@ -170,7 +170,7 @@ export function AdminOverview({ initial }: { initial: AdminDashboard }) {
           rows={data.workspacesList}
           disabled={busy}
           empty="No workspaces yet."
-          onPending={setPending}
+          onPending={setPendingOrRun}
         />
       </section>
 

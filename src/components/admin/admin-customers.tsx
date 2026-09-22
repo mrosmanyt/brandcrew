@@ -41,7 +41,7 @@ export function AdminCustomers({
     setData(next);
   }
 
-  const { busy, setBusy, pending, setPending, runPending } = useAdminMutation(() =>
+  const { busy, setBusy, pending, setPending, setPendingOrRun, runPending } = useAdminMutation(() =>
     load(query, data.profile?.user.id, data.pageInfo.page),
   );
 
@@ -101,13 +101,13 @@ export function AdminCustomers({
         </p>
         <UserActionList
           rows={data.results}
-          onPending={setPending}
+          onPending={setPendingOrRun}
           empty={query.trim() ? "No users match that email." : "No users in Postgres yet."}
         />
         <AdminPager pageInfo={data.pageInfo} onPage={onPage} disabled={busy} />
       </section>
 
-      {data.profile ? <CustomerProfile profile={data.profile} busy={busy} onPending={setPending} /> : null}
+      {data.profile ? <CustomerProfile profile={data.profile} busy={busy} onPending={setPendingOrRun} /> : null}
 
       <AdminConfirm
         pending={pending}
@@ -126,7 +126,7 @@ function CustomerProfile({
 }: {
   profile: AdminCustomer360;
   busy: boolean;
-  onPending: ReturnType<typeof useAdminMutation>["setPending"];
+  onPending: ReturnType<typeof useAdminMutation>["setPendingOrRun"];
 }) {
   const workspaceCount = profile.workspaces.length;
   const tokenLine = useMemo(

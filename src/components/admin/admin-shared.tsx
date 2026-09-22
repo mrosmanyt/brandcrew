@@ -501,58 +501,63 @@ export function AdminConfirm({
   );
 }
 
+/**
+ * Assign/budget are low-risk, frequent actions (setting a plan or a token
+ * cap) — reversible in one more click, unlike revoke/suspend. They skip the
+ * confirm modal and run immediately from setPendingOrRun below.
+ */
+const NO_CONFIRM_KINDS = new Set<AdminPending["kind"]>(["assign", "assign-user", "budget"]);
+
+async function executeAdminAction(action: AdminPending): Promise<string> {
+  if (action.kind === "assign") {
+    await postAdmin({ action: "assign", plan: action.plan, workspaceId: action.workspaceId });
+    return "Plan assigned.";
+  }
+  if (action.kind === "revoke") {
+    await postAdmin({ action: "revoke", workspaceId: action.workspaceId });
+    return "Plan revoked. Workspace is on Free.";
+  }
+  if (action.kind === "suspend") {
+    await postAdmin({ action: "suspend", workspaceId: action.workspaceId });
+    return "Workspace suspended.";
+  }
+  if (action.kind === "unsuspend") {
+    await postAdmin({ action: "unsuspend", workspaceId: action.workspaceId });
+    return "Workspace unsuspended.";
+  }
+  if (action.kind === "assign-user") {
+    await postAdmin({ action: "assign", plan: action.plan, userEmail: action.email });
+    return "Plan assigned to every workspace for that user.";
+  }
+  if (action.kind === "revoke-user") {
+    await postAdmin({ action: "revoke", userEmail: action.email });
+    return "Plans revoked to Free.";
+  }
+  if (action.kind === "suspend-user") {
+    await postAdmin({ action: "suspend", userEmail: action.email });
+    return "User workspaces suspended.";
+  }
+  if (action.kind === "unsuspend-user") {
+    await postAdmin({ action: "unsuspend", userEmail: action.email });
+    return "User workspaces unsuspended.";
+  }
+  if (action.kind === "budget") {
+    await postAdmin({ action: "budget", workspaceId: action.workspaceId, tokenBudget: action.tokenBudget });
+    return "Token budget updated.";
+  }
+  await postAdmin({ action: "flag", flagKey: action.key, enabled: action.enabled, note: action.note });
+  return action.enabled ? "Flag enabled." : "Flag disabled.";
+}
+
 export function useAdminMutation(onDone?: () => Promise<void> | void) {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<AdminPending | null>(null);
 
-  async function runPending() {
-    if (!pending) return;
+  async function run(action: AdminPending) {
     setBusy(true);
     try {
-      if (pending.kind === "assign") {
-        await postAdmin({
-          action: "assign",
-          plan: pending.plan,
-          workspaceId: pending.workspaceId,
-        });
-        toast.success("Plan assigned.");
-      } else if (pending.kind === "revoke") {
-        await postAdmin({ action: "revoke", workspaceId: pending.workspaceId });
-        toast.success("Plan revoked. Workspace is on Free.");
-      } else if (pending.kind === "suspend") {
-        await postAdmin({ action: "suspend", workspaceId: pending.workspaceId });
-        toast.success("Workspace suspended.");
-      } else if (pending.kind === "unsuspend") {
-        await postAdmin({ action: "unsuspend", workspaceId: pending.workspaceId });
-        toast.success("Workspace unsuspended.");
-      } else if (pending.kind === "assign-user") {
-        await postAdmin({ action: "assign", plan: pending.plan, userEmail: pending.email });
-        toast.success("Plan assigned to every workspace for that user.");
-      } else if (pending.kind === "revoke-user") {
-        await postAdmin({ action: "revoke", userEmail: pending.email });
-        toast.success("Plans revoked to Free.");
-      } else if (pending.kind === "suspend-user") {
-        await postAdmin({ action: "suspend", userEmail: pending.email });
-        toast.success("User workspaces suspended.");
-      } else if (pending.kind === "unsuspend-user") {
-        await postAdmin({ action: "unsuspend", userEmail: pending.email });
-        toast.success("User workspaces unsuspended.");
-      } else if (pending.kind === "budget") {
-        await postAdmin({
-          action: "budget",
-          workspaceId: pending.workspaceId,
-          tokenBudget: pending.tokenBudget,
-        });
-        toast.success("Token budget updated.");
-      } else {
-        await postAdmin({
-          action: "flag",
-          flagKey: pending.key,
-          enabled: pending.enabled,
-          note: pending.note,
-        });
-        toast.success(pending.enabled ? "Flag enabled." : "Flag disabled.");
-      }
+      const message = await executeAdminAction(action);
+      toast.success(message);
       setPending(null);
       await onDone?.();
     } catch (error) {
@@ -562,7 +567,21 @@ export function useAdminMutation(onDone?: () => Promise<void> | void) {
     }
   }
 
-  return { busy, setBusy, pending, setPending, runPending };
+  async function runPending() {
+    if (!pending) return;
+    await run(pending);
+  }
+
+  /** Use in place of setPending from action buttons — skips the confirm modal for low-risk kinds. */
+  function setPendingOrRun(action: AdminPending) {
+    if (NO_CONFIRM_KINDS.has(action.kind)) {
+      void run(action);
+      return;
+    }
+    setPending(action);
+  }
+
+  return { busy, setBusy, pending, setPending, setPendingOrRun, runPending };
 }
 
 export function AdminPageFrame({
