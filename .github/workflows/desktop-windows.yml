@@ -44,6 +44,7 @@ jobs:
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: CINEM-Pro-Setup
           path: |
@@ -52,6 +53,30 @@ jobs:
             dist/desktop/latest.yml
             dist/desktop/*.blockmap
           if-no-files-found: error
+
+      # Actions artifact storage can be over quota. Publish the same files to a
+      # reusable draft prerelease so workflow_dispatch builds stay downloadable.
+      # Not a production release: draft + prerelease, and never marked latest.
+      # Tag pushes skip this step and use the release step below.
+      - name: Publish draft CI release
+        if: github.event_name == 'workflow_dispatch' || !startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cinem-pro-desktop-ci
+          name: CINEM Pro desktop CI build
+          draft: true
+          prerelease: true
+          make_latest: "false"
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          body: |
+            Draft prerelease of the Windows desktop build.
+            Not a production release. Download CINEM-Pro-Setup.exe from the assets on this draft.
+          files: |
+            dist/desktop/CINEM-Pro-Setup.exe
+            dist/desktop/CINEM-Pro-Portable.exe
+            dist/desktop/latest.yml
+            dist/desktop/*.blockmap
 
       # Tag builds attach to this repo's GitHub Release. Installed apps
       # update from mrosmanyt/cinem-pro-releases — also upload Setup.exe,
