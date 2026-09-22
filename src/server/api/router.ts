@@ -84,6 +84,8 @@ import * as workspaceApprovals from "./workspaces/approvals";
 import * as workspaceAudit from "./workspaces/audit";
 import * as workspacePhase2 from "./workspaces/phase2";
 import * as workspaceRoutines from "./workspaces/routines";
+import * as workspaceRoutine from "./workspaces/routine";
+import * as workspaceRoutineRun from "./workspaces/routine-run";
 import * as workspaceJobReplay from "./workspaces/job-replay";
 import * as workspaceTriggers from "./workspaces/triggers";
 import * as workspaceTriggerFire from "./workspaces/trigger-fire";
@@ -273,6 +275,14 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "workspaces", ":workspaceId", "routines"],
     handlers: asHandlers(workspaceRoutines),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "routines", ":routineId", "run"],
+    handlers: asHandlers(workspaceRoutineRun),
+  },
+  {
+    pattern: ["api", "workspaces", ":workspaceId", "routines", ":routineId"],
+    handlers: asHandlers(workspaceRoutine),
   },
   {
     pattern: ["api", "workspaces", ":workspaceId", "triggers", "fire"],
