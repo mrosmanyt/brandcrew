@@ -22,11 +22,25 @@
  * db-server) are intentionally exempt.
  */
 
-import { isCinemElectron, isTauriShell, verifyElectronShell } from "@/lib/desktop-shell";
+import {
+  cinemDesktopBridge,
+  ELECTRON_SHELL_PING,
+  isCinemElectron,
+  isTauriShell,
+  verifyElectronShell,
+} from "@/lib/desktop-shell";
 
 const isAdminRoute = (): boolean =>
   window.location.pathname.replace(/\/+$/, "") === "/admin" ||
   window.location.hash.startsWith("#/admin");
+
+const INTEGRITY_DEBUG =
+  import.meta.env.DEV || String(import.meta.env.VITE_INTEGRITY_DEBUG || "").trim() === "1";
+
+function logIntegrityFailure(reason: string): void {
+  if (!INTEGRITY_DEBUG) return;
+  console.warn("[IntegrityGuard]", reason);
+}
 
 /** True ⇔ running inside the genuine Cinem AI Assistant shell (always true in dev). */
 export async function verifyEnvironment(): Promise<boolean> {
@@ -34,9 +48,35 @@ export async function verifyEnvironment(): Promise<boolean> {
   if (isAdminRoute()) return true;      // admin panel runs in a browser by design
   if (isCinemElectron()) {
     const nonce = `${crypto.randomUUID()}.${Date.now().toString(36)}`;
-    return verifyElectronShell(nonce);
+    const ok = await verifyElectronShell(nonce);
+    if (!ok) {
+      const bridge = cinemDesktopBridge();
+      if (!bridge) {
+        logIntegrityFailure("Electron path: window.cinemDesktop missing (preload bridge not exposed)");
+      } else if (!bridge.verifyShell || !bridge.ping) {
+        logIntegrityFailure("Electron path: cinemDesktop missing verifyShell or ping");
+      } else {
+        try {
+          const verified = await bridge.verifyShell(nonce);
+          const pong = await bridge.ping();
+          if (verified !== true) {
+            logIntegrityFailure(`Electron path: verifyShell returned ${String(verified)}`);
+          } else if (pong !== ELECTRON_SHELL_PING) {
+            logIntegrityFailure(`Electron path: ping mismatch (got ${String(pong)})`);
+          } else {
+            logIntegrityFailure("Electron path: verifyElectronShell failed for unknown reason");
+          }
+        } catch (error) {
+          logIntegrityFailure(`Electron path: bridge IPC error — ${String(error)}`);
+        }
+      }
+    }
+    return ok;
   }
-  if (!isTauriShell()) return false; // production UI outside an official shell = stolen copy
+  if (!isTauriShell()) {
+    logIntegrityFailure("No official shell: not cinem-pro Electron and not Tauri");
+    return false; // production UI outside an official shell = stolen copy
+  }
 
   try {
     const { invoke } = await import("@tauri-apps/api/core");
@@ -50,8 +90,15 @@ export async function verifyEnvironment(): Promise<boolean> {
     // A forged shell that blindly echoes `true` still has to know the
     // command surface; cross-check a second independent command.
     const pong = await invoke<string>("ping");
-    return ok === true && pong === "Cinem AI Assistant core online";
-  } catch {
+    const pass = ok === true && pong === "Cinem AI Assistant core online";
+    if (!pass) {
+      logIntegrityFailure(
+        `Tauri path: guard_verify=${String(ok)} ping=${String(pong)}`,
+      );
+    }
+    return pass;
+  } catch (error) {
+    logIntegrityFailure(`Tauri path: invoke failed — ${String(error)}`);
     return false; // commands missing/failing ⇒ not the genuine core
   }
 }
