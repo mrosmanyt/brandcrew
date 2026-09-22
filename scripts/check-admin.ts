@@ -213,7 +213,7 @@ async function main() {
   assert.match(assistantQueriesApi, /assistantRegistrationAdminConfigured/);
   assert.match(assistantQueriesApi, /service_unconfigured/);
   const assistantQueriesUi = readFileSync("src/components/admin/admin-assistant-queries.tsx", "utf8");
-  assert.match(assistantQueriesUi, /readJson/);
+  assert.match(assistantQueriesUi, /fetchAdminJson|postJson/);
   assert.match(assistantQueriesUi, /effectiveConfigured/);
   assert.ok(existsSync("src/app/admin/assistant-queries/page.tsx"));
   assert.ok(existsSync("src/app/desk/error.tsx"));

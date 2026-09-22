@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { AdminPageFrame, fetchAdminJson } from "@/components/admin/admin-shared";
+import { AdminPageFrame, SimpleConfirm, fetchAdminJson, postJson } from "@/components/admin/admin-shared";
 import type { HelpdeskInbox, HelpdeskThreadDTO } from "@/lib/helpdesk-pure";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
   const [thread, setThread] = useState<HelpdeskThreadDTO | null>(null);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingClose, setPendingClose] = useState<"close" | "reopen" | null>(null);
 
   const selected = useMemo(
     () => inbox.threads.find((row) => row.id === selectedId) || null,
@@ -63,11 +64,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
   }
 
   async function heartbeat() {
-    await fetch("/api/admin/support", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "presence" }),
-    });
+    await postJson("/api/admin/support", { action: "presence" });
   }
 
   useEffect(() => {
@@ -100,14 +97,11 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
     if (!selectedId) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/support/${selectedId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, body: action === "reply" ? reply : undefined }),
+      const payload = await postJson(`/api/admin/support/${selectedId}`, {
+        action,
+        body: action === "reply" ? reply : undefined,
       });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Action failed.");
-      setThread(payload.thread);
+      setThread(payload.thread as HelpdeskThreadDTO);
       if (action === "reply") setReply("");
       await loadInbox();
       toast.success(
@@ -123,6 +117,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
       toast.error(error instanceof Error ? error.message : "Action failed.");
     } finally {
       setBusy(false);
+      setPendingClose(null);
     }
   }
 
@@ -256,7 +251,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
                     size="sm"
                     variant="ghost"
                     disabled={busy}
-                    onClick={() => void act(thread?.status === "closed" ? "reopen" : "close")}
+                    onClick={() => setPendingClose(thread?.status === "closed" ? "reopen" : "close")}
                   >
                     {thread?.status === "closed" ? "Reopen" : "Close"}
                   </Button>
@@ -266,6 +261,19 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
           )}
         </section>
       </div>
+
+      <SimpleConfirm
+        open={Boolean(pendingClose)}
+        title={pendingClose === "reopen" ? "Reopen this thread?" : "Close this thread?"}
+        body={
+          pendingClose === "reopen"
+            ? "Marks it open again so it shows in Open + live counts."
+            : "Marks it closed. The customer can still see the history; reopen any time."
+        }
+        busy={busy}
+        onClose={() => setPendingClose(null)}
+        onConfirm={() => pendingClose && void act(pendingClose)}
+      />
     </AdminPageFrame>
   );
 }

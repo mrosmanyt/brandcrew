@@ -4,30 +4,32 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, Loader2, RefreshCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AssistantRegistrationRow } from "@/lib/assistant-registration-admin";
+import { AdminPageFrame, SimpleConfirm, fetchAdminJson, postJson } from "@/components/admin/admin-shared";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
+
+type QueriesResponse = {
+  configured?: boolean;
+  notice?: string | null;
+  rows?: AssistantRegistrationRow[];
+};
 
 function fmt(iso?: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString();
 }
 
-async function readJson(res: Response): Promise<Record<string, unknown>> {
-  try {
-    return (await res.json()) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
+type PendingAction = { action: "approve" | "reject"; row: AssistantRegistrationRow };
 
 export function AdminAssistantQueries({ configured }: { configured: boolean }) {
   const [filter, setFilter] = useState<Filter>("pending");
   const [rows, setRows] = useState<AssistantRegistrationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [serverConfigured, setServerConfigured] = useState(configured);
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
   const effectiveConfigured = serverConfigured && configured;
 
@@ -35,14 +37,10 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/assistant-queries?status=${filter}`);
-      const data = await readJson(res);
-      if (!res.ok) {
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to load queries.");
-      }
+      const data = await fetchAdminJson<QueriesResponse>(`/api/admin/assistant-queries?status=${filter}`);
       setServerConfigured(data.configured === true);
-      setNotice(typeof data.notice === "string" ? data.notice : null);
-      setRows(Array.isArray(data.rows) ? (data.rows as AssistantRegistrationRow[]) : []);
+      setNotice(data.notice ?? null);
+      setRows(Array.isArray(data.rows) ? data.rows : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load queries.");
       setRows([]);
@@ -55,49 +53,40 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
     void refresh();
   }, [refresh]);
 
-  async function act(action: "approve" | "reject", requestId: string) {
+  async function confirmAction() {
+    if (!pending) return;
     if (!effectiveConfigured) {
       setError("Supabase admin is not configured — approve/reject is disabled.");
+      setPending(null);
       return;
     }
-    setBusyId(requestId);
+    setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/assistant-queries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, requestId }),
-      });
-      const data = await readJson(res);
-      if (!res.ok) {
-        throw new Error(typeof data.error === "string" ? data.error : "Action failed.");
-      }
+      await postJson("/api/admin/assistant-queries", { action: pending.action, requestId: pending.row.id });
+      setPending(null);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Action failed.");
     } finally {
-      setBusyId(null);
+      setBusy(false);
     }
   }
 
   const pendingCount = rows.filter((r) => r.status === "pending").length;
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cinem AI Assistant queries</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Incoming registration requests from the Windows app. Approve to issue a license key;
-            reject to decline access. Requires Supabase service role on the server.
-          </p>
-        </div>
+    <AdminPageFrame
+      kicker="Internal Admin HQ"
+      title="Cinem AI Assistant queries"
+      hint="Incoming registration requests from the Windows app. Approve issues a license key; reject declines access. Requires Supabase service role on the server."
+      actions={
         <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>
           <RefreshCcw className="size-3.5" />
           Refresh
         </Button>
-      </div>
-
+      }
+    >
       {!effectiveConfigured && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
           {notice ||
@@ -105,7 +94,7 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {(["pending", "all", "approved", "rejected"] as Filter[]).map((value) => (
           <Button
             key={value}
@@ -120,7 +109,7 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
       </div>
 
       {error && (
-        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+        <p className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
@@ -137,7 +126,7 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
             : "No queries loaded — configure Supabase service role to enable this panel."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="mt-4 overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -174,22 +163,18 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
                           <Button
                             type="button"
                             size="sm"
-                            disabled={!effectiveConfigured || busyId === row.id}
-                            onClick={() => void act("approve", row.id)}
+                            disabled={!effectiveConfigured || busy}
+                            onClick={() => setPending({ action: "approve", row })}
                           >
-                            {busyId === row.id ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <Check className="size-3.5" />
-                            )}
+                            <Check className="size-3.5" />
                             Accept
                           </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={!effectiveConfigured || busyId === row.id}
-                            onClick={() => void act("reject", row.id)}
+                            disabled={!effectiveConfigured || busy}
+                            onClick={() => setPending({ action: "reject", row })}
                           >
                             <X className="size-3.5" />
                             Reject
@@ -208,6 +193,20 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
           </table>
         </div>
       )}
-    </div>
+
+      <SimpleConfirm
+        open={Boolean(pending)}
+        title={pending?.action === "approve" ? `Approve ${pending.row.name}?` : `Reject ${pending?.row.name}?`}
+        body={
+          pending?.action === "approve"
+            ? "Issues a license key and grants Cinem AI Assistant access."
+            : "Declines this registration request. They can request again."
+        }
+        destructive={pending?.action === "reject"}
+        busy={busy}
+        onClose={() => setPending(null)}
+        onConfirm={() => void confirmAction()}
+      />
+    </AdminPageFrame>
   );
 }

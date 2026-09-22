@@ -31,21 +31,39 @@ export type AdminPending =
   | { kind: "unsuspend-user"; email: string }
   | { kind: "flag"; key: string; enabled: boolean; note?: string };
 
+/** Reads the body once, even on a non-JSON error page (proxy timeout, raw 500 HTML) — never throws a raw parse error. */
+async function readJsonSafe(res: Response): Promise<Record<string, unknown>> {
+  try {
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export async function fetchAdminJson<T>(path: string): Promise<T> {
   const res = await fetch(path);
-  const payload = await res.json();
-  if (!res.ok) throw new Error(payload.error || "Could not load admin data.");
+  const payload = await readJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(typeof payload.error === "string" ? payload.error : "Could not load admin data.");
+  }
   return payload as T;
 }
 
 export async function postAdmin(body: Record<string, unknown>) {
-  const res = await fetch("/api/admin", {
+  return postJson("/api/admin", body);
+}
+
+/** Same shape as postAdmin, for admin endpoints that don't live under /api/admin (e.g. /api/admin/support/:id). */
+export async function postJson(path: string, body: Record<string, unknown>) {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const payload = await res.json();
-  if (!res.ok) throw new Error(payload.error || "Admin action failed.");
+  const payload = await readJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(typeof payload.error === "string" ? payload.error : "Admin action failed.");
+  }
   return payload;
 }
 
@@ -461,6 +479,48 @@ function confirmCopy(pending: AdminPending | null): { title: string; body: strin
     title: pending.enabled ? `Enable ${pending.key}?` : `Disable ${pending.key}?`,
     body: `Write FeatureFlag ${pending.key} = ${pending.enabled ? "on" : "off"} and record an audit row.`,
   };
+}
+
+/**
+ * Same modal chrome as AdminConfirm, for actions outside the AdminPending
+ * union (e.g. assistant-queries approve/reject, support close/reopen) —
+ * takes its title/body directly instead of switching on a fixed kind.
+ */
+export function SimpleConfirm({
+  open,
+  title,
+  body,
+  destructive,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  body: string;
+  destructive?: boolean;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm} disabled={busy}>
+            Confirm
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function AdminConfirm({
