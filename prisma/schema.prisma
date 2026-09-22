@@ -827,6 +827,36 @@ model ImageGenAsyncResult {
   expiresAt    DateTime
 }
 
+/// Anonymous marketing-funnel event (site visit / WhatsApp CTA click).
+/// anonId is a client-generated random id (localStorage), never a cookie
+/// tied to auth, an IP, or a device fingerprint — no PII by design.
+model FunnelEvent {
+  id        String   @id @default(cuid())
+  kind      String
+  anonId    String
+  path      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([anonId])
+}
+
+/// A visitor asking to buy after WhatsApp contact. Name/note are PII the
+/// visitor volunteered to reach sales — distinct from FunnelEvent, which
+/// stays anonymous. anonId links it back to the funnel, optionally.
+model PurchaseRequest {
+  id          String    @id @default(cuid())
+  anonId      String    @default("")
+  name        String
+  note        String    @default("")
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+  approvedAt  DateTime?
+  approvedBy  String    @default("")
+
+  @@index([status, createdAt])
+}
+
 /// Opt-in desktop crash report. Self-hosted (no third-party subprocessor) —
 /// userId is optional and never required; no free-text PII fields exist here.
 model CrashReport {
