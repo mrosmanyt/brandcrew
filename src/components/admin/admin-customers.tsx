@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import {
   AdminConfirm,
   AdminPageFrame,
+  AdminPager,
   PlanSelect,
   UserActionList,
   WorkspaceActions,
@@ -31,16 +32,17 @@ export function AdminCustomers({
   const [query, setQuery] = useState(initialQuery);
   const [data, setData] = useState(initial);
 
-  async function load(nextQuery: string, userId?: string) {
+  async function load(nextQuery: string, userId?: string, page = 1) {
     const params = new URLSearchParams({ section: "customers" });
     if (nextQuery.trim()) params.set("q", nextQuery.trim());
     if (userId) params.set("userId", userId);
+    if (page > 1) params.set("page", String(page));
     const next = await fetchAdminJson<AdminCustomersPayload>(`/api/admin?${params}`);
     setData(next);
   }
 
   const { busy, setBusy, pending, setPending, runPending } = useAdminMutation(() =>
-    load(query, data.profile?.user.id),
+    load(query, data.profile?.user.id, data.pageInfo.page),
   );
 
   async function onSearch(e: React.FormEvent) {
@@ -53,6 +55,17 @@ export function AdminCustomers({
       router.replace(params.size ? `/admin/customers?${params}` : "/admin/customers");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Search failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPage(page: number) {
+    setBusy(true);
+    try {
+      await load(query, undefined, page);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load that page.");
     } finally {
       setBusy(false);
     }
@@ -84,13 +97,14 @@ export function AdminCustomers({
         <p className="mt-1 text-xs text-muted-foreground">
           {query.trim()
             ? "Email contains search against Postgres."
-            : "Latest 40 accounts. Search to narrow."}
+            : "Most recent accounts. Search to narrow."}
         </p>
         <UserActionList
           rows={data.results}
           onPending={setPending}
           empty={query.trim() ? "No users match that email." : "No users in Postgres yet."}
         />
+        <AdminPager pageInfo={data.pageInfo} onPage={onPage} disabled={busy} />
       </section>
 
       {data.profile ? <CustomerProfile profile={data.profile} busy={busy} onPending={setPending} /> : null}

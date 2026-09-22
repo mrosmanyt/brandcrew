@@ -30,16 +30,18 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const section = parseAdminSection(url.searchParams.get("section"));
     const q = url.searchParams.get("q");
+    const page = Number(url.searchParams.get("page") || "1") || 1;
     if (section === "customers") {
       return jsonOk(
         await getAdminCustomers({
           q,
           userId: url.searchParams.get("userId"),
+          page,
         }),
       );
     }
     if (section === "billing") {
-      return jsonOk(await getAdminBilling());
+      return jsonOk(await getAdminBilling({ page }));
     }
     if (section === "models") {
       return jsonOk(await getAdminModels());
@@ -63,6 +65,7 @@ export async function GET(request: Request) {
           action: url.searchParams.get("action"),
           actor: url.searchParams.get("actor"),
           q,
+          page,
         }),
       );
     }

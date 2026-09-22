@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminBackupButton } from "@/components/admin/admin-backup-button";
-import { AdminPageFrame, fetchAdminJson } from "@/components/admin/admin-shared";
+import { AdminPageFrame, AdminPager, fetchAdminJson } from "@/components/admin/admin-shared";
 
 const ACTION_FILTERS = [
   "",
@@ -29,17 +29,33 @@ export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
   const [q, setQ] = useState(initial.filters.q);
   const [busy, setBusy] = useState(false);
 
+  async function load(page = 1) {
+    const params = new URLSearchParams({ section: "audit" });
+    if (action) params.set("action", action);
+    if (actor.trim()) params.set("actor", actor.trim());
+    if (q.trim()) params.set("q", q.trim());
+    if (page > 1) params.set("page", String(page));
+    setData(await fetchAdminJson<AdminAuditPayload>(`/api/admin?${params}`));
+  }
+
   async function onFilter(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      const params = new URLSearchParams({ section: "audit" });
-      if (action) params.set("action", action);
-      if (actor.trim()) params.set("actor", actor.trim());
-      if (q.trim()) params.set("q", q.trim());
-      setData(await fetchAdminJson<AdminAuditPayload>(`/api/admin?${params}`));
+      await load(1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Filter failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPage(page: number) {
+    setBusy(true);
+    try {
+      await load(page);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load that page.");
     } finally {
       setBusy(false);
     }
@@ -151,6 +167,9 @@ export function AdminAudit({ initial }: { initial: AdminAuditPayload }) {
             ))
           )}
         </ul>
+        <div className="px-5 py-3">
+          <AdminPager pageInfo={data.pageInfo} onPage={onPage} disabled={busy} />
+        </div>
       </section>
     </AdminPageFrame>
   );

@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import type { AdminSignupRow, AdminWorkspaceRow } from "@/lib/admin";
+import type { AdminPageInfo, AdminSignupRow, AdminWorkspaceRow } from "@/lib/admin";
 import { planModeName } from "@/lib/agent-modes";
 import { PLANS, type PlanId } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,51 @@ export function Kpi({
       <p className="mt-1 text-2xl font-medium tracking-tight">{value}</p>
       {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
     </article>
+  );
+}
+
+/** "Showing 26-50 of 340" + Prev/Next — used by any list that paginates via AdminPageInfo. */
+export function AdminPager({
+  pageInfo,
+  onPage,
+  disabled,
+}: {
+  pageInfo: AdminPageInfo;
+  onPage: (page: number) => void;
+  disabled?: boolean;
+}) {
+  const { page, pageSize, total } = pageInfo;
+  if (total <= pageSize && page <= 1) return null;
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const hasPrev = page > 1;
+  const hasNext = page * pageSize < total;
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+      <span>
+        Showing {from}-{to} of {total.toLocaleString()}
+      </span>
+      <div className="flex gap-1">
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          disabled={disabled || !hasPrev}
+          onClick={() => onPage(page - 1)}
+        >
+          Prev
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          disabled={disabled || !hasNext}
+          onClick={() => onPage(page + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   );
 }
 

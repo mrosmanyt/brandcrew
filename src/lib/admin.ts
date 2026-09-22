@@ -232,15 +232,26 @@ export type AdminDashboard = {
   search: AdminSignupRow[] | null;
 };
 
+/** Page size is fixed (not client-chosen) so offset math stays simple and cheap. */
+export const ADMIN_PAGE_SIZE = 25;
+
+export type AdminPageInfo = {
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 export type AdminCustomersPayload = {
   section: "customers";
   results: AdminSignupRow[];
   profile: AdminCustomer360 | null;
+  pageInfo: AdminPageInfo;
 };
 
 export type AdminBillingPayload = {
   section: "billing";
   paid: AdminWorkspaceRow[];
+  paidPageInfo: AdminPageInfo;
   credits: null;
   creditsNote: string;
   supports: AdminBillingEventRow[];
@@ -290,6 +301,7 @@ export type AdminAuditPayload = {
   section: "audit";
   rows: AdminAuditRow[];
   filters: { action: string; actor: string; q: string };
+  pageInfo: AdminPageInfo;
 };
 
 export type AdminTrustPayload = {
@@ -1057,13 +1069,18 @@ async function loadCustomer360(userId: string): Promise<AdminCustomer360 | null>
 export async function getAdminCustomers(input: {
   q?: string | null;
   userId?: string | null;
+  page?: number;
 }): Promise<AdminCustomersPayload> {
   const q = input.q?.trim() || "";
   const userId = input.userId?.trim() || "";
-  const results = (
-    await prisma.user.findMany({
-      where: q ? { email: { contains: q, mode: "insensitive" } } : undefined,
-      take: q ? 25 : 40,
+  const page = Math.max(1, Math.trunc(input.page || 1));
+  const where = q ? { email: { contains: q, mode: "insensitive" as const } } : undefined;
+
+  const [rows, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      take: ADMIN_PAGE_SIZE,
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
       orderBy: { createdAt: "desc" },
       include: {
         memberships: {
@@ -1074,26 +1091,37 @@ export async function getAdminCustomers(input: {
           },
         },
       },
-    })
-  ).map(serializeSignup);
+    }),
+    prisma.user.count({ where }),
+  ]);
+  const results = rows.map(serializeSignup);
 
   let profile: AdminCustomer360 | null = null;
   if (userId) {
     profile = await loadCustomer360(userId);
-  } else if (results.length === 1) {
+  } else if (results.length === 1 && total === 1) {
     profile = await loadCustomer360(results[0].id);
   }
-  return { section: "customers", results, profile };
+  return {
+    section: "customers",
+    results,
+    profile,
+    pageInfo: { page, pageSize: ADMIN_PAGE_SIZE, total },
+  };
 }
 
-export async function getAdminBilling(): Promise<AdminBillingPayload> {
-  const [paid, supports, webhooks] = await Promise.all([
+export async function getAdminBilling(input: { page?: number } = {}): Promise<AdminBillingPayload> {
+  const page = Math.max(1, Math.trunc(input.page || 1));
+  const paidWhere = { plan: { not: "demo" } };
+  const [paid, paidTotal, supports, webhooks] = await Promise.all([
     prisma.workspace.findMany({
-      where: { plan: { not: "demo" } },
+      where: paidWhere,
       orderBy: { updatedAt: "desc" },
-      take: 80,
+      take: ADMIN_PAGE_SIZE,
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
       include: workspaceListInclude,
     }),
+    prisma.workspace.count({ where: paidWhere }),
     prisma.brandSupport.findMany({
       orderBy: { createdAt: "desc" },
       take: 40,
@@ -1122,6 +1150,7 @@ export async function getAdminBilling(): Promise<AdminBillingPayload> {
   return {
     section: "billing",
     paid: paid.map(serializeWorkspaceRow),
+    paidPageInfo: { page, pageSize: ADMIN_PAGE_SIZE, total: paidTotal },
     credits: null,
     creditsNote:
       "No credits column exists on Workspace. Credits are token budget 1:1. This page does not invent a balance.",
@@ -1222,31 +1251,39 @@ export async function getAdminAudit(input: {
   action?: string | null;
   actor?: string | null;
   q?: string | null;
+  page?: number;
 }): Promise<AdminAuditPayload> {
   const action = input.action?.trim() || "";
   const actor = input.actor?.trim() || "";
   const q = input.q?.trim() || "";
-  const rows = await prisma.adminAuditLog.findMany({
-    where: {
-      ...(action ? { action } : {}),
-      ...(actor ? { actorEmail: { contains: actor, mode: "insensitive" } } : {}),
-      ...(q
-        ? {
-            OR: [
-              { targetId: { contains: q, mode: "insensitive" } },
-              { meta: { contains: q, mode: "insensitive" } },
-              { action: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 80,
-  });
+  const page = Math.max(1, Math.trunc(input.page || 1));
+  const where = {
+    ...(action ? { action } : {}),
+    ...(actor ? { actorEmail: { contains: actor, mode: "insensitive" as const } } : {}),
+    ...(q
+      ? {
+          OR: [
+            { targetId: { contains: q, mode: "insensitive" as const } },
+            { meta: { contains: q, mode: "insensitive" as const } },
+            { action: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+  const [rows, total] = await Promise.all([
+    prisma.adminAuditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: ADMIN_PAGE_SIZE,
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+    }),
+    prisma.adminAuditLog.count({ where }),
+  ]);
   return {
     section: "audit",
     rows: rows.map(serializeAudit),
     filters: { action, actor, q },
+    pageInfo: { page, pageSize: ADMIN_PAGE_SIZE, total },
   };
 }
 

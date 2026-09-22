@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import type { AdminBillingEventRow, AdminBillingPayload } from "@/lib/admin";
 import { AdminBackupButton } from "@/components/admin/admin-backup-button";
 import {
   AdminConfirm,
   AdminPageFrame,
+  AdminPager,
   WorkspaceTable,
   fetchAdminJson,
   useAdminMutation,
@@ -14,11 +16,21 @@ import {
 export function AdminBilling({ initial }: { initial: AdminBillingPayload }) {
   const [data, setData] = useState(initial);
 
-  async function refresh() {
-    setData(await fetchAdminJson<AdminBillingPayload>("/api/admin?section=billing"));
+  async function load(page = data.paidPageInfo.page) {
+    const params = new URLSearchParams({ section: "billing" });
+    if (page > 1) params.set("page", String(page));
+    setData(await fetchAdminJson<AdminBillingPayload>(`/api/admin?${params}`));
   }
 
-  const { busy, pending, setPending, runPending } = useAdminMutation(refresh);
+  const { busy, pending, setPending, runPending } = useAdminMutation(() => load());
+
+  async function onPage(page: number) {
+    try {
+      await load(page);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load that page.");
+    }
+  }
 
   return (
     <AdminPageFrame
@@ -31,7 +43,7 @@ export function AdminBilling({ initial }: { initial: AdminBillingPayload }) {
         <div className="border-b border-border px-5 py-4">
           <h2 className="text-sm font-medium">Paid workspaces</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {data.paid.length} row{data.paid.length === 1 ? "" : "s"} · {data.creditsNote}
+            {data.paidPageInfo.total.toLocaleString()} total · {data.creditsNote}
           </p>
         </div>
         <WorkspaceTable
@@ -40,6 +52,9 @@ export function AdminBilling({ initial }: { initial: AdminBillingPayload }) {
           empty="No paid workspaces in Postgres."
           onPending={setPending}
         />
+        <div className="px-5 pb-4">
+          <AdminPager pageInfo={data.paidPageInfo} onPage={onPage} disabled={busy} />
+        </div>
       </section>
 
       <BillingEventTable
