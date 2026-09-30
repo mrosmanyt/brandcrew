@@ -28,6 +28,7 @@ const {
   CHROME_HEIGHT,
   ASSISTANT_PING,
   normalizeMode,
+  hasExplicitStartMode,
   parseStartMode,
   modeFromProtocolUrl,
   assistantDevOrigin,
@@ -995,14 +996,12 @@ async function boot() {
   }
 
   await restoreCloudSession();
-  let startMode = parseStartMode(process.argv, process.env);
-  if (startMode !== "both") {
-    const saved = readPreferredMode();
-    if (saved && !process.argv.some((a) => a.startsWith("--mode="))) {
-      startMode = saved;
-    } else if (!saved && packaged()) {
-      startMode = await showFirstLaunchChooser();
-    }
+  // CINEM Pro opens the desk. Assistant is a menu item (--mode=assistant,
+  // Start Menu shortcut, or CINEM Pro → AI Assistant), not the default surface.
+  // A saved assistant preference must not replace the desk launch.
+  let startMode = "desk";
+  if (hasExplicitStartMode(process.argv, process.env)) {
+    startMode = parseStartMode(process.argv, process.env);
   }
   if (startMode === "both") {
     createShellWindow("desk");
@@ -1017,17 +1016,22 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on("second-instance", (_event, argv) => {
+    const focusShell = (entry) => {
+      if (!entry || entry.win.isDestroyed()) return;
+      if (entry.win.isMinimized()) entry.win.restore();
+      entry.win.focus();
+    };
     const proto = argv.find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}:`));
-    if (proto) handleProtocolUrl(proto);
-    const mode = parseStartMode(argv, {});
-    if (mode === "assistant" || mode === "both") {
-      void showMode(mode);
+    if (proto) {
+      handleProtocolUrl(proto);
+      focusShell(firstShell());
+      return;
     }
-    const focused = firstShell();
-    if (focused) {
-      if (focused.win.isMinimized()) focused.win.restore();
-      focused.win.focus();
-    }
+    const mode = hasExplicitStartMode(argv, {}) ? parseStartMode(argv, {}) : "desk";
+    void showMode(mode).then(() => {
+      const focusMode = mode === "assistant" ? "assistant" : "desk";
+      focusShell(findShellByMode(focusMode) || firstShell());
+    });
   });
 
 function installAppMenu() {

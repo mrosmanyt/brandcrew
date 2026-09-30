@@ -23,6 +23,13 @@ function normalizeMode(raw) {
   return DEFAULT_MODE;
 }
 
+function hasExplicitStartMode(argv = [], env = process.env) {
+  if (argv.some((arg) => typeof arg === "string" && arg.startsWith("--mode="))) return true;
+  if (argv.includes("--mode")) return true;
+  if (env && (env.CINEM_START_MODE || env.CINEM_DESKTOP_MODE)) return true;
+  return false;
+}
+
 function parseStartMode(argv = [], env = process.env) {
   const eq = argv.find((arg) => typeof arg === "string" && arg.startsWith("--mode="));
   if (eq) return normalizeMode(eq.slice("--mode=".length));
@@ -90,6 +97,7 @@ module.exports = {
   ASSISTANT_PING,
   SHELL_NAME,
   normalizeMode,
+  hasExplicitStartMode,
   parseStartMode,
   modeFromProtocolUrl,
   assistantDevOrigin,

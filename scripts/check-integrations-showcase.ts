@@ -99,9 +99,10 @@ assert.match(pricing, /Checkout uses Whop/);
 console.log("ok: pricing still includes Ultra and footer links Connectors");
 
 const nav = readFileSync("src/components/marketing/site-nav.tsx", "utf8");
-assert.match(nav, /label: "Cinem Pro"/);
-assert.match(nav, /\/cinem-ai-assistant\/billing/);
-console.log("ok: site nav links Cinem Pro and assistant pricing");
+assert.match(nav, /\/about#integrations/);
+assert.match(nav, /href: "\/cinem-ai-assistant", label: "Assistant"/);
+assert.doesNotMatch(nav, /href: "\/", label: "Assistant"/);
+console.log("ok: site nav links to connectors; Assistant is a menu item");
 
 const css = readFileSync("src/app/globals.css", "utf8");
 assert.match(css, /\.integrations-cloud/);
