@@ -226,6 +226,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
 
 const modes = require("../electron/modes.cjs") as {
   normalizeMode: (raw: string) => string;
+  hasExplicitStartMode: (argv?: string[], env?: NodeJS.ProcessEnv) => boolean;
   parseStartMode: (argv?: string[], env?: NodeJS.ProcessEnv) => string;
   modeFromProtocolUrl: (raw: string) => string | null;
   assistantDevOrigin: (env?: NodeJS.ProcessEnv) => string;
@@ -233,8 +234,16 @@ const modes = require("../electron/modes.cjs") as {
   ASSISTANT_PING: string;
 };
 assert.equal(modes.normalizeMode("ai"), "assistant");
+assert.equal(modes.parseStartMode([], {}), "desk");
+assert.equal(modes.hasExplicitStartMode([], {}), false);
+assert.equal(modes.hasExplicitStartMode(["--mode=assistant"], {}), true);
+assert.equal(modes.hasExplicitStartMode(["--mode", "desk"], {}), true);
+assert.equal(modes.hasExplicitStartMode([], { CINEM_START_MODE: "assistant" }), true);
 assert.equal(modes.parseStartMode(["--mode=assistant"], {}), "assistant");
 assert.equal(modes.parseStartMode([], { CINEM_START_MODE: "both" }), "both");
+assert.match(main, /hasExplicitStartMode/);
+assert.match(main, /startMode = "desk"/);
+assert.doesNotMatch(main, /await showFirstLaunchChooser\(/);
 assert.equal(modes.modeFromProtocolUrl("cinem-pro://assistant"), "assistant");
 assert.equal(modes.modeFromProtocolUrl("cinem-pro://desk"), "desk");
 assert.equal(modes.assistantDevOrigin({}), "http://127.0.0.1:1420");

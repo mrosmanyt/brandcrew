@@ -35,6 +35,9 @@ assert.match(composer, /buildLocked/);
 const sidebar = readFileSync("src/components/desk/sidebar.tsx", "utf8");
 assert.match(sidebar, /BuildSidebarSection/);
 
+const home = readFileSync("src/app/page.tsx", "utf8");
+assert.match(home, /GuestChatHome/);
+assert.doesNotMatch(home, /AssistantMarketingMain/);
 const chat = readFileSync("src/app/chat/page.tsx", "utf8");
 assert.match(chat, /GuestChatHome/);
 

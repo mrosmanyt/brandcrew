@@ -68,11 +68,11 @@ const BUILD_ICONS = {
 } as const;
 
 const TOP_NAV = [
-  { href: "/", label: "Assistant" },
-  { href: "/cinem-ai-assistant/billing", label: "Pricing" },
-  { href: "/about", label: "Cinem Pro" },
+  { href: "/about#features", label: "Features" },
+  { href: "/about#pricing", label: "Pricing" },
+  { href: "/cinem-ai-assistant", label: "Assistant" },
   { href: "/download", label: "Download" },
-  { href: "/login", label: "Login" },
+  { href: "/about", label: "About" },
 ] as const;
 
 function loadGuestKey(): string {
@@ -233,8 +233,8 @@ export function GuestChatHome() {
                   What can I help with?
                 </h1>
                 <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                  Try Cinem Pro cloud chat — multi-model answers on the web. Sign in for the full
-                  desk, agents, and approvals.
+                  Ask anything — CINEM Pro answers instantly. Sign in for the full desk, agents,
+                  and approvals.
                 </p>
               </div>
             ) : (
