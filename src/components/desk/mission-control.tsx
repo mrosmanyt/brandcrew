@@ -285,25 +285,32 @@ export function MissionControl({
   }, [threadKey, messages.length]);
 
   useEffect(() => {
-    setAgents(initialAgents);
+    const timer = window.setTimeout(() => setAgents(initialAgents), 0);
+    return () => window.clearTimeout(timer);
   }, [agentRosterKey]);
 
   useEffect(() => {
     if (
-      urlAgentId &&
-      agents.some((agent) => agent.id === urlAgentId) &&
-      urlAgentId !== selectedId
+      !urlAgentId ||
+      !agents.some((agent) => agent.id === urlAgentId) ||
+      urlAgentId === selectedId
     ) {
-      setSelectedId(urlAgentId);
+      return;
     }
+    const timer = window.setTimeout(() => setSelectedId(urlAgentId), 0);
+    return () => window.clearTimeout(timer);
   }, [urlAgentId, agents, selectedId]);
 
   useEffect(() => {
-    if (selected) {
-      setRenameValue(displayAgentName(selected.name));
+    if (!selected) return;
+    const agentId = selected.id;
+    const agentName = selected.name;
+    const timer = window.setTimeout(() => {
+      setRenameValue(displayAgentName(agentName));
       setRenaming(false);
-      void refreshChat(selected.id);
-    }
+      void refreshChat(agentId);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [selected?.id, refreshChat]);
 
   useEffect(() => {

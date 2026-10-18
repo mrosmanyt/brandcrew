@@ -52,14 +52,20 @@ export function WhatsAppCta() {
 
   return (
     <div className="space-y-3">
-      <Button type="button" variant="secondary" onClick={openWhatsApp}>
-        Talk to sales on WhatsApp
-      </Button>
-      {!number ? (
-        <p className="text-xs text-muted-foreground">
-          (WhatsApp number not configured yet — set NEXT_PUBLIC_WHATSAPP_NUMBER.)
-        </p>
-      ) : null}
+      {number ? (
+        <Button type="button" variant="secondary" onClick={openWhatsApp}>
+          Talk to sales on WhatsApp
+        </Button>
+      ) : (
+        <a
+          href="https://instagram.com/cinem.tech"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium text-foreground underline underline-offset-4"
+        >
+          Instagram
+        </a>
+      )}
       {open ? (
         <form onSubmit={submitRequest} className="grid gap-2 sm:grid-cols-3">
           <Input

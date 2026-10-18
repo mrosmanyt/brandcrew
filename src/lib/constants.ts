@@ -13,10 +13,10 @@ export const PLANS = {
     name: "Free",
     price: 0,
     seats: 1,
-    tokenBudget: 15_000,
+    tokenBudget: 40_000,
     /** Cheap-model desk Q&A only — not playbook jobs. Generous enough for a long chat. */
-    chatTokenBudget: 500_000,
-    jobsPerHour: 4,
+    chatTokenBudget: 2_000_000,
+    jobsPerHour: 6,
     maxConcurrentJobs: 1,
   },
   starter: {

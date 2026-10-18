@@ -36,6 +36,7 @@ function SignupForm() {
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,12 +65,46 @@ function SignupForm() {
       setError(data.error || "Could not create the account.");
       return;
     }
+    if (data.needsEmailConfirmation) {
+      setConfirmEmail(email.trim());
+      return;
+    }
     if (data.workspaceId && data.joinedViaInvite) {
       router.push(`/desk/${data.workspaceId}`);
     } else {
       router.push(safeNextPath(next, "/onboarding"));
     }
     router.refresh();
+  }
+
+  if (confirmEmail) {
+    return (
+      <MarketingShell>
+        <div className="flex flex-1 flex-col">
+          <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
+            <Link href="/">
+              <BrandMark priority />
+            </Link>
+            <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login" />}>
+              Sign in
+            </Button>
+          </header>
+          <div className="flex flex-1 flex-col items-center justify-center px-6 pb-24">
+            <div className="w-full max-w-sm">
+              <CinemLogoImage alt="CINEM" className="mb-6 size-12" priority />
+              <h1 className="font-heading text-3xl tracking-tight">Check your email</h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                Check your email to confirm, then sign in. We sent a confirmation
+                link to {confirmEmail}. The link opens onboarding after you confirm.
+              </p>
+              <Button className="mt-8 w-full" nativeButton={false} render={<Link href="/login" />}>
+                Sign in
+              </Button>
+            </div>
+          </div>
+        </div>
+      </MarketingShell>
+    );
   }
 
   return (
@@ -89,9 +124,8 @@ function SignupForm() {
             <h1 className="font-heading text-3xl tracking-tight">Get started</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               We create a free workspace with the Northline Studio Brand Kit so you
-              can open Mission Control, create agents, and give a real job. Prefer
-              Continue with Google — Google already verifies your email. Email/password
-              does not send a confirmation mail (no mailer in this stack).
+              can open Mission Control, create agents, and give a real job. If email
+              confirmation is required, check your inbox and then sign in.
             </p>
             {inviteToken ? (
               <p className="mt-3 text-sm text-muted-foreground">

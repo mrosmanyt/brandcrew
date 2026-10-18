@@ -100,8 +100,8 @@ console.log("ok: favicon SVG + PNG logo + OG + apple-icon files exist; login + n
 
 const footer = readFileSync("src/components/marketing/home-sections.tsx", "utf8");
 assert.match(footer, /href: "\/privacy"/);
-assert.match(footer, /href: "\/support"/);
-assert.match(footer, /label: "Support"/);
+assert.doesNotMatch(footer, /href: "\/support"/);
+assert.doesNotMatch(footer, /\$99,999/);
 assert.match(footer, /href: "\/terms"/);
 assert.match(footer, /label: "Privacy"/);
 assert.match(footer, /label: "Terms"/);
@@ -279,7 +279,7 @@ async function main() {
   assert.ok(urls.some((url) => url.includes("/terms")));
   assert.ok(urls.some((url) => url.includes("/download")));
   assert.ok(urls.some((url) => url.includes("/cinem-ai-assistant")));
-  assert.ok(urls.some((url) => url.includes("/support")));
+  assert.ok(!urls.some((url) => url.includes("/support")));
   assert.ok(!urls.some((url) => url.includes("/security")));
   const nextConfigSrc = readFileSync("next.config.ts", "utf8");
   assert.match(nextConfigSrc, /source: "\/security"/);
@@ -398,8 +398,10 @@ async function main() {
   assert.match(googleCallback, /email_unverified/);
   assert.match(googleCallback, /!profile\.emailVerified/);
   const signupScreen = readFileSync("src/app/signup/signup-screen.tsx", "utf8");
-  assert.match(signupScreen, /Google already verifies/);
-  console.log("ok: Google OpenID requires email_verified === true; password path is documented");
+  assert.match(signupScreen, /needsEmailConfirmation/);
+  assert.match(signupScreen, /Check your email to confirm, then sign in/);
+  assert.doesNotMatch(signupScreen, /does not send a confirmation/);
+  console.log("ok: Google OpenID requires email_verified === true; signup waits on email confirmation");
 
   const authSrc = readFileSync("src/lib/auth.ts", "utf8");
   assert.match(authSrc, /httpOnly: true/);

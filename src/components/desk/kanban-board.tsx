@@ -33,9 +33,12 @@ export function KanbanBoard({
   }
 
   useEffect(() => {
-    load()
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      load()
+        .catch((err: Error) => setError(err.message))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 

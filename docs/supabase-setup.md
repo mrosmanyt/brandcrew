@@ -44,7 +44,7 @@ DIRECT_URL="postgresql://postgres:[PASSWORD]@db.viejyuiiyjmhxfhyuvpa.supabase.co
    - `http://127.0.0.1:43180/auth/callback`
    - `https://brandcrew.vercel.app/auth/callback` (preview)
 
-CINEM Pro does **not** fake Connected — if Google is disabled in Supabase, “Continue with Google” shows an honest setup hint.
+CINEM Pro does **not** fake Connected — if Google is disabled in Supabase (`/auth/v1/settings` `external.google` is false), the button shows “Google sign-in coming soon” and does not send people to the provider’s 400 page.
 
 ### 3. Database migrations (order matters)
 

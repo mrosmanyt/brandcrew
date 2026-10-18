@@ -167,7 +167,7 @@ export function SettingsHub({
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Account and workspace. Marketplace, Client desks, Calendar, Ops, Trust,
         and On-device Chrome live here in categories — the sidebar stays on
-        Mission Control, API Console, Usage, Plans, and Support.
+        Mission Control, API Console, Usage, and Plans.
       </p>
 
       <section className="mt-8 rounded-2xl border border-border bg-card p-5">

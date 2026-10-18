@@ -117,7 +117,7 @@ assert.ok(categories.find((category) => category.id === "desk-tools")?.links.som
 
 const links = settingsDeskLinks("ws_1");
 const labels = links.map((link) => link.label);
-const required = ["Plugins", "Bots", "Marketplace", "Plans", "Support", "On-device Chrome", "Client desks", "Trust & audit", "Brand Kit", "API Console", "Calendar", "Ops board"] as const;
+const required = ["Plugins", "Bots", "Marketplace", "Plans", "On-device Chrome", "Client desks", "Trust & audit", "Brand Kit", "API Console", "Calendar", "Ops board"] as const;
 for (const label of required) {
   assert.equal(labels.includes(label), true, `missing ${label}`);
 }
@@ -139,7 +139,7 @@ assert.match(sidebar, /Mission Control/);
 assert.match(sidebar, /API Console/);
 assert.match(sidebar, /Usage/);
 assert.match(sidebar, /Plans/);
-assert.match(sidebar, /Support/);
+assert.doesNotMatch(sidebar, /href="\/support"/);
 assert.doesNotMatch(sidebar, /\/marketplace/);
 assert.doesNotMatch(sidebar, /\/clients/);
 assert.doesNotMatch(sidebar, /\/trust/);

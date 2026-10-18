@@ -73,13 +73,17 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
   }, [provider]);
 
   useEffect(() => {
-    void loadStatus();
+    const timer = window.setTimeout(() => {
+      void loadStatus();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadStatus]);
 
   useEffect(() => {
-    if (activeProviderMeta?.defaultModel && !model) {
-      setModel(activeProviderMeta.defaultModel);
-    }
+    const nextModel = activeProviderMeta?.defaultModel;
+    if (!nextModel || model) return;
+    const timer = window.setTimeout(() => setModel(nextModel), 0);
+    return () => window.clearTimeout(timer);
   }, [activeProviderMeta, model]);
 
   const generate = async () => {

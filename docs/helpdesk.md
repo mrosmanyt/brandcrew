@@ -1,6 +1,6 @@
 # CINEM Pro Help / Team Support
 
-Product helpdesk — not the `/support` Whop tip page.
+Product helpdesk — not the `/support` Whop tip page. That Whop Support product is not shown in the app.
 
 ## For customers
 
@@ -13,7 +13,7 @@ Customers always see **Online — ask anything**. The widget never says the team
 3. Replies from Admin HQ appear in the same panel.
 4. **Request live chat** flags the thread for a teammate. Founder heartbeat on Admin → Support (90s) still gates live join behind the scenes — the customer copy does not say offline.
 
-Sidebar **Support** and Settings → Support remain the one-time tip checkout. The widget copy points at `/support` so the two do not collide.
+Sidebar and Settings do not link to a tip checkout. Product questions stay in this Help widget.
 
 ## For the founder
 

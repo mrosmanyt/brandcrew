@@ -55,11 +55,17 @@ export function ScheduleJobs({
   }
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspaceId]);
 
   useEffect(() => {
-    if (!agentId && agents[0]) setAgentId(agents[0].id);
+    const firstId = agents[0]?.id;
+    if (agentId || !firstId) return;
+    const timer = window.setTimeout(() => setAgentId(firstId), 0);
+    return () => window.clearTimeout(timer);
   }, [agents, agentId]);
 
   async function create(e: React.FormEvent) {

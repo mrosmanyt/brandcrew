@@ -21,7 +21,10 @@ export function LearningMemoryPanel({ workspaceId }: { workspaceId: string }) {
   }
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspaceId]);
 
   async function add(e: React.FormEvent) {

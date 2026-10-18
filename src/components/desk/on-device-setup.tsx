@@ -33,13 +33,16 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
   }
 
   useEffect(() => {
-    void load();
+    const first = window.setTimeout(() => {
+      void load();
+    }, 0);
     const tick = () => {
       if (document.visibilityState === "visible") void load();
     };
     const timer = window.setInterval(tick, 10_000);
     document.addEventListener("visibilitychange", tick);
     return () => {
+      window.clearTimeout(first);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", tick);
     };
@@ -124,7 +127,7 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
             Chrome Web Store
           </Button>
         ) : (
-          <Button type="button" variant="outline" nativeButton={false} render={<a href="/api/downloads/extension" />}>
+          <Button type="button" variant="outline" nativeButton={false} render={<a href="/api/downloads/extension" download="cinem-pro-chrome.zip" />}>
             Alternate download
           </Button>
         )}

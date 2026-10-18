@@ -1,23 +1,23 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { authHrefWithNext, workspaceBillingHref } from "@/lib/billing-ui";
+import {
+  authHrefWithNext,
+  checkoutPlanFromQuery,
+  workspaceBillingHref,
+} from "@/lib/billing-ui";
 import {
   assistantBillingPath,
   parseAssistantBillingPlanId,
 } from "@/lib/cinem-ai-assistant-billing";
-import {
-  assistantCheckoutPlanFromQuery,
-  cinemAiAssistantUpgradeUrl,
-  isCinemAiAssistantProduct,
-} from "@/lib/cinem-ai-assistant";
+import { isCinemAiAssistantProduct } from "@/lib/cinem-ai-assistant";
 import { createDemoWorkspace, listUserWorkspaces, withMemberRole } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Billing deep links.
- * Assistant product → standalone /cinem-ai-assistant/billing (separate from desk plans).
- * Legacy desk plan query params still redirect to workspace billing when product is absent.
+ * Assistant product (`cinem-ai-assistant` or `assistant`) → standalone assistant billing.
+ * An empty product is desk billing, including bare /billing.
  */
 export default async function BillingDeepLinkPage({
   searchParams,
@@ -26,11 +26,10 @@ export default async function BillingDeepLinkPage({
 }) {
   const query = await searchParams;
   const product = query.product?.trim() || "";
-  const assistantPlan = parseAssistantBillingPlanId(query.plan);
-  const isAssistant = isCinemAiAssistantProduct(product) || Boolean(assistantPlan);
+  const isAssistant = isCinemAiAssistantProduct(product);
 
   if (isAssistant) {
-    const plan = assistantPlan || "monthly";
+    const plan = parseAssistantBillingPlanId(query.plan) || "monthly";
     const selfPath = assistantBillingPath(plan);
     const user = await getCurrentUser();
     if (!user) {
@@ -39,9 +38,8 @@ export default async function BillingDeepLinkPage({
     redirect(selfPath);
   }
 
-  const checkoutPlan =
-    assistantCheckoutPlanFromQuery(query.plan, product) || "starter";
-  const selfPath = cinemAiAssistantUpgradeUrl(undefined, query.plan?.trim() || "pro");
+  const checkoutPlan = checkoutPlanFromQuery(query.plan) || "starter";
+  const selfPath = `/billing?plan=${checkoutPlan}`;
 
   const user = await getCurrentUser();
   if (!user) {

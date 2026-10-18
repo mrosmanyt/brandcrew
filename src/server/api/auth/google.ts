@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     (request.headers.get("accept") || "").includes("application/json");
 
   if (isSupabaseAuthEnabled()) {
-    const status = supabaseGooglePublicStatus();
+    const status = await supabaseGooglePublicStatus();
     if (wantsJson && url.searchParams.get("start") !== "1") {
       return NextResponse.json(status);
     }

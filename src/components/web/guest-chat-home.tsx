@@ -113,14 +113,17 @@ export function GuestChatHome() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    setGuestKey(loadGuestKey());
-    setModelRouting(loadModelRouting());
-    void fetch("/api/guest/chat")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.llm) setLlm(data.llm);
-      })
-      .catch(() => undefined);
+    const timer = window.setTimeout(() => {
+      setGuestKey(loadGuestKey());
+      setModelRouting(loadModelRouting());
+      void fetch("/api/guest/chat")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.llm) setLlm(data.llm);
+        })
+        .catch(() => undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

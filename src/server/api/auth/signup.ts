@@ -10,6 +10,7 @@ import { assertPasswordAllowed } from "@/lib/password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/password-rules";
 import { claimFoundingMember, foundingSpotsSnapshot } from "@/lib/founding-members";
 import { redeemReferralOnSignup, referralStats } from "@/lib/referral-invites";
+import { appOrigin } from "@/lib/crypto-secret";
 import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureAppUser } from "@/lib/supabase/ensure-app-user";
@@ -137,11 +138,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const emailRedirectTo = new URL("/auth/callback", `${appOrigin()}/`);
+    emailRedirectTo.searchParams.set("next", "/onboarding");
     const { data, error } = await supabase.auth.signUp({
       email,
       password: body.password,
       options: {
         data: { name: body.name.trim() },
+        emailRedirectTo: emailRedirectTo.toString(),
       },
     });
     if (error) {

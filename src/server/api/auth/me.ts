@@ -24,7 +24,7 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     const googleLogin = isSupabaseAuthEnabled()
-      ? supabaseGooglePublicStatus()
+      ? await supabaseGooglePublicStatus()
       : googleLoginPublicStatus();
     if (!user) {
       return withNativeCors(jsonOk({ user: null, workspaces: [], googleLogin }));
