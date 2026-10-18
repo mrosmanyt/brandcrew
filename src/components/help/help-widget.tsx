@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Loader2, Send, X } from "lucide-react";
 import { CinemHelpMark } from "@/components/help/help-mark";
@@ -153,16 +152,22 @@ export function HelpWidget() {
   }, [applyPayload]);
 
   useEffect(() => {
-    refresh().catch(() => undefined);
+    const timer = window.setTimeout(() => {
+      refresh().catch(() => undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   useEffect(() => {
     if (!open) return;
-    setUnread(false);
+    const clearUnread = window.setTimeout(() => setUnread(false), 0);
     const tick = window.setInterval(() => {
       refresh().catch(() => undefined);
     }, thread?.liveActive ? 3000 : 6000);
-    return () => window.clearInterval(tick);
+    return () => {
+      window.clearTimeout(clearUnread);
+      window.clearInterval(tick);
+    };
   }, [open, refresh, thread?.liveActive]);
 
   useEffect(() => {
@@ -238,11 +243,7 @@ export function HelpWidget() {
               <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
                 CINEM Help is online. Ask about download, plans, sign-in, or a
                 product issue — I’ll answer here. Bigger account or billing
-                problems get escalated to the team. Not the{" "}
-                <Link href="/support" className="underline underline-offset-2">
-                  Support tip page
-                </Link>
-                .
+                problems get escalated to the team.
               </p>
             ) : (
               thread.messages.map((row) => (

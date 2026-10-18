@@ -48,6 +48,9 @@ export function googleAuthErrorMessage(code: string | null, hint?: string | null
     return hint || "That Google account does not match the invite email.";
   }
   if (code === "invalid_state") return "Google sign-in expired. Try Continue with Google again.";
+  if (code === "confirm_failed") {
+    return hint || "Could not confirm that email. Open the link again, then sign in.";
+  }
   return hint || "Google sign-in failed. Check the redirect URI in Google Cloud and try again.";
 }
 

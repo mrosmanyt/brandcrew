@@ -67,7 +67,7 @@ model Workspace {
   slug               String            @unique
   plan               String            @default("demo")
   tokenUsed          Int               @default(0)
-  tokenBudget        Int               @default(15000)
+  tokenBudget        Int               @default(40000)
   /// Cheap-model desk Q&A on Free/Pro. Separate from playbook job tokenUsed.
   chatTokenUsed      Int               @default(0)
   brandKit           String            @default("{}")

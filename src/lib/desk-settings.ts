@@ -88,7 +88,7 @@ export function settingsDeskCategories(workspaceId: string): SettingsDeskCategor
     {
       id: "billing",
       title: "Billing & help",
-      hint: "Also on the primary sidebar: usage, plans, support, and the API console.",
+      hint: "Also on the primary sidebar: usage, plans, and the API console.",
       links: [
         {
           href: `/desk/${workspaceId}/usage`,
@@ -99,11 +99,6 @@ export function settingsDeskCategories(workspaceId: string): SettingsDeskCategor
           href: `/desk/${workspaceId}/billing`,
           label: "Plans",
           hint: "Pro $20, Pro Plus $79, and Ultra $200. Caps are enforced. Model keys stay on the server.",
-        },
-        {
-          href: `/support`,
-          label: "Support",
-          hint: "One-time $1–$99,999 via Whop. Does not change the workspace plan. Product issues use the Help button (lower right), not this tip page.",
         },
         {
           href: `/console?workspace=${workspaceId}`,

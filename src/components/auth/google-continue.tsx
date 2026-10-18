@@ -91,7 +91,6 @@ function GoogleMark() {
 
 type GoogleStatus = {
   ready: boolean;
-  setupHint: string;
 };
 
 export function GoogleContinueButton({
@@ -109,7 +108,8 @@ export function GoogleContinueButton({
   const [desktop, setDesktop] = useState(false);
 
   useEffect(() => {
-    setDesktop(isCinemDesktopShell());
+    const timer = window.setTimeout(() => setDesktop(isCinemDesktopShell()), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -117,22 +117,11 @@ export function GoogleContinueButton({
     let cancelled = false;
     fetch("/api/auth/google?format=json")
       .then((res) => res.json())
-      .then((data: GoogleStatus & { error?: string }) => {
-        if (!cancelled) {
-          setStatus({
-            ready: Boolean(data.ready),
-            setupHint: data.setupHint || data.error || "",
-          });
-        }
+      .then((data: GoogleStatus) => {
+        if (!cancelled) setStatus({ ready: Boolean(data.ready) });
       })
       .catch(() => {
-        if (!cancelled) {
-          setStatus({
-            ready: false,
-            setupHint:
-              "Could not check Google sign-in. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
-          });
-        }
+        if (!cancelled) setStatus({ ready: false });
       });
     return () => {
       cancelled = true;
@@ -140,6 +129,14 @@ export function GoogleContinueButton({
   }, [desktop]);
 
   if (desktop) return <DesktopCinemSignIn />;
+
+  if (!status?.ready) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {status ? "Google sign-in coming soon" : "\u00a0"}
+      </p>
+    );
+  }
 
   const href = googleLoginStartHref({ intent, next, invite, ref: refCode });
 
@@ -154,9 +151,6 @@ export function GoogleContinueButton({
         <GoogleMark />
         Continue with Google
       </Button>
-      {status && !status.ready ? (
-        <p className="text-xs leading-5 text-muted-foreground">{status.setupHint}</p>
-      ) : null}
     </div>
   );
 }

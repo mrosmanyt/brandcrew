@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   CreditCard,
-  Heart,
   LayoutGrid,
   LogOut,
   Menu,
@@ -396,14 +395,6 @@ function NavBody({
               icon={<CreditCard className="size-3.5" />}
             >
               Plans
-            </SideLink>
-            <SideLink
-              href="/support"
-              pathname={pathname}
-              collapsed={collapsed}
-              icon={<Heart className="size-3.5" />}
-            >
-              Support
             </SideLink>
             <SideLink
               href={`/desk/${workspace.id}/settings`}

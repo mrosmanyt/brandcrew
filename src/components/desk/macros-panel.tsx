@@ -35,7 +35,10 @@ export function MacrosPanel({ workspaceId }: { workspaceId: string }) {
   }
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspaceId]);
 
   async function saveMacro(e: React.FormEvent) {

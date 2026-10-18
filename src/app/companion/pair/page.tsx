@@ -13,21 +13,24 @@ function CompanionPairInner() {
 
   useEffect(() => {
     if (!code) return;
-    setBusy(true);
-    void fetch("/api/companion/pair", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pairCode: code }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Could not pair.");
-        setStatus("Paired — send research or reminder commands from your phone.");
+    const timer = window.setTimeout(() => {
+      setBusy(true);
+      void fetch("/api/companion/pair", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pairCode: code }),
       })
-      .catch((error) =>
-        setStatus(error instanceof Error ? error.message : "Sign in with the same account first."),
-      )
-      .finally(() => setBusy(false));
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Could not pair.");
+          setStatus("Paired — send research or reminder commands from your phone.");
+        })
+        .catch((error) =>
+          setStatus(error instanceof Error ? error.message : "Sign in with the same account first."),
+        )
+        .finally(() => setBusy(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [code]);
 
   return (

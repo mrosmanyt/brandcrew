@@ -1,7 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { appOrigin } from "@/lib/crypto-secret";
 import { safeNextPath, type GoogleLoginIntent } from "@/lib/google-auth-shared";
-import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
+import {
+  isSupabaseAuthEnabled,
+  supabaseAnonKey,
+  supabaseUrl,
+} from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const STATE_PURPOSE = "supabase_oauth";
@@ -97,18 +101,59 @@ export async function startSupabaseGoogleOAuth(request: Request) {
   return data.url;
 }
 
-export function supabaseGooglePublicStatus() {
-  const ready = isSupabaseAuthEnabled();
+const GOOGLE_PROVIDER_TTL_MS = 60_000;
+let googleProviderCache: { at: number; enabled: boolean } | null = null;
+
+/**
+ * Supabase returns 400 on the authorize URL when the Google provider is off.
+ * `/auth/v1/settings` exposes `external.google` without starting that redirect.
+ */
+export async function supabaseGoogleProviderEnabled() {
+  if (!isSupabaseAuthEnabled()) return false;
+  const now = Date.now();
+  if (googleProviderCache && now - googleProviderCache.at < GOOGLE_PROVIDER_TTL_MS) {
+    return googleProviderCache.enabled;
+  }
+  const anon = supabaseAnonKey();
+  if (!anon) return false;
+  const base = supabaseUrl().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/auth/v1/settings`, {
+      headers: {
+        apikey: anon,
+        Authorization: `Bearer ${anon}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) {
+      googleProviderCache = { at: now, enabled: false };
+      return false;
+    }
+    const body = (await res.json()) as { external?: { google?: boolean } };
+    const enabled = body.external?.google === true;
+    googleProviderCache = { at: now, enabled };
+    return enabled;
+  } catch {
+    googleProviderCache = { at: now, enabled: false };
+    return false;
+  }
+}
+
+export async function supabaseGooglePublicStatus() {
+  const envReady = isSupabaseAuthEnabled();
+  const providerEnabled = envReady ? await supabaseGoogleProviderEnabled() : false;
+  const ready = envReady && providerEnabled;
   return {
     ready,
-    missingEnv: ready
+    missingEnv: envReady
       ? []
       : ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"].filter(
           (key) => !process.env[key]?.trim(),
         ),
     setupHint: ready
       ? supabaseGoogleSetupHint()
-      : "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY. Google uses the Supabase Google provider.",
+      : "Google sign-in coming soon",
     redirectUri: `${appOrigin()}/auth/callback`,
     scopes: ["openid", "email", "profile"],
     purpose: "user_login" as const,

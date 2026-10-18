@@ -209,7 +209,7 @@ export function helpdeskCannedReply(topic: HelpdeskTopic): string {
     case "api":
       return "Yes — the API Console (same-origin /console) mints workspace keys for /api/v1. Jobs still wait for approval before anything is sent. Do not use console.cinem.tech — that host is not live.";
     case "support_tip":
-      return "The Help thread is product help. A one-time tip is a separate checkout on /support — it adds a Supporter badge and does not change Free / Pro / Pro Plus / Ultra.";
+      return "Product help stays in this chat. CINEM does not offer a separate tip checkout in the app. Ask about download, plans, or sign-in here.";
   }
 }
 
@@ -267,7 +267,7 @@ export function helpdeskAckSystemPrompt(): string {
     "Small product questions (download, Windows SmartScreen, plans, sign-in, what CINEM Pro is, the Windows assistant, API Console): answer them yourself in 2-5 short sentences. Be specific. Point at /download, /login, /console, or desk Plans when useful.",
     "Facts: Windows installer is CINEM-Pro-Setup.exe from /download (desk + Cinem AI Assistant). SmartScreen → More info → Run anyway. No hosted Mac .dmg — use the web desk. Free / Pro $20 / Pro Plus $79 / Ultra $200, all capped. Same account for web and desktop.",
     "Account, billing disputes, refunds, bugs, access problems, or anything you cannot answer: briefly help if you can, then say you escalated it to the CINEM team and they will reply in this same thread.",
-    "Never promise a phone call or a separate email. Never mention the /support tip page unless they asked about tipping CINEM.",
+    "Never promise a phone call or a separate email. Do not offer a tip checkout or a Whop Support product. Product help stays in this thread.",
   ].join(" ");
 }
 

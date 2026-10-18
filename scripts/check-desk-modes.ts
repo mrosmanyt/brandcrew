@@ -30,7 +30,7 @@ assert.equal(planModeName("growth"), "Pro Plus");
 assert.equal(planPowerLabel("pro"), "Power");
 assert.equal(planPowerLabel("ultra"), "Max");
 assert.equal(planPowerLabel("demo"), null);
-assert.match(planModeDescription("demo"), /15,000 credits/);
+assert.match(planModeDescription("demo"), /40,000 credits/);
 assert.match(planModeDescription("starter"), /50,000 credits/);
 assert.match(planModeDescription("pro"), /Power/);
 assert.match(planModeDescription("ultra"), /Max/);

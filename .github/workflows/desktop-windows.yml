@@ -35,7 +35,7 @@ jobs:
         run: npm run desktop:build:win
         env:
           VITE_CINEM_CLOUD_URL: https://app.cinem.tech
-          VITE_CINEM_UPGRADE_URL: https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant
+          VITE_CINEM_UPGRADE_URL: https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant
           CINEM_ELECTRON_ASSISTANT: "1"
           COMPUTER_USE_ENABLED: "1"
           MULTILAYER_ORCHESTRATOR_ENABLED: "1"

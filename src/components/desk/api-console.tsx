@@ -63,16 +63,22 @@ export function ApiConsole({ workspaceId }: { workspaceId: string }) {
   }
 
   useEffect(() => {
-    void loadKeys();
-    const stored = sessionStorage.getItem(bearerStorageKey(workspaceId));
-    if (stored) setBearer(stored);
+    const timer = window.setTimeout(() => {
+      void loadKeys();
+      const stored = sessionStorage.getItem(bearerStorageKey(workspaceId));
+      if (stored) setBearer(stored);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspaceId]);
 
   useEffect(() => {
-    setPath(selected.path);
-    setBody(exampleBody(selected));
-    setStatus(null);
-    setResponse("");
+    const timer = window.setTimeout(() => {
+      setPath(selected.path);
+      setBody(exampleBody(selected));
+      setStatus(null);
+      setResponse("");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [selected]);
 
   async function createKey(e: React.FormEvent) {

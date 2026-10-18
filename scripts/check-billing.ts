@@ -215,6 +215,11 @@ assert.equal(checkoutPlanFromNextPath("/desk?checkout=ultra"), "ultra");
 assert.equal(checkoutPlanFromNextPath("https://evil.example/?checkout=pro"), null);
 assert.equal(authHrefWithNext("/login", "/desk?checkout=pro"), "/login?next=%2Fdesk%3Fcheckout%3Dpro");
 assert.equal(assistantCheckoutPlanFromQuery("pro", CINEM_AI_ASSISTANT_PRODUCT), "starter");
+assert.equal(assistantCheckoutPlanFromQuery("pro", ""), null);
+assert.equal(assistantCheckoutPlanFromQuery("pro", null), null);
+assert.equal(checkoutPlanFromNextPath("/billing"), null);
+assert.equal(checkoutPlanFromNextPath("/billing?plan=pro"), "pro");
+assert.equal(checkoutPlanFromNextPath("/billing?plan=monthly"), null);
 assert.equal(cinemAiAssistantBillingPath("pro"), "/cinem-ai-assistant/billing?plan=monthly");
 assert.equal(
   cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
@@ -408,7 +413,10 @@ assert.match(readFileSync("docs/whop-support.md", "utf8"), /plan\.company_id/);
 assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /isSupportCheckout/);
 assert.match(readFileSync("src/lib/billing-fulfill.ts", "utf8"), /applyPaidSupport/);
 assert.doesNotMatch(readFileSync("src/lib/support-fulfill.ts", "utf8"), /plan:/);
-assert.match(readFileSync("src/app/support/page.tsx", "utf8"), /SupportPageClient/);
+assert.doesNotMatch(readFileSync("src/app/support/page.tsx", "utf8"), /SupportPageClient|SupportForm|\$99,999/);
+assert.match(readFileSync("src/app/support/page.tsx", "utf8"), /Help button/);
+assert.doesNotMatch(readFileSync("src/components/marketing/home-sections.tsx", "utf8"), /\$99,999/);
+assert.doesNotMatch(readFileSync("src/components/desk/sidebar.tsx", "utf8"), /href="\/support"/);
 assert.match(readFileSync("docs/whop-support.md", "utf8"), /WHOP_SUPPORT_PRODUCT_ID/);
 console.log("ok: catch-all registers /api/webhooks/whop; env example lists Whop vars");
 

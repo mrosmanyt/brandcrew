@@ -35,8 +35,8 @@ import { DESKTOP_WIN_DOWNLOAD } from "../src/lib/site";
 
 assert.equal(CINEM_AI_ASSISTANT_PRODUCT, "cinem-ai-assistant");
 assert.equal(CINEM_AI_ASSISTANT_NAME, "Cinem AI Assistant");
-assert.equal(CINEM_AI_ASSISTANT_FREE_TURNS, 500);
-assert.equal(cinemAiAssistantTurnLimit("demo"), 500);
+assert.equal(CINEM_AI_ASSISTANT_FREE_TURNS, 5000);
+assert.equal(cinemAiAssistantTurnLimit("demo"), 5000);
 assert.ok(cinemAiAssistantTurnLimit("starter") > CINEM_AI_ASSISTANT_FREE_TURNS);
 assert.ok(CINEM_AI_ASSISTANT_TURN_LIMIT.ultra >= CINEM_AI_ASSISTANT_TURN_LIMIT.pro);
 assert.equal(bestPlanId(["demo", "starter", "pro"]), "pro");
@@ -98,7 +98,7 @@ console.log("ok: upgrade deep link routes to standalone assistant billing");
 
 const snap = usageSnapshot({
   plan: "demo",
-  used: 500,
+  used: CINEM_AI_ASSISTANT_FREE_TURNS,
   period: "2026-09",
   upgradeUrl: cinemAiAssistantUpgradeUrl("https://app.cinem.tech"),
   workspaceId: "ws_1",

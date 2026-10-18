@@ -31,8 +31,14 @@ export const CINEM_AI_ASSISTANT_DOWNLOAD_API = "/api/downloads/cinem-ai-assistan
 export const CINEM_AI_ASSISTANT_USAGE_API = "/api/cinem-ai-assistant/usage";
 export const CINEM_AI_ASSISTANT_DOCS = "docs/cinem-ai-assistant.md";
 
-/** Free plan: 500 chat/voice turns per UTC month. */
-export const CINEM_AI_ASSISTANT_FREE_TURNS = 500;
+/** Free plan: chat/voice turns per UTC month. */
+export const CINEM_AI_ASSISTANT_FREE_TURNS = 5000;
+
+/**
+ * Invite bonus stays 500 turns per free month.
+ * It does not follow CINEM_AI_ASSISTANT_FREE_TURNS.
+ */
+export const REFERRAL_TURNS_PER_MONTH = 500;
 
 /**
  * Paid desks include the assistant. Caps stay high (“unlimited-ish”) so
@@ -150,7 +156,7 @@ export const CINEM_AI_ASSISTANT_FEATURES: CinemAiAssistantFeature[] = [
     id: "upgrade",
     title: "Standalone plans",
     status: "shipped",
-    body: "Free includes 500 turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing. Founding seats may still qualify for free access.",
+    body: `Free includes ${CINEM_AI_ASSISTANT_FREE_TURNS.toLocaleString()} turns / month. Paid assistant plans unlock everything — billed separately at /cinem-ai-assistant/billing. Founding seats may still qualify for free access.`,
   },
 ];
 
@@ -232,10 +238,11 @@ export function assistantUsageHttpStatus(snapshot: {
 }
 
 export function isCinemAiAssistantProduct(raw?: string | null) {
-  const id = String(raw || "")
+  const id = String(raw ?? "")
     .trim()
     .toLowerCase();
-  return id === CINEM_AI_ASSISTANT_PRODUCT || id === "assistant" || id === "";
+  if (!id) return false;
+  return id === CINEM_AI_ASSISTANT_PRODUCT || id === "assistant";
 }
 
 /**
@@ -246,9 +253,7 @@ export function assistantCheckoutPlanFromQuery(
   raw?: string | null,
   product?: string | null,
 ): CheckoutPlanId | null {
-  if (!isCinemAiAssistantProduct(product) && product != null && String(product).trim()) {
-    return null;
-  }
+  if (!isCinemAiAssistantProduct(product)) return null;
   const id = String(raw || "")
     .trim()
     .toLowerCase();
@@ -344,7 +349,7 @@ export function usageSnapshot(input: {
     input.includedWithPlan ?? (paid || Boolean(input.foundingMember));
   const gatePaidOnly = Boolean(input.gatePaidOnly && !included);
   const referralBonus = Math.max(0, Math.floor(input.referralBonusMonths ?? 0));
-  const referralTurns = referralBonus * CINEM_AI_ASSISTANT_FREE_TURNS;
+  const referralTurns = referralBonus * REFERRAL_TURNS_PER_MONTH;
   const limit = gatePaidOnly ? referralTurns : cinemAiAssistantTurnLimit(plan) + referralTurns;
   const used = Math.max(0, Math.floor(input.used));
   const remaining = Math.max(0, limit - used);

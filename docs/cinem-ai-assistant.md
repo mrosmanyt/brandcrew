@@ -56,7 +56,7 @@ Vercel / `next build` ignores this folder — Rust is never compiled on the Next
 | Variable | Where | Purpose |
 | --- | --- | --- |
 | `VITE_CINEM_CLOUD_URL` | Assistant renderer | Cloud origin, default `https://app.cinem.tech` |
-| `VITE_CINEM_UPGRADE_URL` | Assistant renderer | Optional override; default is `/billing?plan=pro&product=cinem-ai-assistant` |
+| `VITE_CINEM_UPGRADE_URL` | Assistant renderer | Optional override; default is `/billing?plan=monthly&product=cinem-ai-assistant` |
 | `CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro server | Optional absolute URL for the **unified** installer |
 | `NEXT_PUBLIC_CINEM_AI_ASSISTANT_SETUP_URL` | CINEM Pro (public) | Same, if the marketing CTA should skip the releases host |
 | `CINEM_START_MODE` | Electron | `desk` (default), `assistant`, or `both` |
@@ -86,7 +86,7 @@ Both return:
   "planName": "Free",
   "allowed": true,
   "remaining": 499,
-  "upgradeUrl": "https://app.cinem.tech/billing?plan=pro&product=cinem-ai-assistant",
+  "upgradeUrl": "https://app.cinem.tech/billing?plan=monthly&product=cinem-ai-assistant",
   "meter": "chat_voice_turns",
   "limit": 500,
   "used": 1,

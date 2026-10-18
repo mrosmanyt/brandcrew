@@ -8,10 +8,11 @@ import {
   REFERRAL_TURNS_PER_MONTH,
   referralBonusTurns,
 } from "../src/lib/referral-invites";
-import { usageSnapshot } from "../src/lib/cinem-ai-assistant";
+import { CINEM_AI_ASSISTANT_FREE_TURNS, usageSnapshot } from "../src/lib/cinem-ai-assistant";
 
 assert.equal(REFERRAL_BONUS_MONTHS_DEFAULT, 1);
 assert.equal(REFERRAL_INVITER_CAP, 50);
+assert.equal(REFERRAL_TURNS_PER_MONTH, 500);
 assert.equal(referralBonusTurns(2), REFERRAL_TURNS_PER_MONTH * 2);
 
 const snap = usageSnapshot({
@@ -20,7 +21,7 @@ const snap = usageSnapshot({
   upgradeUrl: "/billing",
   referralBonusMonths: 1,
 });
-assert.equal(snap.limit, 500 + REFERRAL_TURNS_PER_MONTH);
+assert.equal(snap.limit, CINEM_AI_ASSISTANT_FREE_TURNS + REFERRAL_TURNS_PER_MONTH);
 assert.equal(snap.remaining, snap.limit - 10);
 
 const gated = usageSnapshot({

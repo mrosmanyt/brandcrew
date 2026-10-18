@@ -93,7 +93,11 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
   }, [selectedId, q, status]);
 
   useEffect(() => {
-    if (selectedId) loadThread(selectedId).catch(() => undefined);
+    if (!selectedId) return;
+    const timer = window.setTimeout(() => {
+      loadThread(selectedId).catch(() => undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [selectedId]);
 
   async function act(action: "reply" | "join_live" | "leave_live" | "close" | "reopen") {
@@ -130,7 +134,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
     <AdminPageFrame
       kicker="Internal Admin HQ"
       title="Team support"
-      hint="Product helpdesk from the Help widget. Separate from Whop Support tips on Billing. Heartbeat on this page marks you available for live chat."
+      hint="Product helpdesk from the Help widget. Heartbeat on this page marks you available for live chat."
     >
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <article className="rounded-xl border border-border bg-card p-4">

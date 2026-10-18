@@ -35,10 +35,9 @@ export default function TermsPage() {
 
       <h2>Accounts</h2>
       <p>
-        You must provide an accurate email. Continue with Google is the
-        verified-email path (Google must report the address as verified).
-        Email/password signup does not send a confirmation message — there is
-        no mailer or password-reset email in this product yet. Two-factor
+        You must provide an accurate email. When the project requires email
+        confirmation, check your inbox, open the link, and then sign in.
+        Password reset email is not in this product yet. Two-factor
         authentication is a follow-up, not a fake UI. You are responsible for
         activity under your session. Do not share your password. Plans (Free,
         Pro, Pro Plus, Ultra) cap seats, tokens, and jobs per hour. When a cap

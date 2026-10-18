@@ -470,7 +470,7 @@ Public site: [app.cinem.tech](https://app.cinem.tech) (Vercel alias [brandcrew.v
 
 **CSRF:** Session cookie `brandcrew_session` is httpOnly, SameSite=Lax, Secure in production and on Vercel. Same-origin POSTs send it; cross-site POSTs from other origins do not. OAuth callbacks are top-level GET. There is no extra CSRF token. The session JWT is never written to `localStorage` / `sessionStorage` (those stores are cookie-banner consent, desk pane width, billing toast, and developer API keys — not login).
 
-**Auth (existing Google + cookie session — no second system):** Continue with Google already verifies email (`email_verified === true` or the callback bounces `email_unverified`). Email/password signup remains; there is **no SMTP mailer** and **no password-reset route**, so we do not fake a “we sent a verification email” or 2FA UI. Privileged Admin HQ is `ADMIN_EMAILS` + `requireAdmin` / `loadAdminPage` on every `/admin` page and `/api/admin` GET+POST (including `/api/admin/backup`) — hiding the Settings link is not the gate. Password signup and Settings password-change require 8–72 characters, reject trivial passwords, and optionally query Have I Been Pwned (k-anonymity SHA-1 prefix, 2s timeout, **fail-open**). 2FA is a follow-up.
+**Auth (existing Google + cookie session — no second system):** Continue with Google already verifies email (`email_verified === true` or the callback bounces `email_unverified`). Email/password signup remains. When Supabase requires confirmation, `POST /api/auth/signup` returns `needsEmailConfirmation`, the screen asks the person to check their email, and the link returns through `/auth/callback` into `/onboarding`. There is no password-reset route and no 2FA UI. Privileged Admin HQ is `ADMIN_EMAILS` + `requireAdmin` / `loadAdminPage` on every `/admin` page and `/api/admin` GET+POST (including `/api/admin/backup`) — hiding the Settings link is not the gate. Password signup and Settings password-change require 8–72 characters, reject trivial passwords, and optionally query Have I Been Pwned (k-anonymity SHA-1 prefix, 2s timeout, **fail-open**). 2FA is a follow-up.
 
 **Rate limits:** In-memory per-IP windows on login, signup, Google start/callback, checkout, admin reads, admin writes (tighter), account PATCH, and invite accept. Login/signup also bucket **per email** (cloned request body; Hobby has no Redis). Isolates do not share memory (Upstash-free). Developer API keys already have a 60/min hashed-key window in Postgres.
 
@@ -590,7 +590,7 @@ Founder Admin HQ lives at `/admin` (path-based internal ops console, not a custo
 
 | Plan | Price | Seats | Tokens | Jobs/hour | Concurrent |
 | --- | --- | --- | --- | --- | --- |
-| Free | $0 | 1 | 15,000 | 4 | 1 |
+| Free | $0 | 1 | 40,000 | 6 | 1 |
 | Pro | $20/mo | 2 | 50,000 | 8 | 1 |
 | Pro Plus | $79/mo | 5 | 200,000 | 30 | 3 |
 | Ultra | $200/mo | 12 | 600,000 | 90 | 6 |

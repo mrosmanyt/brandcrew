@@ -97,21 +97,27 @@ export function MarketplaceDesk({
   }
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspaceId]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const connected = params.get("connected");
-    const error = params.get("error");
-    const plugin = params.get("plugin");
-    if (connected) {
-      toast.success(`${connected} connected.`);
-      void refresh();
-    }
-    if (error) {
-      toast.error(pluginOAuthErrorMessage(error, plugin));
-    }
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const connected = params.get("connected");
+      const error = params.get("error");
+      const plugin = params.get("plugin");
+      if (connected) {
+        toast.success(`${connected} connected.`);
+        void refresh();
+      }
+      if (error) {
+        toast.error(pluginOAuthErrorMessage(error, plugin));
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const categories = tab === "bots" ? MARKETPLACE_BOT_CATEGORIES : PLUGIN_CATEGORIES;

@@ -4,11 +4,12 @@
  */
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { CINEM_AI_ASSISTANT_FREE_TURNS } from "@/lib/cinem-ai-assistant";
+import { REFERRAL_TURNS_PER_MONTH } from "@/lib/cinem-ai-assistant";
+
+export { REFERRAL_TURNS_PER_MONTH };
 
 export const REFERRAL_BONUS_MONTHS_DEFAULT = 1;
 export const REFERRAL_INVITER_CAP = 50;
-export const REFERRAL_TURNS_PER_MONTH = CINEM_AI_ASSISTANT_FREE_TURNS;
 
 export function referralBonusTurns(months: number) {
   return Math.max(0, Math.floor(months)) * REFERRAL_TURNS_PER_MONTH;

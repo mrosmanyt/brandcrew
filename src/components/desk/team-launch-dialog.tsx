@@ -35,10 +35,12 @@ export function TeamLaunchDialog({
   );
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
       setRows(proposal.map((row) => ({ ...row, name: row.name || DEFAULT_AGENT_NAME })));
       setStartJobs(false);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [open, proposal]);
 
   function syncOpen(next: boolean) {

@@ -52,7 +52,10 @@ export function AdminAssistantQueries({ configured }: { configured: boolean }) {
   }, [filter]);
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   async function act(action: "approve" | "reject", requestId: string) {

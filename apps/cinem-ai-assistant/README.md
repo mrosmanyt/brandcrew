@@ -13,7 +13,7 @@ Full native extras (Whisper / Piper sidecars) remain available in the optional T
 | Origin | `VITE_CINEM_CLOUD_URL` (default `https://app.cinem.tech`) |
 | Usage | `GET` / `POST /api/cinem-ai-assistant/usage` |
 | Auth | Sign in with CINEM Pro (`POST /api/auth/connect` + `/connect/desktop`, or email/password via `POST /api/auth/token`) |
-| Upgrade | System browser → `upgradeUrl` (`/billing?plan=pro&product=cinem-ai-assistant`) |
+| Upgrade | System browser → `upgradeUrl` (`/billing?plan=monthly&product=cinem-ai-assistant`) |
 
 Shared fetch helper: [`usage-client.ts`](./usage-client.ts). Electron bridge: [`src/lib/desktop-shell.ts`](./src/lib/desktop-shell.ts). Website contract: [`docs/cinem-ai-assistant.md`](../../docs/cinem-ai-assistant.md).
 

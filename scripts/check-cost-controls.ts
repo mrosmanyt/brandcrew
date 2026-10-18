@@ -261,11 +261,11 @@ assert.deepEqual([...PLAN_IDS_CAPPED], ["demo", "starter", "pro", "ultra"]);
 assert.equal("unlimited" in PLANS, false);
 assert.deepEqual([...CHECKOUT_PLANS], ["starter", "pro", "ultra"]);
 const credits = creditsFromTokens(100, PLANS.demo.tokenBudget);
-assert.equal(credits.creditsBudget, 15_000);
+assert.equal(credits.creditsBudget, 40_000);
 assert.match(CREDITS_HINT, /no unlimited plan/);
 assert.match(CREDITS_HINT, /Free\/Pro\/Pro Plus\/Ultra/);
 assert.match(readFileSync("src/lib/limits.ts", "utf8"), /no unlimited plan/);
-assert.equal(PLANS.demo.chatTokenBudget, 500_000);
+assert.equal(PLANS.demo.chatTokenBudget, 2_000_000);
 assert.ok(PLANS.demo.chatTokenBudget > PLANS.demo.tokenBudget);
 assert.equal(usesSeparateChatBudget("demo"), true);
 assert.equal(usesSeparateChatBudget("starter"), true);
@@ -273,10 +273,10 @@ assert.equal(usesSeparateChatBudget("pro"), false);
 assert.equal(usesSeparateChatBudget("ultra"), false);
 const chatOk = evaluateBudgetCaps(
   {
-    tokenUsed: 15_000,
-    tokenBudget: 15_000,
+    tokenUsed: 40_000,
+    tokenBudget: 40_000,
     chatTokenUsed: 10,
-    chatTokenBudget: 500_000,
+    chatTokenBudget: 2_000_000,
     separateChatBudget: true,
   },
   "chat",
@@ -285,9 +285,9 @@ assert.equal(chatOk.ok, true);
 const chatStop = evaluateBudgetCaps(
   {
     tokenUsed: 0,
-    tokenBudget: 15_000,
-    chatTokenUsed: 500_000,
-    chatTokenBudget: 500_000,
+    tokenBudget: 40_000,
+    chatTokenUsed: 2_000_000,
+    chatTokenBudget: 2_000_000,
     separateChatBudget: true,
   },
   "chat",
@@ -307,10 +307,10 @@ const paidChatSharesJobs = evaluateBudgetCaps(
 assert.equal(paidChatSharesJobs.ok, false);
 const jobStillCapped = evaluateBudgetCaps(
   {
-    tokenUsed: 15_000,
-    tokenBudget: 15_000,
+    tokenUsed: 40_000,
+    tokenBudget: 40_000,
     chatTokenUsed: 10,
-    chatTokenBudget: 500_000,
+    chatTokenBudget: 2_000_000,
     separateChatBudget: true,
   },
   "job",

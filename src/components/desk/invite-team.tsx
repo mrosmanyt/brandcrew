@@ -53,7 +53,10 @@ export function InviteTeam({ workspaceId }: { workspaceId: string }) {
   }
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspaceId]);
 
   async function invite(e: React.FormEvent) {

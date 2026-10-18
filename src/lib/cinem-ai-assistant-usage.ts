@@ -7,7 +7,7 @@ import { normalizePlanId } from "@/lib/limits";
 import { listUserWorkspaces } from "@/lib/workspace";
 import {
   CINEM_AI_ASSISTANT_PRODUCT,
-  CINEM_AI_ASSISTANT_FREE_TURNS,
+  REFERRAL_TURNS_PER_MONTH,
   cinemAiAssistantPeriodUtc,
   cinemAiAssistantTurnLimit,
   cinemAiAssistantUpgradeUrl,
@@ -156,7 +156,7 @@ export async function incrementCinemAssistantUsage(
   const effectiveLimit =
     gatePaidOnly && referralBonus <= 0
       ? 0
-      : cinemAiAssistantTurnLimit(caller.plan) + referralBonus * CINEM_AI_ASSISTANT_FREE_TURNS;
+      : cinemAiAssistantTurnLimit(caller.plan) + referralBonus * REFERRAL_TURNS_PER_MONTH;
 
   if ((gatePaidOnly && referralBonus <= 0) || current >= effectiveLimit) {
     return usageSnapshot({
