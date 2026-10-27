@@ -1,0 +1,53 @@
+{
+  "name": "cinem-ai-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Cinem AI Assistant \u2014 Windows desktop AI assistant for CINEM Pro",
+  "scripts": {
+    "dev": "vite",
+    "db": "node db-server/index.js",
+    "admin": "npm run build && node db-server/index.js",
+    "typecheck": "tsc --noEmit",
+    "sidecars": "node scripts/run-sidecars.mjs",
+    "verify": "node scripts/verify.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "icon": "node scripts/make-icon.mjs && node scripts/write-windows-icons.mjs",
+    "package": "node scripts/package.mjs",
+    "dist": "tauri build && node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-autostart": "^2.3.0",
+    "@tauri-apps/plugin-http": "^2.4.0",
+    "@tauri-apps/plugin-process": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0",
+    "@tauri-apps/plugin-store": "^2.2.0",
+    "@tauri-apps/plugin-updater": "^2.7.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.7.4",
+    "lucide-react": "^0.488.0",
+    "playwright": "^1.60.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^9.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.2.0",
+    "three": "^0.175.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@tauri-apps/cli": "^2.5.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/three": "^0.175.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2"
+  }
+}

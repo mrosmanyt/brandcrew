@@ -1,0 +1,10 @@
+{
+  "name": "cinem-ai-assistant-db-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cinem AI Assistant local database server — single source of truth for users, licenses and activity (100% offline).",
+  "scripts": {
+    "start": "node index.js"
+  }
+}

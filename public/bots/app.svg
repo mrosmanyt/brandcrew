@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-label="app cover">
+  <defs>
+    <linearGradient id="app-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1016"/>
+      <stop offset="55%" stop-color="#121820"/>
+      <stop offset="100%" stop-color="#0e1412"/>
+    </linearGradient>
+    <radialGradient id="app-glow" cx="72%" cy="18%" r="55%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="app-panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c2430"/>
+      <stop offset="100%" stop-color="#141a22"/>
+    </linearGradient>
+    <filter id="app-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect width="480" height="360" fill="url(#app-bg)"/>
+  <rect width="480" height="360" fill="url(#app-glow)"/>
+  <g opacity="0.18" stroke="#7c3aed" stroke-width="1" fill="none">
+    <path d="M-20 280 C80 220 160 320 260 250 S420 180 520 230"/>
+    <path d="M-20 310 C90 250 190 340 300 270 S430 210 520 260"/>
+  </g>
+  <circle cx="56" cy="48" r="70" fill="#7c3aed" opacity="0.08"/>
+  <g filter="url(#app-soft)">
+    <rect x="168" y="48" width="144" height="264" rx="28" fill="#140c24" stroke="#7c3aed" stroke-width="6"/>
+    <rect x="180" y="78" width="120" height="196" rx="8" fill="#1c1233"/>
+    <rect x="192" y="96" width="44" height="44" rx="12" fill="#7c3aed"/>
+    <rect x="244" y="96" width="44" height="44" rx="12" fill="#5b21b6"/>
+    <rect x="192" y="148" width="44" height="44" rx="12" fill="#5b21b6"/>
+    <rect x="244" y="148" width="44" height="44" rx="12" fill="#a78bfa"/>
+    <rect x="192" y="200" width="96" height="20" rx="10" fill="#7c3aed" opacity="0.7"/>
+    <circle cx="240" cy="286" r="10" fill="#2e1065" stroke="#a78bfa"/>
+    </g>
+</svg>

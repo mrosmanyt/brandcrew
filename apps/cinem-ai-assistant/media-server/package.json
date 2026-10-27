@@ -1,0 +1,8 @@
+{
+  "name": "cinem-ai-assistant-media-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "NOVA — local ffmpeg video-editing sidecar for Cinem AI Assistant",
+  "scripts": { "start": "node index.js" }
+}

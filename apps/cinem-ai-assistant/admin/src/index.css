@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ── Cinem AI Assistant ADMIN — identical design tokens to the desktop app ────── */
+@theme {
+  --color-void: #04070a;
+  --color-abyss: #070d12;
+  --color-panel: #0a141a;
+  --color-neon: #59f0ea;
+  --color-neon-dim: #2ea8a3;
+  --color-ice: #c9f6f4;
+
+  --font-display: "Orbitron", ui-sans-serif, sans-serif;
+  --font-body: "Rajdhani", ui-sans-serif, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-void);
+  color: #cfe6e4;
+  font-family: var(--font-body);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(89, 240, 234, 0.05), transparent 70%),
+    linear-gradient(rgba(89, 240, 234, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(89, 240, 234, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 56px 56px, 56px 56px;
+}
+
+::selection {
+  background: rgba(89, 240, 234, 0.3);
+}
+
+/* Glassmorphism panel with sci-fi corner cuts (same as Cinem AI Assistant) */
+.glass {
+  position: relative;
+  background: linear-gradient(160deg, rgba(13, 26, 32, 0.78), rgba(6, 12, 16, 0.6));
+  border: 1px solid rgba(89, 240, 234, 0.16);
+  backdrop-filter: blur(14px);
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  box-shadow:
+    inset 0 0 28px rgba(89, 240, 234, 0.045),
+    inset 0 1px 0 rgba(89, 240, 234, 0.08);
+}
+
+.neon-text {
+  color: var(--color-ice);
+  text-shadow:
+    0 0 8px rgba(89, 240, 234, 0.9),
+    0 0 24px rgba(89, 240, 234, 0.45);
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #e6fbfa;
+}
+
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(89, 240, 234, 0.25);
+  border-radius: 99px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(89, 240, 234, 0.5);
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(89, 240, 234, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(89, 240, 234, 0);
+  }
+}
+.dot-active {
+  animation: pulse-dot 2s ease-in-out infinite;
+}

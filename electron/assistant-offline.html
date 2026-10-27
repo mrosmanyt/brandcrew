@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cinem AI Assistant</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #09090b;
+        color: #fafafa;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      main {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+      }
+      .card {
+        width: min(520px, 100%);
+        border: 1px solid #27272a;
+        border-radius: 16px;
+        background: #0c0c0f;
+        padding: 28px 24px;
+      }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #a1a1aa;
+        font-size: 13px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        letter-spacing: -0.03em;
+      }
+      p {
+        margin: 0 0 14px;
+        color: #a1a1aa;
+        line-height: 1.6;
+        font-size: 14px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0 0;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #retry {
+        background: #fafafa;
+        color: #09090b;
+      }
+      #desk {
+        background: transparent;
+        color: #fafafa;
+        border: 1px solid #3f3f46;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <p class="eyebrow">Cinem AI Assistant</p>
+        <h1>Assistant couldn't load</h1>
+        <p>
+          The bundled assistant UI failed to start. Reload to try again, or switch
+          back to Desk while you check your connection.
+        </p>
+        <div class="actions">
+          <button id="retry" type="button">Reload</button>
+          <button id="desk" type="button">Open Desk</button>
+        </div>
+      </section>
+    </main>
+    <script>
+      const api = window.cinemDesktop;
+      document.getElementById("retry").addEventListener("click", () => {
+        if (api && typeof api.retryAssistant === "function") api.retryAssistant();
+      });
+      document.getElementById("desk").addEventListener("click", () => {
+        if (api && typeof api.openDesk === "function") api.openDesk();
+      });
+    </script>
+  </body>
+</html>

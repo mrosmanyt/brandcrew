@@ -1,0 +1,875 @@
+generator client {
+  provider      = "prisma-client-js"
+  // native = local/desktop; rhel-openssl-3.0.x = Vercel (Amazon Linux 2023)
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon pooled URL cannot run migrations. Local Docker: same as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  /// Matches Supabase auth.users.id when Supabase Auth is enabled.
+  id            String             @id @default(uuid())
+  email         String             @unique
+  /// Null for Google-only accounts. Email/password users always have a hash.
+  passwordHash  String?
+  /// Google account `sub`. Distinct from Marketplace Gmail plugin tokens.
+  googleId      String?            @unique
+  name          String
+  /// UI language (default English). Synced to public.profiles.
+  language      String             @default("en")
+  /// desk | assistant | both — desktop mode chooser preference.
+  preferredMode String             @default("desk")
+  /// True after a successful Support (tip) payment webhook — not from the thank-you page alone.
+  supporter          Boolean   @default(false)
+  supporterAt        DateTime?
+  supporterTotalCents Int      @default(0)
+  /// First-50 founding member — Cinem AI Assistant included free for life on this account.
+  assistantFoundingMember Boolean @default(false)
+  /// 1–50 when claimed at signup; null otherwise.
+  assistantFoundingNumber Int?
+  /// Shareable invite code for viral +1 free month redemption.
+  inviteCode             String?  @unique
+  invitedByUserId        String?
+  /// Bonus assistant months from successful referrals (500 turns/month each).
+  referralBonusMonths    Int      @default(0)
+  /// Set at signup when founding spots were full — assistant needs paid plan.
+  assistantRequiresPaid  Boolean  @default(false)
+  createdAt     DateTime           @default(now())
+  memberships   WorkspaceMember[]
+  invitesSent   WorkspaceInvite[]
+  refreshTokens AuthRefreshToken[]
+  supports      BrandSupport[]
+  productUsage  ProductUsage[]
+  assistantSubscription AssistantSubscription?
+  helpThreads   SupportThread[]
+  providerKeys  UserProviderKey?
+  inviteRedemptionsSent   InviteRedemption[] @relation("InviterRedemptions")
+  inviteRedemptionReceived InviteRedemption? @relation("InviteeRedemption")
+  mobileCompanionPairs    MobileCompanionPair[]
+  assistantWhatsAppLink   AssistantWhatsAppLink?
+  assistantRemoteCommands AssistantRemoteCommand[]
+  invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  invitees      User[]             @relation("UserInvites")
+  crashReports  CrashReport[]
+
+  @@index([supporter])
+  @@index([assistantFoundingMember])
+}
+
+model Workspace {
+  id                 String            @id @default(cuid())
+  name               String
+  slug               String            @unique
+  plan               String            @default("demo")
+  tokenUsed          Int               @default(0)
+  tokenBudget        Int               @default(40000)
+  /// Cheap-model desk Q&A on Free/Pro. Separate from playbook job tokenUsed.
+  chatTokenUsed      Int               @default(0)
+  brandKit           String            @default("{}")
+  modelRouting       String            @default("auto")
+  /// Auto-run safe click/type. High-risk sends, Slack posts, payments, and file writes still wait.
+  autoApproveSafe    Boolean           @default(false)
+  /// agency = the house desk. client = a client-wise workspace (own Brand Kit, memory, approvals).
+  kind               String            @default("agency")
+  /// Display name of the client this desk is for. Empty on the agency house desk.
+  clientName         String            @default("")
+  /// Last Whop membership that granted the current paid plan. Used to match deactivates.
+  whopMembershipId   String?
+  /// True after a successful Support payment. Independent of plan (Pro / Pro Plus / Ultra).
+  supporter          Boolean           @default(false)
+  supporterAt        DateTime?
+  supporterTotalCents Int              @default(0)
+  /// Soft suspend from Admin HQ: workspace is forced to Free and new jobs are blocked.
+  suspended          Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  members            WorkspaceMember[]
+  conversations      Conversation[]
+  artifacts          Artifact[]
+  tasks              Task[]
+  calendarItems      CalendarItem[]
+  usageEvents        UsageEvent[]
+  jobs               Job[]
+  skills             Skill[]
+  agents             Agent[]
+  pluginConnections  PluginConnection[]
+  apiKeys            ApiKey[]
+  invites            WorkspaceInvite[]
+  schedules          ScheduledJob[]
+  devices            LocalDevice[]
+  audits             WorkspaceAudit[]
+  actionCaches       ActionCache[]
+  eventTriggers      EventTrigger[]
+  routines           Routine[]
+  sessionReplays     SessionReplay[]
+  memories           WorkspaceMemory[]
+  supports           BrandSupport[]
+  helpThreads        SupportThread[]
+  mobileCompanionPairs MobileCompanionPair[]
+
+  @@index([whopMembershipId])
+  @@index([plan])
+  @@index([suspended])
+  @@index([supporter])
+}
+
+model Agent {
+  id            String         @id @default(cuid())
+  workspaceId   String
+  name          String         @default("New Agent")
+  role          String         @default("")
+  instructions  String         @default("")
+  templateId    String?
+  /// JSON array of JobTool names. Empty array means all default tools.
+  allowedTools  String         @default("[]")
+  status        String         @default("active")
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs          Job[]
+  conversations Conversation[]
+  artifacts     Artifact[]
+  skills        Skill[]
+  usageEvents   UsageEvent[]
+  schedules     ScheduledJob[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, templateId])
+}
+
+model PluginConnection {
+  id          String    @id @default(cuid())
+  workspaceId String
+  pluginId    String
+  status      String    @default("disconnected")
+  metadata    String    @default("{}")
+  secretEnc   String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, pluginId])
+  @@index([workspaceId, status])
+}
+
+model WorkspaceMember {
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  userId               String
+  /// owner | admin | approver | member — see src/lib/rbac.ts. Not founder Admin HQ.
+  role                 String    @default("owner")
+  onboardingDismissed  Boolean   @default(false)
+  /// First-run setup wizard. Default true so existing desks are not forced through it.
+  /// New workspaces from createDemoWorkspace set this false.
+  setupWizardDone      Boolean   @default(true)
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model WorkspaceInvite {
+  id          String     @id @default(cuid())
+  workspaceId String
+  email       String
+  token       String     @unique
+  role        String     @default("member")
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User       @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, email])
+  @@index([expiresAt])
+}
+
+model ScheduledJob {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  agentId      String?
+  title        String
+  message      String
+  playbookKey  String?
+  /// Optional saved skill this schedule re-runs (routines).
+  skillId      String?
+  deliverSlack Boolean   @default(false)
+  deliverEmail Boolean   @default(false)
+  slackChannel String    @default("")
+  sourceJobId  String?
+  cadence      String
+  timezone     String    @default("UTC")
+  nextRunAt    DateTime
+  lastRunAt    DateTime?
+  lastJobId    String?
+  enabled      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent        Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, enabled, nextRunAt])
+  @@index([enabled, nextRunAt])
+}
+
+model Conversation {
+  id          String     @id @default(cuid())
+  workspaceId String
+  agentId     String?
+  agentRole   String
+  createdAt   DateTime   @default(now())
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  messages    Message[]
+  artifacts   Artifact[]
+
+  @@unique([workspaceId, agentRole])
+  @@index([workspaceId, agentId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Artifact {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  conversationId String?
+  jobId          String?
+  agentId        String?
+  agentRole      String
+  type           String
+  title          String
+  content        String
+  status         String        @default("draft")
+  model          String        @default("demo")
+  provider       String        @default("demo")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  job            Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  agent          Agent?        @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  tasks          Task[]
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  workspaceId String
+  artifactId  String?
+  title       String
+  description String    @default("")
+  status      String    @default("approve")
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  artifact    Artifact? @relation(fields: [artifactId], references: [id], onDelete: SetNull)
+}
+
+model CalendarItem {
+  id          String    @id @default(cuid())
+  workspaceId String
+  date        String
+  title       String
+  channel     String
+  content     String    @default("")
+  artifactId  String?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model UsageEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  tokens      Int
+  model       String
+  agentRole   String
+  agentId     String?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+}
+
+model Job {
+  id          String     @id @default(cuid())
+  workspaceId String
+  agentId     String?
+  agentRole   String
+  title       String
+  prompt      String
+  status      String     @default("queued")
+  plan        String     @default("[]")
+  context     String     @default("{}")
+  playbookKey String?
+  skillId     String?
+  routineId   String?
+  askPrompt   String     @default("")
+  /// "clarify" (Yes/No or short answer) or "approve" (artifact approval).
+  askKind     String     @default("")
+  /// Persisted human reply when askKind is clarify. Empty until answered.
+  userAnswer  String     @default("")
+  /// JSON string array of allowed hostnames for this job. Browse/CDP aborts off-list.
+  allowedDomains String  @default("[]")
+  /// auto | cloud | extension — where browser tools should run.
+  runnerKind  String     @default("auto")
+  runnerLock  String     @default("")
+  error       String     @default("")
+  deviceCommands DeviceCommand[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  skill       Skill?     @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  routine     Routine?   @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  replay      SessionReplay?
+  events      JobEvent[]
+  artifacts   Artifact[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, agentId])
+}
+
+model JobEvent {
+  id        String   @id @default(cuid())
+  jobId     String
+  type      String
+  message   String
+  stepId    String?
+  data      String   @default("{}")
+  createdAt DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}
+
+model Skill {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  agentId     String?
+  agentRole   String
+  playbook    String
+  sourceJobId String?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agent       Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  jobs        Job[]
+}
+
+/// Workspace-scoped developer keys. Store `keyHash` only — the secret is shown once at create.
+model ApiKey {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  name            String    @default("Default")
+  prefix          String    @unique
+  keyHash         String    @unique
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  rateWindowStart DateTime  @default(now())
+  rateWindowCount Int       @default(0)
+  createdAt       DateTime  @default(now())
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, revokedAt])
+}
+
+/// Founder Admin HQ mutations (plan assign / revoke).
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorEmail String
+  action     String
+  targetId   String
+  meta       String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorEmail])
+  @@index([action])
+}
+
+/// Internal Admin HQ toggles. Missing key → disabled. Not customer-facing.
+model FeatureFlag {
+  key       String   @id
+  enabled   Boolean  @default(false)
+  note      String   @default("")
+  updatedAt DateTime @default(now()) @updatedAt
+  updatedBy String   @default("")
+}
+
+/// Paired Chrome MV3 extension + native messaging host (on-device CDP).
+model LocalDevice {
+  id               String          @id @default(cuid())
+  workspaceId      String
+  name             String          @default("Chrome")
+  tokenHash        String          @unique
+  pairingCode      String?         @unique
+  pairingExpiresAt DateTime?
+  /// User who attached this Chrome via Sign in with CINEM (account-linked).
+  linkedUserId     String?
+  status           String          @default("pending")
+  lastSeenAt       DateTime?
+  capabilities     String          @default("[]")
+  nativeHost       Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  workspace        Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  commands         DeviceCommand[]
+
+  @@index([workspaceId, status])
+  @@index([linkedUserId])
+}
+
+/// Refresh tokens for desktop / mobile / extension (hashed). Web still uses the session cookie.
+model AuthRefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  surface    String
+  deviceName String    @default("")
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
+/// One-time connect tickets: Sign in with CINEM (extension) and desktop/mobile deep links.
+model AuthConnectTicket {
+  id          String    @id @default(cuid())
+  nonce       String    @unique
+  surface     String
+  status      String    @default("pending")
+  userId      String?
+  workspaceId String?
+  deviceName  String    @default("")
+  /// AES-GCM blob (device token or native session) until claimed, then wiped.
+  payloadEnc  String?
+  expiresAt   DateTime
+  claimedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, expiresAt])
+}
+
+model DeviceCommand {
+  id        String      @id @default(cuid())
+  deviceId  String
+  jobId     String
+  stepId    String
+  tool      String
+  args      String      @default("{}")
+  status    String      @default("queued")
+  result    String      @default("{}")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  device    LocalDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  job       Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, status, createdAt])
+  @@index([jobId])
+}
+
+/// Durable workspace audit (device, approvals, domain aborts) — complements JobEvent.
+model WorkspaceAudit {
+  id          String    @id @default(cuid())
+  workspaceId String
+  jobId       String?
+  deviceId    String?
+  actor       String    @default("system")
+  action      String
+  detail      String    @default("")
+  data        String    @default("{}")
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([jobId])
+}
+
+/// Cached selectors + step recipes so a later job on the same domain can skip an LLM guess.
+model ActionCache {
+  id          String    @id @default(cuid())
+  workspaceId String
+  domain      String
+  actionKey   String
+  selector    String
+  /// JSON args recipe from a successful step (Stagehand-style).
+  recipe      String    @default("{}")
+  playbookKey String    @default("")
+  hits        Int       @default(0)
+  misses      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, domain, actionKey])
+  @@index([workspaceId, domain])
+}
+
+/// Cheap event triggers: schedule (cron), email-received (Gmail poll), Slack inbound.
+model EventTrigger {
+  id          String    @id @default(cuid())
+  workspaceId String
+  kind        String
+  enabled     Boolean   @default(false)
+  playbookKey String    @default("")
+  agentId     String?
+  config      String    @default("{}")
+  note        String    @default("")
+  /// Dedup cursor (last Gmail message id / Slack ts / last fire).
+  cursor      String    @default("")
+  lastFiredAt DateTime?
+  lastJobId   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind])
+  @@index([enabled, kind])
+}
+
+/// Scheduled re-run of a successful workflow (skill + cadence + optional Slack/email deliver).
+model Routine {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  agentId        String?
+  skillId        String?
+  scheduleId     String?
+  playbookKey    String    @default("")
+  title          String
+  message        String
+  cadence        String
+  deliverSlack   Boolean   @default(false)
+  deliverEmail   Boolean   @default(false)
+  slackChannel   String    @default("")
+  emailTo        String    @default("")
+  sourceJobId    String?
+  lastJobId      String?
+  enabled        Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs           Job[]
+
+  @@index([workspaceId, enabled])
+}
+
+/// Learned facts + draft style per workspace (client-wise). Never auto-sends.
+model WorkspaceMemory {
+  id          String    @id @default(cuid())
+  workspaceId String
+  /// fact | style | preference | project
+  kind        String
+  /// approved_draft | rejected_draft | manual | job
+  source      String
+  title       String    @default("")
+  value       String
+  /// Learned rows are stored only after a human approve/reject or a manual add.
+  approved    Boolean   @default(true)
+  artifactId  String?
+  jobId       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind])
+  @@index([workspaceId, createdAt])
+}
+
+/// Packed job timeline for later review (cheaper than live view as the headline).
+model SessionReplay {
+  id          String    @id @default(cuid())
+  workspaceId String
+  jobId       String    @unique
+  packed      String    @default("{}")
+  stepCount   Int       @default(0)
+  llmCalls    Int       @default(0)
+  llmSkipped  Int       @default(0)
+  cacheHits   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+/// Dedupes inbound provider webhooks (Whop webhook-id / payment id).
+model ProcessedWebhook {
+  id         String   @id
+  eventType  String
+  externalId String?
+  createdAt  DateTime @default(now())
+
+  @@index([externalId])
+}
+
+/// One successful viral invite redemption — one row per invitee, capped per inviter.
+model InviteRedemption {
+  id                 String   @id @default(cuid())
+  inviteCode         String
+  inviterId          String
+  inviteeId          String   @unique
+  inviterBonusMonths Int      @default(1)
+  inviteeBonusMonths Int      @default(1)
+  createdAt          DateTime @default(now())
+  inviter            User     @relation("InviterRedemptions", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee            User     @relation("InviteeRedemption", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@index([inviterId])
+  @@index([inviteCode])
+}
+
+/// Phone ↔ desk pairing for remote research/reminder commands.
+model MobileCompanionPair {
+  id               String                  @id @default(cuid())
+  userId           String
+  workspaceId      String
+  pairCode         String                  @unique
+  commandTokenHash String                  @unique
+  status           String                  @default("pending")
+  expiresAt        DateTime
+  claimedAt        DateTime?
+  lastCommandAt    DateTime?
+  createdAt        DateTime                @default(now())
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace        Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  commands         MobileCompanionCommand[]
+
+  @@index([userId, status])
+}
+
+model MobileCompanionCommand {
+  id        String              @id @default(cuid())
+  pairId    String
+  action    String
+  payload   String              @default("{}")
+  status    String              @default("queued")
+  result    String              @default("{}")
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  pair      MobileCompanionPair @relation(fields: [pairId], references: [id], onDelete: Cascade)
+
+  @@index([pairId, status])
+}
+
+/// WhatsApp Cloud API — maps inbound `from` phone to a CINEM user for desktop routing.
+model AssistantWhatsAppLink {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  phoneE164 String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Cloud-queued remote commands for the desktop Assistant poller.
+model AssistantRemoteCommand {
+  id        String   @id @default(cuid())
+  userId    String
+  channel   String
+  sourceId  String   @default("")
+  text      String
+  status    String   @default("queued")
+  replyText String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+/// Standalone Cinem AI Assistant subscription (separate from desk Workspace.plan).
+model AssistantSubscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  /// monthly | 3mo | 6mo | 1yr
+  plan             String
+  /// active | cancelled | expired
+  status           String    @default("active")
+  whopMembershipId String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+/// Account-bound product meters (Cinem AI Assistant chat/voice turns).
+model ProductUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  product   String
+  /// UTC calendar month `YYYY-MM`.
+  period    String
+  used      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, product, period])
+  @@index([userId, product])
+}
+
+/// One-time Support (tip) payments. Does not change Workspace.plan.
+model BrandSupport {
+  id           String     @id @default(cuid())
+  amountCents  Int
+  currency     String     @default("usd")
+  userId       String?
+  workspaceId  String?
+  email        String     @default("")
+  paymentId    String?    @unique
+  status       String     @default("pending")
+  provider     String     @default("whop")
+  createdAt    DateTime   @default(now())
+  paidAt       DateTime?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([status])
+}
+
+/// Product helpdesk thread (Help widget → Admin HQ). Not Whop / BrandSupport tips.
+model SupportThread {
+  id            String           @id @default(cuid())
+  userId        String?
+  email         String           @default("")
+  name          String           @default("")
+  workspaceId   String?
+  pageUrl       String           @default("")
+  preview       String           @default("")
+  /// open | live | replied | closed
+  status        String           @default("open")
+  liveRequested Boolean          @default(false)
+  liveActive    Boolean          @default(false)
+  /// Opaque key for anonymous marketing-page threads. Empty when signed-in.
+  guestKey      String           @default("")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  lastMessageAt DateTime         @default(now())
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace     Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  messages      SupportMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([status, lastMessageAt])
+  @@index([email])
+  @@index([guestKey])
+}
+
+model SupportMessage {
+  id          String        @id @default(cuid())
+  threadId    String
+  role        String
+  body        String
+  authorEmail String        @default("")
+  createdAt   DateTime      @default(now())
+  thread      SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+}
+
+/// Singleton row (`id = founder`) — Admin HQ heartbeat for live-chat availability.
+model SupportStaffPresence {
+  id         String   @id
+  lastSeenAt DateTime @default(now())
+  actorEmail String   @default("")
+}
+
+/// Singleton — public founding-member counter for Cinem AI Assistant.
+model SiteConfig {
+  id                       String   @id @default("global")
+  assistantFoundingSlots   Int      @default(50)
+  assistantFoundingClaimed Int      @default(0)
+  updatedAt                DateTime @updatedAt
+}
+
+/// Per-user BYOK keys (Gemini + Deepgram + optional image providers) encrypted at rest.
+model UserProviderKey {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  geminiKeyEnc     String   @default("")
+  deepgramKeyEnc   String   @default("")
+  imageGenUrlEnc   String   @default("")
+  imageGenApiKeyEnc String  @default("")
+  geminigenApiKeyEnc String @default("")
+  geminiTokensUsed Int      @default(0)
+  deepgramCharsUsed Int     @default(0)
+  spendCapUsd      Float    @default(25)
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Short-lived GeminiGen webhook / poll cache (async image jobs).
+model ImageGenAsyncResult {
+  uuid         String   @id
+  mediaUrl     String   @default("")
+  status       Int      @default(1)
+  errorMessage String   @default("")
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+}
+
+/// Anonymous marketing-funnel event (site visit / WhatsApp CTA click).
+/// anonId is a client-generated random id (localStorage), never a cookie
+/// tied to auth, an IP, or a device fingerprint — no PII by design.
+model FunnelEvent {
+  id        String   @id @default(cuid())
+  kind      String
+  anonId    String
+  path      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([anonId])
+}
+
+/// A visitor asking to buy after WhatsApp contact. Name/note are PII the
+/// visitor volunteered to reach sales — distinct from FunnelEvent, which
+/// stays anonymous. anonId links it back to the funnel, optionally.
+model PurchaseRequest {
+  id          String    @id @default(cuid())
+  anonId      String    @default("")
+  name        String
+  note        String    @default("")
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+  approvedAt  DateTime?
+  approvedBy  String    @default("")
+
+  @@index([status, createdAt])
+}
+
+/// Opt-in desktop crash report. Self-hosted (no third-party subprocessor) —
+/// userId is optional and never required; no free-text PII fields exist here.
+model CrashReport {
+  id          String   @id @default(cuid())
+  userId      String?
+  platform    String
+  appVersion  String
+  /// Short machine reason, e.g. Electron render-process-gone "reason".
+  reason      String
+  /// Truncated stack/context — never the full renderer DOM or user content.
+  detail      String   @default("")
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}

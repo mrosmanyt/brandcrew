@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CINEM">
+  <style>
+    path { fill: #111111; }
+    @media (prefers-color-scheme: dark) {
+      path { fill: #f4f3ef; }
+    }
+  </style>
+  <path d="M2 32 L16 8 H28 L18 32 L28 56 H16 Z"/>
+  <path d="M62 32 L48 8 H36 L46 32 L36 56 H46 Z"/>
+</svg>

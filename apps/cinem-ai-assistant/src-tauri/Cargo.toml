@@ -1,0 +1,33 @@
+[package]
+name = "cinem-ai-assistant"
+version = "0.1.0"
+description = "Cinem AI Assistant — Your Personal Intelligent Cyber Assistant"
+edition = "2021"
+
+[lib]
+name = "cinem_ai_assistant_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
+tauri-plugin-http = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-process = "2"
+
+[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+sysinfo = "0.33"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

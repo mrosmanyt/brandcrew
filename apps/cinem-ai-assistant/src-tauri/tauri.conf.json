@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Cinem AI Assistant",
+  "version": "0.1.0",
+  "identifier": "com.cinem-ai-assistant.assistant",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Cinem AI Assistant — Personal Intelligent Cyber Assistant",
+        "label": "main",
+        "width": 1500,
+        "height": 940,
+        "minWidth": 1180,
+        "minHeight": 760,
+        "center": true,
+        "resizable": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {},
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": false,
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "publisher": "Cinem AI Assistant",
+    "category": "Productivity",
+    "shortDescription": "Cinem AI Assistant — Personal Intelligent Cyber Assistant",
+    "longDescription": "Cinem AI Assistant is a premium desktop AI assistant with 15 specialized agents, voice control, browser automation, vision and a local-first user system.",
+    "resources": {
+      "../playwright-server/index.js": "playwright-server/index.js",
+      "../playwright-server/package.json": "playwright-server/package.json",
+      "../media-server/index.js": "media-server/index.js",
+      "../media-server/package.json": "media-server/package.json",
+      "../db-server/index.js": "db-server/index.js",
+      "../db-server/package.json": "db-server/package.json",
+      "../dist": "dist",
+      "../scripts/whisper_stt.py": "scripts/whisper_stt.py",
+      "installer/install-deps.ps1": "bootstrap/install-deps.ps1"
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "perMachine",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "startMenuFolder": "Cinem AI Assistant",
+        "installerHooks": "installer/hooks.nsh"
+      }
+    }
+  }
+}

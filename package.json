@@ -1,0 +1,277 @@
+{
+  "name": "brandcrew",
+  "version": "0.3.6",
+  "private": true,
+  "description": "CINEM Pro — AI employee desk. Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
+  "author": "CINEM",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "predev": "node scripts/ensure-dev.mjs",
+    "dev": "next dev --hostname 0.0.0.0 --port 43180",
+    "build": "node scripts/prisma-generate.mjs && npm run pack:extension && next build",
+    "start": "next start --hostname 0.0.0.0 --port 43180",
+    "lint": "eslint",
+    "postinstall": "node scripts/prisma-generate.mjs",
+    "db:up": "docker compose up -d",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "node scripts/prisma-generate.mjs",
+    "vercel-build": "node scripts/prisma-generate.mjs --with-migrate && npm run pack:extension && next build",
+    "test:llm": "tsx scripts/check-llm-router.ts",
+    "test:models": "tsx scripts/check-model-catalog.ts",
+    "test:admin": "tsx scripts/check-admin.ts",
+    "test:helpdesk": "tsx scripts/check-helpdesk.ts",
+    "test:jobs": "tsx scripts/check-job-runtime.ts",
+    "test:companions": "tsx scripts/check-companions.ts",
+    "test:marketplace": "tsx scripts/check-marketplace.ts",
+    "test:oauth": "tsx scripts/check-oauth-plugins.ts",
+    "test:browse": "tsx scripts/check-browse.ts",
+    "test:api-router": "tsx scripts/check-api-router.ts",
+    "test:workspace-create": "tsx scripts/check-workspace-create.ts",
+    "pack:extension": "tsx scripts/pack-extension.ts",
+    "test:developer-api": "tsx scripts/check-developer-api.ts",
+    "test:console": "tsx scripts/check-console-site.ts",
+    "test:usage": "tsx scripts/check-usage-series.ts",
+    "test:limits": "tsx scripts/check-limits.ts",
+    "test:product": "tsx scripts/check-product-pack.ts",
+    "test:desk-chat": "tsx scripts/check-desk-chat.ts",
+    "test:desk-settings": "tsx scripts/check-desk-settings.ts",
+    "test:google-auth": "tsx scripts/check-google-auth.ts",
+    "test:desk-theme": "tsx scripts/check-desk-theme.ts",
+    "test:desk-modes": "tsx scripts/check-desk-modes.ts",
+    "test:desk-ux": "tsx scripts/check-desk-ux.ts",
+    "test:hero-demo": "tsx scripts/check-hero-demo.ts",
+    "test:build-prompt": "tsx scripts/check-build-prompt.ts",
+    "test:build-gate": "tsx scripts/check-build-gate.ts",
+    "test:integrations": "tsx scripts/check-integrations-showcase.ts",
+    "test:billing": "tsx scripts/check-billing.ts",
+    "test:launch": "tsx scripts/check-launch.ts",
+    "test:onboarding": "tsx scripts/check-onboarding-wizard.ts",
+    "test:on-device": "tsx scripts/check-on-device.ts",
+    "test:auth-bridge": "tsx scripts/check-auth-bridge.ts",
+    "test:win-signing": "tsx scripts/check-win-code-signing.ts",
+    "test:write-gate": "tsx scripts/check-write-gate.ts",
+    "test:cost": "tsx scripts/check-cost-controls.ts",
+    "test:phase3": "tsx scripts/check-phase3.ts",
+    "test:phase4": "tsx scripts/check-phase4.ts",
+    "test:desktop-shell": "tsx scripts/check-desktop-shell.ts",
+    "test:desktop-updater": "tsx scripts/check-desktop-updater.ts",
+    "test:voices": "tsx scripts/check-character-voices.ts",
+    "test:cinem-ai": "tsx scripts/check-cinem-ai-assistant.ts",
+    "test:assistant-ux": "tsx scripts/check-assistant-ux.ts",
+    "test:assistant-browser": "tsx scripts/check-assistant-browser-loop.ts",
+    "test:jarvis-features": "tsx scripts/check-jarvis-features.ts",
+    "test:image-generation": "tsx scripts/check-image-generation.ts",
+    "test:power-pack": "tsx scripts/check-power-pack.ts",
+    "test:computer-use": "tsx scripts/check-computer-use.ts",
+    "test:social-playbooks": "tsx scripts/check-social-playbooks.ts",
+    "test:remote-control": "tsx scripts/check-remote-control.ts",
+    "test:multilayer": "tsx scripts/check-multilayer-orchestrator.ts",
+    "test:iris-pack": "tsx scripts/check-iris-pack.ts",
+    "test:referral-invites": "tsx scripts/check-referral-invites.ts",
+    "composio:first-call": "tsx scripts/composio-first-call.ts",
+    "test:installer-branding": "tsx scripts/check-installer-branding.ts",
+    "test:win-nudge": "tsx scripts/check-windows-download-nudge.ts",
+    "test:guest-assistant-prompt": "tsx scripts/check-guest-assistant-download-prompt.ts",
+    "test:direct-desktop-download": "tsx scripts/check-direct-desktop-download.ts",
+    "test:desktop-startup-safety": "tsx scripts/check-desktop-startup-safety.ts",
+    "test:api-error-handling": "tsx scripts/check-api-error-handling.ts",
+    "installer:art": "node scripts/make-installer-art.mjs",
+    "desktop:dev": "node scripts/make-icon.mjs && electron electron/main.cjs",
+    "desktop:cloud": "node scripts/desktop-cloud.mjs",
+    "desktop:assistant": "node scripts/make-icon.mjs && node scripts/build-assistant-renderer.mjs && electron electron/main.cjs --mode=assistant",
+    "desktop:build:assistant": "node scripts/build-assistant-renderer.mjs",
+    "desktop:build": "node scripts/desktop-build.mjs",
+    "desktop:build:win": "node scripts/desktop-build.mjs --win",
+    "desktop:build:mac": "node scripts/desktop-build.mjs --mac"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "@base-ui/react": "^1.8.0",
+    "@composio/core": "^0.17.0",
+    "@google/genai": "^2.21.0",
+    "@prisma/client": "^6.16.3",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.116.0",
+    "@whop/sdk": "^1.1.2",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "electron-updater": "^6.8.9",
+    "jose": "^6.2.12",
+    "lucide-react": "^1.41.0",
+    "next": "16.3.4",
+    "next-themes": "^0.4.6",
+    "openai": "^7.10.0",
+    "pdf-parse": "^1.1.4",
+    "playwright-core": "^1.63.0",
+    "radix-ui": "^1.6.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "shadcn": "^4.21.0",
+    "sonner": "^2.0.8",
+    "stripe": "^22.6.1",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "electron": "^37.10.3",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "prisma": "^6.16.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.brandcrew.desktop",
+    "productName": "CINEM Pro",
+    "copyright": "Copyright © CINEM",
+    "directories": {
+      "output": "dist/desktop",
+      "buildResources": "electron/resources"
+    },
+    "files": [
+      "electron/main.cjs",
+      "electron/main-log.cjs",
+      "electron/safe-mode.cjs",
+      "electron/preload.cjs",
+      "electron/desk-shell.cjs",
+      "electron/modes.cjs",
+      "electron/local-builder.cjs",
+      "electron/wake-word.cjs",
+      "electron/system-meters.cjs",
+      "electron/mode-chooser.html",
+      "electron/mode-chooser-preload.cjs",
+      "electron/window-chrome.cjs",
+      "electron/chrome.html",
+      "electron/chrome-preload.cjs",
+      "electron/assistant-preload.cjs",
+      "electron/assistant-missing.html",
+      "electron/assistant-offline.html",
+      "electron/offline.html",
+      "electron/computer-use.cjs",
+      "electron/computer-use-hud.html",
+      "electron/ai-cursor-overlay.html",
+      "electron/sign-in.html",
+      "electron/updater.cjs",
+      "electron/updates.html",
+      "electron/updates-preload.cjs",
+      "electron/installer.nsh",
+      "package.json",
+      "!**/node_modules/**"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "mrosmanyt",
+        "repo": "cinem-pro-releases",
+        "releaseType": "release"
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/electron-updater/**/*",
+      "**/node_modules/builder-util-runtime/**/*"
+    ],
+    "npmRebuild": false,
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone"
+      },
+      {
+        "from": "apps/cinem-ai-assistant/dist",
+        "to": "assistant"
+      },
+      {
+        "from": "apps/cinem-ai-assistant/computer-use-server",
+        "to": "computer-use-server"
+      },
+      {
+        "from": "electron/resources",
+        "to": "brandcrew",
+        "filter": [
+          "icon.png",
+          "icon.ico",
+          "installer/icon.ico",
+          "env.example"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "electron/resources/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": false,
+      "identity": null
+    },
+    "win": {
+      "icon": "electron/resources/icon.ico",
+      "executableName": "CINEM-Pro",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CINEM Pro",
+      "uninstallDisplayName": "CINEM Pro (Desk + AI Assistant)",
+      "include": "installer.nsh",
+      "installerIcon": "installer/icon.ico",
+      "uninstallerIcon": "installer/icon.ico",
+      "installerHeader": "installer/header.bmp",
+      "installerSidebar": "installer/sidebar.bmp",
+      "uninstallerSidebar": "installer/sidebar.bmp",
+      "runAfterFinish": true,
+      "artifactName": "CINEM-Pro-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "CINEM-Pro-Portable.${ext}"
+    },
+    "linux": {
+      "icon": "electron/resources/icon.png",
+      "category": "Office",
+      "target": [
+        "AppImage"
+      ]
+    },
+    "protocols": [
+      {
+        "name": "CINEM Pro",
+        "schemes": [
+          "cinem-pro"
+        ]
+      }
+    ]
+  }
+}

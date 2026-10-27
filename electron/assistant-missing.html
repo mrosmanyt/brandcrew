@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cinem AI Assistant</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #09090b;
+        color: #fafafa;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+      }
+      .card {
+        width: min(520px, 100%);
+        border: 1px solid #27272a;
+        border-radius: 16px;
+        background: #0c0c0f;
+        padding: 28px 24px;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: #a1a1aa;
+        line-height: 1.55;
+      }
+      code {
+        font-size: 12px;
+        color: #e4e4e7;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <h1>Assistant renderer is not built</h1>
+        <p>
+          Cinem AI Assistant loads from the Vite build inside this Electron shell. Packaged
+          Setup.exe always includes it. For local runs:
+        </p>
+        <p>
+          <code>node scripts/build-assistant-renderer.mjs</code>
+        </p>
+        <p>Or start the Vite dev server on port 1420 and reopen AI Assistant.</p>
+      </div>
+    </main>
+  </body>
+</html>
