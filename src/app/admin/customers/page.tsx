@@ -14,5 +14,5 @@ export default async function AdminCustomersPage({
   const q = query.q?.trim() || "";
   const userId = query.userId?.trim() || "";
   const initial = await getAdminCustomers({ q, userId });
-  return <AdminCustomers initial={initial} initialQuery={q} initialUserId={userId} />;
+  return <AdminCustomers initial={initial} initialQuery={q} />;
 }

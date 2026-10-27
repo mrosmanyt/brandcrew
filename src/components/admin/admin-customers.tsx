@@ -21,11 +21,9 @@ import {
 export function AdminCustomers({
   initial,
   initialQuery,
-  initialUserId,
 }: {
   initial: AdminCustomersPayload;
   initialQuery: string;
-  initialUserId: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
