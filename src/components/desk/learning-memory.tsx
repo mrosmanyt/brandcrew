@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,19 +13,19 @@ export function LearningMemoryPanel({ workspaceId }: { workspaceId: string }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/memory`);
     if (!res.ok) return;
     const data = await res.json();
     setRows(data.memories ?? []);
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void refresh();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [workspaceId]);
+  }, [refresh]);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();

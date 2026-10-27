@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
     [inbox.threads, selectedId],
   );
 
-  async function loadInbox() {
+  const loadInbox = useCallback(async () => {
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
     if (status !== "all") params.set("status", status);
@@ -49,7 +49,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
     if (selectedId && !next.threads.some((row) => row.id === selectedId)) {
       setSelectedId(next.threads[0]?.id || "");
     }
-  }
+  }, [q, status, selectedId]);
 
   async function loadThread(id: string) {
     if (!id) {
@@ -90,7 +90,7 @@ export function AdminSupport({ initial }: { initial: HelpdeskInbox }) {
       window.clearInterval(pulse);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [selectedId, q, status]);
+  }, [loadInbox, selectedId]);
 
   useEffect(() => {
     if (!selectedId) return;

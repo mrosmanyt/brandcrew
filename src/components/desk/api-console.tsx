@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Copy, KeyRound, Play, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function ApiConsole({ workspaceId }: { workspaceId: string }) {
     [endpoint],
   );
 
-  async function loadKeys() {
+  const loadKeys = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/api-keys`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -60,7 +60,7 @@ export function ApiConsole({ workspaceId }: { workspaceId: string }) {
       return;
     }
     setKeys(data.apiKeys ?? []);
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -69,7 +69,7 @@ export function ApiConsole({ workspaceId }: { workspaceId: string }) {
       if (stored) setBearer(stored);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [workspaceId]);
+  }, [loadKeys, workspaceId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

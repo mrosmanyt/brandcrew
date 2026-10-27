@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,21 +43,21 @@ export function InviteTeam({ workspaceId }: { workspaceId: string }) {
   const canInvite = !membership || roleCan(membership.role, "invite");
   const canManageRoles = !membership || roleCan(membership.role, "manage_roles");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/invites`);
     if (!res.ok) return;
     const data = await res.json();
     setInvites(data.invites ?? []);
     setMembers(data.members ?? []);
     if (data.membership) setMembership(data.membership);
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void refresh();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [workspaceId]);
+  }, [refresh]);
 
   async function invite(e: React.FormEvent) {
     e.preventDefault();

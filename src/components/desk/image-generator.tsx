@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, ImageIcon, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -243,10 +244,13 @@ export function ImageGeneratorPanel({ workspaceId }: { workspaceId: string }) {
                 : "Cloudflare Workers AI"}
               {result.source === "byok" ? " · your key" : " · server key"}
             </p>
-            <img
+            <Image
               src={dataUrl}
               alt={result.prompt}
-              className="max-h-[480px] w-full rounded-lg border object-contain bg-muted/30"
+              width={1024}
+              height={1024}
+              unoptimized
+              className="h-auto max-h-[480px] w-full rounded-lg border object-contain bg-muted/30"
             />
           </div>
         )}

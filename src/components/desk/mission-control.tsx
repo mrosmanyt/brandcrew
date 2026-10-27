@@ -284,10 +284,12 @@ export function MissionControl({
     if (node) node.scrollTop = node.scrollHeight;
   }, [threadKey, messages.length]);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setAgents(initialAgents), 0);
-    return () => window.clearTimeout(timer);
-  }, [agentRosterKey]);
+  // Reset the local roster when the server sends a different set of agents.
+  const [syncedRosterKey, setSyncedRosterKey] = useState(agentRosterKey);
+  if (syncedRosterKey !== agentRosterKey) {
+    setSyncedRosterKey(agentRosterKey);
+    setAgents(initialAgents);
+  }
 
   useEffect(() => {
     if (
@@ -301,17 +303,19 @@ export function MissionControl({
     return () => window.clearTimeout(timer);
   }, [urlAgentId, agents, selectedId]);
 
+  const selectedAgentId = selected?.id;
+  const selectedAgentName = selected?.name;
   useEffect(() => {
-    if (!selected) return;
-    const agentId = selected.id;
-    const agentName = selected.name;
+    if (!selectedAgentId || selectedAgentName === undefined) return;
+    const agentId = selectedAgentId;
+    const agentName = selectedAgentName;
     const timer = window.setTimeout(() => {
       setRenameValue(displayAgentName(agentName));
       setRenaming(false);
       void refreshChat(agentId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [selected?.id, refreshChat]);
+  }, [selectedAgentId, selectedAgentName, refreshChat]);
 
   useEffect(() => {
     let cancelled = false;

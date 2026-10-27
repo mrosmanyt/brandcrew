@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CHROME_WEB_STORE_URL } from "@/lib/auth-bridge";
@@ -25,12 +25,12 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
   const [loginUrl, setLoginUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/devices`);
     if (!res.ok) return;
     const data = await res.json();
     setDevices(data.devices || []);
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     const first = window.setTimeout(() => {
@@ -46,7 +46,7 @@ export function OnDeviceSetup({ workspaceId }: { workspaceId: string }) {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [workspaceId]);
+  }, [load]);
 
   async function pair() {
     setBusy(true);

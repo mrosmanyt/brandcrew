@@ -250,7 +250,8 @@ export function nextStatusAfterFounderReply(liveActive: boolean): HelpdeskStatus
   return liveActive ? "live" : "replied";
 }
 
-export function helpdeskAckForLiveRequest(_founderAvailable?: boolean): string {
+/** Live handoff ack. Same copy whether or not the team is online — Help never says "offline". */
+export function helpdeskAckForLiveRequest(): string {
   return HELPDESK_LIVE_AVAILABLE_ACK;
 }
 

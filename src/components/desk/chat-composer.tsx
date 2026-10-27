@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -464,9 +465,12 @@ export function ChatComposer({
                 >
                   {file.kind === "image" && file.previewUrl ? (
                     <>
-                      <img
+                      <Image
                         src={file.previewUrl}
                         alt={file.name}
+                        width={56}
+                        height={56}
+                        unoptimized
                         className="h-14 w-14 object-cover"
                       />
                       <button

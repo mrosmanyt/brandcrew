@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { connectorLogoSrc } from "@/lib/connector-logos";
 import { cn } from "@/lib/utils";
 
@@ -24,8 +25,9 @@ export function ConnectorLogo({
 }) {
   const px = SIZE_PX[size];
   return (
-    <img
+    <Image
       src={connectorLogoSrc(pluginId)}
+      unoptimized
       alt=""
       width={px}
       height={px}

@@ -91,8 +91,8 @@ assert.equal(
 );
 assert.equal(nextStatusAfterFounderReply(true), "live");
 assert.equal(nextStatusAfterFounderReply(false), "replied");
-assert.equal(helpdeskAckForLiveRequest(true), HELPDESK_LIVE_AVAILABLE_ACK);
-assert.equal(helpdeskAckForLiveRequest(false), HELPDESK_LIVE_OFFLINE_ACK);
+assert.equal(helpdeskAckForLiveRequest(), HELPDESK_LIVE_AVAILABLE_ACK);
+assert.equal(helpdeskAckForLiveRequest(), HELPDESK_LIVE_OFFLINE_ACK);
 assert.doesNotMatch(HELPDESK_LIVE_AVAILABLE_ACK, /offline/i);
 assert.doesNotMatch(HELPDESK_LIVE_OFFLINE_ACK, /offline/i);
 console.log("ok: live handoff + presence window");

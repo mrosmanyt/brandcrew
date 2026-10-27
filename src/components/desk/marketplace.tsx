@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Check, FileText, Loader2, Plug, Search, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -79,7 +79,7 @@ export function MarketplaceDesk({
   const [probeBusy, setProbeBusy] = useState(false);
   const [probeNote, setProbeNote] = useState("");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/marketplace`);
     if (!res.ok) return;
     const data = await res.json();
@@ -94,14 +94,14 @@ export function MarketplaceDesk({
       setComposioHint(String(data.composio.hint || ""));
     }
     setLoading(false);
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void refresh();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [workspaceId]);
+  }, [refresh]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -118,7 +118,8 @@ export function MarketplaceDesk({
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+    // OAuth return params are read once on mount; refresh only changes with workspaceId.
+  }, [refresh]);
 
   const categories = tab === "bots" ? MARKETPLACE_BOT_CATEGORIES : PLUGIN_CATEGORIES;
 

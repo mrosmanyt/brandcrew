@@ -124,7 +124,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
-    "electron": "^37.10.3",
+    "electron": "^44.9.3",
     "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
@@ -273,5 +273,8 @@
         ]
       }
     ]
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
   }
 }

@@ -1,4 +1,4 @@
-export default {
+const worker = {
     async fetch(request, env) {
         const API_KEY = env.API_KEY;
         const url = new URL(request.url);
@@ -47,3 +47,5 @@ function json(data, status = 200) {
         headers: { "Content-Type": "application/json" },
     });
 }
+
+export default worker;

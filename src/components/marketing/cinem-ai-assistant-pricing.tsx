@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 import { useMarketingAuth } from "@/components/marketing/use-signed-in";
@@ -18,12 +19,13 @@ import { cn } from "@/lib/utils";
 function PlanCard({ planId }: { planId: AssistantBillingPlanId }) {
   const plan = ASSISTANT_BILLING_PLANS[planId];
   const { signedIn } = useMarketingAuth();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const highlighted = Boolean(plan.highlighted);
 
   async function checkout() {
     if (!signedIn) {
-      window.location.href = `/login?next=${encodeURIComponent(assistantBillingPath(planId))}`;
+      router.push(`/login?next=${encodeURIComponent(assistantBillingPath(planId))}`);
       return;
     }
     setBusy(true);

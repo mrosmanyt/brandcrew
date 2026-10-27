@@ -187,7 +187,7 @@ export async function composeHelpdeskAck(input: {
     };
   }
   const template = input.liveRequested
-    ? helpdeskAckForLiveRequest(input.founderAvailable)
+    ? helpdeskAckForLiveRequest()
     : classified.route === "escalate" || classified.looksLikeIssue
       ? HELPDESK_ESCALATE_ACK
       : HELPDESK_CHAT_FALLBACK;

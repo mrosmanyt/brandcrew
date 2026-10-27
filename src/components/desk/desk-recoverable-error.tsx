@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 type DeskRecoverableErrorProps = {
   error: Error & { digest?: string };
@@ -36,15 +37,9 @@ export function DeskRecoverableError({
           <Button type="button" onClick={() => reset()}>
             Reload
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              if (typeof window !== "undefined") window.location.assign("/desk");
-            }}
-          >
+          <Link href="/desk" prefetch={false} className={buttonVariants({ variant: "outline" })}>
             Back to workspaces
-          </Button>
+          </Link>
         </div>
       </div>
     </div>
