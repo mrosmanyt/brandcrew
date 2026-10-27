@@ -4,6 +4,7 @@ import { notify } from "@/store/useToastStore";
 import { applyTheme, themeById } from "@/lib/themes";
 import { DEFAULT_CHARACTER_ID, FISH_AUDIO_DEFAULT_MODEL } from "@/lib/character-voices";
 import { DEFAULT_DEEPGRAM_VOICE_ID } from "@/lib/deepgram-voices";
+import { DEFAULT_ELEVEN_VOICE_ID, DEFAULT_GEMINI_VOICE } from "@/lib/gemini-voices";
 import type { AgentStatus } from "@/data/agents";
 
 /* ── Settings model ───────────────────────────────────────────────── */
@@ -31,7 +32,9 @@ export interface Settings {
   deepgramApiKey: string;
   /** Deepgram Aura / Aura-2 model id for TTS (e.g. aura-2-thalia-en). */
   deepgramVoiceId: string;
-  ttsEngine: "auto" | "deepgram" | "fish" | "elevenlabs" | "piper" | "webspeech";
+  ttsEngine: "auto" | "gemini" | "deepgram" | "fish" | "elevenlabs" | "piper" | "webspeech";
+  /** Gemini native TTS voice (Charon, Puck, Kore, Fenrir, Aoede). Uses geminiKey. */
+  geminiVoice: string;
   /** Named character (Aria, Zara, …). */
   characterVoice: string;
   /** Product default is English. "auto" follows the last user message. */
@@ -114,6 +117,7 @@ export const DEFAULT_SETTINGS: Settings = {
   deepgramApiKey: "",
   deepgramVoiceId: DEFAULT_DEEPGRAM_VOICE_ID,
   ttsEngine: "auto",
+  geminiVoice: DEFAULT_GEMINI_VOICE,
   characterVoice: DEFAULT_CHARACTER_ID,
   preferredLanguage: "en",
   fishAudioKey: "",
@@ -121,7 +125,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fishVoiceIds: {},
   // Enter your own ElevenLabs key in Settings → API (voice).
   elevenKey: "",
-  elevenVoiceId: "EXAVITQu4vr4xnSDxMaL", // "Bella" — soft, sweet, warm (change in Settings)
+  elevenVoiceId: DEFAULT_ELEVEN_VOICE_ID, // "Adam" — change in Settings → Voice
   piperVoicePath: "voices/en_US-amy-medium.onnx",
   agentAnnouncements: true,
   uiSounds: true,
@@ -237,6 +241,7 @@ const pickSettings = (s: SettingsState): Settings => ({
   deepgramApiKey: s.deepgramApiKey,
   deepgramVoiceId: s.deepgramVoiceId,
   ttsEngine: s.ttsEngine,
+  geminiVoice: s.geminiVoice,
   characterVoice: s.characterVoice,
   preferredLanguage: s.preferredLanguage,
   fishAudioKey: s.fishAudioKey,

@@ -2,7 +2,7 @@
  * Cinem AI Assistant voice engine (Phase 2).
  *  - Listening : mic capture (MediaRecorder) + live level metering
  *  - STT       : Faster-Whisper (Tauri) or Chromium speech recognition (Electron)
- *  - Speaking  : Fish Audio (optional key) → ElevenLabs → Piper (Tauri) →
+ *  - Speaking  : Gemini (Charon…) → Deepgram → Fish Audio → ElevenLabs → Piper (Tauri) →
  *                Windows / Edge Neural Web Speech. Whisper stays speech-to-text only.
  * The waveform bar reads `voice.getLevel()` each frame for real amplitude.
  */
@@ -27,6 +27,16 @@ import {
   resolveDeepgramKey,
 } from "@/lib/deepgramVoice";
 import { resolveDeepgramVoiceId } from "@/lib/deepgram-voices";
+import {
+  base64ToBytes,
+  GEMINI_TTS_MODELS,
+  geminiAudioPart,
+  geminiTtsBody,
+  geminiTtsUrl,
+  pcm16ToWav,
+  pcmSampleRate,
+  resolveGeminiVoice,
+} from "@/lib/gemini-voices";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -194,7 +204,7 @@ class VoiceEngine {
   /* ── Speaking ─────────────────────────────────────── */
   /**
    * Speaks `text`. `opts` lets callers override the voice per utterance.
-   * Chain: Deepgram Aura (optional key + voice) → Fish Audio → ElevenLabs →
+   * Chain: Gemini native voice (geminiKey) → Deepgram Aura → Fish Audio → ElevenLabs →
    * Piper (Tauri only) → sweet Web Speech. Never leaves the harsh default clip as the only path.
    */
   async speak(text: string, s: Settings, opts?: SpeakOptions): Promise<void> {
@@ -202,6 +212,8 @@ class VoiceEngine {
     const character = resolveCharacterForSpeak(opts?.characterId || s.characterVoice, opts?.lang);
     const lang = opts?.lang || character.bcp47;
     const engine = s.ttsEngine || "auto";
+    const geminiKey = s.geminiKey?.trim() || "";
+    const tryGemini = Boolean(geminiKey) && (engine === "gemini" || engine === "auto");
     const dgKey = resolveDeepgramKey(s.deepgramApiKey);
     const dgVoice = resolveDeepgramVoiceId(s.deepgramVoiceId);
     const tryDeepgram =
@@ -213,8 +225,20 @@ class VoiceEngine {
     const tryEleven = Boolean(s.elevenKey) && (engine === "auto" || engine === "elevenlabs");
     const tryPiper =
       IS_TAURI &&
-      (engine === "piper" || (engine === "auto" && !dgKey && !fishKey && !s.elevenKey));
+      (engine === "piper" || (engine === "auto" && !geminiKey && !dgKey && !fishKey && !s.elevenKey));
 
+    if (tryGemini) {
+      try {
+        await this.play(await this.geminiTts(text, geminiKey, s.geminiVoice));
+        reportUsage("tts", text.length);
+        return;
+      } catch (e) {
+        if (engine === "gemini") {
+          throw e instanceof Error ? e : new Error("Gemini TTS failed.");
+        }
+        console.warn("Gemini TTS failed, trying next engine:", e);
+      }
+    }
     if (tryDeepgram) {
       try {
         await this.play(await deepgramSpeak(text, dgKey, dgVoice));
@@ -252,6 +276,31 @@ class VoiceEngine {
       }
     }
     await this.webSpeechTts(text, lang, character);
+  }
+
+  private async geminiTts(text: string, apiKey: string, voiceId: string): Promise<Blob> {
+    const doFetch = IS_TAURI
+      ? (await import("@tauri-apps/plugin-http")).fetch
+      : window.fetch.bind(window);
+    const voiceName = resolveGeminiVoice(voiceId);
+    let lastError = "Gemini TTS returned no audio.";
+    for (const model of GEMINI_TTS_MODELS) {
+      const res = await doFetch(geminiTtsUrl(model, apiKey), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiTtsBody(text, voiceName)),
+      });
+      if (res.status === 404) {
+        lastError = `Gemini TTS model ${model} not found.`;
+        continue;
+      }
+      if (!res.ok) throw new Error(`Gemini TTS ${res.status}: ${await res.text()}`);
+      const audio = geminiAudioPart(await res.json());
+      if (!audio) throw new Error(lastError);
+      const wav = pcm16ToWav(base64ToBytes(audio.data), pcmSampleRate(audio.mimeType));
+      return new Blob([wav.buffer as ArrayBuffer], { type: "audio/wav" });
+    }
+    throw new Error(lastError);
   }
 
   private async fishAudioTts(

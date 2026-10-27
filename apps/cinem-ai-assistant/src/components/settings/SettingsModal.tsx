@@ -36,6 +36,7 @@ import {
   type DeepgramVoiceEntry,
 } from "@/lib/deepgram-voices";
 import { deepgramConfigured, listDeepgramVoices } from "@/lib/deepgramVoice";
+import { ELEVEN_VOICE_PRESETS, GEMINI_VOICES, resolveGeminiVoice } from "@/lib/gemini-voices";
 import { cn } from "@/lib/utils";
 import ByokDashboardTab from "@/components/byok/ByokDashboardTab";
 import GeminiByokWizard from "@/components/byok/GeminiByokWizard";
@@ -652,8 +653,8 @@ function VoiceTab() {
         <p className="text-sm font-semibold text-ice/90">Microphone</p>
         <p className="mt-1 text-xs leading-relaxed text-neon-dim">
           Tap the mic in Chat (or the bar below) to talk. STT: Deepgram Nova-2 (optional key) →
-          browser recognition (Electron) → Faster-Whisper (Tauri). TTS: Deepgram Aura / Aura-2 →
-          Fish Audio → ElevenLabs → Neural Windows. Keys via Settings or DEEPGRAM_API_KEY /
+          browser recognition (Electron) → Faster-Whisper (Tauri). TTS: Gemini (Charon) → Deepgram
+          Aura / Aura-2 → Fish Audio → ElevenLabs → Neural Windows. Keys via Settings or DEEPGRAM_API_KEY /
           VITE_DEEPGRAM_API_KEY / FISH_AUDIO_API_KEY env vars.
         </p>
       </div>
@@ -741,19 +742,34 @@ function VoiceTab() {
       </Field>
       <Field
         label="TTS Engine"
-        hint="Auto prefers Deepgram when keyed + a voice is selected, then Fish Audio, then Neural Windows."
+        hint="Auto prefers the Gemini voice when a Gemini key is set (Settings → API), then Deepgram, Fish Audio, ElevenLabs, Neural Windows."
       >
         <Select
           value={s.ttsEngine}
           onChange={(v) => s.update({ ttsEngine: v as Settings["ttsEngine"] })}
           options={[
-            ["auto", "Auto (Deepgram → Fish → Neural)"],
+            ["auto", "Auto (Gemini → Deepgram → Fish → ElevenLabs → Neural)"],
+            ["gemini", "Gemini native voice"],
             ["deepgram", "Deepgram Aura / Aura-2"],
             ["fish", "Fish Audio"],
             ["webspeech", "Windows / browser Neural"],
             ["elevenlabs", "ElevenLabs"],
             ["piper", "Piper (Tauri offline)"],
           ]}
+        />
+      </Field>
+      <Field
+        label="Gemini voice"
+        hint={
+          s.geminiKey.trim()
+            ? "Uses your Gemini key from Settings → API. Speaks the language of the reply."
+            : "Add a Gemini key in Settings → API to use these voices."
+        }
+      >
+        <Select
+          value={resolveGeminiVoice(s.geminiVoice)}
+          onChange={(v) => s.update({ geminiVoice: v })}
+          options={GEMINI_VOICES.map((v): [string, string] => [v.id, v.label])}
         />
       </Field>
       <Field
@@ -781,8 +797,23 @@ function VoiceTab() {
       <Field label="ElevenLabs API Key" hint="Optional fallback. Stored locally.">
         <TextInput type="password" value={elevenKey} onChange={(e) => setElevenKey(e.target.value)} />
       </Field>
-      <Field label="ElevenLabs Voice ID">
-        <TextInput value={voiceId} onChange={(e) => setVoiceId(e.target.value)} placeholder="21m00Tcm4TlvDq8ikWAM" />
+      <Field label="ElevenLabs voice" hint="Pick a preset or paste any voice ID from your ElevenLabs library.">
+        <Select
+          value={ELEVEN_VOICE_PRESETS.some((v) => v.id === voiceId) ? voiceId : "custom"}
+          onChange={(v) => {
+            if (v !== "custom") setVoiceId(v);
+          }}
+          options={[
+            ...ELEVEN_VOICE_PRESETS.map((v): [string, string] => [v.id, v.label]),
+            ["custom", "Custom voice ID"],
+          ]}
+        />
+        <TextInput
+          className="mt-1.5"
+          value={voiceId}
+          onChange={(e) => setVoiceId(e.target.value)}
+          placeholder="pNInz6obpgDQGcFmaJgB"
+        />
       </Field>
       <Field label="Piper Voice Model Path" hint="Tauri offline fallback only, e.g. voices/en_US-amy-medium.onnx">
         <TextInput value={s.piperVoicePath} onChange={(e) => s.update({ piperVoicePath: e.target.value })} />
