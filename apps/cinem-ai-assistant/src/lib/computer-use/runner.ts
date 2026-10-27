@@ -159,4 +159,4 @@ export function planFromTask(task: string): ComputerUseAction[] {
   return actions;
 }
 
-export { DEFAULT_MAX_STEPS };
+export { DEFAULT_MAX_STEPS } from "./types";

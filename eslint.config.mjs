@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "electron/**",
     "extension/**",
     "mobile/**",
+    // Python reference project (CC BY-NC); not part of the CINEM build.
+    "Mark-LVI/**",
   ]),
 ]);
 

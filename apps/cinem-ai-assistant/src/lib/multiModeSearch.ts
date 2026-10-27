@@ -8,7 +8,6 @@ import {
   fetchPageText,
   formatHitsForPrompt,
   searchPublicWeb,
-  type WebHit,
 } from "@/lib/publicWebSearch";
 import { researchInBrowser } from "@/lib/playwrightActions";
 import { languageDirective } from "@/lib/language";
@@ -125,7 +124,7 @@ async function gatherEvidence(query: string, mode: SearchMode): Promise<string> 
       "LIVE BROWSER:\n" +
         [...live.results, ...live.pages.map((p) => ({ title: p.title || p.url, url: p.url, snippet: p.text?.slice(0, 400) }))]
           .slice(0, 6)
-          .map((r) => `- ${"title" in r ? r.title : r.url}: ${"url" in r ? r.url : ""}`)
+          .map((r) => `- ${r.title}: ${r.url}`)
           .join("\n"),
     );
   }

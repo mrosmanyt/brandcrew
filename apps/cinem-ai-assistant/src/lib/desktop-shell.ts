@@ -66,8 +66,8 @@ export type CinemDesktopBridge = {
   computerUse?: {
     envEnabled: () => Promise<boolean>;
     startSidecar: () => Promise<{ ok?: boolean; error?: string }>;
-    startSession: (payload: { task?: string; maxSteps?: number }) => Promise<{ ok?: boolean }>;
-    syncHud: (payload: Record<string, unknown>) => Promise<{ ok?: boolean }>;
+    startSession: (payload: { task?: string; maxSteps?: number }) => Promise<{ ok?: boolean; error?: string }>;
+    syncHud: (payload: object) => Promise<{ ok?: boolean }>;
     terminate: () => Promise<{ ok?: boolean }>;
     stopSession: () => Promise<{ ok?: boolean }>;
     onMousePause: (handler: () => void) => () => void;

@@ -49,7 +49,7 @@ async function executeStep(
     case "weather": {
       const q = parseWeatherQuery(sub) || sub;
       appendStep(`Fetching weather for "${q}"…`);
-      const data = await fetchWeather(q, settings);
+      const data = await fetchWeather(q);
       return formatWeatherReply(data);
     }
     case "news": {
@@ -102,7 +102,7 @@ Write a concise, actionable deliverable (markdown, bullets OK). Be specific.`,
   }
 }
 
-async function planRun(text: string, settings: SettingsState, history: HistoryTurn[]): Promise<OrchestratorRun> {
+async function planRun(text: string, settings: Settings, history: HistoryTurn[]): Promise<OrchestratorRun> {
   let parsed = planFromText(text);
 
   if (settings.geminiKey.trim()) {

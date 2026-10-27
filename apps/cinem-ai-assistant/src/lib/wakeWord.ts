@@ -9,10 +9,28 @@ import { isIrisPackEnabled } from "@/lib/iris/feature";
 import { wakeAckLine } from "@/lib/iris/hinglish-persona";
 import { pushLiveTranscriptHeard } from "@/lib/iris/live-transcript";
 
-type SpeechRecognitionCtor = new () => SpeechRecognition;
+/** Web Speech recognition surface this file uses (not in TypeScript's DOM lib). */
+interface WakeRecognitionEvent {
+  resultIndex: number;
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+}
+
+interface WakeRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: WakeRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type SpeechRecognitionCtor = new () => WakeRecognition;
 
 declare global {
   interface Window {
+    SpeechRecognition?: SpeechRecognitionCtor;
     webkitSpeechRecognition?: SpeechRecognitionCtor;
   }
 }
@@ -25,7 +43,7 @@ export type WakeEngine = "porcupine" | "web-speech" | "off";
 
 let listening = false;
 let deepSleep = false;
-let recognition: SpeechRecognition | null = null;
+let recognition: WakeRecognition | null = null;
 let onTriggerRef: (() => void) | null = null;
 let nativeUnsub: (() => void) | null = null;
 
@@ -106,7 +124,7 @@ function startWebSpeech(onTrigger: () => void) {
     useSettingsStore.getState().preferredLanguage === "auto"
       ? "en-US"
       : useSettingsStore.getState().preferredLanguage;
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
+  recognition.onresult = (event: WakeRecognitionEvent) => {
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const text = event.results[i][0].transcript.toLowerCase();
       if (text.includes(WAKE_PHRASE)) {

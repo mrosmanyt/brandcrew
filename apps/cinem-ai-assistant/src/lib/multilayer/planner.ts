@@ -100,7 +100,7 @@ export function parsePlanJson(raw: string, fallbackGoal: string): ParsedPlan | n
     const goal = typeof obj.goal === "string" && obj.goal.trim() ? obj.goal.trim() : fallbackGoal;
 
     if (Array.isArray(obj.steps) && obj.steps.length) {
-      const steps = obj.steps.slice(0, MAX_ORCHESTRATOR_STEPS).map((s, i) => {
+      const steps = obj.steps.slice(0, MAX_ORCHESTRATOR_STEPS).map((s) => {
         const subgoal = typeof s.subgoal === "string" ? s.subgoal : typeof s.title === "string" ? s.title : goal;
         const inferred = inferKind(subgoal);
         const kind = (typeof s.kind === "string" ? s.kind : inferred.kind) as OrchestratorStepKind;
