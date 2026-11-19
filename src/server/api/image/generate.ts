@@ -2,15 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { withNativeCors } from "@/lib/auth-native";
-import { generateImageForUser, getImageGenStatusForUser } from "@/lib/image-generation";
+import {
+  generateImageForUser,
+  generateImageVariationForUser,
+  getImageGenStatusForUser,
+} from "@/lib/image-generation";
 import { IMAGE_PROMPT_MAX, isImageGenProviderId } from "@/lib/image-generation-pure";
 import { jsonError, jsonOk } from "@/lib/http";
 import { enforceSensitiveRateLimit } from "@/lib/rate-limit";
 
 const postSchema = z.object({
   prompt: z.string().trim().min(3).max(IMAGE_PROMPT_MAX),
-  provider: z.enum(["cloudflare", "geminigen", "auto"]).optional(),
+  provider: z.enum(["cloudflare", "geminigen", "openai", "gemini", "auto"]).optional(),
   model: z.string().trim().max(80).optional(),
+  variation: z.boolean().optional(),
+  sourceImageBase64: z.string().max(8_000_000).optional(),
+  sourceMimeType: z.string().trim().max(40).optional(),
 });
 
 export async function GET() {
@@ -32,6 +39,22 @@ export async function POST(request: Request) {
       body.provider && body.provider !== "auto" && isImageGenProviderId(body.provider)
         ? body.provider
         : undefined;
+    if (body.variation) {
+      if (!body.sourceImageBase64) {
+        return NextResponse.json(
+          { error: "A variation needs a source image.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const result = await generateImageVariationForUser(user.id, {
+        provider,
+        model: body.model,
+        prompt: body.prompt,
+        imageBase64: body.sourceImageBase64,
+        mimeType: body.sourceMimeType || "image/png",
+      });
+      return withNativeCors(jsonOk(result));
+    }
     const result = await generateImageForUser(user.id, body.prompt, {
       provider,
       model: body.model,

@@ -856,7 +856,10 @@ model UserProviderKey {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// Short-lived GeminiGen webhook / poll cache (async image jobs).
+/// Short-lived GeminiGen webhook / poll cache (async image jobs). Rows with
+/// a userId double as the image studio's per-user history (30-day TTL):
+/// prompt/provider/model are recorded for every generation, and the image
+/// payload is kept inline when the provider returns no hosted URL.
 model ImageGenAsyncResult {
   uuid         String   @id
   mediaUrl     String   @default("")
@@ -864,6 +867,14 @@ model ImageGenAsyncResult {
   errorMessage String   @default("")
   createdAt    DateTime @default(now())
   expiresAt    DateTime
+  userId       String?
+  prompt       String   @default("")
+  provider     String   @default("")
+  model        String   @default("")
+  mimeType     String   @default("")
+  imageData    String?
+
+  @@index([userId, createdAt])
 }
 
 /// Anonymous marketing-funnel event (site visit / WhatsApp CTA click).
