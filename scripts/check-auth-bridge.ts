@@ -108,7 +108,7 @@ assert.match(readFileSync("src/app/download/page.tsx", "utf8"), /Get Chrome exte
 assert.match(readFileSync("src/app/download/page.tsx", "utf8"), /SmartScreen/);
 assert.ok(existsSync("docs/windows-code-signing.md"));
 assert.equal(CHROME_EXTENSION_ZIP, "/downloads/cinem-pro-chrome.zip");
-assert.match(readFileSync("src/components/marketing/site-nav.tsx", "utf8"), /href: "\/download"/);
+assert.doesNotMatch(readFileSync("src/components/marketing/site-nav.tsx", "utf8"), /href: "\/download"/);
 console.log("ok: /download hub + connect pages");
 
 const popup = readFileSync("extension/popup.html", "utf8");

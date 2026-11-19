@@ -193,23 +193,23 @@ export function helpdeskCannedReply(topic: HelpdeskTopic): string {
     case "greeting":
       return HELPDESK_CHAT_FALLBACK;
     case "thanks":
-      return "Glad that helped. I'm still here — ask about download, plans, sign-in, or anything else.";
+      return "Glad that helped. I'm still here — ask about plans, sign-in, models, or anything else.";
     case "product":
-      return "CINEM Pro is an AI employee desk. You create agents, give them jobs, and approve what leaves — email, posts, and browser work wait for you. Open the desk from Get started, or ask me about download, plans, or sign-in.";
+      return "CINEM Pro is CINEM's AI chat and image generation studio. You chat with leading AI models — the picker names the real model that answers — and generate images in the same place. Sign in from Get started, or ask me about plans or sign-in.";
     case "download":
-      return "Windows: open /download and get CINEM-Pro-Setup.exe. That one installer is the cloud desk plus Cinem AI Assistant — pick the mode in the app. There is no hosted Mac .dmg; use the web desk at app.cinem.tech, or build on a Mac. Android is package tech.cinem.pro when the Play listing is live.";
+      return "There is nothing to download — CINEM Pro runs in your browser at app.cinem.tech. Sign in with your CINEM account and your chats and images are right there, on any device.";
     case "smartscreen":
-      return "Unsigned Windows builds can trip SmartScreen. Click More info, then Run anyway. The file is CINEM-Pro-Setup.exe from /download. After install, sign in with the same CINEM account you use on the website.";
+      return "That prompt was about the old Windows installer, which has been retired. CINEM Pro now runs entirely in your browser at app.cinem.tech — no installer and no SmartScreen prompt.";
     case "plans":
-      return "Signup starts on Free (capped — there is no unlimited plan). Pro is $20/month (2 seats, 50k job tokens). Pro Plus is $79/month (5 seats, 200k). Ultra is $200/month (12 seats, 600k). Cinem AI Assistant is included with those plans, not a second purchase. Open Plans in the desk to upgrade. Credits wrap token budgets 1:1.";
+      return "Signup starts on Free (capped — there is no unlimited plan). Pro is $20/month (2 seats, 50k tokens). Pro Plus is $79/month (5 seats, 200k). Ultra is $200/month (12 seats, 600k). Open Plans to upgrade. Credits wrap token budgets 1:1.";
     case "signin":
-      return "Use the same CINEM account on the website, Windows app, and Chrome extension. Open /login — email or Continue with Google. Desktop and the extension pair to that account; they do not create a second login.";
+      return "Use the same CINEM account everywhere. Open /login — email or Continue with Google. Your chats and images are tied to that account.";
     case "assistant":
-      return "Cinem AI Assistant is Windows-only and ships in CINEM-Pro-Setup.exe with the desk. Switch Desk / AI Assistant / both in the app. It uses your existing Free, Pro, Pro Plus, or Ultra plan.";
+      return "Cinem AI Assistant has been retired. CINEM Pro is now a web app for AI chat and image generation — open app.cinem.tech in your browser; your account and plan are unchanged.";
     case "api":
-      return "Yes — the API Console (same-origin /console) mints workspace keys for /api/v1. Jobs still wait for approval before anything is sent. Do not use console.cinem.tech — that host is not live.";
+      return "Yes — the API Console (same-origin /console) mints workspace keys for /api/v1. Do not use console.cinem.tech — that host is not live.";
     case "support_tip":
-      return "Product help stays in this chat. CINEM does not offer a separate tip checkout in the app. Ask about download, plans, or sign-in here.";
+      return "Product help stays in this chat. CINEM does not offer a separate tip checkout in the app. Ask about plans or sign-in here.";
   }
 }
 
@@ -264,8 +264,8 @@ export function helpdeskAckSystemPrompt(): string {
     "You are CINEM Help — the in-product chatbot for CINEM Pro. CINEM Pro made you.",
     "Default to English when the user's language is unclear. Mirror their language if they write in another language (including Urdu / Roman Urdu).",
     "Never claim you are English-only. Never name third-party AI labs, models, or providers. Never say the CINEM team is offline.",
-    "Small product questions (download, Windows SmartScreen, plans, sign-in, what CINEM Pro is, the Windows assistant, API Console): answer them yourself in 2-5 short sentences. Be specific. Point at /download, /login, /console, or desk Plans when useful.",
-    "Facts: Windows installer is CINEM-Pro-Setup.exe from /download (desk + Cinem AI Assistant). SmartScreen → More info → Run anyway. No hosted Mac .dmg — use the web desk. Free / Pro $20 / Pro Plus $79 / Ultra $200, all capped. Same account for web and desktop.",
+    "Small product questions (plans, sign-in, what CINEM Pro is, models, image generation, API Console): answer them yourself in 2-5 short sentences. Be specific. Point at /login, /console, or Plans when useful.",
+    "Facts: CINEM Pro is an AI chat and image generation service at app.cinem.tech — it runs in the browser; there is nothing to download and the old Windows installer is retired. Free / Pro $20 / Pro Plus $79 / Ultra $200, all capped. The model picker names the real models. Same account on every device.",
     "Account, billing disputes, refunds, bugs, access problems, or anything you cannot answer: briefly help if you can, then say you escalated it to the CINEM team and they will reply in this same thread.",
     "Never promise a phone call or a separate email. Do not offer a tip checkout or a Whop Support product. Product help stays in this thread.",
   ].join(" ");

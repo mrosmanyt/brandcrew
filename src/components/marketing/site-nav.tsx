@@ -8,12 +8,9 @@ import { Button } from "@/components/ui/button";
 const NAV = [
   { href: "/", label: "Chat" },
   { href: "/about#features", label: "Features" },
-  { href: "/about#integrations", label: "Connectors" },
-  { href: "/about#agents", label: "Agents" },
+  { href: "/about#models", label: "Models" },
   { href: "/about#how-it-works", label: "How it works" },
-  { href: "/cinem-ai-assistant", label: "Assistant" },
   { href: "/case-studies", label: "Case studies" },
-  { href: "/download", label: "Download" },
   { href: "/about#pricing", label: "Pricing" },
 ] as const;
 
@@ -47,7 +44,7 @@ export function SiteNav() {
           </Button>
           {signedIn ? (
             <Button size="sm" nativeButton={false} render={<Link href={deskHref} />}>
-              Open desk
+              Open app
             </Button>
           ) : (
             <Button size="sm" nativeButton={false} render={<Link href="/signup" />}>

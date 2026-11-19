@@ -8,7 +8,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "Terms & conditions",
   description:
-    "Terms for using CINEM Pro, the AI employee desk from CINEM.",
+    "Terms for using CINEM Pro, CINEM's AI chat and image generation service.",
 };
 
 export default function TermsPage() {
@@ -27,10 +27,10 @@ export default function TermsPage() {
 
       <h2>The product</h2>
       <p>
-        CINEM Pro is an AI employee desk. You create agents, run jobs, and
-        approve artifacts. The desk does not auto-post to LinkedIn, send Gmail,
-        or send WhatsApp. Slack posts only after an explicit approve step.
-        Output is a draft you remain responsible for.
+        CINEM Pro is an AI chat and image generation service. You chat with AI
+        models and generate images in the studio. AI output can be wrong, and
+        you remain responsible for how you use it. CINEM Pro does not send
+        email, post to social networks, or publish anything on your behalf.
       </p>
 
       <h2>Accounts</h2>

@@ -83,26 +83,31 @@ for (const file of files) {
 console.log("ok: showcase files do not lift Strawberry branding or video");
 
 const page = readFileSync("src/app/about/page.tsx", "utf8");
-assert.match(page, /IntegrationsShowcase/);
-assert.match(page, /HeroDemo/);
+// Copy sweep (2026-11-19): /about no longer mounts the desk-era showcase or
+// hero demo and no longer sells agents — it describes chat + images only.
+assert.doesNotMatch(page, /IntegrationsShowcase/);
+assert.doesNotMatch(page, /HeroDemo/);
 assert.match(page, /PricingSection/);
-assert.match(page, /Hire agents/);
-console.log("ok: landing keeps hero demo and pricing, and mounts the showcase");
+assert.doesNotMatch(page, /Hire agents/);
+assert.match(page, /AI chat and image generation/);
+console.log("ok: about keeps pricing; showcase + hero demo unmounted by the copy sweep");
 
 const pricing = readFileSync("src/components/marketing/home-sections.tsx", "utf8");
 assert.match(pricing, /Ultra/);
 assert.match(pricing, /PLANS\.ultra/);
-assert.match(pricing, /\/about#integrations/);
+assert.match(pricing, /\/about#models/);
+assert.doesNotMatch(pricing, /\/about#integrations/);
 assert.match(pricing, /PricingPlanCta/);
 assert.match(pricing, /Get Pro \/ Get Pro Plus \/ Get Ultra/);
 assert.match(pricing, /Checkout uses Whop/);
-console.log("ok: pricing still includes Ultra and footer links Connectors");
+console.log("ok: pricing still includes Ultra and footer links Models");
 
 const nav = readFileSync("src/components/marketing/site-nav.tsx", "utf8");
-assert.match(nav, /\/about#integrations/);
-assert.match(nav, /href: "\/cinem-ai-assistant", label: "Assistant"/);
-assert.doesNotMatch(nav, /href: "\/", label: "Assistant"/);
-console.log("ok: site nav links to connectors; Assistant is a menu item");
+assert.match(nav, /\/about#models/);
+assert.doesNotMatch(nav, /\/about#integrations/);
+assert.doesNotMatch(nav, /cinem-ai-assistant/);
+assert.doesNotMatch(nav, /href: "\/download"/);
+console.log("ok: site nav links to models; retired Assistant/Download items are gone");
 
 const css = readFileSync("src/app/globals.css", "utf8");
 assert.match(css, /\.integrations-cloud/);

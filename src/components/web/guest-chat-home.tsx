@@ -56,8 +56,6 @@ import {
   type LlmStatus,
 } from "@/lib/llm-routing";
 import { cn } from "@/lib/utils";
-import { CinemAiAssistantDownloadPrompt } from "@/components/marketing/cinem-ai-assistant-download-prompt";
-import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 
 const BUILD_ICONS = {
   website: AppWindow,
@@ -69,9 +67,8 @@ const BUILD_ICONS = {
 
 const TOP_NAV = [
   { href: "/about#features", label: "Features" },
+  { href: "/about#models", label: "Models" },
   { href: "/about#pricing", label: "Pricing" },
-  { href: "/cinem-ai-assistant", label: "Assistant" },
-  { href: "/download", label: "Download" },
   { href: "/about", label: "About" },
 ] as const;
 
@@ -224,8 +221,6 @@ export function GuestChatHome() {
           </Button>
         </div>
       </header>
-
-      <FoundingSpotsBanner className="mx-4 mt-3" />
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
@@ -384,8 +379,6 @@ export function GuestChatHome() {
           </form>
         </div>
       </div>
-
-      <CinemAiAssistantDownloadPrompt />
 
       <DesktopBuildRequiredDialog open={buildOpen} onOpenChange={setBuildOpen} />
 

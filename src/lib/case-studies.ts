@@ -28,7 +28,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     summary: "Replace with a real client outcome once copy is ready.",
     stat: "— pending —",
     challenge: "Describe the problem the client had before CINEM Pro.",
-    approach: "Describe which agents/jobs/routines solved it.",
+    approach: "Describe how the client used CINEM Pro chat and image generation.",
     results: ["Pending metric 1", "Pending metric 2"],
   },
 ];

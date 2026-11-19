@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showcaseSignupHint } from "@/lib/integrations-showcase";
-import { FoundingSpotsBanner } from "@/components/marketing/founding-spots-banner";
 import { authHrefWithNext, checkoutPlanFromNextPath } from "@/lib/billing-ui";
 import { PLANS } from "@/lib/constants";
 import { validateSignupInput } from "@/lib/form-guard";
@@ -123,9 +122,9 @@ function SignupForm() {
             <CinemLogoImage alt="CINEM" className="mb-6 size-12" priority />
             <h1 className="font-heading text-3xl tracking-tight">Get started</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              We create a free workspace with the Northline Studio Brand Kit so you
-              can open Mission Control, create agents, and give a real job. If email
-              confirmation is required, check your inbox and then sign in.
+              Create a free account and start chatting with leading AI models and
+              generating images. If email confirmation is required, check your
+              inbox and then sign in.
             </p>
             {inviteToken ? (
               <p className="mt-3 text-sm text-muted-foreground">
@@ -134,14 +133,13 @@ function SignupForm() {
             ) : null}
             {checkoutPlan ? (
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                After you create an account, we open desk billing for{" "}
+                After you create an account, we open billing for{" "}
                 {PLANS[checkoutPlan].name}. Checkout uses Whop when configured.
               </p>
             ) : null}
             {chipHint ? (
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{chipHint}</p>
             ) : null}
-            <FoundingSpotsBanner className="mt-4" compact />
             <div className="mt-8 space-y-5">
               <GoogleContinueButton
                 intent="signup"

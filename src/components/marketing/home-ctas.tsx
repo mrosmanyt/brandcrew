@@ -18,16 +18,16 @@ export function HomeHeroCtas() {
         nativeButton={false}
         render={<Link href={href} />}
       >
-        {signedIn ? "Open desk" : "Get started"}
+        {signedIn ? "Open app" : "Get started"}
       </Button>
       <Button
         size="lg"
         variant="outline"
         className="h-11 px-5"
         nativeButton={false}
-        render={<Link href="/download" />}
+        render={<Link href="/about#pricing" />}
       >
-        Download desktop
+        See pricing
       </Button>
     </div>
   );
@@ -44,16 +44,16 @@ export function HomeFooterCta() {
         nativeButton={false}
         render={<Link href={href} />}
       >
-        {signedIn ? "Open desk" : "Get started"}
+        {signedIn ? "Open app" : "Get started"}
       </Button>
       <Button
         size="lg"
         variant="outline"
         className="h-11 px-5"
         nativeButton={false}
-        render={<Link href="/download" />}
+        render={<Link href="/about#pricing" />}
       >
-        Get desktop
+        See pricing
       </Button>
     </div>
   );
@@ -75,7 +75,7 @@ export function GetStartedButton({
       nativeButton={false}
       render={<Link href={href} />}
     >
-      {children ?? (signedIn ? "Open desk" : "Get started")}
+      {children ?? (signedIn ? "Open app" : "Get started")}
     </Button>
   );
 }
@@ -112,7 +112,7 @@ export function PricingDemoCta() {
       nativeButton={false}
       render={<Link href={href} />}
     >
-      {signedIn ? "Open desk" : "Start free"}
+      {signedIn ? "Open app" : "Start free"}
     </Button>
   );
 }

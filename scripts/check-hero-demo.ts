@@ -80,11 +80,15 @@ for (const file of files) {
 console.log("ok: demo files do not lift Strawberry branding or video");
 
 const page = readFileSync("src/app/about/page.tsx", "utf8");
-assert.match(page, /HeroDemo/);
+// Copy sweep (2026-11-19): the desk-era demo is unmounted from /about and
+// the hero sells chat + images. The demo lib/component stay in the tree
+// (asserted above/below) but render nowhere.
+assert.doesNotMatch(page, /HeroDemo/);
 assert.doesNotMatch(page, /ProductShot/);
-assert.match(page, /Hire agents/);
-assert.match(page, /Approve the work/);
-console.log("ok: landing keeps CINEM hero copy and mounts the looping demo");
+assert.doesNotMatch(page, /Hire agents/);
+assert.doesNotMatch(page, /Approve the work/);
+assert.match(page, /AI chat and image generation/);
+console.log("ok: about hero is chat + images; the looping desk demo is unmounted");
 
 const css = readFileSync("src/app/globals.css", "utf8");
 assert.match(css, /prefers-reduced-motion: reduce/);

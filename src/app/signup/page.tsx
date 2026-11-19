@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Get started",
-  description: "Create a CINEM Pro account and open the AI employee desk.",
+  description: "Create a CINEM Pro account for AI chat and image generation.",
 };
 
 export default function SignupPage() {

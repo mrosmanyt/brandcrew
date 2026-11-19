@@ -9,7 +9,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Case studies",
-  description: "How teams use CINEM Pro to run agents, jobs, and routines.",
+  description: "How teams use CINEM Pro for AI chat and image generation.",
 };
 
 export default function CaseStudiesPage() {

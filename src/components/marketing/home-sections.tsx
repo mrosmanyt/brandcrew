@@ -1,25 +1,10 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/logo";
-import { GetStartedButton, PricingDemoCta, PricingPlanCta } from "@/components/marketing/home-ctas";
+import { PricingDemoCta, PricingPlanCta } from "@/components/marketing/home-ctas";
 import { WhatsAppCta } from "@/components/marketing/whatsapp-cta";
 import { Reveal } from "@/components/marketing/reveal";
-import { Button } from "@/components/ui/button";
-import {
-  CINEM_AI_ASSISTANT_NAME,
-  CINEM_AI_ASSISTANT_PATH,
-  cinemAiAssistantDownloadHref,
-} from "@/lib/cinem-ai-assistant";
 import { PLANS } from "@/lib/constants";
-import {
-  ANDROID_PACKAGE_ID,
-  CHROME_EXTENSION_ZIP,
-  COMPANY_SITE,
-  DESKTOP_WIN_DOWNLOAD,
-  DESKTOP_WIN_PORTABLE,
-  WIN_PORTABLE_FILENAME,
-  WIN_SETUP_FILENAME,
-} from "@/lib/site";
-import { TEAM_LAUNCH_ROLES } from "@/lib/team-launch";
+import { COMPANY_SITE } from "@/lib/site";
 
 function Section({
   id,
@@ -65,40 +50,40 @@ function Section({
 
 const FEATURES = [
   {
-    title: "Agents you create",
-    body: "New Agent is the default name. Role is a label you pick. Rename freely — the desk never invents a cast.",
+    title: "Real models, named honestly",
+    body: "The picker lists Claude, GPT, Gemini, and Grok models by their real names. The name you pick is the model that answers.",
   },
   {
-    title: "Marketplace Bots & Plugins",
-    body: "Add a bot and you get a real Agent row. Connect a plugin only with a real API key or a finished OAuth callback.",
+    title: "Streaming answers",
+    body: "Replies stream in token by token, with a stop button and per-message copy, retry, and edit — like a proper chat app.",
   },
   {
-    title: "Mission Control jobs",
-    body: "Give a job. It plans, uses tools, writes a draft, then waits for you. You approve what leaves.",
+    title: "Fast, labelled Fast",
+    body: "Cheaper models live under a Fast group, labelled honestly. CINEM Pro never swaps your pick for a cheaper model in secret.",
   },
   {
-    title: "Drafts you can inspect",
-    body: "Agents write drafts and finals in the desk. You review the work and approve what goes out.",
+    title: "Image studio",
+    body: "Generate images with the image models, try variations, and keep everything in a saved gallery.",
   },
   {
-    title: "Brand Kit",
-    body: "Company facts live on the workspace. Agents read the kit before they write. There is no per-agent memory in v1.",
+    title: "Your chats, saved",
+    body: "Sign in and every conversation is kept — searchable, renamable, and there when you come back.",
+  },
+  {
+    title: "Try it as a guest",
+    body: "The homepage chat answers right away, no account needed. Create a free account when you want your chats and images saved.",
+  },
+  {
+    title: "Credits with a hard cap",
+    body: "Free, Pro ($20), Pro Plus ($79), and Ultra ($200) each cap usage credits. When the cap is hit, CINEM Pro stops and says so — it does not keep spending silently.",
+  },
+  {
+    title: "Workspaces and seats",
+    body: "Plans include seats, so a team can share one workspace and one plan.",
   },
   {
     title: "API Console / Developer API",
-    body: "Mint a workspace key in the desk and call /api/v1. Jobs still wait for you.",
-  },
-  {
-    title: "Gmail & Slack, real OAuth",
-    body: "Connected only after Google or Slack token exchange. Gmail creates drafts. Slack posts only after you approve.",
-  },
-  {
-    title: "Token budget",
-    body: "Free, Pro ($20), Pro Plus ($79), and Ultra ($200) each cap tokens, jobs/hour, and seats. When the budget is gone, the desk stops — it does not silently keep spending.",
-  },
-  {
-    title: "Electron desktop",
-    body: "Windows and Mac from the same repo. Mission Control, Marketplace, and OAuth are the same app as the web desk.",
+    body: "Mint a workspace key and call /api/v1 from your own app.",
   },
 ] as const;
 
@@ -108,8 +93,8 @@ export function FeaturesSection() {
       id="features"
       bordered
       kicker="Features"
-      title="A desk, not another chat box"
-      lead="CINEM Pro staffs work you can inspect. Agents email, post, and run tools. Nothing leaves until you say so."
+      title="One studio for chat and images"
+      lead="Pick a real model, watch the answer stream in, and generate the image to go with it — without switching apps."
     >
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature) => (
@@ -126,45 +111,41 @@ export function FeaturesSection() {
   );
 }
 
-export function AgentsSection() {
+export function ModelsSection() {
   return (
     <Section
-      id="agents"
+      id="models"
       bordered
-      kicker="Agents"
-      title="Roles on a roster you approve"
-      lead="Create one New Agent, add a Marketplace bot, or launch a full business team. Installing a bot only creates Agent rows — it does not invent business results."
+      kicker="Models"
+      title="The name is the model"
+      lead="No house brands and no silent downgrades. If a model is not configured yet, the picker says so instead of quietly using something else."
     >
       <div className="grid gap-6 md:grid-cols-2">
         <article className="mkt-card-hover rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Default</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">New Agent</h3>
+          <p className="text-sm text-muted-foreground">Fast</p>
+          <h3 className="mt-2 text-lg font-medium tracking-tight">
+            Quick answers, lower cost
+          </h3>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            Every agent starts as New Agent. Role is a hint for playbooks
-            (Research → competitor scan, Sales → outreach). You rename. The desk
-            never ships a celebrity persona.
+            Claude Haiku 4.5 · GPT-4o mini · Gemini 2.5 Flash · Grok 3 Mini.
+            For everyday questions, drafts, and summaries.
           </p>
         </article>
         <article className="mkt-card-hover rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">After you approve</p>
+          <p className="text-sm text-muted-foreground">Most advanced</p>
           <h3 className="mt-2 text-lg font-medium tracking-tight">
-            Launch full business team
+            The strongest models
           </h3>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            One sheet proposes {TEAM_LAUNCH_ROLES.length} roles. Nothing is
-            created until you click Approve & create. “Poori team banao” opens
-            the same sheet — it does not silently spawn a roster.
+            Claude Sonnet 5 · GPT-4.1 · Gemini 2.5 Pro. For harder reasoning,
+            longer work, and code.
           </p>
         </article>
       </div>
-      <ul className="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-        {TEAM_LAUNCH_ROLES.map((role) => (
-          <li key={role.id}>
-            <p className="text-sm font-medium tracking-tight">{role.role}</p>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{role.blurb}</p>
-          </li>
-        ))}
-      </ul>
+      <p className="mt-10 max-w-2xl text-sm leading-7 text-muted-foreground">
+        Auto mode picks a sensible model for you. Picking a name yourself pins
+        exactly that model — it is never swapped behind your back.
+      </p>
     </Section>
   );
 }
@@ -172,28 +153,28 @@ export function AgentsSection() {
 const STEPS = [
   {
     n: "1",
-    title: "Create an agent",
-    body: "New Agent is the default name. Add a Marketplace bot or launch a team — you approve the roster.",
+    title: "Create a free account",
+    body: "Signup starts on Free. No card, no install — CINEM Pro runs in your browser.",
   },
   {
     n: "2",
-    title: "Connect plugins",
-    body: "Gmail and Slack stay disconnected until you finish connecting. Empty Connect never fakes Connected.",
+    title: "Pick a model",
+    body: "Choose Auto, a Fast model, or one of the most advanced — by its real name.",
   },
   {
     n: "3",
-    title: "Give a job",
-    body: "Type a brief or use a role chip. The agent plans from the Brand Kit and the tools that are actually connected.",
+    title: "Ask anything",
+    body: "Answers stream in as they are written. Copy, retry, or edit and resend.",
   },
   {
     n: "4",
-    title: "Tools run",
-    body: "Browse, search, read the kit, write an artifact. Live activity shows the tool name and URL.",
+    title: "Generate an image",
+    body: "Describe the picture. The studio returns images and variations, saved to your gallery.",
   },
   {
     n: "5",
-    title: "You approve",
-    body: "Jobs wait for you. Drafts stay drafts. Gmail does not send. Slack posts only after you approve.",
+    title: "Come back anytime",
+    body: "Your conversations and images stay in your account, ready on your next visit.",
   },
 ] as const;
 
@@ -202,8 +183,8 @@ export function HowItWorksSection() {
     <Section
       id="how-it-works"
       kicker="How it works"
-      title="Create, connect, job, tools, approve"
-      lead="Five steps. The last one is yours. CINEM Pro will not walk away with a draft that already went out."
+      title="Sign up, pick a model, ask"
+      lead="No installs and no setup. If you can type a question, you already know how it works."
     >
       <ol className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
         {STEPS.map((step) => (
@@ -220,12 +201,12 @@ export function HowItWorksSection() {
 
 const USE_CASES = [
   {
-    title: "Founders",
-    body: "One desk for research, a week of posts, and outbound your agents run. Brand Kit holds the offer so every job sounds like your company.",
+    title: "Creators",
+    body: "Draft scripts, posts, and stories in chat, then generate the cover image in the same studio — no tab-hopping between tools.",
   },
   {
-    title: "Agencies",
-    body: "Staff a workspace per client. Launch the team after approve, keep Gmail drafts in the client account, and use the token budget so a busy month cannot run away.",
+    title: "Teams",
+    body: "Share one workspace and one plan. Everyone chats with the same models, and usage stays under one honest cap.",
   },
 ] as const;
 
@@ -235,8 +216,8 @@ export function UseCasesSection() {
       id="use-cases"
       bordered
       kicker="Use cases"
-      title="Built for people who still sign the work"
-      lead="CINEM is an agency. CINEM Pro is the desk we wanted: staff you can see, jobs you can stop."
+      title="Built for people who make things"
+      lead="CINEM is an agency. CINEM Pro is the chat and image studio we wanted: the real models, named honestly, in one place."
     >
       <div className="grid gap-6 md:grid-cols-2">
         {USE_CASES.map((item) => (
@@ -250,158 +231,6 @@ export function UseCasesSection() {
   );
 }
 
-export function DownloadSection() {
-  return (
-    <Section
-      id="download"
-      kicker="Download"
-      title="Get desktop, Android, or Chrome"
-      lead="Same CINEM Pro account on every surface. Windows is a direct installer download. Android and the Chrome extension use the same login API as this website."
-    >
-      <div className="mb-6 flex flex-wrap gap-3">
-        <Button size="lg" className="h-11 px-5" nativeButton={false} render={<Link href="/download" />}>
-          All downloads
-        </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          className="h-11 px-5"
-          nativeButton={false}
-          render={<Link href={CINEM_AI_ASSISTANT_PATH} />}
-        >
-          {CINEM_AI_ASSISTANT_NAME}
-        </Button>
-      </div>
-      <article className="mkt-card-hover mb-6 flex flex-col rounded-xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between md:gap-8">
-        <div className="max-w-xl">
-          <p className="text-sm text-muted-foreground">Windows · one installer</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">
-            Desk + {CINEM_AI_ASSISTANT_NAME} — included with your plan
-          </h3>
-          <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            Voice Jarvis, agents, and the cloud desk in one app. Installer{" "}
-            <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
-          </p>
-        </div>
-        <div className="mt-6 flex shrink-0 flex-col gap-2 md:mt-0">
-          <Button
-            size="lg"
-            className="mkt-cta-pulse h-11 px-5"
-            nativeButton={false}
-            render={<a href={cinemAiAssistantDownloadHref()} download={WIN_SETUP_FILENAME} />}
-          >
-            Get CINEM Pro
-          </Button>
-          <p className="text-xs leading-5 text-muted-foreground">
-            If Windows shows &quot;protected your PC,&quot; click More info, then Run anyway.
-          </p>
-        </div>
-      </article>
-      <div className="grid gap-6 md:grid-cols-3">
-        <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Windows</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">CINEM Pro Setup</h3>
-          <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            Downloads <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>.
-            Run it, then open CINEM Pro. First launch writes{" "}
-            <code className="font-mono text-xs">%APPDATA%\CINEM Pro\.env</code>. The
-            build is unsigned until signed releases ship — Windows SmartScreen
-            may ask More info → Run anyway.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              className="mkt-cta-pulse h-11 px-5"
-              nativeButton={false}
-              render={
-                <a
-                  href={DESKTOP_WIN_DOWNLOAD}
-                  download={WIN_SETUP_FILENAME}
-                />
-              }
-            >
-              Download Windows
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-11 px-5"
-              nativeButton={false}
-              render={
-                <a
-                  href={DESKTOP_WIN_PORTABLE}
-                  download={WIN_PORTABLE_FILENAME}
-                />
-              }
-            >
-              Portable .exe
-            </Button>
-          </div>
-        </article>
-        <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Mac</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">Use the web desk</h3>
-          <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            There is no hosted Mac installer yet. Use the browser desk — same
-            account as Windows.
-          </p>
-          <div className="mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-11 px-5"
-              nativeButton={false}
-              render={<Link href="/signup" />}
-            >
-              Open in browser
-            </Button>
-          </div>
-        </article>
-        <article className="mkt-card-hover flex flex-col rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Chrome + Android</p>
-          <h3 className="mt-2 text-lg font-medium tracking-tight">Extension & Play app</h3>
-          <p className="mt-2 flex-1 text-sm leading-7 text-muted-foreground">
-            Chrome: download the MV3 zip, then Sign in with CINEM. Android package{" "}
-            <code className="font-mono text-xs">{ANDROID_PACKAGE_ID}</code> — Play listing
-            after the AAB upload.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              className="h-11 px-5"
-              nativeButton={false}
-              render={<a href={CHROME_EXTENSION_ZIP} download="cinem-pro-chrome.zip" />}
-            >
-              Get Chrome extension
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-11 px-5"
-              nativeButton={false}
-              render={<Link href="/download" />}
-            >
-              Get Android
-            </Button>
-          </div>
-        </article>
-      </div>
-      <p className="mt-6 text-sm leading-7 text-muted-foreground">
-        Windows builds are a direct installer download (
-        <code className="font-mono text-xs">{WIN_SETUP_FILENAME}</code>
-        ). Prefer the web desk if you want to skip the installer.
-      </p>
-      <div className="mt-8 flex flex-col items-start justify-between gap-6 rounded-xl border border-border px-6 py-5 md:flex-row md:items-center">
-        <p className="max-w-xl text-sm leading-7 text-muted-foreground">
-          Prefer the browser? Create an account and open Mission Control on the
-          web. Same desk, no installer.
-        </p>
-        <GetStartedButton />
-      </div>
-    </Section>
-  );
-}
-
 export function PricingSection() {
   const plans = [PLANS.starter, PLANS.pro, PLANS.ultra] as const;
   return (
@@ -410,7 +239,7 @@ export function PricingSection() {
       bordered
       kicker="Pricing"
       title="Pro, Pro Plus, and Ultra"
-      lead="Signup starts on Free. Get Pro, Pro Plus, or Ultra to sign in and checkout — Whop when configured — so the workspace unlocks from the payment webhook."
+      lead="Signup starts on Free. Get Pro, Pro Plus, or Ultra to sign in and checkout — Whop when configured — so the plan unlocks from the payment webhook."
     >
       <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
@@ -427,10 +256,9 @@ export function PricingSection() {
               <span className="text-base text-muted-foreground">/mo</span>
             </p>
             <ul className="mt-5 mb-6 space-y-2 text-sm leading-6 text-muted-foreground">
-              <li>{plan.jobsPerHour} jobs / hour · {plan.maxConcurrentJobs} concurrent</li>
-              <li>Cinem AI Assistant included (Windows)</li>
-              <li>Mission Control, Marketplace, Brand Kit</li>
-              <li>Approve-before-send jobs</li>
+              <li>AI chat with the real models</li>
+              <li>Image generation studio</li>
+              <li>Saved chats and image history</li>
               <li>Developer API keys in the Console</li>
             </ul>
             <PricingPlanCta plan={plan.id} featured={plan.id === "pro"} />
@@ -439,10 +267,10 @@ export function PricingSection() {
       </div>
       <p className="mt-6 text-sm leading-6 text-muted-foreground">
         Free is {PLANS.demo.tokenBudget.toLocaleString()} tokens and 1 seat — enough
-        to create New Agent and run a first job. Checkout uses Whop when
-        configured, then Stripe; otherwise the desk can apply a plan in mock
-        billing. Get Pro, Pro Plus, or Ultra signs you in first, then opens desk
-        billing for that plan.
+        to chat, generate your first images, and see how it feels. Checkout uses Whop when
+        configured, then Stripe; otherwise billing can apply a plan in mock
+        mode. Get Pro, Pro Plus, or Ultra signs you in first, then opens billing
+        for that plan.
       </p>
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <PricingDemoCta />
@@ -451,7 +279,7 @@ export function PricingSection() {
         </p>
       </div>
       <p className="mt-6 text-sm leading-6 text-muted-foreground">
-        Already on the desk? Invite a friend and you both get a free month —
+        Already using CINEM Pro? Invite a friend and you both get a free month —
         find your link under Settings.
       </p>
       <div className="mt-6">
@@ -466,7 +294,7 @@ export function DeveloperApiSection() {
     <Section
       id="developers"
       kicker="Developer API"
-      title="Call the same desk over HTTPS"
+      title="Call CINEM Pro over HTTPS"
       lead="Mint a workspace key in API Console. Secrets show once. Session cookies are ignored — send a Bearer token."
     >
       <div className="product-frame overflow-hidden rounded-xl">
@@ -481,10 +309,10 @@ export function DeveloperApiSection() {
         </pre>
       </div>
       <p className="mt-6 max-w-2xl text-sm leading-7 text-muted-foreground">
-        List agents, queue jobs, read artifacts. Jobs do not auto-publish. Slack
-        still needs your approval in the desk. Rate limit: 60 requests / minute / key. Open the Console
+        List agents, queue jobs, read artifacts. Jobs do not auto-publish —
+        sends still wait for your approval. Rate limit: 60 requests / minute / key. Open the Console
         after signup at <span className="text-foreground">/console</span>
-        {" "}(same origin as the desk).
+        {" "}(same origin).
       </p>
     </Section>
   );
@@ -496,8 +324,8 @@ const TRUST = [
     body: "CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients.",
   },
   {
-    title: "Approve before send",
-    body: "Gmail can create a draft. Slack posts only after you approve. Ads never buy media. WhatsApp never sends.",
+    title: "Honest by default",
+    body: "Model names in the picker are the models that actually answer. When a plan cap is hit, CINEM Pro stops and tells you — it never silently switches you to something cheaper.",
   },
 ] as const;
 
@@ -508,7 +336,7 @@ export function TrustSection() {
       bordered
       kicker="Trust"
       title="A registered company, trusted by 5,000+ clients"
-      lead="CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients. Agents email, post, and work the browser — you approve what goes out."
+      lead="CINEM / CINEM Tech is a registered company, operating in accordance with applicable laws and rules. We already serve 5,000+ active clients."
     >
       <ul className="grid gap-10 md:grid-cols-2">
         {TRUST.map((item) => (
@@ -524,28 +352,28 @@ export function TrustSection() {
 
 const FAQS = [
   {
-    q: "What is New Agent?",
-    a: "The default display name for every agent you create. Role is a label. Marketplace bots and Launch team still start as New Agent until you rename them.",
+    q: "What is CINEM Pro?",
+    a: "CINEM's AI chat and image studio. You chat with leading AI models — Claude, GPT, Gemini, and Grok — and generate images, all under one account and one plan.",
   },
   {
-    q: "Does it post to LinkedIn or send email?",
-    a: "That's the work. Agents draft email, LinkedIn, and posts, and they work the browser. Approve-before-send is the default — Gmail stays a draft, Slack posts after you approve, and LinkedIn copy waits on the desk until you say it can go.",
+    q: "Are the model names real?",
+    a: "Yes. The picker shows the model that will actually answer. Cheaper models are grouped under Fast and labelled as such. If a model is not configured yet, the picker says so instead of swapping silently.",
   },
   {
-    q: "Are Gmail and Slack real?",
-    a: "Yes — OAuth start + callback. Connected appears only after a real token exchange. Without client ids, Connect shows an error and stays disconnected.",
+    q: "Can it generate images?",
+    a: "Yes — the image studio generates images and variations and keeps them in your gallery. Image generation uses your plan's credits, like chat.",
   },
   {
-    q: "Where do I download Windows and Mac?",
-    a: "Windows: the Download section starts a direct file download of CINEM-Pro-Setup.exe. That one installer includes the cloud desk and Cinem AI Assistant — switch modes in the app. There is no hosted Mac installer yet — use the web desk.",
+    q: "Does it send email or post for me?",
+    a: "No. CINEM Pro is chat and image generation. Nothing is emailed, posted, or published on your behalf.",
   },
   {
     q: "How does pricing work?",
-    a: "Pro is $20/month (2 seats, 50k tokens). Pro Plus is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Pro / Get Pro Plus / Get Ultra signs you in, then desk billing checkouts with Whop when configured. Cinem AI Assistant is included with those plans — not a separate purchase.",
+    a: "Pro is $20/month (2 seats, 50k tokens). Pro Plus is $79/month (5 seats, 200k tokens). Ultra is $200/month (12 seats, 600k tokens). Signup starts on Free. Get Pro / Get Pro Plus / Get Ultra signs you in, then billing checkouts with Whop when configured.",
   },
   {
     q: "Can I call this from my own app?",
-    a: "Yes. API Console mints workspace keys for /api/v1. Jobs use the live runtime and still wait for approval before anything is sent.",
+    a: "Yes. API Console mints workspace keys for /api/v1, with the same workspace and plan limits as the app.",
   },
 ] as const;
 
@@ -570,11 +398,8 @@ export function FaqSection() {
 
 const FOOTER_LINKS = [
   { href: "/about#features", label: "Features" },
-  { href: "/about#integrations", label: "Connectors" },
-  { href: "/about#agents", label: "Agents" },
+  { href: "/about#models", label: "Models" },
   { href: "/about#how-it-works", label: "How it works" },
-  { href: "/cinem-ai-assistant", label: "Assistant" },
-  { href: "/download", label: "Download" },
   { href: "/about#pricing", label: "Pricing" },
   { href: "/about#developers", label: "Developer API" },
   { href: "/about#faq", label: "FAQ" },
@@ -596,8 +421,8 @@ export function SiteFooter() {
             <BrandMark />
           </Link>
           <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-            From CINEM. An AI employee desk — not a CRM, not an ad account.
-            Agents that email, post, and work the browser for you.
+            From CINEM. AI chat and image generation — real models, named
+            honestly, in one studio.
           </p>
         </div>
         <nav className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm text-muted-foreground sm:grid-cols-3">
