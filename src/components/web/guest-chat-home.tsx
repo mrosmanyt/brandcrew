@@ -236,8 +236,8 @@ export function GuestChatHome() {
                   What can I help with?
                 </h1>
                 <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                  Ask anything — CINEM Pro answers instantly. Sign in for the full desk, agents,
-                  and approvals.
+                  Ask anything — CINEM Pro answers instantly. Sign in to save your chats and generate
+                  images.
                 </p>
               </div>
             ) : (
@@ -395,7 +395,7 @@ export function GuestChatHome() {
             <DialogTitle>Continue with CINEM Pro</DialogTitle>
             <DialogDescription>
               You&apos;ve used {GUEST_CHAT_MESSAGE_LIMIT} guest messages. Create a free account or
-              log in to keep chatting, open the desk, and run agents.
+              log in to keep chatting and generate images.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col">

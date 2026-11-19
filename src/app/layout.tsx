@@ -32,7 +32,7 @@ const geistMono = Geist_Mono({
 
 const title = `${PRODUCT_NAME} — ${PRODUCT_TAGLINE}`;
 const description =
-  "CINEM Pro is an AI employee desk from CINEM. Create agents, give them jobs, and approve what leaves.";
+  "CINEM Pro is CINEM's AI chat and image studio. Chat with leading AI models and generate images — all in one place.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
@@ -43,11 +43,11 @@ export const metadata: Metadata = {
   description,
   applicationName: PRODUCT_NAME,
   authors: [{ name: COMPANY_NAME, url: COMPANY_SITE }],
-  keywords: [PRODUCT_NAME, COMPANY_NAME, "AI employee desk", "AI agents"],
+  keywords: [PRODUCT_NAME, COMPANY_NAME, "AI chat", "image generation", "AI assistant"],
   openGraph: {
     title,
     description:
-      "AI employee desk. Create agents, connect Gmail and Slack for real, run jobs with tools — then approve what leaves.",
+      "AI chat and image generation. Chat with Claude, GPT, Gemini and Grok, and generate images in one studio.",
     siteName: PRODUCT_NAME,
     type: "website",
     locale: "en_US",
