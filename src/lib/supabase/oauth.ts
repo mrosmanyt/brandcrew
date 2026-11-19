@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { appOrigin } from "@/lib/crypto-secret";
+import { sessionSecretBytes } from "@/lib/session-secret";
 import { safeNextPath, type GoogleLoginIntent } from "@/lib/google-auth-shared";
 import {
   isSupabaseAuthEnabled,
@@ -11,9 +12,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const STATE_PURPOSE = "supabase_oauth";
 
 function sessionBytes() {
-  const raw =
-    process.env.SESSION_SECRET || "brandcrew-dev-session-secret-change-me";
-  return new TextEncoder().encode(raw);
+  return sessionSecretBytes();
 }
 
 export type SupabaseOAuthState = {

@@ -1,9 +1,8 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { sessionSecret } from "@/lib/session-secret";
 
 function secretKey() {
-  const raw =
-    process.env.SESSION_SECRET || "brandcrew-dev-session-secret-change-me";
-  return createHash("sha256").update(raw).digest();
+  return createHash("sha256").update(sessionSecret()).digest();
 }
 
 /** AES-256-GCM. Returns iv.tag.ciphertext, all base64. Never log the plaintext. */

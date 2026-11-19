@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 import { oauthRedirectBase } from "@/lib/crypto-secret";
+import { sessionSecretBytes } from "@/lib/session-secret";
 import { SITE_ORIGIN, VERCEL_SITE_ORIGIN } from "@/lib/site";
 import {
   GOOGLE_LOGIN_CALLBACK_PATH,
@@ -41,9 +42,7 @@ export {
 const STATE_PURPOSE = "google_login";
 
 function sessionBytes() {
-  const raw =
-    process.env.SESSION_SECRET || "brandcrew-dev-session-secret-change-me";
-  return new TextEncoder().encode(raw);
+  return sessionSecretBytes();
 }
 
 /** Reuse the existing Google Web client. Optional dedicated login overrides. */

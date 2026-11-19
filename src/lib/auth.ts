@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/constants";
+import { sessionSecretBytes } from "@/lib/session-secret";
 import { REFRESH_TOKEN_PREFIX } from "@/lib/auth-bridge";
 import { DEVICE_TOKEN_PREFIX } from "@/lib/device-protocol";
 import {
@@ -17,9 +18,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const SESSION_DAYS = 30;
 
 function getSecret() {
-  const raw =
-    process.env.SESSION_SECRET || "brandcrew-dev-session-secret-change-me";
-  return new TextEncoder().encode(raw);
+  return sessionSecretBytes();
 }
 
 export type SessionUser = {

@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 import { encryptSecret, decryptSecret, oauthRedirectBase } from "@/lib/crypto-secret";
+import { sessionSecretBytes } from "@/lib/session-secret";
 import { ClientError } from "@/lib/http";
 import {
   envValuePresent,
@@ -26,9 +27,7 @@ export type PluginConnectionDTO = {
 };
 
 function sessionBytes() {
-  const raw =
-    process.env.SESSION_SECRET || "brandcrew-dev-session-secret-change-me";
-  return new TextEncoder().encode(raw);
+  return sessionSecretBytes();
 }
 
 export function googleClient(plugin: PluginDef) {
