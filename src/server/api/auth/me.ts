@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   hashPassword,
   requireUser,
+  setSessionCookie,
   verifyPassword,
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -16,7 +17,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { assertPasswordAllowed } from "@/lib/password";
 import { entitlementFromWorkspaces } from "@/lib/cinem-ai-assistant";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
-import { withNativeCors } from "@/lib/auth-native";
+import { revokeAllRefreshTokens, withNativeCors } from "@/lib/auth-native";
 import { userFoundingBadge } from "@/lib/founding-members";
 import { readByokSnapshot } from "@/lib/user-provider-keys";
 
@@ -95,7 +96,12 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const data: { email?: string; name?: string; passwordHash?: string } = {};
+    const data: {
+      email?: string;
+      name?: string;
+      passwordHash?: string;
+      sessionVersion?: { increment: number };
+    } = {};
     if (body.email) {
       const email = body.email.toLowerCase().trim();
       const taken = await prisma.user.findFirst({
@@ -116,12 +122,20 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: weak }, { status: 400 });
       }
       data.passwordHash = await hashPassword(body.newPassword);
+      // A password change kills every other session: bump the session
+      // version so outstanding JWTs fail verification, and revoke all
+      // refresh tokens below. The acting browser gets a fresh cookie.
+      data.sessionVersion = { increment: 1 };
     }
 
     const updated = await prisma.user.update({
       where: { id: user.id },
       data,
     });
+    if (body.newPassword) {
+      await revokeAllRefreshTokens(user.id);
+      await setSessionCookie(user.id);
+    }
     return jsonOk({
       user: { id: updated.id, email: updated.email, name: updated.name },
     });

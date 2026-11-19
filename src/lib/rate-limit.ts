@@ -1,8 +1,14 @@
 import { ApiRateLimitError } from "@/lib/http";
+import { applyWindowHit, type RateWindowRow } from "@/lib/rate-limit-pure";
 
-type Bucket = { count: number; resetAt: number };
+type Bucket = RateWindowRow;
 
-/** Per-isolate token window. Hobby has no Upstash — best-effort per instance. */
+/**
+ * Per-isolate fallback window. The durable limiter (`takeTokenShared`) is
+ * authoritative; this Map only takes over when Postgres is unreachable, so
+ * a store hiccup degrades to the old per-instance behavior instead of
+ * taking the site down.
+ */
 const buckets = new Map<string, Bucket>();
 const MAX_KEYS = 4000;
 
@@ -46,19 +52,57 @@ export function takeToken(
 ): { ok: true } | { ok: false; retryAfterSec: number } {
   const now = Date.now();
   prune(now);
-  const current = buckets.get(key);
-  if (!current || now >= current.resetAt) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return { ok: true };
+  const hit = applyWindowHit(now, buckets.get(key) ?? null, limit, windowMs);
+  buckets.set(key, hit.row);
+  return hit.ok ? { ok: true } : { ok: false, retryAfterSec: hit.retryAfterSec };
+}
+
+type SharedLimiterModule = typeof import("@/lib/rate-limit-db");
+
+let sharedLimiterPromise: Promise<SharedLimiterModule | null> | null = null;
+
+/**
+ * Lazily load the Postgres-backed limiter. This module stays prisma-free
+ * (pure check scripts import it), so the DB module is pulled in on first
+ * use; a load failure is permanent for the isolate and simply means
+ * "no shared store here" — the in-memory limiter takes over.
+ */
+function loadSharedLimiter(): Promise<SharedLimiterModule | null> {
+  if (!sharedLimiterPromise) {
+    sharedLimiterPromise = import("@/lib/rate-limit-db").catch((error) => {
+      console.error(
+        "[rate-limit] shared limiter unavailable; using per-instance fallback",
+        error,
+      );
+      return null;
+    });
   }
-  if (current.count >= limit) {
-    return {
-      ok: false,
-      retryAfterSec: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
-    };
+  return sharedLimiterPromise;
+}
+
+/**
+ * Durable fixed-window limiter (see `rate-limit-db.ts` for the atomic
+ * upsert). If the shared store cannot be loaded or a hit fails, the hit
+ * falls back to the per-isolate in-memory limiter and the failure is
+ * logged — limiting degrades, the request path never does.
+ */
+export async function takeTokenShared(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<{ ok: true } | { ok: false; retryAfterSec: number }> {
+  const shared = await loadSharedLimiter();
+  if (shared) {
+    try {
+      return await shared.takeTokenSharedDb(key, limit, windowMs);
+    } catch (error) {
+      console.error(
+        "[rate-limit] shared store hit failed; using per-instance fallback",
+        error,
+      );
+    }
   }
-  current.count += 1;
-  return { ok: true };
+  return takeToken(key, limit, windowMs);
 }
 
 /** Reset helper for unit tests. */
@@ -172,7 +216,11 @@ async function enforceAuthEmailRateLimit(
   }
   if (!email) return;
   throwIfLimited(
-    takeToken(`auth-email:${path}:${email}`, AUTH_EMAIL_LIMIT, AUTH_WINDOW_MS),
+    await takeTokenShared(
+      `auth-email:${path}:${email}`,
+      AUTH_EMAIL_LIMIT,
+      AUTH_WINDOW_MS,
+    ),
   );
 }
 
@@ -184,7 +232,9 @@ export async function enforceSensitiveRateLimit(
   const spec = sensitiveRateLimit(segments, method);
   if (spec) {
     const ip = clientIp(request);
-    throwIfLimited(takeToken(`${spec.key}:${ip}`, spec.limit, spec.windowMs));
+    throwIfLimited(
+      await takeTokenShared(`${spec.key}:${ip}`, spec.limit, spec.windowMs),
+    );
   }
   await enforceAuthEmailRateLimit(request, segments, method);
 }

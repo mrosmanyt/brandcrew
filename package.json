@@ -44,7 +44,8 @@
     "test:referral-invites": "tsx scripts/check-referral-invites.ts",
     "test:win-nudge": "tsx scripts/check-windows-download-nudge.ts",
     "test:guest-assistant-prompt": "tsx scripts/check-guest-assistant-download-prompt.ts",
-    "test:api-error-handling": "tsx scripts/check-api-error-handling.ts"
+    "test:api-error-handling": "tsx scripts/check-api-error-handling.ts",
+    "test:security-hardening": "tsx scripts/check-security-hardening.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

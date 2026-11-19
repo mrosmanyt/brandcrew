@@ -39,6 +39,9 @@ model User {
   referralBonusMonths    Int      @default(0)
   /// Set at signup when founding spots were full — assistant needs paid plan.
   assistantRequiresPaid  Boolean  @default(false)
+  /// Session JWTs carry this as the `sv` claim; bumping it (password change,
+  /// sign-out-everywhere) invalidates every outstanding session token.
+  sessionVersion Int               @default(0)
   createdAt     DateTime           @default(now())
   memberships   WorkspaceMember[]
   invitesSent   WorkspaceInvite[]
@@ -484,6 +487,18 @@ model AuthRefreshToken {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
+}
+
+/// Shared fixed-window rate-limit counters. One row per limiter key; the
+/// hot path is a single atomic INSERT … ON CONFLICT upsert so limits hold
+/// across serverless instances (the old in-memory Map reset per isolate).
+model RateLimitBucket {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
 }
 
 /// One-time connect tickets: Sign in with CINEM (extension) and desktop/mobile deep links.

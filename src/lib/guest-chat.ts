@@ -8,8 +8,7 @@ import {
   type GuestChatMessage,
 } from "@/lib/guest-chat-pure";
 import { normalizeModelRouting, type LlmRoutingPreference } from "@/lib/llm-routing";
-import { clientIp } from "@/lib/rate-limit";
-import { takeToken } from "@/lib/rate-limit";
+import { clientIp, takeTokenShared } from "@/lib/rate-limit";
 
 type GuestSession = {
   userMessages: number;
@@ -59,7 +58,7 @@ export async function answerGuestChat(input: {
   }
 
   const ip = clientIp(input.request);
-  const ipLimit = takeToken(`guest-chat-ip:${ip}`, 30, 60 * 60 * 1000);
+  const ipLimit = await takeTokenShared(`guest-chat-ip:${ip}`, 30, 60 * 60 * 1000);
   if (!ipLimit.ok) {
     throw new Error("Too many messages from this network. Try again later.");
   }

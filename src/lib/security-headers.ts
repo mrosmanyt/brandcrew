@@ -13,8 +13,17 @@ import { WHOP_PIXEL_ORIGIN } from "./whop-pixel";
  * COOP is `same-origin-allow-popups`: OAuth is a top-level redirect, and
  * artifact print uses window.open to a same-origin document.
  *
- * Follow-ups (separate pass, same module): nonce-based CSP, COEP,
- * Trusted Types, report-uri. Do not add a third-party WAF here.
+ * CSP tightening status: the enforced policy still allows
+ * `'unsafe-inline'` scripts — Next.js emits inline bootstrap scripts and
+ * the GTM / Whop pixels inject their own, so dropping it blind would
+ * break pages. The nonce-based strict policy below is therefore shipped
+ * as `Content-Security-Policy-Report-Only` from `src/proxy.ts` (fresh
+ * nonce per request; Next stamps its own scripts with it, so reports
+ * isolate the remaining third-party/inline blockers). Flip it to
+ * enforced once the report stream is clean. `script-src-attr 'none'` is
+ * already enforced: no inline event-handler attributes exist in the app.
+ * Remaining follow-ups: a report collection endpoint for the report-only
+ * stream, COEP, Trusted Types. Do not add a third-party WAF here.
  *
  * HTTPS: Vercel redirects HTTP→HTTPS on *.vercel.app. HSTS + CSP
  * `upgrade-insecure-requests` reinforce that. Do not set HSTS preload
@@ -47,6 +56,7 @@ function cspValue() {
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
+    "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
@@ -59,6 +69,65 @@ function cspValue() {
     "worker-src 'self' blob:",
     "upgrade-insecure-requests",
   ].join("; ");
+}
+
+/** Request header that carries the per-request CSP nonce to pages. */
+export const CSP_NONCE_HEADER = "x-nonce";
+
+/** Fresh nonce for one request (base64 of a random UUID, per Next docs). */
+export function generateCspNonce(): string {
+  return Buffer.from(crypto.randomUUID()).toString("base64");
+}
+
+/**
+ * The strict policy we intend to enforce eventually: nonce-based
+ * `script-src` with `'strict-dynamic'` and no `'unsafe-inline'`, so a
+ * script runs only if Next stamped it with this request's nonce or a
+ * trusted script loaded it. Host sources are omitted from `script-src`
+ * on purpose — browsers ignore them under `'strict-dynamic'`; the pixel
+ * origins stay in `connect-src`, which still applies.
+ *
+ * Everything else mirrors the enforced policy so report-only violations
+ * isolate the script changes. Two deliberate exceptions kept from the
+ * enforced policy: `style-src 'unsafe-inline'` (React inline styles and
+ * Next style tags are a separate migration) and the same permissive
+ * `img-src`/`frame-src` (provider media and blob previews).
+ */
+export function strictCspReportOnlyValue(nonce: string): string {
+  const isDev = process.env.NODE_ENV !== "production";
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    isDev ? "'unsafe-eval'" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "script-src-attr 'none'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    `connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://plausible.io https://*.plausible.io ${WHOP_PIXEL_ORIGIN} https://*.whop.tw`,
+    "frame-src 'self' blob: data:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "worker-src 'self' blob:",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+/** Attach the strict policy as report-only (never blocks, only reports). */
+export function applyReportOnlyCsp(headers: Headers, nonce: string) {
+  headers.set(
+    "Content-Security-Policy-Report-Only",
+    strictCspReportOnlyValue(nonce),
+  );
 }
 
 /** Ordered list for next.config `headers()`. */

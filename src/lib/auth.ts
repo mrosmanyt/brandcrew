@@ -14,6 +14,12 @@ import {
 } from "@/lib/rbac";
 import { isSupabaseAuthEnabled } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  SESSION_VERSION_CLAIM,
+  normalizeSessionVersion,
+  sessionVersionFromPayload,
+  sessionVersionMatches,
+} from "@/lib/auth-session-pure";
 
 const SESSION_DAYS = 30;
 
@@ -35,22 +41,70 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export async function createSessionToken(userId: string) {
-  return new SignJWT({ sub: userId })
+export async function createSessionToken(
+  userId: string,
+  sessionVersion?: number,
+) {
+  let version = sessionVersion;
+  if (version === undefined) {
+    const row = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { sessionVersion: true },
+    });
+    version = row?.sessionVersion ?? 0;
+  }
+  return new SignJWT({
+    sub: userId,
+    [SESSION_VERSION_CLAIM]: normalizeSessionVersion(version),
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DAYS}d`)
     .sign(getSecret());
 }
 
-export async function readSessionUserId(token: string | undefined) {
+export type SessionClaims = { userId: string; sessionVersion: number };
+
+/** Verify the JWT signature and return its claims (no DB version check). */
+export async function readSessionClaims(
+  token: string | undefined,
+): Promise<SessionClaims | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    return typeof payload.sub === "string" ? payload.sub : null;
+    if (typeof payload.sub !== "string") return null;
+    return {
+      userId: payload.sub,
+      sessionVersion: sessionVersionFromPayload(payload),
+    };
   } catch {
     return null;
   }
+}
+
+export async function readSessionUserId(token: string | undefined) {
+  const claims = await readSessionClaims(token);
+  return claims?.userId ?? null;
+}
+
+/**
+ * Global session kill: bump the user's session version so every
+ * outstanding session JWT fails verification, and revoke every refresh
+ * token so native clients cannot mint fresh access tokens. Returns the
+ * new version. (Supabase-bridge sessions are managed by Supabase itself;
+ * this covers the app JWT + refresh-token flows.)
+ */
+export async function invalidateAllSessions(userId: string) {
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { sessionVersion: { increment: 1 } },
+    select: { sessionVersion: true },
+  });
+  await prisma.authRefreshToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return updated.sessionVersion;
 }
 
 /** Session JWT lives in the HttpOnly cookie (web) or Authorization Bearer (native). */
@@ -140,13 +194,18 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   if (supabaseUser) return supabaseUser;
 
   const token = await readRequestSessionToken();
-  const userId = await readSessionUserId(token);
-  if (!userId) return null;
+  const claims = await readSessionClaims(token);
+  if (!claims) return null;
   const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, name: true },
+    where: { id: claims.userId },
+    select: { id: true, email: true, name: true, sessionVersion: true },
   });
-  return user;
+  if (!user) return null;
+  // Stateless-token revocation: a bumped sessionVersion kills old tokens.
+  if (!sessionVersionMatches(claims.sessionVersion, user.sessionVersion)) {
+    return null;
+  }
+  return { id: user.id, email: user.email, name: user.name };
 }
 
 export function readBearerToken(request: Request) {
@@ -161,12 +220,17 @@ export async function getUserFromRequest(request: Request): Promise<SessionUser 
   if (fromContext) return fromContext;
   const token = readBearerToken(request);
   if (!isUserAccessToken(token)) return null;
-  const userId = await readSessionUserId(token);
-  if (!userId) return null;
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, name: true },
+  const claims = await readSessionClaims(token);
+  if (!claims) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: claims.userId },
+    select: { id: true, email: true, name: true, sessionVersion: true },
   });
+  if (!user) return null;
+  if (!sessionVersionMatches(claims.sessionVersion, user.sessionVersion)) {
+    return null;
+  }
+  return { id: user.id, email: user.email, name: user.name };
 }
 
 export async function requireUser(): Promise<SessionUser> {

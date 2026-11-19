@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
-import { revokeAllRefreshTokens, revokeRefreshToken, withNativeCors } from "@/lib/auth-native";
+import { clearSessionCookie, getCurrentUser, invalidateAllSessions } from "@/lib/auth";
+import { revokeRefreshToken, withNativeCors } from "@/lib/auth-native";
 import { jsonAuthBridgeError } from "@/lib/http";
 
 const schema = z.object({
@@ -19,7 +19,10 @@ export async function POST(request: Request) {
           NextResponse.json({ error: "Sign in to revoke every device." }, { status: 401 }),
         );
       }
-      await revokeAllRefreshTokens(user.id);
+      // Sign out everywhere: bump the session version (kills every
+      // outstanding session JWT, not just this browser's cookie) and
+      // revoke all refresh tokens.
+      await invalidateAllSessions(user.id);
       await clearSessionCookie();
       return withNativeCors(NextResponse.json({ ok: true, revoked: "all" }));
     }
