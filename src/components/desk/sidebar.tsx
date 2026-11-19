@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   CreditCard,
-  LayoutGrid,
+  Image as ImageIcon,
   LogOut,
   Menu,
   MessageSquare,
@@ -18,17 +18,12 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandMark, CinemMark } from "@/components/brand/logo";
-import { AgentAvatar } from "@/components/desk/agent-avatar";
-import { BuildSidebarSection } from "@/components/desk/build-sidebar-section";
 import { ConsoleNavLink } from "@/components/desk/console-nav-link";
-import { NotificationBell, type NeedsYouItem } from "@/components/desk/notification-bell";
-import { useWorkspaceJobsPoll } from "@/components/desk/use-workspace-jobs-poll";
 import {
   ResizeHandle,
   usePersistedCollapsed,
   usePersistedPaneWidth,
 } from "@/components/desk/resize-handle";
-import { TeamLaunchDialog } from "@/components/desk/team-launch-dialog";
 import { DeskThemeToggle } from "@/components/desk/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,66 +35,29 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { DEFAULT_AGENT_NAME, displayAgentName } from "@/lib/constants";
 import { isSettingsFamilyPath } from "@/lib/desk-settings";
 import { SupporterBadge } from "@/components/support/supporter-badge";
-import type { AgentDTO } from "@/lib/job-types";
-import type { ProposedAgent } from "@/lib/team-launch";
 import type { WorkspaceDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-function StatusDot({ status }: { status?: string }) {
-  const color =
-    status === "needs-you" || status === "needs_you"
-      ? "bg-amber-400"
-      : status === "working" || status === "running" || status === "queued"
-        ? "bg-sky-400 animate-pulse"
-        : status === "approved"
-          ? "bg-emerald-500"
-          : status === "draft"
-            ? "bg-zinc-400"
-            : "bg-sidebar-foreground/20";
-  return <span className={cn("size-1.5 shrink-0 rounded-full", color)} />;
-}
 
 function NavBody({
   workspace,
   workspaces,
-  agents,
-  agentStatus,
   collapsed,
   onToggle,
   onLogout,
 }: {
   workspace: WorkspaceDTO;
   workspaces: WorkspaceDTO[];
-  agents: AgentDTO[];
-  agentStatus: Record<string, string>;
   collapsed: boolean;
   onToggle: () => void;
   onLogout: () => void;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(false);
-  const [creatingAgent, setCreatingAgent] = useState(false);
   const [name, setName] = useState("");
-  const [polledStatus, setPolledStatus] = useState<Record<string, string> | null>(
-    null,
-  );
-  const liveStatus = polledStatus ?? agentStatus;
-  const [launchOpen, setLaunchOpen] = useState(false);
-  const [launchProposal, setLaunchProposal] = useState<ProposedAgent[]>([]);
-  const [launchBusy, setLaunchBusy] = useState(false);
-  const selectedAgentId = searchParams.get("agentId");
-  const onMission = pathname === `/desk/${workspace.id}`;
-  useWorkspaceJobsPoll(workspace.id, (data) => {
-    if (data.employeeStatus && typeof data.employeeStatus === "object") {
-      setPolledStatus(data.employeeStatus);
-    }
-  });
 
   async function createWorkspace() {
     const trimmed = name.trim();
@@ -135,46 +93,13 @@ function NavBody({
     }
   }
 
-  async function createAgent() {
-    setCreatingAgent(true);
-    const res = await fetch(`/api/workspaces/${workspace.id}/agents`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: DEFAULT_AGENT_NAME, role: "" }),
-    });
-    const data = await res.json();
-    setCreatingAgent(false);
-    if (!res.ok) {
-      toast.error(data.error || "Could not create an agent.");
-      return;
+  function switchWorkspace(id: string) {
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts[0] === "desk" && parts[1] === workspace.id && parts[2]) {
+      router.push(`/desk/${id}/${parts[2]}`);
+    } else {
+      router.push(`/desk/${id}`);
     }
-    router.push(`/desk/${workspace.id}?agentId=${data.agent.id}`);
-    router.refresh();
-  }
-
-  async function openLaunch() {
-    const res = await fetch(`/api/workspaces/${workspace.id}/agents/launch`);
-    const data = await res.json();
-    setLaunchProposal(data.proposal ?? []);
-    setLaunchOpen(true);
-  }
-
-  async function approveLaunch(rows: ProposedAgent[], startOnboardingJobs: boolean) {
-    setLaunchBusy(true);
-    const res = await fetch(`/api/workspaces/${workspace.id}/agents/launch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agents: rows, startOnboardingJobs }),
-    });
-    const data = await res.json();
-    setLaunchBusy(false);
-    if (!res.ok) {
-      toast.error(data.error || "Could not create the team.");
-      return;
-    }
-    setLaunchOpen(false);
-    toast.success(`Created ${data.created?.length ?? 0} agents.`);
-    router.refresh();
   }
 
   return (
@@ -208,13 +133,11 @@ function NavBody({
             aria-label="Workspace"
             className="w-full rounded-md border-0 bg-sidebar-accent px-2 py-1.5 text-xs text-sidebar-foreground"
             value={workspace.id}
-            onChange={(e) => router.push(`/desk/${e.target.value}`)}
+            onChange={(e) => switchWorkspace(e.target.value)}
           >
             {workspaces.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.kind === "client"
-                  ? `${w.name}${w.clientName ? ` · ${w.clientName}` : ""}`
-                  : w.name}
+                {w.name}
                 {w.supporter || (w.id === workspace.id && workspace.supporter)
                   ? " · Supporter"
                   : ""}
@@ -260,101 +183,6 @@ function NavBody({
       ) : null}
 
       <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
-          {!collapsed ? (
-            <div className="mb-1 flex items-center justify-between px-2">
-              <p className="text-xs text-sidebar-foreground/45">Agents</p>
-              <span className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={createAgent}
-                  disabled={creatingAgent}
-                  className="text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                >
-                  New
-                </button>
-                <button
-                  type="button"
-                  onClick={openLaunch}
-                  className="text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                  title="Launch team"
-                >
-                  Team
-                </button>
-              </span>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={createAgent}
-              disabled={creatingAgent}
-              title="New Agent"
-              className="mb-1 flex w-full items-center justify-center rounded-md py-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            >
-              <Plus className="size-3.5" />
-            </button>
-          )}
-          {agents.length === 0 && !collapsed ? (
-            <p className="px-2 pt-1 text-[11px] leading-4 text-sidebar-foreground/45">
-              None yet — New Agent, Settings → Marketplace, or Launch team.
-            </p>
-          ) : (
-            <ul className="space-y-px">
-              {agents.map((agent) => {
-                const href = `/desk/${workspace.id}?agentId=${agent.id}`;
-                const active =
-                  onMission &&
-                  (selectedAgentId === agent.id ||
-                    (!selectedAgentId && agent.id === agents[0]?.id));
-                const status = liveStatus[agent.id];
-                const working =
-                  status === "working" || status === "running" || status === "queued";
-                return (
-                  <li key={agent.id}>
-                    <Link
-                      href={href}
-                      prefetch={false}
-                      title={`${displayAgentName(agent.name)}${agent.role ? ` · ${agent.role}` : ""}`}
-                      className={cn(
-                        "flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] transition-colors",
-                        collapsed && "justify-center px-0",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-foreground"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-                      )}
-                    >
-                      <AgentAvatar
-                        id={agent.id}
-                        name={agent.name}
-                        role={agent.role}
-                        working={working}
-                        size="sm"
-                      />
-                      {!collapsed ? (
-                        <>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate leading-4">
-                              {displayAgentName(agent.name)}
-                            </span>
-                            {agent.role ? (
-                              <span className="block truncate text-[10px] leading-3 text-sidebar-foreground/40">
-                                {agent.role}
-                              </span>
-                            ) : null}
-                          </span>
-                          <StatusDot status={status} />
-                        </>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <BuildSidebarSection collapsed={collapsed} />
-
         <div className="px-1.5 py-2">
           {!collapsed ? (
             <p className="px-2 pb-1 text-xs text-sidebar-foreground/45">Desk</p>
@@ -369,12 +197,12 @@ function NavBody({
               Chat
             </SideLink>
             <SideLink
-              href={`/desk/${workspace.id}`}
+              href={`/desk/${workspace.id}/image-gen`}
               pathname={pathname}
               collapsed={collapsed}
-              icon={<LayoutGrid className="size-3.5" />}
+              icon={<ImageIcon className="size-3.5" />}
             >
-              Mission Control
+              Image Gen
             </SideLink>
             <li>
               <ConsoleNavLink
@@ -419,13 +247,6 @@ function NavBody({
       </nav>
 
       <div className="p-1.5">
-        <TeamLaunchDialog
-          open={launchOpen}
-          onOpenChange={setLaunchOpen}
-          proposal={launchProposal}
-          busy={launchBusy}
-          onApprove={approveLaunch}
-        />
         <button
           type="button"
           onClick={onLogout}
@@ -483,9 +304,6 @@ function SideLink({
 export function DeskSidebar(props: {
   workspace: WorkspaceDTO;
   workspaces: WorkspaceDTO[];
-  agents: AgentDTO[];
-  agentStatus: Record<string, string>;
-  needsYou?: NeedsYouItem[];
   creditsLine?: string;
 }) {
   const router = useRouter();
@@ -534,7 +352,7 @@ export function DeskSidebar(props: {
       </aside>
       {!collapsed ? (
         <ResizeHandle
-          label="Resize agents sidebar"
+          label="Resize sidebar"
           className="hidden md:flex"
           onDelta={(dx) => setLeftWidth((width) => width + dx)}
           onDoubleClick={toggle}
@@ -550,10 +368,6 @@ export function DeskSidebar(props: {
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <NotificationBell
-            workspaceId={props.workspace.id}
-            initialItems={props.needsYou ?? []}
-          />
           <DeskThemeToggle />
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger

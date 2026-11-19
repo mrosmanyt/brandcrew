@@ -4,13 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { InviteTeam } from "@/components/desk/invite-team";
-import { ScheduleJobs } from "@/components/desk/schedule-jobs";
-import { FileActionsPanel } from "@/components/desk/file-actions-panel";
-import { MacrosPanel } from "@/components/desk/macros-panel";
 import { UsageChart } from "@/components/desk/usage-chart";
 import { usageLookbackLabel } from "@/lib/credits";
 import { publicModelLabel } from "@/lib/model-catalog";
-import type { AgentDTO } from "@/lib/job-types";
 import type { UsageDayPoint } from "@/lib/usage-series";
 
 type UsagePayload = {
@@ -50,13 +46,7 @@ type UsagePayload = {
   }[];
 };
 
-export function UsageDashboard({
-  workspaceId,
-  agents,
-}: {
-  workspaceId: string;
-  agents: AgentDTO[];
-}) {
+export function UsageDashboard({ workspaceId }: { workspaceId: string }) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<UsagePayload | null>(null);
 
@@ -198,15 +188,6 @@ export function UsageDashboard({
 
       <div className="mt-8">
         <InviteTeam workspaceId={workspaceId} />
-      </div>
-      <div className="mt-6">
-        <ScheduleJobs workspaceId={workspaceId} agents={agents} />
-      </div>
-      <div className="mt-6">
-        <FileActionsPanel workspaceId={workspaceId} agents={agents} />
-      </div>
-      <div className="mt-6">
-        <MacrosPanel workspaceId={workspaceId} />
       </div>
     </div>
   );

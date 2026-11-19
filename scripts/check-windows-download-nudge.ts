@@ -133,9 +133,6 @@ assert.doesNotMatch(ui, /onJob|JobEvent|streaming|useChat|addEventListener\(["']
 assert.doesNotMatch(ui, /OpenAI|Claude|Gemini|ChatGPT/i);
 const visibleCopy = ui.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 assert.doesNotMatch(visibleCopy, /Grok/i);
-const deskLayout = readFileSync("src/app/desk/[workspaceId]/layout.tsx", "utf8");
-assert.match(deskLayout, /WindowsDownloadNudge/);
-assert.match(deskLayout, /cinemAiAssistantDownloadHref\(\)/);
 const about = readFileSync("src/app/about/page.tsx", "utf8");
 assert.match(about, /WindowsDownloadNudge/);
 assert.match(about, /cinemAiAssistantDownloadHref\(\)/);
@@ -145,6 +142,6 @@ assert.doesNotMatch(home, /AssistantMarketingMain/);
 const chat = readFileSync("src/app/chat/page.tsx", "utf8");
 assert.match(chat, /GuestChatHome/);
 assert.equal(pkg.scripts?.["test:win-nudge"], "tsx scripts/check-windows-download-nudge.ts");
-console.log("ok: desk shell + about mount; home is CINEM Pro chat; guest chat also at /chat");
+console.log("ok: about mounts the nudge; home is CINEM Pro chat; guest chat also at /chat");
 
 console.log("Windows download nudge checks passed.");

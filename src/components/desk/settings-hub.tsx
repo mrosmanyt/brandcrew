@@ -6,25 +6,13 @@ import { useState } from "react";
 import { KeyRound, Mail } from "lucide-react";
 import { InviteTeam } from "@/components/desk/invite-team";
 import { ReferralPanel } from "@/components/desk/referral-panel";
-import { ExtensionStatusChip } from "@/components/desk/extension-status";
-import { CLIENT_ISOLATION_FACTS } from "@/lib/client-workspaces";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  jobDeskHref,
-  settingsDeskCategories,
-  type SettingsDeskLink,
-} from "@/lib/desk-settings";
-import { ConsoleNavLink } from "@/components/desk/console-nav-link";
 import { SupporterBadge } from "@/components/support/supporter-badge";
 import { assertStrongPassword } from "@/lib/password-rules";
-import { displayAgentName } from "@/lib/constants";
 import { formatSupportCents } from "@/lib/support";
-import type { AgentDTO, JobDTO } from "@/lib/job-types";
-import { jobStatusLabel } from "@/lib/live-progress";
-import { cn } from "@/lib/utils";
 
 type AccountUser = {
   id: string;
@@ -40,19 +28,11 @@ type AccountUser = {
 export function SettingsHub({
   workspaceId,
   workspaceName,
-  workspaceKind = "agency",
-  clientName = "",
   user,
-  initialJobs,
-  agents,
 }: {
   workspaceId: string;
   workspaceName: string;
-  workspaceKind?: "agency" | "client";
-  clientName?: string;
   user: AccountUser;
-  initialJobs: JobDTO[];
-  agents: AgentDTO[];
 }) {
   const router = useRouter();
   const [name, setName] = useState(user.name);
@@ -60,10 +40,7 @@ export function SettingsHub({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [workspaceTitle, setWorkspaceTitle] = useState(workspaceName);
-  const [clientLabel, setClientLabel] = useState(clientName);
-  const [deskKind, setDeskKind] = useState<"agency" | "client">(workspaceKind);
   const [busy, setBusy] = useState<string | null>(null);
-  const categories = settingsDeskCategories(workspaceId);
 
   const hasPassword = user.hasPassword !== false;
 
@@ -138,11 +115,7 @@ export function SettingsHub({
     const res = await fetch(`/api/workspaces/${workspaceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: workspaceTitle,
-        kind: deskKind,
-        clientName: deskKind === "client" ? clientLabel : "",
-      }),
+      body: JSON.stringify({ name: workspaceTitle }),
     });
     const data = await res.json();
     setBusy(null);
@@ -165,9 +138,7 @@ export function SettingsHub({
       <p className="page-kicker">Account</p>
       <h1 className="font-heading mt-1 text-2xl tracking-tight">Settings</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Account and workspace. Marketplace, Client desks, Calendar, Ops, Trust,
-        and On-device Chrome live here in categories — the sidebar stays on
-        Mission Control, API Console, Usage, and Plans.
+        Account and workspace.
       </p>
 
       <section className="mt-8 rounded-2xl border border-border bg-card p-5">
@@ -256,8 +227,7 @@ export function SettingsHub({
       <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-medium">Workspace</h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Name this desk, then open Client desks, Trust & audit, or Brand Kit —
-          those left the primary sidebar.
+          Name this workspace. Chat and image generation meter against it.
         </p>
         <form onSubmit={saveWorkspace} className="mt-3 grid gap-3">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -272,128 +242,14 @@ export function SettingsHub({
               Save workspace
             </Button>
           </div>
-          <Field label="Desk type">
-            <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={deskKind}
-              onChange={(e) => setDeskKind(e.target.value === "client" ? "client" : "agency")}
-            >
-              <option value="agency">Agency house desk</option>
-              <option value="client">Client workspace</option>
-            </select>
-          </Field>
-          {deskKind === "client" ? (
-            <Field label="Client name">
-              <Input
-                value={clientLabel}
-                onChange={(e) => setClientLabel(e.target.value)}
-                placeholder="Acme Corp"
-              />
-            </Field>
-          ) : null}
         </form>
-        <ul className="mt-4 space-y-1.5 text-xs leading-5 text-muted-foreground">
-          {CLIENT_ISOLATION_FACTS.map((row) => (
-            <li key={row.key}>
-              <span className="font-medium text-foreground">{row.label}.</span> {row.detail}
-            </li>
-          ))}
-        </ul>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
           Use server API keys — set{" "}
           <code className="rounded bg-muted px-1 py-0.5">OPENAI_API_KEY</code>,{" "}
           <code className="rounded bg-muted px-1 py-0.5">ANTHROPIC_API_KEY</code>, or{" "}
           <code className="rounded bg-muted px-1 py-0.5">GEMINI_API_KEY</code>{" "}
-          on the host. This desk does not accept a personal key in the browser.
+          on the host. This workspace does not accept a personal key in the browser.
         </p>
-        {categories
-          .filter((category) => category.id === "workspace")
-          .map((category) => (
-            <ul key={category.id} className="mt-4 grid gap-2">
-              {category.links.map((link) => (
-                <li key={`${category.id}-${link.href}`}>
-                  <SettingsLinkRow workspaceId={workspaceId} link={link} />
-                </li>
-              ))}
-            </ul>
-          ))}
-      </section>
-
-      {categories
-        .filter((category) => category.id !== "workspace")
-        .map((category) => (
-        <section
-          key={category.id}
-          className="mt-6 rounded-2xl border border-border bg-card p-5"
-        >
-          <h2 className="text-sm font-medium">{category.title}</h2>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{category.hint}</p>
-          <ul className="mt-4 grid gap-2">
-            {category.links.map((link) => (
-              <li key={`${category.id}-${link.href}`}>
-                <SettingsLinkRow workspaceId={workspaceId} link={link} />
-              </li>
-            ))}
-            {category.id === "desk-tools" ? (
-              <li>
-                <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">Chrome extension</span>
-                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                      Same badge as the old sidebar pill. Install and pair Chrome so
-                      jobs can click and type on this machine.
-                    </span>
-                  </span>
-                  <ExtensionStatusChip workspaceId={workspaceId} />
-                </div>
-              </li>
-            ) : null}
-          </ul>
-        </section>
-      ))}
-
-      <section className="mt-6 rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium">Jobs</h2>
-          <span className="text-xs text-muted-foreground">
-            {initialJobs.filter((job) => job.status !== "done").length} open
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Moved off the desk footer. Open a job to jump back to Mission Control.
-        </p>
-        {initialJobs.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">No jobs yet.</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-border">
-            {initialJobs.map((job) => {
-              const owner = agents.find((agent) => agent.id === job.agentId);
-              return (
-                <li key={job.id}>
-                  <Link
-                    href={jobDeskHref(workspaceId, job)}
-                    className="flex items-center justify-between gap-3 py-2.5 hover:text-foreground"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm">{job.title}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {displayAgentName(owner?.name)} · {jobStatusLabel(job.status)}
-                      </span>
-                    </span>
-                    <span
-                      className={cn(
-                        "shrink-0 text-[11px] capitalize text-muted-foreground",
-                        job.status === "needs_you" && "text-amber-400",
-                      )}
-                    >
-                      {jobStatusLabel(job.status)}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </section>
 
       {user.isAdmin === true ? (
@@ -418,38 +274,6 @@ export function SettingsHub({
         </Button>
       </div>
     </div>
-  );
-}
-
-function SettingsLinkRow({
-  workspaceId,
-  link,
-}: {
-  workspaceId: string;
-  link: SettingsDeskLink;
-}) {
-  const className =
-    "flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-sm hover:bg-muted/40";
-  const inner = (
-    <>
-      <span className="min-w-0">
-        <span className="block font-medium">{link.label}</span>
-        <span className="block text-xs text-muted-foreground">{link.hint}</span>
-      </span>
-      <span className="shrink-0 text-xs text-muted-foreground">Open →</span>
-    </>
-  );
-  if (link.external) {
-    return (
-      <ConsoleNavLink workspaceId={workspaceId} className={className}>
-        {inner}
-      </ConsoleNavLink>
-    );
-  }
-  return (
-    <Link href={link.href} className={className}>
-      {inner}
-    </Link>
   );
 }
 

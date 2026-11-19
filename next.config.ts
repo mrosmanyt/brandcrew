@@ -1,14 +1,5 @@
 import type { NextConfig } from "next";
-import {
-  CINEM_AI_ASSISTANT_SETUP_FILENAME,
-  DESKTOP_AI_ASSISTANT_ADVANCED_DOWNLOAD,
-  DESKTOP_WIN_DOWNLOAD,
-  DESKTOP_WIN_PORTABLE,
-  WIN_SETUP_FILENAME,
-} from "./src/lib/desktop-download-redirects";
 import { securityHeaderList } from "./src/lib/security-headers";
-
-const desktop = process.env.DESKTOP === "1";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -22,22 +13,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/security", destination: "/privacy", permanent: true },
-      // Never serve ~120MB installers from Vercel — hand off to GitHub Releases CDN.
-      {
-        source: `/downloads/${WIN_SETUP_FILENAME}`,
-        destination: DESKTOP_WIN_DOWNLOAD,
-        permanent: false,
-      },
-      {
-        source: `/downloads/${CINEM_AI_ASSISTANT_SETUP_FILENAME}`,
-        destination: DESKTOP_AI_ASSISTANT_ADVANCED_DOWNLOAD,
-        permanent: false,
-      },
-      {
-        source: "/downloads/CINEM-Pro-Portable.exe",
-        destination: DESKTOP_WIN_PORTABLE,
-        permanent: false,
-      },
     ];
   },
   async rewrites() {
@@ -83,15 +58,6 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
         ],
       },
-      {
-        source: "/downloads/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=3600, stale-while-revalidate=86400",
-          },
-        ],
-      },
     ];
   },
   // README and local tooling use 127.0.0.1; Next 16 treats that as a distinct
@@ -103,17 +69,6 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/*": ["./node_modules/playwright-core/**/*"],
   },
-  ...(desktop
-    ? {
-        output: "standalone" as const,
-        outputFileTracingIncludes: {
-          "/*": [
-            "./node_modules/.prisma/client/**/*",
-            "./node_modules/@prisma/client/**/*",
-          ],
-        },
-      }
-    : {}),
 };
 
 export default nextConfig;

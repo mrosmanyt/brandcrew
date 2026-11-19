@@ -3,7 +3,6 @@
  * No floating category bar. No database.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import {
   BUILD_PROMPT_CATEGORIES,
   BUILD_PROMPT_CHIPS,
@@ -96,14 +95,6 @@ assert.deepEqual(
 assert.equal("section" in COMPOSER_PLUS_ITEMS[2] && COMPOSER_PLUS_ITEMS[2].section, true);
 assert.equal("section" in COMPOSER_PLUS_ITEMS[3] && COMPOSER_PLUS_ITEMS[3].section, true);
 console.log("ok: + menu keeps files/skills/connectors/plugins and adds Build + examples");
-
-const composer = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
-assert.doesNotMatch(composer, /Try an example prompt/);
-assert.doesNotMatch(composer, /Playbook categories/);
-assert.doesNotMatch(composer, /role="tablist"/);
-assert.match(composer, /plusMenuExampleChips/);
-assert.match(composer, /BUILD_PROMPT_CATEGORIES/);
-console.log("ok: desk composer has no floating category / example-chip bar");
 
 for (const category of BUILD_PROMPT_CATEGORIES) {
   const playbook = playbookFromKey(category.playbookKey, "writer");

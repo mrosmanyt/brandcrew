@@ -7,7 +7,18 @@ import {
   googleLoginStartHref,
   type GoogleLoginIntent,
 } from "@/lib/google-auth-shared";
-import "@/lib/desktop-client";
+
+// The retired Electron shell exposed this preload bridge for its Google
+// sign-in hand-off. The web product never sets it; the declaration stays
+// local so the (now unreachable) desktop branch below keeps type-checking.
+declare global {
+  interface Window {
+    brandcrewDesktop?: {
+      desktop?: boolean;
+      startCinemSignIn?: () => Promise<unknown>;
+    };
+  }
+}
 
 function isCinemDesktopShell() {
   return Boolean(typeof window !== "undefined" && window.brandcrewDesktop?.desktop);

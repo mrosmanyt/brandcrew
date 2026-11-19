@@ -2,8 +2,7 @@
  * API error-handling safety net: DB failures return the app's clean
  * jsonError() JSON envelope (500, application/json), never a bare
  * framework crash. See src/server/api/founding/spots.ts,
- * src/server/api/auth/me.ts, src/server/api/router.ts (dispatchApi),
- * src/components/desk/trust-center.tsx.
+ * src/server/api/auth/me.ts, src/server/api/router.ts (dispatchApi).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -51,13 +50,6 @@ assert.match(
   /try \{\s*response = await handler\(request, \{ params: Promise\.resolve\(matched\.params\) \}\);\s*\} catch \(error\) \{\s*return jsonError\(error\);\s*\}/,
 );
 console.log("ok: dispatchApi() catches handler() throws and returns jsonError");
-
-const trustCenter = readFileSync(
-  join(root, "src/components/desk/trust-center.tsx"),
-  "utf8",
-);
-assert.match(trustCenter, /try \{[\s\S]*\} finally \{\s*setExporting\(false\);\s*\}/);
-console.log("ok: TrustCenter.exportAudit() always resets exporting via finally");
 
 async function run() {
   await checkFoundingSpotsHandlesDbFailure();

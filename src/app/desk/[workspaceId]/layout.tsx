@@ -1,14 +1,10 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DeskChromeHeader } from "@/components/desk/desk-chrome";
-import { DeskCompanionDeepLink } from "@/components/desk/desk-companion-deeplink";
 import { DeskSidebar } from "@/components/desk/sidebar";
 import { SetupBanner } from "@/components/desk/setup-banner";
-import { WindowsDownloadNudge } from "@/components/desk/windows-download-nudge";
-import { cinemAiAssistantDownloadHref } from "@/lib/cinem-ai-assistant";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { serializeAgent, employeeStatusFromJobs } from "@/lib/job-serialize";
 import { creditsFromTokens, formatCreditsLine } from "@/lib/credits";
 import { limitsForPlan } from "@/lib/limits";
 import { listUserWorkspaces, serializeWorkspace } from "@/lib/workspace";
@@ -28,34 +24,11 @@ export default async function WorkspaceLayout({
 
   const member = await prisma.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: user.id } },
-    include: {
-      workspace: {
-        include: {
-          artifacts: { orderBy: { createdAt: "desc" } },
-          jobs: {
-            where: { status: { in: ["queued", "running", "needs_you"] } },
-            orderBy: { updatedAt: "desc" },
-          },
-          agents: {
-            where: { status: { not: "archived" } },
-            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-          },
-        },
-      },
-    },
+    include: { workspace: true },
   });
   if (!member) redirect("/desk");
 
   const workspaces = (await listUserWorkspaces(user.id)).map(serializeWorkspace);
-  const agentStatus: Record<string, string> = {
-    ...employeeStatusFromJobs(member.workspace.jobs),
-  };
-  for (const artifact of member.workspace.artifacts) {
-    const key = artifact.agentId || artifact.agentRole;
-    if (!agentStatus[key] || agentStatus[key] === "idle") {
-      agentStatus[key] = artifact.status;
-    }
-  }
 
   const tokenBudget =
     member.workspace.tokenBudget || limitsForPlan(member.workspace.plan).tokenBudget;
@@ -73,45 +46,17 @@ export default async function WorkspaceLayout({
         <DeskSidebar
           workspace={serializeWorkspace({ ...member.workspace, memberRole: member.role })}
           workspaces={workspaces}
-          agents={member.workspace.agents.map(serializeAgent)}
-          agentStatus={agentStatus}
           creditsLine={creditsLine}
-          needsYou={member.workspace.jobs
-            .filter((job) => job.status === "needs_you")
-            .map((job) => ({
-              id: job.id,
-              title: job.title,
-              agentId: job.agentId,
-              status: job.status,
-              updatedAt: job.updatedAt.toISOString(),
-            }))}
         />
       </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <SetupBanner />
-        <WindowsDownloadNudge
-          placement="desk"
-          downloadHref={cinemAiAssistantDownloadHref()}
-        />
-        <Suspense fallback={null}>
-          <DeskCompanionDeepLink workspaceId={member.workspace.id} />
-        </Suspense>
         <DeskChromeHeader
           workspaceId={member.workspace.id}
           tokensLeft={Math.max(0, tokenBudget - member.workspace.tokenUsed)}
           tokenBudget={tokenBudget}
-          jobsLeft={limitsForPlan(member.workspace.plan).jobsPerHour}
           plan={limitsForPlan(member.workspace.plan).plan}
           supporter={Boolean(member.workspace.supporter)}
-          needsYou={member.workspace.jobs
-            .filter((job) => job.status === "needs_you")
-            .map((job) => ({
-              id: job.id,
-              title: job.title,
-              agentId: job.agentId,
-              status: job.status,
-              updatedAt: job.updatedAt.toISOString(),
-            }))}
         />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>

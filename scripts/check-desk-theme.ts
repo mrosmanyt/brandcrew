@@ -31,13 +31,6 @@ assert.match(layout, /enableSystem/);
 assert.doesNotMatch(layout, /forcedTheme/);
 console.log("ok: ThemeProvider persists and is not forced to dark");
 
-const composer = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
-assert.match(composer, /bg-composer/);
-assert.match(composer, /bg-composer-send/);
-assert.match(composer, /text-composer-send-foreground/);
-assert.doesNotMatch(composer, /#eceae4/);
-console.log("ok: composer uses theme tokens instead of a hardcoded off-white bar");
-
 const css = readFileSync("src/app/globals.css", "utf8");
 assert.match(css, /--composer-send:\s*#3f7a4f/);
 assert.match(css, /\.dark\s*\{[\s\S]*--composer:\s*#2f2f2f/);

@@ -122,15 +122,10 @@ assert.match(pluginOAuthErrorMessage("access_denied", "slack"), /cancelled or de
 assert.match(GOOGLE_TESTING_MODE_HINT, /Testing/);
 console.log("ok: Gmail access_denied / unverified tells the user to add a Test user — never Connected");
 
-const composer = readFileSync("src/components/desk/chat-composer.tsx", "utf8");
-assert.match(composer, /ALWAYS_APPROVED_LABEL/);
-assert.match(composer, /role="switch"/);
-assert.match(composer, /autoApproveSafe/);
 const schema = readFileSync("prisma/schema.prisma", "utf8");
 assert.match(schema, /autoApproveSafe/);
 const patch = readFileSync("src/server/api/workspaces/workspace.ts", "utf8");
 assert.match(patch, /autoApproveSafe/);
-assert.match(readFileSync("src/server/api/oauth/callback.ts", "utf8"), /mapPluginOAuthError/);
-console.log("ok: preference persists on Workspace; composer switch is wired");
+console.log("ok: preference persists on Workspace");
 
 console.log("Write-gate checks passed.");
