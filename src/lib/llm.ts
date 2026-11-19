@@ -13,11 +13,16 @@ import { messagesWithLanguagePolicy } from "@/lib/language-policy";
 import {
   displayModelById,
   geminiFlashModelId,
+  geminiProModelId,
   gptTerraModelId,
   haikuModelId,
+  openaiFinalModelId,
+  providerModelIdFor,
   publicModelLabel,
   sonnetMaxModelId,
   sonnetModelId,
+  xaiModelId,
+  type DisplayModelId,
 } from "@/lib/model-catalog";
 import {
   normalizeModelRouting,
@@ -208,7 +213,7 @@ export function openaiDraftModel() {
 }
 
 export function openaiFinalModel() {
-  return process.env.OPENAI_FINAL_MODEL || "gpt-4.1";
+  return openaiFinalModelId();
 }
 
 export function anthropicDraftModel() {
@@ -224,11 +229,15 @@ export function geminiDraftModel() {
 }
 
 export function geminiFinalModel() {
-  return process.env.GEMINI_FINAL_MODEL || "gemini-2.5-pro";
+  return geminiProModelId();
 }
 
 export function xaiPostsModel() {
-  return process.env.XAI_POSTS_MODEL || process.env.XAI_MODEL || "grok-3-mini";
+  return xaiModelId();
+}
+
+export function xaiChatModel() {
+  return xaiModelId();
 }
 
 export function xaiBaseUrl() {
@@ -330,16 +339,37 @@ function wantsSonnetMax(kind: LlmJobKind, plan: string, boost: boolean) {
   return boost || kind === "boost" || normalizePlanId(plan) === "ultra";
 }
 
-function isExpensiveRoute(route: LlmRoute | null): boolean {
-  if (!route) return false;
-  if (route.provider === "anthropic" && /sonnet/i.test(route.model)) return true;
-  if (route.provider === "openai" && /gpt-4\.1(?!-mini)|gpt-4o(?!-mini)|o[1-4]\b/i.test(route.model)) {
-    return true;
+/**
+ * Strict route for an explicit catalog pick: the picked model's OWN
+ * provider and provider model id, or null when that provider has no key
+ * configured. No cross-provider fallback and no plan-based downgrade —
+ * a user who picks a model gets that model. Chat surfaces turn the null
+ * into an honest "model not configured" response.
+ */
+export function routeForCatalogModel(
+  id: DisplayModelId | LlmRoutingPreference | string,
+): LlmRoute | null {
+  const row = displayModelById(id);
+  if (!row) return null;
+  const model = providerModelIdFor(row.id);
+  switch (row.provider) {
+    case "anthropic": {
+      const key = anthropicKey();
+      return key ? { provider: "anthropic", model, apiKey: key } : null;
+    }
+    case "openai": {
+      const key = openaiKey();
+      return key ? { provider: "openai", model, apiKey: key } : null;
+    }
+    case "gemini": {
+      const key = geminiKey();
+      return key ? { provider: "gemini", model, apiKey: key } : null;
+    }
+    case "xai": {
+      const key = xaiKey();
+      return key ? { provider: "xai", model, apiKey: key } : null;
+    }
   }
-  if (route.provider === "gemini" && /pro/i.test(route.model) && !/flash/i.test(route.model)) {
-    return true;
-  }
-  return false;
 }
 
 /**
@@ -378,20 +408,19 @@ function pickRouteDefault(
 }
 
 function catalogRoute(prefer: LlmRoutingPreference): LlmRoute | null {
-  const row = displayModelById(prefer);
-  if (!row) return null;
-  if (row.backendClass === "haiku") return firstCheap([anthropicHaikuRoute()]);
-  if (row.backendClass === "sonnet") return firstCheap([anthropicSonnetRoute()]);
-  if (row.backendClass === "sonnet-max") return firstCheap([anthropicSonnetRoute(true)]);
-  if (row.backendClass === "terra") return firstCheap([openaiTerraRoute()]);
-  if (row.backendClass === "flash") return firstCheap([geminiFlashRoute()]);
-  return null;
+  return routeForCatalogModel(prefer);
 }
 
 /**
  * Display-model catalog first; otherwise task-based cheap routing.
- * Picked UI names resolve to Haiku / Sonnet / GPT Terra / Gemini Flash.
- * Free + Pro (internal starter id) never take Sonnet / Gemini Pro finals even if the picker says Fable.
+ * An explicit catalog pick is honored exactly — the picked provider's own
+ * model on every plan. Plan policy governs only Auto / task routing
+ * (`pickRouteDefault`), and per-plan token budgets still cap every call
+ * via `assertLlmCallBudget`: a plan that cannot afford a picked model
+ * surfaces the budget error instead of silently swapping models.
+ * When the picked provider has no key, job-style callers fall back to
+ * task routing (a stored preference is a preference, not a promise);
+ * the chat product pre-checks configuration and never falls back.
  */
 export function pickRoute(
   mode: TaskMode,
@@ -404,9 +433,8 @@ export function pickRoute(
   const json = extras?.json ?? false;
   const plan = extras?.plan ?? currentRoutingPlan();
   const boost = extras?.boost ?? currentRoutingBoost();
-  const cheapPlan = planForcesCheapBackends(plan);
   const chosen = catalogRoute(catalogId);
-  if (chosen && !(cheapPlan && isExpensiveRoute(chosen))) return chosen;
+  if (chosen) return chosen;
   return pickRouteDefault(kind, json, plan, boost);
 }
 

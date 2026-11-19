@@ -15,7 +15,8 @@ import {
   hasAnthropic,
   hasGemini,
   hasOpenAI,
-  pickRoute,
+  hasXai,
+  routeForCatalogModel,
   type LlmRoute,
 } from "@/lib/llm";
 import { normalizeModelRouting } from "@/lib/llm-routing";
@@ -166,9 +167,12 @@ export async function deleteChatConversation(userId: string, conversationId: str
   await prisma.chatConversation.delete({ where: { id: conversationId } });
 }
 
-export function providerConfigured(provider: "anthropic" | "openai" | "gemini"): boolean {
+export function providerConfigured(
+  provider: "anthropic" | "openai" | "gemini" | "xai",
+): boolean {
   if (provider === "anthropic") return hasAnthropic();
   if (provider === "openai") return hasOpenAI();
+  if (provider === "xai") return hasXai();
   return hasGemini();
 }
 
@@ -203,7 +207,10 @@ export function resolveChatRoutes(modelId: string, plan: string): ChatRouteResol
   if (!providerConfigured(row.provider)) {
     return { ok: false, provider: row.provider, displayName: row.displayName };
   }
-  const route = pickRoute("final", "general", pref, { plan });
+  // Strict resolution: the picked model's own provider route, exactly the
+  // model the picker named — no plan-based downgrade, no cross-provider
+  // swap. Plan budgets still apply downstream via assertLlmCallBudget.
+  const route = routeForCatalogModel(pref);
   if (!route) return { ok: false, provider: row.provider, displayName: row.displayName };
   return { ok: true, routes: [route] };
 }

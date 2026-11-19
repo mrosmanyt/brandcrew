@@ -15,9 +15,11 @@ import {
   getLlmStatus,
   isRetryableLlmProviderError,
   pickRoute,
+  routeForCatalogModel,
   runWithLlmRouting,
   runWithRoutingPreference,
 } from "../src/lib/llm";
+import { routingProvider } from "../src/lib/llm-routing";
 
 const KEYS = [
   "OPENAI_API_KEY",
@@ -77,7 +79,7 @@ try {
   assert.equal(pickRoute("final")?.model, "claude-haiku-4-5");
   const anthropicClient = createAnthropicClient(fakeAnthropic);
   assert.equal(anthropicClient.apiKey, fakeAnthropic);
-  console.log("ok: Anthropic only → Haiku (Opus 4.8 catalog) never Opus");
+  console.log("ok: Anthropic only → Haiku draft for Auto, never Opus");
 
   const fakeGemini = "gemini-fake-boot-check-do-not-call";
   setKeys({ gemini: fakeGemini });
@@ -90,7 +92,7 @@ try {
   assert.equal(pickRoute("final")?.model, "gemini-2.5-flash");
   const geminiClient = createGeminiClient(fakeGemini);
   assert.ok(geminiClient.models, "Gemini models API is present");
-  console.log("ok: Gemini only → Flash (Gemini 3.8 Flash catalog), never Pro");
+  console.log("ok: Gemini only → Flash (Gemini 2.5 Flash catalog) for Auto, never Pro");
 
   setKeys({ geminiAlias: fakeGemini });
   assert.equal(getLlmStatus().gemini, true);
@@ -119,9 +121,12 @@ try {
     pickRoute("draft", "coding", "auto", { plan: "starter" })?.model,
     "gemini-2.5-flash",
   );
+  // An explicit pick is honored on EVERY plan — no silent downgrade.
+  // (fable-5.1 is the retired name for the Sonnet route; it coerces to
+  // claude-sonnet and now actually calls Sonnet even on starter.)
   assert.equal(
     pickRoute("draft", "coding", "fable-5.1", { plan: "starter" })?.model,
-    "gemini-2.5-flash",
+    "claude-sonnet-5",
   );
   assert.equal(
     pickRoute("draft", "coding", "auto", { plan: "pro" })?.provider,
@@ -154,12 +159,12 @@ try {
     pickRoute("draft", "general", "fable-5.1", { plan: "pro" })?.model,
     "claude-sonnet-5",
   );
-  assert.equal(pickRoute("draft", "general", "fable-5.1")?.model, "gemini-2.5-flash");
+  assert.equal(pickRoute("draft", "general", "fable-5.1")?.model, "claude-sonnet-5");
   assert.equal(pickRoute("draft", "general", "gpt-4o-mini")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "gpt-sol")?.model, "gpt-4o-mini");
   assert.equal(pickRoute("draft", "general", "claude-opus")?.model, "claude-haiku-4-5");
   assert.equal(pickRoute("draft", "general", "gemini-flash")?.model, "gemini-2.5-flash");
-  assert.equal(pickRoute("draft", "general", "cinem-super-4.8")?.model, "gemini-2.5-flash");
+  assert.equal(pickRoute("draft", "general", "cinem-super-4.8")?.model, "claude-sonnet-5");
   assert.equal(
     pickRoute("draft", "general", "cinem-super-4.8", { plan: "pro" })?.model,
     "claude-sonnet-5",
@@ -173,7 +178,7 @@ try {
     "claude-sonnet-5",
   );
   assert.doesNotMatch(pickRoute("draft", "boost")?.model || "", /opus/i);
-  console.log("ok: all three → Flash auto (Free/Pro never Sonnet); Pro Plus code uses Sonnet; Ultra uses Sonnet max");
+  console.log("ok: all three → Flash auto (Auto on Free/Pro never Sonnet); explicit picks honored on every plan; Pro Plus code uses Sonnet; Ultra uses Sonnet max");
 
   setKeys({
     openai: "sk-openai-fake",
@@ -204,6 +209,23 @@ try {
   assert.match(base, /x\.ai/);
   console.log("ok: posts stay Gemini Flash even if xAI is keyed; Free/Pro apps stay Flash, Pro Plus apps stay Sonnet");
 
+  // Explicit Grok pick: routed to xAI with the real model, on any plan.
+  assert.equal(routingProvider("grok-3-mini"), "xai");
+  assert.equal(pickRoute("draft", "general", "grok-3-mini")?.provider, "xai");
+  assert.equal(pickRoute("draft", "general", "grok-3-mini")?.model, "grok-3-mini");
+  assert.equal(
+    pickRoute("final", "general", "grok-3-mini", { plan: "demo" })?.model,
+    "grok-3-mini",
+  );
+  assert.equal(
+    completeRouteCandidates("final", "general", "grok-3-mini", { plan: "demo" })[0]?.provider,
+    "xai",
+  );
+  const grokRoute = routeForCatalogModel("grok-3-mini");
+  assert.equal(grokRoute?.provider, "xai");
+  assert.equal(grokRoute?.model, "grok-3-mini");
+  console.log("ok: Grok pick routes to xAI grok-3-mini, even on the Free plan");
+
   const autoCandidates = completeRouteCandidates("draft", "general", "auto", { plan: "demo" });
   assert.equal(autoCandidates[0]?.provider, "gemini");
   assert.equal(autoCandidates[0]?.model, "gemini-2.5-flash");
@@ -224,6 +246,16 @@ try {
   assert.equal(noGemini[0]?.provider, "openai");
   assert.equal(noGemini.some((row) => row.provider === "gemini"), false);
   console.log("ok: without GEMINI_API_KEY, Auto cannot invent Gemini — founder must set it on Vercel");
+
+  // Strict catalog resolution: unkeyed providers resolve to null (the chat
+  // product turns that into "model not configured"), keyed ones resolve
+  // to exactly the picked model.
+  assert.equal(routeForCatalogModel("gemini-2.5-pro"), null);
+  assert.equal(routeForCatalogModel("grok-3-mini"), null);
+  assert.equal(routeForCatalogModel("claude-sonnet")?.provider, "anthropic");
+  assert.equal(routeForCatalogModel("claude-sonnet")?.model, "claude-sonnet-5");
+  assert.equal(routeForCatalogModel("gpt-4o-mini")?.model, "gpt-4o-mini");
+  console.log("ok: strict catalog routes are exact per provider, null when unkeyed");
 
   const vision = mergeTextAndAttachments("Look at this", [
     { name: "shot.png", size: 12, kind: "image", mime: "image/png", data: "abcd" },

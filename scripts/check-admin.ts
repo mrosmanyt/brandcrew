@@ -102,7 +102,8 @@ async function main() {
   console.log("ok: access section lists masked emails and documents ADMIN_EMAILS");
 
   const catalog = getAdminModelCatalog();
-  assert.ok(catalog.some((row) => row.displayName === "Opus 4.8"));
+  assert.ok(catalog.some((row) => row.displayName === "Claude Sonnet 5"));
+  assert.ok(catalog.some((row) => row.displayName === "Grok 3 Mini"));
   assert.ok(catalog.every((row) => row.configuredProviderModelId.length > 0));
 
   const secret = "sk-admin-test-never-return-this";

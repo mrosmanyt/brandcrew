@@ -108,12 +108,13 @@ export const MODEL_ROUTING_GROUPS = [
 
 export function modelRoutingLocked(
   id: LlmRoutingPreference,
-  llm: Pick<LlmStatus, "openai" | "anthropic" | "gemini">,
+  llm: Pick<LlmStatus, "openai" | "anthropic" | "gemini" | "xai">,
 ) {
   const provider = routingProvider(id);
   if (!provider) return false;
   if (provider === "gemini") return !llm.gemini;
   if (provider === "anthropic") return !llm.anthropic;
+  if (provider === "xai") return !llm.xai;
   return !llm.openai;
 }
 
@@ -121,13 +122,13 @@ export function modelRoutingLabel(id?: string | null) {
   const normalized = normalizeModelRouting(id);
   return (
     MODEL_ROUTING_OPTIONS.find((row) => row.id === normalized)?.label ??
-    (normalized === "claude-haiku" ? "Claude Haiku" : "Auto")
+    (normalized === "claude-haiku" ? "Claude Haiku 4.5" : "Auto")
   );
 }
 
 export function nextModelRouting(
   current?: string | null,
-  llm?: Pick<LlmStatus, "openai" | "anthropic" | "gemini">,
+  llm?: Pick<LlmStatus, "openai" | "anthropic" | "gemini" | "xai">,
 ): LlmRoutingPreference {
   const ids = MODEL_ROUTING_OPTIONS.map((row) => row.id);
   const start = ids.indexOf(normalizeModelRouting(current));

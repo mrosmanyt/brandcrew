@@ -160,8 +160,9 @@ function ModelsPanel() {
       <section>
         <h1 className="font-heading text-2xl tracking-tight">Models</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Desk labels are marketing names. Runtime stays on cheap Flash/Haiku/Terra
-          backends. Opus is never called. Credits wrap tokens 1:1.
+          Labels are the real models: picking a model calls exactly that
+          model. Auto routing uses the cheapest live backend for background
+          work. Credits wrap tokens 1:1.
         </p>
         <ul className="mt-4 divide-y divide-border rounded-xl border border-border">
           {DISPLAY_MODELS.map((row) => (

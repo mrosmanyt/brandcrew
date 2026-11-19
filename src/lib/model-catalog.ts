@@ -1,34 +1,39 @@
 /**
- * Single display→backend model catalog.
+ * Truthful display→backend model catalog.
  *
- * Desk picker shows `displayName` only. Runtime still calls the cheap
- * `providerModelId` so Free / Pro ($20, internal starter id) budgets last.
- * Never call Opus. Cinem super 4.8 is a CINEM brand — it maps to the
- * strongest paid route already in use (Sonnet max), never a fake provider.
+ * Picker names ARE the models that get called. Every picker entry resolves
+ * (via `providerModelIdFor`) to exactly the provider model its name states,
+ * using the provider env override the entry names. There are no marketing
+ * aliases and no silent downgrades: an explicit pick is honored exactly
+ * (see `routeForCatalogModel` in `src/lib/llm.ts` and chat route resolution
+ * in `src/lib/chat.ts`).
  *
- * | UI (displayName)   | Catalog id         | Backend class | Real provider id          |
- * |--------------------|--------------------|---------------|---------------------------|
- * | GPT 4.0 mini       | gpt-4o-mini        | Terra         | OPENAI_DRAFT_MODEL        |
- * | GPT Sol            | gpt-sol            | Terra         | OPENAI_DRAFT_MODEL        |
- * | GPT Astra          | gpt-astra          | Terra         | OPENAI_DRAFT_MODEL        |
- * | Gemini Flash 3.8   | gemini-3.8-flash   | Flash         | GEMINI_DRAFT_MODEL        |
- * | Claude Haiku       | claude-haiku       | Haiku         | ANTHROPIC_DRAFT_MODEL     |
- * | Claude Sonnet 5    | claude-sonnet      | Sonnet        | ANTHROPIC_FINAL_MODEL     |
- * | Fable 5.1          | fable-5.1          | Sonnet        | ANTHROPIC_FINAL_MODEL     |
- * | Opus 4.8           | opus-4.8           | Haiku         | ANTHROPIC_DRAFT_MODEL     |
- * | Cinem super 4.8    | cinem-super-4.8    | Sonnet max    | ANTHROPIC_BOOST/FINAL     |
+ * Cost control is explicit instead of hidden:
+ * - The "Fast" picker group holds each provider's cheaper draft model,
+ *   labelled Fast. Full models sit in "Most advanced".
+ * - Auto / task routing (no explicit pick) keeps the cheap-first policy in
+ *   `pickRouteDefault` — the system choosing cheaply is Auto's documented
+ *   behavior, and per-plan token budgets (`assertLlmCallBudget`) still cap
+ *   every call. A plan that cannot afford a picked model gets the honest
+ *   budget error, never a swapped model.
  *
- * GPT Terra (cheap OpenAI) defaults to `gpt-4o-mini`.
- * Gemini Flash defaults to `gemini-2.5-flash` (maps the “3.1 Flash” class).
- * Free + Pro (internal starter id) Auto routing never calls Sonnet — see `planForcesCheapBackends`.
+ * | UI (displayName)   | Catalog id         | Backend class    | Real provider id (env)     |
+ * |--------------------|--------------------|------------------|----------------------------|
+ * | Claude Sonnet 5    | claude-sonnet      | anthropic-final  | ANTHROPIC_FINAL_MODEL      |
+ * | GPT-4.1            | gpt-4.1            | openai-final     | OPENAI_FINAL_MODEL         |
+ * | Gemini 2.5 Pro     | gemini-2.5-pro     | gemini-final     | GEMINI_FINAL_MODEL         |
+ * | Claude Haiku 4.5   | claude-haiku       | anthropic-draft  | ANTHROPIC_DRAFT_MODEL      |
+ * | GPT-4o mini        | gpt-4o-mini        | openai-draft     | OPENAI_DRAFT_MODEL         |
+ * | Gemini 2.5 Flash   | gemini-2.5-flash   | gemini-draft     | GEMINI_DRAFT_MODEL         |
+ * | Grok 3 Mini        | grok-3-mini        | xai              | XAI_MODEL                  |
  *
- * Off-menu aliases: claude-opus → opus-4.8, gemini-flash → gemini-3.8-flash.
- * Claude Haiku stays for routing fallbacks and is hidden from the picker.
+ * Retired marketing ids are NOT catalog entries anymore. Stored
+ * preferences using them coerce to the entry whose backend they actually
+ * executed — see LEGACY_ROUTING in `src/lib/llm-routing.ts`.
  */
 
 export const PICKER_GROUPS = [
-  { id: "fastest", label: "Fastest and quick answer" },
-  { id: "complex", label: "For complex" },
+  { id: "fastest", label: "Fast — quick answers, lower cost" },
   { id: "advanced", label: "Most advanced" },
 ] as const;
 
@@ -39,25 +44,32 @@ export const MODEL_CAPABILITIES = PICKER_GROUPS.map((row) => row.label);
 export type ModelCapability = (typeof MODEL_CAPABILITIES)[number];
 
 export const DISPLAY_MODEL_IDS = [
-  "gpt-4o-mini",
-  "gpt-sol",
-  "gpt-astra",
-  "gemini-3.8-flash",
-  "claude-haiku",
   "claude-sonnet",
-  "fable-5.1",
-  "opus-4.8",
-  "cinem-super-4.8",
+  "gpt-4.1",
+  "gemini-2.5-pro",
+  "claude-haiku",
+  "gpt-4o-mini",
+  "gemini-2.5-flash",
+  "grok-3-mini",
 ] as const;
 
 export type DisplayModelId = (typeof DISPLAY_MODEL_IDS)[number];
 
-export type BackendClass = "haiku" | "sonnet" | "sonnet-max" | "terra" | "flash";
+export type BackendClass =
+  | "anthropic-draft"
+  | "anthropic-final"
+  | "openai-draft"
+  | "openai-final"
+  | "gemini-draft"
+  | "gemini-final"
+  | "xai";
+
+export type ModelProvider = "anthropic" | "openai" | "gemini" | "xai";
 
 export type DisplayModel = {
   id: DisplayModelId;
   displayName: string;
-  provider: "anthropic" | "openai" | "gemini";
+  provider: ModelProvider;
   backendClass: BackendClass;
   pickerGroup: PickerGroupId | null;
   capability: ModelCapability | null;
@@ -66,110 +78,91 @@ export type DisplayModel = {
   hint: string;
 };
 
-export const GPT_TERRA_MODEL_ID = "gpt-4o-mini";
-export const GEMINI_FLASH_MODEL_ID = "gemini-2.5-flash";
-export const ANTHROPIC_HAIKU_MODEL_ID = "claude-haiku-4-5";
 export const ANTHROPIC_SONNET_MODEL_ID = "claude-sonnet-5";
+export const ANTHROPIC_HAIKU_MODEL_ID = "claude-haiku-4-5";
+export const OPENAI_FINAL_MODEL_ID = "gpt-4.1";
+export const GPT_TERRA_MODEL_ID = "gpt-4o-mini";
+export const GEMINI_PRO_MODEL_ID = "gemini-2.5-pro";
+export const GEMINI_FLASH_MODEL_ID = "gemini-2.5-flash";
+export const GROK_MODEL_ID = "grok-3-mini";
 
 export const DISPLAY_MODELS: DisplayModel[] = [
   {
     id: "claude-sonnet",
     displayName: "Claude Sonnet 5",
     provider: "anthropic",
-    backendClass: "sonnet",
-    pickerGroup: "fastest",
-    capability: "Fastest and quick answer",
+    backendClass: "anthropic-final",
+    pickerGroup: "advanced",
+    capability: "Most advanced",
     providerModelEnv: "ANTHROPIC_FINAL_MODEL",
     defaultProviderModelId: ANTHROPIC_SONNET_MODEL_ID,
-    hint: "Fast replies and everyday work",
+    hint: "Deep reasoning, writing and code",
   },
   {
-    id: "gpt-4o-mini",
-    displayName: "GPT 4.0 mini",
+    id: "gpt-4.1",
+    displayName: "GPT-4.1",
     provider: "openai",
-    backendClass: "terra",
-    pickerGroup: "fastest",
-    capability: "Fastest and quick answer",
-    providerModelEnv: "OPENAI_DRAFT_MODEL",
-    defaultProviderModelId: GPT_TERRA_MODEL_ID,
-    hint: "Fastest cheap answers",
+    backendClass: "openai-final",
+    pickerGroup: "advanced",
+    capability: "Most advanced",
+    providerModelEnv: "OPENAI_FINAL_MODEL",
+    defaultProviderModelId: OPENAI_FINAL_MODEL_ID,
+    hint: "Advanced drafting and structured work",
   },
   {
-    id: "opus-4.8",
-    displayName: "Opus 4.8",
-    provider: "anthropic",
-    backendClass: "haiku",
-    pickerGroup: "complex",
-    capability: "For complex",
-    providerModelEnv: "ANTHROPIC_DRAFT_MODEL",
-    defaultProviderModelId: ANTHROPIC_HAIKU_MODEL_ID,
-    hint: "Complex reasoning",
-  },
-  {
-    id: "gpt-sol",
-    displayName: "GPT Sol",
-    provider: "openai",
-    backendClass: "terra",
-    pickerGroup: "complex",
-    capability: "For complex",
-    providerModelEnv: "OPENAI_DRAFT_MODEL",
-    defaultProviderModelId: GPT_TERRA_MODEL_ID,
-    hint: "Structured drafts",
-  },
-  {
-    id: "gemini-3.8-flash",
-    displayName: "Gemini Flash 3.8",
+    id: "gemini-2.5-pro",
+    displayName: "Gemini 2.5 Pro",
     provider: "gemini",
-    backendClass: "flash",
-    pickerGroup: "complex",
-    capability: "For complex",
-    providerModelEnv: "GEMINI_DRAFT_MODEL",
-    defaultProviderModelId: GEMINI_FLASH_MODEL_ID,
-    hint: "Research and summaries",
-  },
-  {
-    id: "gpt-astra",
-    displayName: "GPT Astra",
-    provider: "openai",
-    backendClass: "terra",
+    backendClass: "gemini-final",
     pickerGroup: "advanced",
     capability: "Most advanced",
-    providerModelEnv: "OPENAI_DRAFT_MODEL",
-    defaultProviderModelId: GPT_TERRA_MODEL_ID,
-    hint: "Advanced drafting",
-  },
-  {
-    id: "fable-5.1",
-    displayName: "Fable 5.1",
-    provider: "anthropic",
-    backendClass: "sonnet",
-    pickerGroup: "advanced",
-    capability: "Most advanced",
-    providerModelEnv: "ANTHROPIC_FINAL_MODEL",
-    defaultProviderModelId: ANTHROPIC_SONNET_MODEL_ID,
-    hint: "Code and complex apps",
-  },
-  {
-    id: "cinem-super-4.8",
-    displayName: "Cinem super 4.8",
-    provider: "anthropic",
-    backendClass: "sonnet-max",
-    pickerGroup: "advanced",
-    capability: "Most advanced",
-    providerModelEnv: "ANTHROPIC_BOOST_MODEL",
-    defaultProviderModelId: ANTHROPIC_SONNET_MODEL_ID,
-    hint: "CINEM's strongest route",
+    providerModelEnv: "GEMINI_FINAL_MODEL",
+    defaultProviderModelId: GEMINI_PRO_MODEL_ID,
+    hint: "Long documents and research",
   },
   {
     id: "claude-haiku",
-    displayName: "Claude Haiku",
+    displayName: "Claude Haiku 4.5",
     provider: "anthropic",
-    backendClass: "haiku",
-    pickerGroup: null,
-    capability: null,
+    backendClass: "anthropic-draft",
+    pickerGroup: "fastest",
+    capability: "Fast — quick answers, lower cost",
     providerModelEnv: "ANTHROPIC_DRAFT_MODEL",
     defaultProviderModelId: ANTHROPIC_HAIKU_MODEL_ID,
-    hint: "Routing fallback",
+    hint: "Fast replies at the lowest cost",
+  },
+  {
+    id: "gpt-4o-mini",
+    displayName: "GPT-4o mini",
+    provider: "openai",
+    backendClass: "openai-draft",
+    pickerGroup: "fastest",
+    capability: "Fast — quick answers, lower cost",
+    providerModelEnv: "OPENAI_DRAFT_MODEL",
+    defaultProviderModelId: GPT_TERRA_MODEL_ID,
+    hint: "Fast replies at the lowest cost",
+  },
+  {
+    id: "gemini-2.5-flash",
+    displayName: "Gemini 2.5 Flash",
+    provider: "gemini",
+    backendClass: "gemini-draft",
+    pickerGroup: "fastest",
+    capability: "Fast — quick answers, lower cost",
+    providerModelEnv: "GEMINI_DRAFT_MODEL",
+    defaultProviderModelId: GEMINI_FLASH_MODEL_ID,
+    hint: "Fast research and summaries",
+  },
+  {
+    id: "grok-3-mini",
+    displayName: "Grok 3 Mini",
+    provider: "xai",
+    backendClass: "xai",
+    pickerGroup: "fastest",
+    capability: "Fast — quick answers, lower cost",
+    providerModelEnv: "XAI_MODEL",
+    defaultProviderModelId: GROK_MODEL_ID,
+    hint: "Fast, direct answers",
   },
 ];
 
@@ -216,8 +209,9 @@ export function sonnetModelId() {
 }
 
 /**
- * Strongest allowed Anthropic model for Ultra / Boost / Cinem super 4.8.
+ * Strongest allowed Anthropic model for the Auto Ultra / Boost route.
  * Uses ANTHROPIC_BOOST_MODEL or ANTHROPIC_FINAL_MODEL, never Opus.
+ * Auto routing only — no picker entry maps here anymore.
  */
 export function sonnetMaxModelId() {
   const boost = process.env.ANTHROPIC_BOOST_MODEL?.trim();
@@ -229,37 +223,69 @@ export function gptTerraModelId() {
   return envModel("OPENAI_DRAFT_MODEL", GPT_TERRA_MODEL_ID);
 }
 
+export function openaiFinalModelId() {
+  return envModel("OPENAI_FINAL_MODEL", OPENAI_FINAL_MODEL_ID);
+}
+
 export function geminiFlashModelId() {
   const raw = envModel("GEMINI_DRAFT_MODEL", GEMINI_FLASH_MODEL_ID);
   if (/pro/i.test(raw) && !/flash/i.test(raw)) return GEMINI_FLASH_MODEL_ID;
   return raw;
 }
 
+export function geminiProModelId() {
+  const raw = envModel("GEMINI_FINAL_MODEL", GEMINI_PRO_MODEL_ID);
+  if (/flash/i.test(raw)) return GEMINI_PRO_MODEL_ID;
+  return raw;
+}
+
+/**
+ * The one xAI model the runtime calls. XAI_POSTS_MODEL is the historical
+ * override name and still wins when set; XAI_MODEL is the documented env.
+ */
+export function xaiModelId() {
+  return (
+    process.env.XAI_POSTS_MODEL?.trim() ||
+    process.env.XAI_MODEL?.trim() ||
+    GROK_MODEL_ID
+  );
+}
+
 export function providerModelIdFor(id: DisplayModelId): string {
   const row = displayModelById(id);
-  if (row?.backendClass === "haiku") return haikuModelId();
-  if (row?.backendClass === "sonnet") return sonnetModelId();
-  if (row?.backendClass === "sonnet-max") return sonnetMaxModelId();
-  if (row?.backendClass === "terra") return gptTerraModelId();
-  return geminiFlashModelId();
+  if (!row) return "";
+  switch (row.backendClass) {
+    case "anthropic-draft":
+      return haikuModelId();
+    case "anthropic-final":
+      return sonnetModelId();
+    case "openai-draft":
+      return gptTerraModelId();
+    case "openai-final":
+      return openaiFinalModelId();
+    case "gemini-draft":
+      return geminiFlashModelId();
+    case "gemini-final":
+      return geminiProModelId();
+    case "xai":
+      return xaiModelId();
+  }
 }
 
 export function catalogByProviderModelId(model?: string | null): DisplayModel | undefined {
   if (!model) return undefined;
   const id = model.toLowerCase();
-  if (/haiku/.test(id)) return displayModelById("opus-4.8");
-  if (/sonnet/.test(id)) return displayModelById("fable-5.1");
-  if (/opus/.test(id)) return displayModelById("opus-4.8");
-  if (/flash/.test(id) || /^gemini-2/.test(id) || /^gemini-3/.test(id)) {
-    return displayModelById("gemini-3.8-flash");
-  }
-  if (/gpt-4o-mini|gpt-4\.1-mini|gpt-4o/.test(id) || /^gpt-/.test(id)) {
-    return displayModelById("gpt-astra");
-  }
+  if (/grok/.test(id)) return displayModelById("grok-3-mini");
+  if (/haiku/.test(id)) return displayModelById("claude-haiku");
+  if (/sonnet/.test(id)) return displayModelById("claude-sonnet");
+  if (/flash/.test(id)) return displayModelById("gemini-2.5-flash");
+  if (/pro/.test(id) && /^gemini/.test(id)) return displayModelById("gemini-2.5-pro");
+  if (/mini/.test(id) && /^gpt/.test(id)) return displayModelById("gpt-4o-mini");
+  if (/^gpt/.test(id)) return displayModelById("gpt-4.1");
   return undefined;
 }
 
-/** Customer-facing label. Never a raw provider id. */
+/** Customer-facing label for a backend model id — the truthful picker name. */
 export function publicModelLabel(model?: string | null): string {
   if (!model || model === "demo") return "Offline templates";
   if (model === "browse" || model === "tools") return "Tools";
