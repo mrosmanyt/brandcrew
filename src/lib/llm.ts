@@ -133,6 +133,24 @@ export type LlmChatMessage = {
   content: LlmMessageContent;
 };
 
+/** One chunk from a provider stream: text and/or a running token total. */
+export type LlmStreamChunk = {
+  text?: string;
+  tokens?: number;
+};
+
+export type LlmStreamMeta = {
+  model: string;
+  provider: LlmProviderName;
+  displayName: string;
+  tokens: number;
+  promptCached?: boolean;
+};
+
+export type LlmStreamEvent =
+  | { type: "delta"; text: string }
+  | { type: "meta"; meta: LlmStreamMeta };
+
 export function openaiKey() {
   return process.env.OPENAI_API_KEY?.trim() || "";
 }
@@ -599,6 +617,205 @@ export class LLMProvider {
       }
     }
     throw lastError instanceof Error ? lastError : new Error("NO_LLM_KEYS");
+  }
+
+  /**
+   * Streaming counterpart of complete() for the chat product. Yields text
+   * deltas as the provider produces them, then one terminal "meta" event
+   * with the real model/provider and token count for usage metering.
+   *
+   * Fallback rule: if a route fails BEFORE its first delta, the next
+   * candidate route is tried (same policy as complete()). Once a delta has
+   * been emitted the stream is committed to that route — a later failure is
+   * thrown so the caller can surface an honest mid-stream error instead of
+   * silently switching models halfway through a reply.
+   *
+   * Pass `routes` to pin the candidate list (the chat route resolves the
+   * picked display model to its own provider route and passes exactly one).
+   */
+  async *streamComplete(input: {
+    mode: TaskMode;
+    kind?: LlmJobKind;
+    messages: LlmChatMessage[];
+    routes?: LlmRoute[];
+    signal?: AbortSignal;
+  }): AsyncGenerator<LlmStreamEvent> {
+    const workspaceId = currentRoutingWorkspaceId();
+    if (workspaceId) {
+      const { assertLlmCallBudget } = await import("@/lib/usage");
+      await assertLlmCallBudget(workspaceId, currentRoutingBudgetMode());
+    }
+    const kind = input.kind ?? "general";
+    const payload = {
+      mode: input.mode,
+      messages: messagesWithLanguagePolicy(input.messages, kind) as LlmChatMessage[],
+    };
+    const candidates =
+      input.routes ??
+      completeRouteCandidates(input.mode, kind, currentRoutingPreference());
+    if (!candidates.length) {
+      throw new Error("NO_LLM_KEYS");
+    }
+
+    let lastError: unknown;
+    for (const route of candidates) {
+      let emitted = false;
+      let text = "";
+      let tokens = 0;
+      try {
+        for await (const chunk of this.streamOnRoute(route, payload, input.signal)) {
+          if (typeof chunk.tokens === "number" && chunk.tokens > 0) {
+            tokens = chunk.tokens;
+          }
+          if (chunk.text) {
+            emitted = true;
+            text += chunk.text;
+            yield { type: "delta", text: chunk.text };
+          }
+        }
+      } catch (error) {
+        if (!emitted && isRetryableLlmProviderError(error)) {
+          lastError = error;
+          continue;
+        }
+        throw error;
+      }
+      yield {
+        type: "meta",
+        meta: {
+          model: route.model,
+          provider: route.provider,
+          displayName: publicModelLabel(route.model),
+          tokens: tokens || Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.3),
+          promptCached: promptCacheForProvider(route.provider).enabled,
+        },
+      };
+      return;
+    }
+    throw lastError instanceof Error ? lastError : new Error("NO_LLM_KEYS");
+  }
+
+  private async *streamOnRoute(
+    route: LlmRoute,
+    input: { mode: TaskMode; messages: LlmChatMessage[] },
+    signal?: AbortSignal,
+  ): AsyncGenerator<LlmStreamChunk> {
+    if (route.provider === "anthropic") {
+      yield* this.streamAnthropic(route, input, signal);
+      return;
+    }
+    if (route.provider === "gemini") {
+      yield* this.streamGemini(route, input, signal);
+      return;
+    }
+    if (route.provider === "xai") {
+      yield* this.streamOpenAiCompatible(createXaiClient(route.apiKey), route, input, signal);
+      return;
+    }
+    yield* this.streamOpenAiCompatible(createOpenAIClient(route.apiKey), route, input, signal);
+  }
+
+  private async *streamOpenAiCompatible(
+    client: OpenAI,
+    route: LlmRoute,
+    input: { mode: TaskMode; messages: LlmChatMessage[] },
+    signal?: AbortSignal,
+  ): AsyncGenerator<LlmStreamChunk> {
+    const stream = await client.chat.completions.create(
+      {
+        model: route.model,
+        messages: input.messages.map((message) => openaiChatMessage(message)),
+        temperature: input.mode === "final" ? 0.4 : 0.7,
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      signal ? { signal } : undefined,
+    );
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content;
+      if (typeof text === "string" && text) yield { text };
+      if (chunk.usage?.total_tokens) yield { tokens: chunk.usage.total_tokens };
+    }
+  }
+
+  private async *streamAnthropic(
+    route: LlmRoute,
+    input: { mode: TaskMode; messages: LlmChatMessage[] },
+    signal?: AbortSignal,
+  ): AsyncGenerator<LlmStreamChunk> {
+    const client = createAnthropicClient(route.apiKey);
+    const system = input.messages
+      .filter((message) => message.role === "system")
+      .map((message) => textOfContent(message.content))
+      .join("\n\n");
+    const conversation = input.messages
+      .filter((message) => message.role !== "system")
+      .map((message) => ({
+        role: message.role as "user" | "assistant",
+        content: anthropicMessageContent(message.content),
+      }));
+    const systemText = system.trim();
+    const stream = client.messages.stream(
+      {
+        model: route.model,
+        max_tokens: 4096,
+        temperature: input.mode === "final" ? 0.4 : 0.7,
+        // House rule: Anthropic system prompts keep cache_control.
+        system: systemText ? anthropicCachedSystem(systemText) : undefined,
+        messages: conversation,
+      },
+      signal ? { signal } : undefined,
+    );
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta" &&
+        event.delta.text
+      ) {
+        yield { text: event.delta.text };
+      }
+    }
+    const finalMessage = await stream.finalMessage();
+    const tokens =
+      (finalMessage.usage?.input_tokens ?? 0) +
+      (finalMessage.usage?.output_tokens ?? 0);
+    if (tokens) yield { tokens };
+  }
+
+  private async *streamGemini(
+    route: LlmRoute,
+    input: { mode: TaskMode; messages: LlmChatMessage[] },
+    signal?: AbortSignal,
+  ): AsyncGenerator<LlmStreamChunk> {
+    const client = createGeminiClient(route.apiKey);
+    const system = input.messages
+      .filter((message) => message.role === "system")
+      .map((message) => textOfContent(message.content))
+      .join("\n\n");
+    const contents = input.messages
+      .filter((message) => message.role !== "system")
+      .map((message) => ({
+        role: message.role === "assistant" ? "model" : "user",
+        parts: geminiParts(message.content),
+      }));
+    const stream = await client.models.generateContentStream({
+      model: route.model,
+      contents,
+      config: {
+        systemInstruction: system.trim() || undefined,
+        temperature: input.mode === "final" ? 0.4 : 0.7,
+        ...(signal ? { abortSignal: signal } : {}),
+      },
+    });
+    for await (const chunk of stream) {
+      if (chunk.text) yield { text: chunk.text };
+      const usage = chunk.usageMetadata;
+      if (usage) {
+        yield {
+          tokens: (usage.promptTokenCount ?? 0) + (usage.candidatesTokenCount ?? 0),
+        };
+      }
+    }
   }
 
   private async completeOnRoute(

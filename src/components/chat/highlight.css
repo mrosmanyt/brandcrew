@@ -1,0 +1,54 @@
+/* Minimal highlight.js token palette for chat code blocks (both themes). */
+.chat-markdown .hljs-comment,
+.chat-markdown .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+.chat-markdown .hljs-keyword,
+.chat-markdown .hljs-selector-tag,
+.chat-markdown .hljs-doctag,
+.chat-markdown .hljs-template-tag {
+  color: #ff7b72;
+}
+.chat-markdown .hljs-string,
+.chat-markdown .hljs-regexp,
+.chat-markdown .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+.chat-markdown .hljs-number,
+.chat-markdown .hljs-literal {
+  color: #79c0ff;
+}
+.chat-markdown .hljs-title,
+.chat-markdown .hljs-title.function_,
+.chat-markdown .hljs-section {
+  color: #d2a8ff;
+}
+.chat-markdown .hljs-title.class_,
+.chat-markdown .hljs-type,
+.chat-markdown .hljs-built_in {
+  color: #ffa657;
+}
+.chat-markdown .hljs-attr,
+.chat-markdown .hljs-attribute,
+.chat-markdown .hljs-variable,
+.chat-markdown .hljs-template-variable,
+.chat-markdown .hljs-selector-id,
+.chat-markdown .hljs-selector-class {
+  color: #79c0ff;
+}
+.chat-markdown .hljs-name,
+.chat-markdown .hljs-tag {
+  color: #7ee787;
+}
+.chat-markdown .hljs-symbol,
+.chat-markdown .hljs-bullet,
+.chat-markdown .hljs-link {
+  color: #a5d6ff;
+}
+.chat-markdown .hljs-emphasis {
+  font-style: italic;
+}
+.chat-markdown .hljs-strong {
+  font-weight: 700;
+}

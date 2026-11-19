@@ -56,6 +56,7 @@ model User {
   invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
   invitees      User[]             @relation("UserInvites")
   crashReports  CrashReport[]
+  chatConversations ChatConversation[]
 
   @@index([supporter])
   @@index([assistantFoundingMember])
@@ -90,6 +91,7 @@ model Workspace {
   updatedAt          DateTime          @updatedAt
   members            WorkspaceMember[]
   conversations      Conversation[]
+  chatConversations  ChatConversation[]
   artifacts          Artifact[]
   tasks              Task[]
   calendarItems      CalendarItem[]
@@ -241,6 +243,43 @@ model Message {
   content        String
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+/// Streaming chat product (ChatGPT-style). Separate from the desk-era
+/// Conversation/Message pair above: those are pinned one-per-agent and feed
+/// the job runtime. Chat conversations are per-user, multi-conversation,
+/// and metered against the owner's primary workspace.
+model ChatConversation {
+  id          String        @id @default(cuid())
+  userId      String
+  workspaceId String
+  title       String        @default("New chat")
+  /// Last display-model id picked in the chat model picker.
+  modelId     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([workspaceId])
+}
+
+model ChatMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  /// user | assistant | system
+  role           String
+  content        String
+  /// Provider model id that produced an assistant reply (null for user rows).
+  model          String?
+  provider       String?
+  tokens         Int            @default(0)
+  createdAt      DateTime       @default(now())
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }
 
 model Artifact {

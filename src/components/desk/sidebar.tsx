@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -359,6 +360,14 @@ function NavBody({
             <p className="px-2 pb-1 text-xs text-sidebar-foreground/45">Desk</p>
           ) : null}
           <ul className="space-y-px">
+            <SideLink
+              href="/chat"
+              pathname={pathname}
+              collapsed={collapsed}
+              icon={<MessageSquare className="size-3.5" />}
+            >
+              Chat
+            </SideLink>
             <SideLink
               href={`/desk/${workspace.id}`}
               pathname={pathname}

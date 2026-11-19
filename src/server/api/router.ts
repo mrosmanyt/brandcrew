@@ -93,6 +93,10 @@ import * as downloadsExtension from "./downloads/extension";
 import * as downloadsCinemAiAssistant from "./downloads/cinem-ai-assistant";
 import * as cinemAiAssistantUsage from "./cinem-ai-assistant/usage";
 import * as guestChat from "./guest/chat";
+import * as chatModels from "./chat/models";
+import * as chatConversations from "./chat/conversations";
+import * as chatConversation from "./chat/conversation";
+import * as chatStream from "./chat/stream";
 import * as crashReports from "./crash-reports";
 import * as funnel from "./funnel";
 import * as purchaseRequests from "./purchase-requests";
@@ -164,6 +168,16 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(cinemAiAssistantUsage),
   },
   { pattern: ["api", "guest", "chat"], handlers: asHandlers(guestChat) },
+  { pattern: ["api", "chat", "models"], handlers: asHandlers(chatModels) },
+  {
+    pattern: ["api", "chat", "conversations"],
+    handlers: asHandlers(chatConversations),
+  },
+  {
+    pattern: ["api", "chat", "conversations", ":conversationId"],
+    handlers: asHandlers(chatConversation),
+  },
+  { pattern: ["api", "chat", "stream"], handlers: asHandlers(chatStream) },
   { pattern: ["api", "crash-reports"], handlers: asHandlers(crashReports) },
   { pattern: ["api", "funnel"], handlers: asHandlers(funnel) },
   { pattern: ["api", "purchase-requests"], handlers: asHandlers(purchaseRequests) },
