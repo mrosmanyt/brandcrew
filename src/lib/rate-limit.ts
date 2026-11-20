@@ -139,7 +139,11 @@ export function sensitiveRateLimit(
   if (path === "api/auth/me" && verb === "PATCH") {
     return { key: "account", limit: AUTH_IP_LIMIT, windowMs: AUTH_WINDOW_MS };
   }
-  if (path === "api/auth/google" || path === "api/auth/google/callback") {
+  if (
+    path === "api/auth/google" ||
+    path === "api/auth/google/callback" ||
+    (path === "api/auth/google/id-token" && verb === "POST")
+  ) {
     return { key: "auth-google", limit: 30, windowMs: AUTH_WINDOW_MS };
   }
   if (path === "api/billing/checkout" && verb === "POST") {

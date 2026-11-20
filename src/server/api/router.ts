@@ -12,6 +12,7 @@ import * as supportPresence from "./support/presence";
 import * as supportThread from "./support/thread";
 import * as authGoogle from "./auth/google";
 import * as authGoogleCallback from "./auth/google-callback";
+import * as authGoogleIdToken from "./auth/google-id-token";
 import * as authLogin from "./auth/login";
 import * as authLogout from "./auth/logout";
 import * as authMe from "./auth/me";
@@ -174,6 +175,10 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(authGoogleCallback),
   },
   { pattern: ["api", "auth", "google"], handlers: asHandlers(authGoogle) },
+  {
+    pattern: ["api", "auth", "google", "id-token"],
+    handlers: asHandlers(authGoogleIdToken),
+  },
   { pattern: ["api", "billing", "checkout"], handlers: asHandlers(billingCheckout) },
   { pattern: ["api", "billing", "support"], handlers: asHandlers(billingSupport) },
   { pattern: ["api", "webhooks", "whop"], handlers: asHandlers(whopWebhook) },
