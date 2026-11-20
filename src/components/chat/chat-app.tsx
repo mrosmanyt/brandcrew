@@ -15,6 +15,8 @@ import {
   Check,
   ChevronDown,
   FileText,
+  Loader2,
+  Mic,
   Paperclip,
   PanelLeft,
   Square,
@@ -146,8 +148,14 @@ export function ChatApp({
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<ChatError | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordChunksRef = useRef<Blob[]>([]);
+  const recordStreamRef = useRef<MediaStream | null>(null);
+  const recordMimeRef = useRef<string>("audio/webm");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -417,6 +425,110 @@ export function ChatApp({
   const removePendingAttachment = (index: number) => {
     setPendingAttachments((current) => current.filter((_, i) => i !== index));
   };
+
+  /**
+   * Voice input: record a note, send it to Whisper, and drop the transcript
+   * into the composer for review before sending. If voice is not configured
+   * the server answers 503 and the honest notice shows — nothing is faked.
+   */
+  const transcribeRecording = useCallback(async (blob: Blob, mime: string) => {
+    setTranscribing(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("read failed"));
+        reader.readAsDataURL(blob);
+      });
+      const response = await fetch("/api/chat/voice/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio: stripDataUrlPrefix(dataUrl),
+          mime,
+        }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+          code?: string;
+        } | null;
+        setError({
+          message: data?.error || "Transcription failed. Try again.",
+          notConfigured: data?.code === "voice_not_configured",
+        });
+        return;
+      }
+      const data = (await response.json()) as { text: string };
+      if (data.text) {
+        setInput((current) =>
+          current.trim() ? `${current.trim()} ${data.text}` : data.text,
+        );
+        textareaRef.current?.focus();
+      } else {
+        setError({
+          message: "I couldn't hear anything in that recording. Try again.",
+          notConfigured: false,
+        });
+      }
+    } catch {
+      setError({
+        message: "Transcription failed. Check your connection and try again.",
+        notConfigured: false,
+      });
+    } finally {
+      setTranscribing(false);
+    }
+  }, []);
+
+  const toggleRecording = useCallback(async () => {
+    if (recording) {
+      recorderRef.current?.stop();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError({
+        message: "Voice recording isn't available in this browser.",
+        notConfigured: false,
+      });
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordStreamRef.current = stream;
+      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(
+        (candidate) => MediaRecorder.isTypeSupported(candidate),
+      );
+      const recorder = mime
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream);
+      recordMimeRef.current = recorder.mimeType || mime || "audio/webm";
+      recordChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) recordChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        recordStreamRef.current?.getTracks().forEach((track) => track.stop());
+        recordStreamRef.current = null;
+        recorderRef.current = null;
+        setRecording(false);
+        const blob = new Blob(recordChunksRef.current, {
+          type: recordMimeRef.current,
+        });
+        recordChunksRef.current = [];
+        if (blob.size) void transcribeRecording(blob, recordMimeRef.current);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+      setError(null);
+    } catch {
+      setError({
+        message: "Microphone access was blocked. Allow it in your browser to use voice.",
+        notConfigured: false,
+      });
+    }
+  }, [recording, transcribeRecording]);
 
   const lastUserIndex = (() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -701,6 +813,21 @@ export function ChatApp({
               >
                 <Paperclip className="size-4" />
               </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant={recording ? "destructive" : "ghost"}
+                className="size-9 shrink-0 rounded-full"
+                aria-label={recording ? "Stop recording" : "Record a voice note"}
+                disabled={streaming || transcribing}
+                onClick={() => void toggleRecording()}
+              >
+                {transcribing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Mic className={`size-4 ${recording ? "animate-pulse" : ""}`} />
+                )}
+              </Button>
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -712,7 +839,13 @@ export function ChatApp({
                   }
                 }}
                 rows={1}
-                placeholder="Ask anything"
+                placeholder={
+                  recording
+                    ? "Listening… tap the mic again to stop"
+                    : transcribing
+                      ? "Transcribing your voice note…"
+                      : "Ask anything"
+                }
                 aria-label="Message"
                 className="max-h-[200px] resize-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0"
               />

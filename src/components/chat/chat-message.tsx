@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Copy, FileText, Pencil, RotateCcw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Check,
+  Copy,
+  FileText,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Square,
+  Volume2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { ComposerAttachment } from "@/lib/composer";
@@ -71,6 +80,105 @@ async function copyText(text: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Markdown → plain words worth hearing (code fences become "code block"). */
+function plainTextForSpeech(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, " code block. ")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[#>*_~|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 1400);
+}
+
+/**
+ * Listen button: asks the server to speak the reply (OpenAI TTS). When
+ * voice is not configured the server says so and the note shows inline —
+ * the button never pretends to play.
+ */
+function SpeakButton({ text }: { text: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
+  const [note, setNote] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
+
+  const stop = () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = null;
+    setState("idle");
+  };
+
+  useEffect(() => stop, []);
+
+  const toggle = async () => {
+    if (state === "playing" || state === "loading") {
+      stop();
+      return;
+    }
+    setNote(null);
+    setState("loading");
+    try {
+      const response = await fetch("/api/chat/voice/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: plainTextForSpeech(text) }),
+      });
+      if (!response.ok) {
+        let message = "Voice playback failed. Try again.";
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data.error) message = data.error;
+        } catch {
+          // Keep the generic message.
+        }
+        setNote(message);
+        setState("idle");
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      urlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => stop();
+      audio.onerror = () => {
+        setNote("Voice playback failed. Try again.");
+        stop();
+      };
+      await audio.play();
+      setState("playing");
+    } catch {
+      setNote("Voice playback failed. Try again.");
+      setState("idle");
+    }
+  };
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <button
+        type="button"
+        aria-label={state === "playing" ? "Stop listening" : "Listen to reply"}
+        className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        onClick={() => void toggle()}
+      >
+        {state === "loading" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : state === "playing" ? (
+          <Square className="size-4" />
+        ) : (
+          <Volume2 className="size-4" />
+        )}
+      </button>
+      {note ? (
+        <span className="text-xs text-amber-600 dark:text-amber-400">{note}</span>
+      ) : null}
+    </span>
+  );
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -196,6 +304,7 @@ export function ChatMessageItem({
         {!message.streaming && message.content ? (
           <div className="mt-1 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
             <CopyButton text={message.content} />
+            <SpeakButton text={message.content} />
             {isLastAssistant && !busy ? (
               <button
                 type="button"
