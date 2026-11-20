@@ -278,6 +278,11 @@ model ChatMessage {
   /// Provider model id that produced an assistant reply (null for user rows).
   model          String?
   provider       String?
+  /// Wire attachments for a user message (composer-media shape: name, size,
+  /// kind, mime, inline text for text files, base64 data for media). Capped
+  /// at 4 files / 8 MB total by src/lib/composer-media.ts. Null for plain
+  /// text messages and all assistant rows.
+  attachments    Json?
   tokens         Int            @default(0)
   createdAt      DateTime       @default(now())
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

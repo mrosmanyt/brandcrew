@@ -8,6 +8,12 @@
  * so plan limits (plan id `demo` = Free, credits wrap token budgets) apply
  * exactly as they do for desk chat.
  */
+import { Prisma } from "@prisma/client";
+import type { ComposerAttachment } from "@/lib/composer";
+import {
+  normalizeComposerAttachments,
+  toWireAttachments,
+} from "@/lib/composer-media";
 import { prisma } from "@/lib/db";
 import { ClientError } from "@/lib/http";
 import {
@@ -48,6 +54,8 @@ export type ChatMessageDTO = {
   provider: string | null;
   tokens: number;
   createdAt: string;
+  /** Wire attachments on a user message; [] when the message has none. */
+  attachments: ComposerAttachment[];
 };
 
 type ConversationRow = {
@@ -66,7 +74,22 @@ type MessageRow = {
   provider: string | null;
   tokens: number;
   createdAt: Date;
+  attachments?: unknown;
 };
+
+/** Stored JSON → wire attachments. Anything unexpected reads as "none". */
+export function parseStoredAttachments(value: unknown): ComposerAttachment[] {
+  if (!Array.isArray(value)) return [];
+  return toWireAttachments(normalizeComposerAttachments(value as ComposerAttachment[]));
+}
+
+/** Client-sent attachments → the normalized wire shape we persist. */
+export function prepareAttachmentsForStorage(
+  files: ComposerAttachment[] | undefined,
+): ComposerAttachment[] {
+  if (!files?.length) return [];
+  return toWireAttachments(normalizeComposerAttachments(files));
+}
 
 export function serializeChatConversation(row: ConversationRow): ChatConversationDTO {
   return {
@@ -87,6 +110,7 @@ export function serializeChatMessage(row: MessageRow): ChatMessageDTO {
     provider: row.provider,
     tokens: row.tokens,
     createdAt: row.createdAt.toISOString(),
+    attachments: parseStoredAttachments(row.attachments),
   };
 }
 
@@ -249,11 +273,15 @@ export async function prepareChatTurn(input: {
     stored = row.messages;
   } else {
     const firstUser = input.messages.find((message) => message.role === "user");
+    const titleSeed =
+      firstUser?.content.trim() ||
+      firstUser?.attachments?.find((file) => !file.error)?.name ||
+      "";
     const created = await prisma.chatConversation.create({
       data: {
         userId: input.userId,
         workspaceId: workspace.id,
-        title: generateConversationTitle(firstUser?.content ?? ""),
+        title: generateConversationTitle(titleSeed),
         modelId: modelPref,
       },
     });
@@ -275,11 +303,18 @@ export async function prepareChatTurn(input: {
     await prisma.chatMessage.deleteMany({ where: { id: { in: deleteIds } } });
   }
   for (const message of plan.append) {
+    const attachments =
+      message.role === "user"
+        ? prepareAttachmentsForStorage(message.attachments)
+        : [];
     const created = await prisma.chatMessage.create({
       data: {
         conversationId: conversationId as string,
         role: message.role,
         content: message.content,
+        ...(attachments.length
+          ? { attachments: attachments as unknown as Prisma.InputJsonValue }
+          : {}),
       },
     });
     if (message.role === "user") userMessageId = created.id;

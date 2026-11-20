@@ -35,6 +35,15 @@ const nextConfig: NextConfig = {
         headers: security,
       },
       {
+        // The service worker script itself must never be cached, or
+        // installed apps would keep running an old worker forever.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
         source: "/brand/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },

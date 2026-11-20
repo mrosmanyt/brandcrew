@@ -15,6 +15,10 @@ import {
   encodeSseEvent,
   type ChatSseEventName,
 } from "@/lib/chat-stream-pure";
+import {
+  chatContentWithAttachments,
+  composerAttachmentsSchema,
+} from "@/lib/composer-media";
 import { jsonError, jsonFail } from "@/lib/http";
 import {
   llm,
@@ -31,10 +35,19 @@ const postSchema = z.object({
   modelId: z.enum(LLM_ROUTING_PREFERENCES),
   messages: z
     .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().min(1).max(CHAT_MESSAGE_MAX),
-      }),
+      z
+        .object({
+          role: z.enum(["user", "assistant"]),
+          // Text may be empty when the message carries attachments
+          // (a photo with no caption is a complete message).
+          content: z.string().max(CHAT_MESSAGE_MAX),
+          attachments: composerAttachmentsSchema,
+        })
+        .refine(
+          (message) =>
+            message.content.trim().length > 0 || message.attachments.length > 0,
+          { message: "Write a message or attach a file." },
+        ),
     )
     .min(1)
     .max(CHAT_HISTORY_MAX),
@@ -101,7 +114,10 @@ export async function POST(request: Request) {
     { role: "system", content: CHAT_SYSTEM_PROMPT },
     ...body.messages.map((message) => ({
       role: message.role,
-      content: message.content,
+      content:
+        message.role === "user"
+          ? chatContentWithAttachments(message.content, message.attachments)
+          : message.content,
     })),
   ];
 

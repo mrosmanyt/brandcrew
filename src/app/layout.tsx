@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@/components/site/analytics";
 import { CookieBanner } from "@/components/site/cookie-banner";
 import { HelpWidgetHost } from "@/components/help/help-widget";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { DESK_THEME_STORAGE_KEY } from "@/lib/desk-theme";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/constants";
 import {
@@ -42,6 +43,11 @@ export const metadata: Metadata = {
   },
   description,
   applicationName: PRODUCT_NAME,
+  appleWebApp: {
+    capable: true,
+    title: PRODUCT_NAME,
+    statusBarStyle: "black-translucent",
+  },
   authors: [{ name: COMPANY_NAME, url: COMPANY_SITE }],
   keywords: [PRODUCT_NAME, COMPANY_NAME, "AI chat", "image generation", "AI assistant"],
   openGraph: {
@@ -90,6 +96,11 @@ export const metadata: Metadata = {
   },
 };
 
+/** Brand night ground (#1a1915, same as the PWA manifest theme color). */
+export const viewport: Viewport = {
+  themeColor: "#1a1915",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -114,6 +125,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           <TooltipProvider>
             {children}
+            <ServiceWorkerRegister />
             <HelpWidgetHost />
             <CookieBanner />
             <Analytics />

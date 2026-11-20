@@ -12,6 +12,8 @@
  * info), "error" (stream failed after it started).
  */
 
+import type { ComposerAttachment } from "@/lib/composer";
+
 export const CHAT_TITLE_MAX = 48;
 export const CHAT_MESSAGE_MAX = 8000;
 export const CHAT_HISTORY_MAX = 100;
@@ -107,7 +109,12 @@ export function generateConversationTitle(firstUserMessage: string): string {
   return `${head}…`;
 }
 
-export type ChatMessageLike = { role: string; content: string };
+export type ChatMessageLike = {
+  role: string;
+  content: string;
+  /** Wire attachments (composer-media shape) on a user message, if any. */
+  attachments?: ComposerAttachment[];
+};
 
 export type ChatReconcilePlan = {
   /** Stored messages [0, keepCount) are identical to the incoming prefix. */

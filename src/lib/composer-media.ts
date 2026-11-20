@@ -314,6 +314,38 @@ export function mergeTextAndAttachments(
   return content;
 }
 
+/**
+ * Build the LLM content for one streaming-chat user message: the typed text,
+ * the full contents of any attached text files (inlined — that is the point
+ * of attaching them), and the media parts for photos/audio/video with a
+ * caption naming each file. Returns a plain string when there is nothing
+ * multimodal to send, so text-only turns keep the exact old wire shape.
+ */
+export function chatContentWithAttachments(
+  text: string,
+  files: ComposerAttachment[] | null | undefined,
+): LlmMessageContent {
+  const usable = (files || []).filter((file) => !file.error);
+  if (!usable.length) return text;
+  const mediaParts = attachmentsToLlmParts(usable);
+  const textBlocks: string[] = [];
+  if (text.trim()) textBlocks.push(text.trim());
+  for (const file of usable) {
+    if (file.kind === "text" && file.text?.trim()) {
+      textBlocks.push(`Attached file ${file.name}:\n${file.text.trim()}`);
+    }
+  }
+  if (!mediaParts.length) return textBlocks.join("\n\n");
+  const parts: LlmContentPart[] = [];
+  if (textBlocks.length) parts.push({ type: "text", text: textBlocks.join("\n\n") });
+  parts.push(...mediaParts);
+  const captions = usable
+    .filter((file) => file.kind === "image" || file.kind === "audio" || file.kind === "video")
+    .map((file) => formatMediaCaption(file));
+  if (captions.length) parts.push({ type: "text", text: captions.join("\n") });
+  return parts;
+}
+
 export function contentHasMedia(content: LlmMessageContent): boolean {
   if (typeof content === "string") return false;
   return content.some((part) => part.type !== "text");

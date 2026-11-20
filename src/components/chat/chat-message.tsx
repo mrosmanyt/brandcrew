@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Pencil, RotateCcw } from "lucide-react";
+import { Check, Copy, FileText, Pencil, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import type { ComposerAttachment } from "@/lib/composer";
+import { formatByteSize } from "@/lib/composer-media";
 import { cn } from "@/lib/utils";
 import { ChatMarkdown } from "./chat-markdown";
 
@@ -15,7 +17,52 @@ export type ChatUiMessage = {
   provider?: string | null;
   displayName?: string | null;
   streaming?: boolean;
+  attachments?: ComposerAttachment[];
 };
+
+function attachmentImageSrc(file: ComposerAttachment): string | null {
+  if (file.previewUrl) return file.previewUrl;
+  if (file.kind === "image" && file.data) {
+    return `data:${file.mime || "image/jpeg"};base64,${file.data}`;
+  }
+  return null;
+}
+
+/** Photos as thumbnails, everything else as a named file chip. */
+export function ChatAttachments({ files }: { files: ComposerAttachment[] }) {
+  const usable = files.filter((file) => !file.error);
+  if (!usable.length) return null;
+  return (
+    <div className="mb-2 flex flex-wrap justify-end gap-2">
+      {usable.map((file, index) => {
+        const src = attachmentImageSrc(file);
+        if (src) {
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={`${file.name}-${index}`}
+              src={src}
+              alt={file.name}
+              className="max-h-48 w-auto max-w-full rounded-2xl border border-border object-cover"
+            />
+          );
+        }
+        return (
+          <span
+            key={`${file.name}-${index}`}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-muted-foreground"
+          >
+            <FileText className="size-4 shrink-0" />
+            <span className="max-w-44 truncate font-medium text-foreground">
+              {file.name}
+            </span>
+            {formatByteSize(file.size)}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -101,9 +148,14 @@ export function ChatMessageItem({
             </div>
           ) : (
             <>
-              <div className="whitespace-pre-wrap rounded-3xl bg-muted px-4 py-2.5 text-[15px] leading-7">
-                {message.content}
-              </div>
+              {message.attachments?.length ? (
+                <ChatAttachments files={message.attachments} />
+              ) : null}
+              {message.content ? (
+                <div className="whitespace-pre-wrap rounded-3xl bg-muted px-4 py-2.5 text-[15px] leading-7">
+                  {message.content}
+                </div>
+              ) : null}
               <div className="mt-1 flex justify-end gap-0.5 opacity-0 transition group-hover:opacity-100">
                 <CopyButton text={message.content} />
                 {isLastUser && !busy ? (

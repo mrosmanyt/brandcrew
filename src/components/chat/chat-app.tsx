@@ -14,9 +14,21 @@ import {
   BadgeAlert,
   Check,
   ChevronDown,
+  FileText,
+  Paperclip,
   PanelLeft,
   Square,
+  X,
 } from "lucide-react";
+import type { ComposerAttachment } from "@/lib/composer";
+import {
+  COMPOSER_ACCEPT,
+  COMPOSER_MAX_ATTACHMENTS,
+  formatByteSize,
+  stripDataUrlPrefix,
+  toWireAttachments,
+  validateComposerAttachment,
+} from "@/lib/composer-media";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -63,6 +75,42 @@ const SUGGESTIONS = [
   "Give me a 7-day plan to learn TypeScript",
 ];
 
+/** Read one picked file into a wire attachment (text inlined, media base64). */
+async function readFileAsAttachment(file: File): Promise<ComposerAttachment> {
+  const classified = validateComposerAttachment({
+    name: file.name,
+    type: file.type,
+    size: file.size,
+  });
+  if (!classified.ok) {
+    return { name: file.name, size: file.size, kind: "text", error: classified.error };
+  }
+  if (classified.kind === "text") {
+    const text = (await file.text()).slice(0, 20_000);
+    return {
+      name: file.name,
+      size: file.size,
+      kind: "text",
+      mime: classified.mime,
+      text,
+    };
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+  return {
+    name: file.name,
+    size: file.size,
+    kind: classified.kind,
+    mime: classified.mime,
+    data: stripDataUrlPrefix(dataUrl),
+    previewUrl: classified.kind === "image" ? dataUrl : undefined,
+  };
+}
+
 async function readJsonError(response: Response): Promise<ChatError> {
   try {
     const data = (await response.json()) as {
@@ -94,11 +142,13 @@ export function ChatApp({
   const [groups, setGroups] = useState<ModelGroup[]>([]);
   const [modelId, setModelId] = useState<string>("auto");
   const [input, setInput] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<ComposerAttachment[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<ChatError | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottomRef = useRef(true);
@@ -185,6 +235,7 @@ export function ChatApp({
           content: string;
           model: string | null;
           provider: string | null;
+          attachments?: ComposerAttachment[];
         }>;
       };
       setMessages(
@@ -195,6 +246,7 @@ export function ChatApp({
           model: row.model,
           provider: row.provider,
           displayName: row.model ? publicModelLabel(row.model) : null,
+          attachments: row.attachments?.length ? row.attachments : undefined,
         })),
       );
       if (data.conversation.modelId) setModelId(data.conversation.modelId);
@@ -210,6 +262,7 @@ export function ChatApp({
     abortRef.current?.abort();
     setActiveId(null);
     setMessages([]);
+    setPendingAttachments([]);
     setError(null);
     setSidebarOpen(false);
     textareaRef.current?.focus();
@@ -252,6 +305,9 @@ export function ChatApp({
             messages: history.map((row) => ({
               role: row.role,
               content: row.content,
+              ...(row.attachments?.length
+                ? { attachments: toWireAttachments(row.attachments) }
+                : {}),
             })),
           }),
           signal: controller.signal,
@@ -328,12 +384,38 @@ export function ChatApp({
     [activeId, modelId, refreshConversations],
   );
 
+  const hasUsableAttachment = pendingAttachments.some((file) => !file.error);
+
   const handleSend = (event?: FormEvent) => {
     event?.preventDefault();
     const content = input.trim();
-    if (!content || streaming) return;
+    if ((!content && !hasUsableAttachment) || streaming) return;
+    const attachments = pendingAttachments.filter((file) => !file.error);
     setInput("");
-    void sendTurn([...messages, { id: null, role: "user", content }]);
+    setPendingAttachments([]);
+    void sendTurn([
+      ...messages,
+      {
+        id: null,
+        role: "user",
+        content,
+        ...(attachments.length ? { attachments } : {}),
+      },
+    ]);
+  };
+
+  const handleFilesPicked = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const room = COMPOSER_MAX_ATTACHMENTS - pendingAttachments.length;
+    const picked = Array.from(files).slice(0, Math.max(room, 0));
+    const read = await Promise.all(picked.map((file) => readFileAsAttachment(file)));
+    setPendingAttachments((current) =>
+      [...current, ...read].slice(0, COMPOSER_MAX_ATTACHMENTS),
+    );
+  };
+
+  const removePendingAttachment = (index: number) => {
+    setPendingAttachments((current) => current.filter((_, i) => i !== index));
   };
 
   const lastUserIndex = (() => {
@@ -557,7 +639,68 @@ export function ChatApp({
             />
           ) : null}
           <form onSubmit={handleSend} className="mx-auto w-full max-w-3xl">
-            <div className="flex items-end gap-2 rounded-[26px] border border-border bg-card p-2 shadow-sm">
+            <div className="rounded-[26px] border border-border bg-card p-2 shadow-sm">
+              {pendingAttachments.length ? (
+                <div className="flex flex-wrap gap-2 px-1 pb-2 pt-1">
+                  {pendingAttachments.map((file, index) => (
+                    <span
+                      key={`${file.name}-${index}`}
+                      className={
+                        file.error
+                          ? "inline-flex max-w-full items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive"
+                          : "inline-flex items-center gap-2 rounded-xl bg-muted px-2.5 py-1.5 text-xs"
+                      }
+                    >
+                      {file.previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={file.previewUrl}
+                          alt=""
+                          className="size-8 rounded-md object-cover"
+                        />
+                      ) : (
+                        <FileText className="size-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="max-w-48 truncate">
+                        {file.error ?? `${file.name} · ${formatByteSize(file.size)}`}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${file.name}`}
+                        className="rounded-full p-0.5 text-muted-foreground transition hover:bg-background hover:text-foreground"
+                        onClick={() => removePendingAttachment(index)}
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <div className="flex items-end gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={COMPOSER_ACCEPT}
+                multiple
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={(event) => {
+                  void handleFilesPicked(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-9 shrink-0 rounded-full"
+                aria-label="Attach photos or files"
+                disabled={streaming || pendingAttachments.length >= COMPOSER_MAX_ATTACHMENTS}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="size-4" />
+              </Button>
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -590,11 +733,12 @@ export function ChatApp({
                   size="icon"
                   className="size-9 shrink-0 rounded-full"
                   aria-label="Send message"
-                  disabled={!input.trim()}
+                  disabled={!input.trim() && !hasUsableAttachment}
                 >
                   <ArrowUp className="size-4" />
                 </Button>
               )}
+              </div>
             </div>
             <p className="mt-2 text-center text-xs text-muted-foreground">
               CINEM Pro can make mistakes. Check important info before you rely on it.
