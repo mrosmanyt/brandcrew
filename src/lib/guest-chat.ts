@@ -5,6 +5,7 @@ import {
   guestChatSystemPrompt,
   GUEST_CHAT_MESSAGE_LIMIT,
   GUEST_CHAT_MESSAGE_MAX,
+  GUEST_CHAT_SESSION_WINDOW_MS,
   type GuestChatMessage,
 } from "@/lib/guest-chat-pure";
 import { normalizeModelRouting, type LlmRoutingPreference } from "@/lib/llm-routing";
@@ -21,7 +22,7 @@ const MAX_SESSIONS = 8000;
 function pruneSessions(now: number) {
   if (sessions.size < MAX_SESSIONS) return;
   for (const [key, row] of sessions) {
-    if (now - row.updatedAt > 7 * 24 * 60 * 60 * 1000) sessions.delete(key);
+    if (now - row.updatedAt > GUEST_CHAT_SESSION_WINDOW_MS) sessions.delete(key);
   }
 }
 
@@ -51,6 +52,7 @@ export async function answerGuestChat(input: {
   history?: GuestChatMessage[];
   modelRouting?: string | null;
 }): Promise<GuestChatResult> {
+  const callerSuppliedKey = Boolean(input.guestKey);
   const guestKey = input.guestKey || randomUUID();
   const message = input.message.trim().slice(0, GUEST_CHAT_MESSAGE_MAX);
   if (!message) {
@@ -69,6 +71,28 @@ export async function answerGuestChat(input: {
   const nextCount = session.userMessages + 1;
   sessions.set(guestKey, { userMessages: nextCount, updatedAt: now });
 
+  // Durable allowance gate. The in-memory count above lives per isolate,
+  // so a redeploy, a cold start or a second instance would hand the same
+  // guest a fresh 10. The shared Postgres limiter (the same store as the
+  // IP limit above) survives all of that, over the same 7-day horizon as
+  // the session expiry. Callers who supply no guest key at all are keyed
+  // by IP instead, so dropping the key cannot reset the allowance
+  // either. If the shared store is unreachable, takeTokenShared degrades
+  // to the per-isolate limiter — never worse than the in-memory count.
+  const allowance = await takeTokenShared(
+    callerSuppliedKey
+      ? `guest-chat-allowance:${guestKey}`
+      : `guest-chat-allowance-ip:${ip}`,
+    GUEST_CHAT_MESSAGE_LIMIT,
+    GUEST_CHAT_SESSION_WINDOW_MS,
+  );
+  // When the durable gate is the one refusing, report the count as past
+  // the limit so the client's "messages left" reads 0 even if this
+  // isolate's in-memory count had restarted lower.
+  const reportedCount = allowance.ok
+    ? nextCount
+    : Math.max(nextCount, GUEST_CHAT_MESSAGE_LIMIT + 1);
+
   const userMsg: GuestChatMessage = {
     id: randomUUID(),
     role: "user",
@@ -76,7 +100,7 @@ export async function answerGuestChat(input: {
     createdAt: new Date().toISOString(),
   };
 
-  if (nextCount > GUEST_CHAT_MESSAGE_LIMIT) {
+  if (nextCount > GUEST_CHAT_MESSAGE_LIMIT || !allowance.ok) {
     const assistantMsg: GuestChatMessage = {
       id: randomUUID(),
       role: "assistant",
@@ -86,7 +110,7 @@ export async function answerGuestChat(input: {
     return {
       guestKey,
       messages: [...(input.history || []), userMsg, assistantMsg],
-      userMessageCount: nextCount,
+      userMessageCount: reportedCount,
       limit: GUEST_CHAT_MESSAGE_LIMIT,
       authRequired: true,
       demo: !llm.status().configured,
