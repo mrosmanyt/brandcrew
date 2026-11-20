@@ -60,6 +60,8 @@ export type ImageGenResult = {
   model?: string;
   mediaUrl?: string;
   jobId?: string;
+  /** History row uuid (ImageGenAsyncResult) recorded for this generation. */
+  id?: string;
 };
 
 export type ImageGenHistoryItem = {
@@ -265,7 +267,7 @@ async function recordImageGenSuccess(
   userId: string,
   workspaceId: string | null,
   result: ImageGenResult,
-): Promise<void> {
+): Promise<string> {
   const uuid = result.jobId ?? randomUUID();
   try {
     await prisma.imageGenAsyncResult.upsert({
@@ -312,6 +314,7 @@ async function recordImageGenSuccess(
       /* metering is best-effort after a successful generation */
     }
   }
+  return uuid;
 }
 
 export async function listImageGenHistoryForUser(
@@ -417,8 +420,8 @@ export async function generateImageForUser(
     throw new Error(imageGenSetupHint());
   }
 
-  await recordImageGenSuccess(userId, workspaceId, result);
-  return result;
+  const historyId = await recordImageGenSuccess(userId, workspaceId, result);
+  return { ...result, id: historyId };
 }
 
 export async function generateImageVariationForUser(
@@ -492,6 +495,6 @@ export async function generateImageVariationForUser(
     throw new Error(imageGenSetupHint());
   }
 
-  await recordImageGenSuccess(userId, workspaceId, result);
-  return result;
+  const historyId = await recordImageGenSuccess(userId, workspaceId, result);
+  return { ...result, id: historyId };
 }

@@ -57,6 +57,8 @@ import * as funnel from "./funnel";
 import * as purchaseRequests from "./purchase-requests";
 import * as imageGenerate from "./image/generate";
 import * as imageHistory from "./image/history";
+import * as imageShare from "./image/share";
+import * as shareRaw from "./share/raw";
 import * as foundingSpots from "./founding/spots";
 import * as userByok from "./user/byok";
 import * as userInvite from "./user/invite";
@@ -138,6 +140,11 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "purchase-requests"], handlers: asHandlers(purchaseRequests) },
   { pattern: ["api", "image", "generate"], handlers: asHandlers(imageGenerate) },
   { pattern: ["api", "image", "history"], handlers: asHandlers(imageHistory) },
+  { pattern: ["api", "image", "share"], handlers: asHandlers(imageShare) },
+  {
+    pattern: ["api", "share", "image", ":token", "raw"],
+    handlers: asHandlers(shareRaw),
+  },
   { pattern: ["api", "founding", "spots"], handlers: asHandlers(foundingSpots) },
   { pattern: ["api", "user", "byok"], handlers: asHandlers(userByok) },
   { pattern: ["api", "user", "invite"], handlers: asHandlers(userInvite) },

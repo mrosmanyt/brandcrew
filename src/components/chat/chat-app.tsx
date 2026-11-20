@@ -23,6 +23,7 @@ import {
   Paperclip,
   PanelLeft,
   Plug,
+  Sparkles,
   Square,
   X,
 } from "lucide-react";
@@ -730,6 +731,13 @@ export function ChatApp({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Link
+              href="/studio"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+            >
+              <Sparkles className="size-4" />
+              <span className="hidden sm:inline">Studio</span>
+            </Link>
             <Link
               href="/connectors"
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"

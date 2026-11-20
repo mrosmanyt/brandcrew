@@ -922,6 +922,9 @@ model ImageGenAsyncResult {
   model        String   @default("")
   mimeType     String   @default("")
   imageData    String?
+  /// Opt-in public share capability for the AI Photo Studio: set only when
+  /// the owner creates a share link (src/lib/image-share.ts). Null = private.
+  shareToken   String?  @unique
 
   @@index([userId, createdAt])
 }
