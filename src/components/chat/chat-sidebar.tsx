@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, MessageSquare, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ export function ChatSidebar({
   onNew,
   onRename,
   onDelete,
+  footer,
 }: {
   conversations: ChatConversationSummary[];
   activeId: string | null;
@@ -29,6 +30,8 @@ export function ChatSidebar({
   onNew: () => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
+  /** Pinned at the bottom of the sidebar (account block in the chat app). */
+  footer?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,6 +186,9 @@ export function ChatSidebar({
           </ul>
         )}
       </nav>
+      {footer ? (
+        <div className="shrink-0 border-t border-border p-2">{footer}</div>
+      ) : null}
     </div>
   );
 }

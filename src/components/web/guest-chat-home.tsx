@@ -1,24 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AppWindow,
-  ArrowUp,
-  ChevronDown,
-  Layers,
-  Loader2,
-  Lock,
-  Menu,
-  PenLine,
-  Plus,
-  Smartphone,
-  SquareDashedMousePointer,
-  X,
-} from "lucide-react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { ArrowUp, ChevronDown, Loader2, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/brand/logo";
-import { DesktopBuildRequiredDialog } from "@/components/desk/desktop-build-required-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,7 +29,6 @@ import {
   modelRoutingLabel,
   modelRoutingLocked,
 } from "@/lib/agent-modes";
-import { BUILD_PROMPT_CATEGORIES } from "@/lib/build-prompt";
 import {
   GUEST_CHAT_MESSAGE_LIMIT,
   GUEST_CHAT_MODEL_KEY,
@@ -56,14 +41,6 @@ import {
   type LlmStatus,
 } from "@/lib/llm-routing";
 import { cn } from "@/lib/utils";
-
-const BUILD_ICONS = {
-  website: AppWindow,
-  mobile: Smartphone,
-  design: SquareDashedMousePointer,
-  slides: Layers,
-  content: PenLine,
-} as const;
 
 const TOP_NAV = [
   { href: "/about#features", label: "Features" },
@@ -95,7 +72,6 @@ export function GuestChatHome() {
   const [userCount, setUserCount] = useState(0);
   const [authRequired, setAuthRequired] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [buildOpen, setBuildOpen] = useState(false);
   const [modelRouting, setModelRouting] = useState<LlmRoutingPreference>("auto");
   const [llm, setLlm] = useState<LlmStatus>({
     openai: false,
@@ -297,31 +273,7 @@ export function GuestChatHome() {
                   }
                 }}
               />
-              <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className="grid size-8 place-items-center rounded-full bg-muted hover:opacity-80"
-                    aria-label="Attach or build"
-                  >
-                    <Plus className="size-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="start" className="min-w-56">
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Build</DropdownMenuLabel>
-                      {BUILD_PROMPT_CATEGORIES.map((category) => {
-                        const Icon = BUILD_ICONS[category.id];
-                        return (
-                          <DropdownMenuItem key={category.id} onClick={() => setBuildOpen(true)}>
-                            <Icon className="size-4" />
-                            {category.label}
-                            <Lock className="ml-auto size-3.5 text-muted-foreground" />
-                          </DropdownMenuItem>
-                        );
-                      })}
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
+              <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5">
                 <div className="flex items-center gap-1.5">
                   <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium hover:opacity-90">
@@ -330,19 +282,21 @@ export function GuestChatHome() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
                       {MODEL_ROUTING_GROUPS.map((group) => (
-                        <div key={group.id}>
+                        <Fragment key={group.id}>
                           {group.label ? (
                             <>
-                              <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                              {group.options.map((opt) => (
-                                <DropdownMenuItem
-                                  key={opt.id}
-                                  disabled={modelRoutingLocked(opt.id, llm)}
-                                  onClick={() => saveModel(opt.id)}
-                                >
-                                  {opt.label}
-                                </DropdownMenuItem>
-                              ))}
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                                {group.options.map((opt) => (
+                                  <DropdownMenuItem
+                                    key={opt.id}
+                                    disabled={modelRoutingLocked(opt.id, llm)}
+                                    onClick={() => saveModel(opt.id)}
+                                  >
+                                    {opt.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuGroup>
                               <DropdownMenuSeparator />
                             </>
                           ) : (
@@ -352,7 +306,7 @@ export function GuestChatHome() {
                               </DropdownMenuItem>
                             ))
                           )}
-                        </div>
+                        </Fragment>
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -379,8 +333,6 @@ export function GuestChatHome() {
           </form>
         </div>
       </div>
-
-      <DesktopBuildRequiredDialog open={buildOpen} onOpenChange={setBuildOpen} />
 
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>
         <DialogContent className="max-w-md">
