@@ -4,8 +4,12 @@
  * offline fallback page. It never caches /api/* responses or authenticated
  * HTML: navigations are network-first and fall back to /offline only when
  * the network is unreachable. Bump VERSION to retire old caches.
+ *
+ * v2 (2026-11-20): retire the v1 caches accumulated since the worker first
+ * shipped, and match /_next/static/ chunk URLs exactly (no ignoreSearch) —
+ * build chunks are content-hashed, so an exact URL is the only safe key.
  */
-const VERSION = "cinem-pro-sw-v1";
+const VERSION = "cinem-pro-sw-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const PRECACHE = ["/offline", "/icon.svg", "/icon-192.png", "/icon-512.png"];
 
@@ -71,7 +75,10 @@ self.addEventListener("fetch", (event) => {
 
   if (isStaticAsset(url)) {
     event.respondWith(
-      caches.match(request, { ignoreSearch: true }).then((cached) => {
+      // Exact-URL match: chunk and asset URLs are content-hashed, so a
+      // cached entry is only ever valid for the precise URL that produced
+      // it. (ignoreSearch stays only on the /offline fallback lookup.)
+      caches.match(request).then((cached) => {
         const network = fetch(request)
           .then((response) => {
             if (response.ok) {

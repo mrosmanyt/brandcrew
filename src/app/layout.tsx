@@ -7,6 +7,7 @@ import { Analytics } from "@/components/site/analytics";
 import { CookieBanner } from "@/components/site/cookie-banner";
 import { HelpWidgetHost } from "@/components/help/help-widget";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { ChunkLoadRecovery } from "@/components/pwa/chunk-load-recovery";
 import { DESK_THEME_STORAGE_KEY } from "@/lib/desk-theme";
 import { COMPANY_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/constants";
 import {
@@ -126,6 +127,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <TooltipProvider>
             {children}
             <ServiceWorkerRegister />
+            <ChunkLoadRecovery />
             <HelpWidgetHost />
             <CookieBanner />
             <Analytics />
