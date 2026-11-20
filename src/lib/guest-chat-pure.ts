@@ -4,6 +4,12 @@ export const GUEST_CHAT_STORAGE_KEY = "cinem_guest_chat_key";
 export const GUEST_CHAT_MODEL_KEY = "cinem_guest_chat_model";
 export const GUEST_CHAT_MESSAGE_LIMIT = 10;
 export const GUEST_CHAT_MESSAGE_MAX = 4000;
+/**
+ * How long a guest allowance lives: in-memory sessions expire after this
+ * much inactivity, and the durable (Postgres) allowance window is the
+ * same length, so both counters describe the same guest session.
+ */
+export const GUEST_CHAT_SESSION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type GuestChatRole = "user" | "assistant";
 
