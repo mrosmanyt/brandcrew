@@ -40,6 +40,21 @@ export const COMPOSIO_AGENCY_TOOLKITS: ComposioToolkitDef[] = [
     docsUrl: "https://docs.composio.dev/toolkits/gmail",
   },
   {
+    id: "composio-googlecalendar",
+    slug: "googlecalendar",
+    name: "Google Calendar (Composio)",
+    description:
+      "Read calendars and events via Composio. Connected only after Composio returns an ACTIVE account. Event writes wait for approval.",
+    category: "Productivity",
+    featured: true,
+    auth: "oauth",
+    letter: "GC",
+    color: "#4285f4",
+    probeTool: "GOOGLECALENDAR_LIST_CALENDARS",
+    writeTools: ["GOOGLECALENDAR_CREATE_EVENT", "GOOGLECALENDAR_DELETE_EVENT"],
+    docsUrl: "https://docs.composio.dev/toolkits/googlecalendar",
+  },
+  {
     id: "composio-hackernews",
     slug: "hackernews",
     name: "Hacker News",

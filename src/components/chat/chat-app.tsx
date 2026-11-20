@@ -22,6 +22,7 @@ import {
   Mic,
   Paperclip,
   PanelLeft,
+  Plug,
   Square,
   X,
 } from "lucide-react";
@@ -729,6 +730,13 @@ export function ChatApp({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Link
+              href="/connectors"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+            >
+              <Plug className="size-4" />
+              <span className="hidden sm:inline">Connectors</span>
+            </Link>
             <button
               type="button"
               onClick={() => setMemoryOpen(true)}
