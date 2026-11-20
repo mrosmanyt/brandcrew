@@ -7,6 +7,7 @@ import * as adminRoot from "./admin/root";
 import * as adminBackup from "./admin/backup";
 import * as adminSupport from "./admin/support";
 import * as adminSupportThread from "./admin/support-thread";
+import * as adminPanel from "./admin/panel";
 import * as supportRoot from "./support/root";
 import * as supportPresence from "./support/presence";
 import * as supportThread from "./support/thread";
@@ -92,6 +93,7 @@ function asHandlers(mod: object): HandlerModule {
 export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "admin"], handlers: asHandlers(adminRoot) },
   { pattern: ["api", "admin", "backup"], handlers: asHandlers(adminBackup) },
+  { pattern: ["api", "admin", "panel"], handlers: asHandlers(adminPanel) },
   { pattern: ["api", "admin", "support"], handlers: asHandlers(adminSupport) },
   {
     pattern: ["api", "admin", "support", ":threadId"],

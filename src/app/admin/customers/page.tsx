@@ -1,18 +1,13 @@
-import { AdminCustomers } from "@/components/admin/admin-customers";
-import { getAdminCustomers } from "@/lib/admin";
-import { loadAdminPage } from "@/lib/admin-page";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function AdminCustomersPage({
+/** Customers moved to /admin/users in the Admin Panel v1. */
+export default async function AdminCustomersRedirect({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; userId?: string }>;
 }) {
-  await loadAdminPage("/admin/customers");
   const query = await searchParams;
-  const q = query.q?.trim() || "";
-  const userId = query.userId?.trim() || "";
-  const initial = await getAdminCustomers({ q, userId });
-  return <AdminCustomers initial={initial} initialQuery={q} initialUserId={userId} />;
+  if (query.userId) redirect(`/admin/users/${query.userId}`);
+  if (query.q) redirect(`/admin/users?q=${encodeURIComponent(query.q)}`);
+  redirect("/admin/users");
 }

@@ -1,4 +1,4 @@
-import { ForbiddenError, requireUser, type SessionUser } from "@/lib/auth";
+import { requireUser, type SessionUser } from "@/lib/auth";
 import { planBudget } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { isPaidPlan, normalizePlanId } from "@/lib/limits";
@@ -53,7 +53,8 @@ export function isAdminEmail(email?: string | null): boolean {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (!isAdminEmail(user.email)) {
-    throw new ForbiddenError("Admin access only.");
+    // 404, not 403: the panel stays invisible to non-admin accounts.
+    throw new ClientError("Not found.", 404, "not_found");
   }
   return user;
 }
@@ -1214,7 +1215,7 @@ export function getAdminAccess(): AdminAccessPayload {
       role: "superadmin" as const,
       isDefault: (DEFAULT_ADMIN_EMAILS as readonly string[]).includes(email),
     })),
-    note: "Set ADMIN_EMAILS on Vercel (Production and Preview) to every staff email that should open /admin. cinemtech@gmail.com and mrosmanyt@gmail.com are always included even if omitted. A signed-in address missing from the list receives 403.",
+    note: "Set ADMIN_EMAILS on Vercel (Production and Preview) to every staff email that should open /admin. cinemtech@gmail.com and mrosmanyt@gmail.com are always included even if omitted. A signed-in address missing from the list receives a 404 (the panel is not advertised).",
   };
 }
 
