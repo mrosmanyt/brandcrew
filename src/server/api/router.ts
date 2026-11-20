@@ -47,6 +47,8 @@ import * as chatConversation from "./chat/conversation";
 import * as chatStream from "./chat/stream";
 import * as chatVoiceTranscribe from "./chat/voice-transcribe";
 import * as chatVoiceSpeak from "./chat/voice-speak";
+import * as chatMemory from "./chat/memory";
+import * as chatMemoryFact from "./chat/memory-fact";
 import * as crashReports from "./crash-reports";
 import * as funnel from "./funnel";
 import * as purchaseRequests from "./purchase-requests";
@@ -110,6 +112,11 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "chat", "voice", "speak"],
     handlers: asHandlers(chatVoiceSpeak),
+  },
+  { pattern: ["api", "chat", "memory"], handlers: asHandlers(chatMemory) },
+  {
+    pattern: ["api", "chat", "memory", "facts", ":factId"],
+    handlers: asHandlers(chatMemoryFact),
   },
   { pattern: ["api", "crash-reports"], handlers: asHandlers(crashReports) },
   { pattern: ["api", "funnel"], handlers: asHandlers(funnel) },

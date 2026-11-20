@@ -12,6 +12,7 @@ import Link from "next/link";
 import {
   ArrowUp,
   BadgeAlert,
+  Brain,
   Check,
   ChevronDown,
   FileText,
@@ -58,6 +59,7 @@ import {
   type ChatUiMessage,
 } from "./chat-message";
 import { ChatSidebar, type ChatConversationSummary } from "./chat-sidebar";
+import { ChatMemoryPanel } from "./chat-memory-panel";
 
 type ModelOption = {
   id: string;
@@ -153,6 +155,7 @@ export function ChatApp({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
+  const [memoryOpen, setMemoryOpen] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -605,6 +608,7 @@ export function ChatApp({
 
   return (
     <div className="flex h-[100dvh] bg-background text-foreground">
+      <ChatMemoryPanel open={memoryOpen} onClose={() => setMemoryOpen(false)} />
       <aside className="hidden w-72 shrink-0 border-r border-border bg-muted/30 md:block">
         {sidebar}
       </aside>
@@ -679,6 +683,14 @@ export function ChatApp({
             </DropdownMenu>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMemoryOpen(true)}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+            >
+              <Brain className="size-4" />
+              <span className="hidden sm:inline">Memory</span>
+            </button>
             <Link
               href="/desk"
               className="hidden text-sm text-muted-foreground transition hover:text-foreground sm:block"

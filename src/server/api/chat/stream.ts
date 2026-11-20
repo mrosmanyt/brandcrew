@@ -36,6 +36,7 @@ import {
   SEARCH_USAGE_TOKENS,
   type ChatSearchSource,
 } from "@/lib/chat-search";
+import { buildMemorySystemBlock } from "@/lib/chat-memory";
 
 const postSchema = z.object({
   conversationId: z.string().min(1).nullable().optional(),
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
   let routes: LlmRoute[];
   let searchContext = "";
   let searchSources: ChatSearchSource[] = [];
+  let systemPrompt = CHAT_SYSTEM_PROMPT;
   try {
     const user = await requireUser();
     body = postSchema.parse(await request.json());
@@ -113,6 +115,14 @@ export async function POST(request: Request) {
     // Pre-flight budget check: an exhausted plan fails as a clean 429 JSON
     // response instead of an SSE stream that dies on its first event.
     await assertLlmCallBudget(prepared.workspaceId, "chat");
+    // Memory + custom instructions ride the system prompt. A memory read
+    // failure must never break the chat itself, so it degrades to none.
+    try {
+      const memoryBlock = await buildMemorySystemBlock(user.id);
+      if (memoryBlock) systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${memoryBlock}`;
+    } catch {
+      // No memory this turn; the chat continues without it.
+    }
     if (body.webSearch) {
       // Search runs before the stream opens so a missing/rejected key or a
       // failed search is an honest JSON error, not a mid-stream surprise.
@@ -151,7 +161,7 @@ export async function POST(request: Request) {
 
   const { workspaceId, conversation } = prepared;
   const history: LlmChatMessage[] = [
-    { role: "system", content: CHAT_SYSTEM_PROMPT },
+    { role: "system", content: systemPrompt },
     ...(searchContext
       ? [{ role: "system", content: searchContext } as LlmChatMessage]
       : []),
