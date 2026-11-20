@@ -94,7 +94,12 @@ type ModelOption = {
 
 type ModelGroup = { id: string; label: string };
 
-type ChatError = { message: string; notConfigured: boolean };
+type ChatError = {
+  message: string;
+  notConfigured: boolean;
+  /** Calm inline notice (e.g. microphone help), not a failure banner. */
+  notice?: boolean;
+};
 
 const SUGGESTIONS = [
   "Explain how neural networks learn, simply",
@@ -547,6 +552,7 @@ export function ChatApp({
       setError({
         message: "Voice recording isn't available in this browser.",
         notConfigured: false,
+        notice: true,
       });
       return;
     }
@@ -579,11 +585,23 @@ export function ChatApp({
       recorder.start();
       setRecording(true);
       setError(null);
-    } catch {
-      setError({
-        message: "Microphone access was blocked. Allow it in your browser to use voice.",
-        notConfigured: false,
-      });
+    } catch (err) {
+      // Any start failure must leave the composer idle: release a stream
+      // that was already acquired and clear the recording indicator.
+      recordStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordStreamRef.current = null;
+      recorderRef.current = null;
+      setRecording(false);
+      const errorName =
+        err instanceof DOMException || err instanceof Error ? err.name : "";
+      const message =
+        errorName === "NotAllowedError" || errorName === "SecurityError"
+          ? "Microphone is off for this site. Click the lock icon in your browser's address bar, allow the microphone, then try again."
+          : errorName === "NotFoundError" ||
+              errorName === "OverconstrainedError"
+            ? "No microphone found on this device."
+            : "Couldn't start the microphone. Check it is connected, then try again.";
+      setError({ message, notConfigured: false, notice: true });
     }
   }, [recording, transcribeRecording]);
 
@@ -947,8 +965,9 @@ export function ChatApp({
             <ChatErrorNotice
               message={error.message}
               notConfigured={error.notConfigured}
+              notice={error.notice}
               onRetry={
-                !streaming && lastUserIndex >= 0
+                !error.notice && !streaming && lastUserIndex >= 0
                   ? () => void sendTurn(messages.slice(0, lastUserIndex + 1))
                   : undefined
               }

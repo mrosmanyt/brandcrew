@@ -365,10 +365,13 @@ export function ChatMessageItem({
 export function ChatErrorNotice({
   message,
   notConfigured,
+  notice,
   onRetry,
 }: {
   message: string;
   notConfigured?: boolean;
+  /** Calm neutral notice (e.g. microphone help) instead of a failure banner. */
+  notice?: boolean;
   onRetry?: () => void;
 }) {
   return (
@@ -377,12 +380,18 @@ export function ChatErrorNotice({
         "mx-auto mb-4 w-full max-w-3xl rounded-2xl border px-4 py-3 text-sm",
         notConfigured
           ? "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
-          : "border-destructive/40 bg-destructive/10 text-destructive",
+          : notice
+            ? "border-border bg-muted text-foreground"
+            : "border-destructive/40 bg-destructive/10 text-destructive",
       )}
-      role="alert"
+      role={notice ? "status" : "alert"}
     >
       <p className="font-medium">
-        {notConfigured ? "Model not configured" : "Something went wrong"}
+        {notConfigured
+          ? "Model not configured"
+          : notice
+            ? "Microphone"
+            : "Something went wrong"}
       </p>
       <p className="mt-0.5 leading-6 opacity-90">{message}</p>
       {onRetry ? (

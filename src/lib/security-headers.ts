@@ -141,8 +141,12 @@ export function securityHeaderList(): HeaderPair[] {
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     {
       key: "Permissions-Policy",
+      // Microphone is `(self)`, not `()`: the chat voice input records via
+      // getUserMedia on our own origin. `()` would forbid the browser from
+      // ever showing the permission prompt, so voice could never work.
+      // Everything else stays fully disabled.
       value:
-        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+        "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()",
     },
     { key: "X-DNS-Prefetch-Control", value: "on" },
   ];
