@@ -29,6 +29,7 @@ import {
   PanelLeft,
   Plug,
   Plus,
+  Settings,
   Sparkles,
   Square,
   X,
@@ -71,6 +72,7 @@ import {
 } from "./chat-message";
 import { ChatSidebar, type ChatConversationSummary } from "./chat-sidebar";
 import { ChatMemoryPanel } from "./chat-memory-panel";
+import { ChatSettingsPanel } from "./chat-settings-panel";
 import {
   CHAT_LANGUAGE_LABELS,
   CHAT_LANGUAGE_MODES,
@@ -176,6 +178,7 @@ export function ChatApp({
   const [transcribing, setTranscribing] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [languageMode, setLanguageMode] = useState<ChatLanguageMode>(() => {
     if (typeof window === "undefined") return "auto";
     const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -670,6 +673,15 @@ export function ChatApp({
         <DropdownMenuContent side="top" align="start" className="w-64">
           <DropdownMenuGroup>
             <DropdownMenuLabel>{userEmail}</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => {
+                setSidebarOpen(false);
+                setSettingsOpen(true);
+              }}
+            >
+              <Settings className="size-4" />
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/studio")}>
               <Sparkles className="size-4" />
               Studio
@@ -727,6 +739,14 @@ export function ChatApp({
   return (
     <div className="flex h-[100dvh] bg-background text-foreground">
       <ChatMemoryPanel open={memoryOpen} onClose={() => setMemoryOpen(false)} />
+      <ChatSettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenMemory={() => {
+          setSettingsOpen(false);
+          setMemoryOpen(true);
+        }}
+      />
       <aside className="hidden w-72 shrink-0 border-r border-border bg-muted/30 md:block">
         {sidebar}
       </aside>
