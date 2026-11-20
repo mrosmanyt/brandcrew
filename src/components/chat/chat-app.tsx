@@ -17,6 +17,7 @@ import {
   ChevronDown,
   FileText,
   Globe,
+  Languages,
   Loader2,
   Mic,
   Paperclip,
@@ -60,6 +61,15 @@ import {
 } from "./chat-message";
 import { ChatSidebar, type ChatConversationSummary } from "./chat-sidebar";
 import { ChatMemoryPanel } from "./chat-memory-panel";
+import {
+  CHAT_LANGUAGE_LABELS,
+  CHAT_LANGUAGE_MODES,
+  PAKISTANI_TEMPLATES,
+  isChatLanguageMode,
+  type ChatLanguageMode,
+} from "@/lib/chat-language";
+
+const LANGUAGE_STORAGE_KEY = "cinem-chat-language";
 
 type ModelOption = {
   id: string;
@@ -156,6 +166,19 @@ export function ChatApp({
   const [transcribing, setTranscribing] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [languageMode, setLanguageMode] = useState<ChatLanguageMode>(() => {
+    if (typeof window === "undefined") return "auto";
+    const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return isChatLanguageMode(saved) ? saved : "auto";
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, languageMode);
+    } catch {
+      // Private mode etc. — the mode still applies to this session.
+    }
+  }, [languageMode]);
 
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -318,6 +341,7 @@ export function ChatApp({
           body: JSON.stringify({
             conversationId: activeId,
             modelId,
+            languageMode,
             ...(webSearch ? { webSearch: true } : {}),
             messages: history.map((row) => ({
               role: row.role,
@@ -403,7 +427,7 @@ export function ChatApp({
         abortRef.current = null;
       }
     },
-    [activeId, modelId, webSearch, refreshConversations],
+    [activeId, modelId, webSearch, languageMode, refreshConversations],
   );
 
   const hasUsableAttachment = pendingAttachments.some((file) => !file.error);
@@ -683,6 +707,28 @@ export function ChatApp({
             </DropdownMenu>
           </div>
           <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                aria-label="Choose reply language"
+              >
+                <Languages className="size-4" />
+                {CHAT_LANGUAGE_LABELS[languageMode]}
+                <ChevronDown className="size-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuLabel>Reply language</DropdownMenuLabel>
+                {CHAT_LANGUAGE_MODES.map((mode) => (
+                  <DropdownMenuItem
+                    key={mode}
+                    onClick={() => setLanguageMode(mode)}
+                  >
+                    <span className="flex-1">{CHAT_LANGUAGE_LABELS[mode]}</span>
+                    {languageMode === mode ? <Check className="size-4" /> : null}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               type="button"
               onClick={() => setMemoryOpen(true)}
@@ -708,6 +754,7 @@ export function ChatApp({
 
         <div
           ref={scrollRef}
+          dir={languageMode === "ur" ? "rtl" : undefined}
           className="min-h-0 flex-1 overflow-y-auto"
           onScroll={(event) => {
             const el = event.currentTarget;
@@ -726,22 +773,53 @@ export function ChatApp({
                   Ask anything — answers stream in from the model you pick, and
                   every chat is saved in your history.
                 </p>
-                <div className="mt-8 grid w-full max-w-xl gap-2 sm:grid-cols-2">
-                  {SUGGESTIONS.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      className="rounded-2xl border border-border px-4 py-3 text-left text-sm text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
-                      onClick={() => {
-                        if (!streaming) {
-                          void sendTurn([{ id: null, role: "user", content: suggestion }]);
-                        }
-                      }}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
+                {languageMode === "ur" || languageMode === "roman-ur" ? (
+                  <>
+                    <p className="mt-8 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {languageMode === "ur"
+                        ? "تیار شدہ ٹیمپلیٹس — ٹیپ کریں اور تفصیل بھر دیں"
+                        : "Ready-made templates — tap karein aur tafseel bhar dein"}
+                    </p>
+                    <div className="mt-3 grid w-full max-w-xl gap-2 sm:grid-cols-2">
+                      {PAKISTANI_TEMPLATES.map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          className="rounded-2xl border border-border px-4 py-3 text-left text-sm text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                          onClick={() => {
+                            setInput(
+                              languageMode === "ur"
+                                ? template.promptUrdu
+                                : template.promptRoman,
+                            );
+                            textareaRef.current?.focus();
+                          }}
+                        >
+                          {languageMode === "ur"
+                            ? template.labelUrdu
+                            : template.labelRoman}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-8 grid w-full max-w-xl gap-2 sm:grid-cols-2">
+                    {SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        className="rounded-2xl border border-border px-4 py-3 text-left text-sm text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                        onClick={() => {
+                          if (!streaming) {
+                            void sendTurn([{ id: null, role: "user", content: suggestion }]);
+                          }
+                        }}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <ul className="space-y-6 pb-2">
@@ -761,7 +839,10 @@ export function ChatApp({
           </div>
         </div>
 
-        <div className="shrink-0 px-4 pb-5 pt-1">
+        <div
+          className="shrink-0 px-4 pb-5 pt-1"
+          dir={languageMode === "ur" ? "rtl" : undefined}
+        >
           {error ? (
             <ChatErrorNotice
               message={error.message}

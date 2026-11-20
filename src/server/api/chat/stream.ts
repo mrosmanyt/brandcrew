@@ -37,12 +37,18 @@ import {
   type ChatSearchSource,
 } from "@/lib/chat-search";
 import { buildMemorySystemBlock } from "@/lib/chat-memory";
+import {
+  CHAT_LANGUAGE_MODES,
+  languageModeSystemBlock,
+} from "@/lib/chat-language";
 
 const postSchema = z.object({
   conversationId: z.string().min(1).nullable().optional(),
   modelId: z.enum(LLM_ROUTING_PREFERENCES),
   /** When true, the latest question is web-searched (Tavily) before the turn. */
   webSearch: z.boolean().optional(),
+  /** Reply language mode: auto mirrors the user; ur / roman-ur pin Urdu. */
+  languageMode: z.enum(CHAT_LANGUAGE_MODES).optional(),
   messages: z
     .array(
       z
@@ -123,6 +129,10 @@ export async function POST(request: Request) {
     } catch {
       // No memory this turn; the chat continues without it.
     }
+    const languageBlock = body.languageMode
+      ? languageModeSystemBlock(body.languageMode)
+      : null;
+    if (languageBlock) systemPrompt = `${systemPrompt}\n\n${languageBlock}`;
     if (body.webSearch) {
       // Search runs before the stream opens so a missing/rejected key or a
       // failed search is an honest JSON error, not a mid-stream surprise.
