@@ -27,7 +27,39 @@ export type ChatUiMessage = {
   displayName?: string | null;
   streaming?: boolean;
   attachments?: ComposerAttachment[];
+  sources?: { title: string; url: string }[];
 };
+
+/** Numbered source list under a reply that used web search. */
+export function ChatSources({
+  sources,
+}: {
+  sources: { title: string; url: string }[];
+}) {
+  if (!sources.length) return null;
+  return (
+    <div className="mt-3 rounded-2xl border border-border bg-muted/40 px-3.5 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Sources
+      </p>
+      <ol className="mt-1.5 space-y-1">
+        {sources.map((source, index) => (
+          <li key={`${source.url}-${index}`} className="text-sm leading-6">
+            <span className="text-muted-foreground">[{index + 1}]</span>{" "}
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              {source.title}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 function attachmentImageSrc(file: ComposerAttachment): string | null {
   if (file.previewUrl) return file.previewUrl;
@@ -300,6 +332,9 @@ export function ChatMessageItem({
         ) : null}
         {message.streaming && message.content ? (
           <span className="mt-1 inline-block h-4 w-2 animate-pulse bg-foreground/70" />
+        ) : null}
+        {message.sources?.length ? (
+          <ChatSources sources={message.sources} />
         ) : null}
         {!message.streaming && message.content ? (
           <div className="mt-1 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">

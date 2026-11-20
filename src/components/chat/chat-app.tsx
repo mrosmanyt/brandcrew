@@ -15,6 +15,7 @@ import {
   Check,
   ChevronDown,
   FileText,
+  Globe,
   Loader2,
   Mic,
   Paperclip,
@@ -48,6 +49,7 @@ import {
   type ChatDeltaData,
   type ChatDoneData,
   type ChatErrorData,
+  type ChatSourcesData,
   type ChatStartData,
 } from "@/lib/chat-stream-pure";
 import {
@@ -150,6 +152,7 @@ export function ChatApp({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [webSearch, setWebSearch] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -244,6 +247,7 @@ export function ChatApp({
           model: string | null;
           provider: string | null;
           attachments?: ComposerAttachment[];
+          sources?: { title: string; url: string }[];
         }>;
       };
       setMessages(
@@ -255,6 +259,7 @@ export function ChatApp({
           provider: row.provider,
           displayName: row.model ? publicModelLabel(row.model) : null,
           attachments: row.attachments?.length ? row.attachments : undefined,
+          sources: row.sources?.length ? row.sources : undefined,
         })),
       );
       if (data.conversation.modelId) setModelId(data.conversation.modelId);
@@ -310,6 +315,7 @@ export function ChatApp({
           body: JSON.stringify({
             conversationId: activeId,
             modelId,
+            ...(webSearch ? { webSearch: true } : {}),
             messages: history.map((row) => ({
               role: row.role,
               content: row.content,
@@ -339,6 +345,11 @@ export function ChatApp({
             if (event.event === "start") {
               const data = parseSseData<ChatStartData>(event.data);
               if (data?.conversationId) setActiveId(data.conversationId);
+            } else if (event.event === "sources") {
+              const data = parseSseData<ChatSourcesData>(event.data);
+              if (data?.sources?.length) {
+                patchAssistant({ sources: data.sources });
+              }
             } else if (event.event === "delta") {
               const data = parseSseData<ChatDeltaData>(event.data);
               if (data?.text) {
@@ -389,7 +400,7 @@ export function ChatApp({
         abortRef.current = null;
       }
     },
-    [activeId, modelId, refreshConversations],
+    [activeId, modelId, webSearch, refreshConversations],
   );
 
   const hasUsableAttachment = pendingAttachments.some((file) => !file.error);
@@ -827,6 +838,20 @@ export function ChatApp({
                 ) : (
                   <Mic className={`size-4 ${recording ? "animate-pulse" : ""}`} />
                 )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={webSearch ? "secondary" : "ghost"}
+                className="h-9 shrink-0 gap-1.5 rounded-full px-3 text-xs"
+                aria-pressed={webSearch}
+                aria-label="Toggle web search"
+                title="Search the web for current information"
+                disabled={streaming}
+                onClick={() => setWebSearch((current) => !current)}
+              >
+                <Globe className="size-4" />
+                Search
               </Button>
               <Textarea
                 ref={textareaRef}

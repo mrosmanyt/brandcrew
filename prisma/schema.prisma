@@ -283,6 +283,10 @@ model ChatMessage {
   /// at 4 files / 8 MB total by src/lib/composer-media.ts. Null for plain
   /// text messages and all assistant rows.
   attachments    Json?
+  /// Web-search sources an assistant reply was grounded on
+  /// ([{title, url}] from Tavily, src/lib/chat-search.ts). Null for
+  /// replies that did not use search and all user rows.
+  sources        Json?
   tokens         Int            @default(0)
   createdAt      DateTime       @default(now())
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

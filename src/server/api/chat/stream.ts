@@ -28,11 +28,20 @@ import {
   type LlmStreamMeta,
 } from "@/lib/llm";
 import { LLM_ROUTING_PREFERENCES } from "@/lib/llm-routing";
-import { assertLlmCallBudget, BudgetError } from "@/lib/usage";
+import { assertLlmCallBudget, BudgetError, recordUsage } from "@/lib/usage";
+import {
+  chatSearchConfigured,
+  searchForChat,
+  SEARCH_NOT_CONFIGURED_MESSAGE,
+  SEARCH_USAGE_TOKENS,
+  type ChatSearchSource,
+} from "@/lib/chat-search";
 
 const postSchema = z.object({
   conversationId: z.string().min(1).nullable().optional(),
   modelId: z.enum(LLM_ROUTING_PREFERENCES),
+  /** When true, the latest question is web-searched (Tavily) before the turn. */
+  webSearch: z.boolean().optional(),
   messages: z
     .array(
       z
@@ -67,6 +76,8 @@ export async function POST(request: Request) {
   let body: ChatStreamBody;
   let prepared: PreparedChatTurn;
   let routes: LlmRoute[];
+  let searchContext = "";
+  let searchSources: ChatSearchSource[] = [];
   try {
     const user = await requireUser();
     body = postSchema.parse(await request.json());
@@ -102,6 +113,35 @@ export async function POST(request: Request) {
     // Pre-flight budget check: an exhausted plan fails as a clean 429 JSON
     // response instead of an SSE stream that dies on its first event.
     await assertLlmCallBudget(prepared.workspaceId, "chat");
+    if (body.webSearch) {
+      // Search runs before the stream opens so a missing/rejected key or a
+      // failed search is an honest JSON error, not a mid-stream surprise.
+      if (!chatSearchConfigured()) {
+        return NextResponse.json(
+          { error: SEARCH_NOT_CONFIGURED_MESSAGE, code: "search_not_configured" },
+          { status: 503 },
+        );
+      }
+      const searched = await searchForChat(last.content);
+      if (!searched.ok) {
+        return NextResponse.json(
+          {
+            error: searched.error || "Web search failed. Try again.",
+            code: "search_failed",
+          },
+          { status: 502 },
+        );
+      }
+      searchContext = searched.contextText;
+      searchSources = searched.sources;
+      await recordUsage({
+        workspaceId: prepared.workspaceId,
+        tokens: SEARCH_USAGE_TOKENS,
+        model: "tavily-search",
+        agentRole: "chat-search",
+        bucket: "chat",
+      });
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return jsonFail("Write a message to start the chat.", 400);
@@ -112,6 +152,9 @@ export async function POST(request: Request) {
   const { workspaceId, conversation } = prepared;
   const history: LlmChatMessage[] = [
     { role: "system", content: CHAT_SYSTEM_PROMPT },
+    ...(searchContext
+      ? [{ role: "system", content: searchContext } as LlmChatMessage]
+      : []),
     ...body.messages.map((message) => ({
       role: message.role,
       content:
@@ -149,6 +192,9 @@ export async function POST(request: Request) {
         conversationId: conversation.id,
         userMessageId: prepared.userMessageId,
       });
+      if (searchSources.length) {
+        send("sources", { sources: searchSources });
+      }
       try {
         await runWithLlmRouting(
           {
@@ -182,6 +228,7 @@ export async function POST(request: Request) {
             model: state.meta.model,
             provider: state.meta.provider,
             tokens: state.meta.tokens,
+            ...(searchSources.length ? { sources: searchSources } : {}),
           });
           send("done", {
             conversationId: conversation.id,
@@ -209,6 +256,7 @@ export async function POST(request: Request) {
             tokens:
               state.meta?.tokens ??
               Math.ceil(state.text.split(/\s+/).filter(Boolean).length * 1.3),
+            ...(searchSources.length ? { sources: searchSources } : {}),
           }).catch(() => null);
         }
         send("error", {

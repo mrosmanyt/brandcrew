@@ -18,7 +18,7 @@ export const CHAT_TITLE_MAX = 48;
 export const CHAT_MESSAGE_MAX = 8000;
 export const CHAT_HISTORY_MAX = 100;
 
-export type ChatSseEventName = "start" | "delta" | "done" | "error";
+export type ChatSseEventName = "start" | "delta" | "sources" | "done" | "error";
 
 export type ChatStartData = {
   conversationId: string;
@@ -26,6 +26,10 @@ export type ChatStartData = {
 };
 
 export type ChatDeltaData = { text: string };
+
+export type ChatSourcesData = {
+  sources: { title: string; url: string }[];
+};
 
 export type ChatDoneData = {
   conversationId: string;

@@ -56,6 +56,8 @@ export type ChatMessageDTO = {
   createdAt: string;
   /** Wire attachments on a user message; [] when the message has none. */
   attachments: ComposerAttachment[];
+  /** Web-search sources an assistant reply was grounded on; [] when none. */
+  sources: { title: string; url: string }[];
 };
 
 type ConversationRow = {
@@ -75,7 +77,28 @@ type MessageRow = {
   tokens: number;
   createdAt: Date;
   attachments?: unknown;
+  sources?: unknown;
 };
+
+/** Stored JSON → search sources. Anything unexpected reads as "none". */
+export function parseStoredSources(
+  value: unknown,
+): { title: string; url: string }[] {
+  if (!Array.isArray(value)) return [];
+  const out: { title: string; url: string }[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object") continue;
+    const title = (row as { title?: unknown }).title;
+    const url = (row as { url?: unknown }).url;
+    if (typeof url === "string" && url.trim()) {
+      out.push({
+        title: typeof title === "string" && title.trim() ? title : url,
+        url,
+      });
+    }
+  }
+  return out.slice(0, 10);
+}
 
 /** Stored JSON → wire attachments. Anything unexpected reads as "none". */
 export function parseStoredAttachments(value: unknown): ComposerAttachment[] {
@@ -111,6 +134,7 @@ export function serializeChatMessage(row: MessageRow): ChatMessageDTO {
     tokens: row.tokens,
     createdAt: row.createdAt.toISOString(),
     attachments: parseStoredAttachments(row.attachments),
+    sources: parseStoredSources(row.sources),
   };
 }
 
@@ -344,6 +368,7 @@ export async function persistChatReply(input: {
   model: string;
   provider: string;
   tokens: number;
+  sources?: { title: string; url: string }[];
 }): Promise<ChatMessageDTO> {
   const row = await prisma.chatMessage.create({
     data: {
@@ -353,6 +378,9 @@ export async function persistChatReply(input: {
       model: input.model,
       provider: input.provider,
       tokens: input.tokens,
+      ...(input.sources?.length
+        ? { sources: input.sources as unknown as Prisma.InputJsonValue }
+        : {}),
     },
   });
   await prisma.chatConversation.update({
