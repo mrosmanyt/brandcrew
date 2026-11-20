@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useRef,
@@ -8,21 +9,26 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowUp,
+  ArrowUpRight,
   BadgeAlert,
   Brain,
   Check,
   ChevronDown,
+  ChevronsUpDown,
   FileText,
   Globe,
+  ImagePlus,
   Languages,
   Loader2,
+  LogOut,
   Mic,
   Paperclip,
   PanelLeft,
   Plug,
+  Plus,
   Sparkles,
   Square,
   X,
@@ -40,7 +46,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -228,12 +236,18 @@ export function ChatApp({
         const response = await fetch("/api/chat/models");
         if (!response.ok || cancelled) return;
         const data = (await response.json()) as {
-          models: ModelOption[];
-          groups: ModelGroup[];
+          models?: unknown;
+          groups?: unknown;
         };
         if (!cancelled) {
-          setModels(data.models);
-          setGroups(data.groups);
+          // Validate the shape before it reaches state: a malformed payload
+          // must degrade to the "Auto" only picker, never crash the header.
+          setModels(
+            Array.isArray(data.models) ? (data.models as ModelOption[]) : [],
+          );
+          setGroups(
+            Array.isArray(data.groups) ? (data.groups as ModelGroup[]) : [],
+          );
         }
       } catch {
         // Picker falls back to "Auto" only.
@@ -617,8 +631,85 @@ export function ChatApp({
     }
   };
 
+  const router = useRouter();
+
   const selectedModel = models.find((row) => row.id === modelId);
   const pickerLabel = modelId === "auto" ? "Auto" : selectedModel?.displayName ?? "Auto";
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Even if the call fails, leave for /login — the session cookie is
+      // what matters and a fresh page load re-checks it server-side.
+    }
+    window.location.assign("/login");
+  }, []);
+
+  const accountDisplayName = userName?.trim() || userEmail;
+  const accountFooter =
+    userName || userEmail ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition hover:bg-muted"
+          aria-label="Account menu"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            {(userName || userEmail || "?").slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">
+              {accountDisplayName}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {userEmail}
+            </span>
+          </span>
+          <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="start" className="w-64">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{userEmail}</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => router.push("/studio")}>
+              <Sparkles className="size-4" />
+              Studio
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/connectors")}>
+              <Plug className="size-4" />
+              Connectors
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setSidebarOpen(false);
+                setMemoryOpen(true);
+              }}
+            >
+              <Brain className="size-4" />
+              Memory
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/desk")}>
+              <ArrowUpRight className="size-4" />
+              Open desk
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => void handleLogout()}>
+            <LogOut className="size-4" />
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <a
+        href="/login"
+        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-muted"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+          ?
+        </span>
+        Sign in
+      </a>
+    );
 
   const sidebar = (
     <ChatSidebar
@@ -629,6 +720,7 @@ export function ChatApp({
       onNew={startNewChat}
       onRename={(id, title) => void handleRename(id, title)}
       onDelete={(id) => void handleDelete(id)}
+      footer={accountFooter}
     />
   );
 
@@ -685,26 +777,30 @@ export function ChatApp({
                   </span>
                   {modelId === "auto" ? <Check className="size-4" /> : null}
                 </DropdownMenuItem>
-                {groups.map((group) => (
-                  <div key={group.id}>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                    {models
-                      .filter((row) => row.group === group.id)
-                      .map((row) => (
-                        <DropdownMenuItem key={row.id} onClick={() => setModelId(row.id)}>
-                          <span className="flex-1">
-                            <span className="block font-medium">{row.displayName}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {row.hint}
-                              {row.configured ? "" : " · Not configured yet"}
+                {groups.map((group) => {
+                  const rows = models.filter((row) => row.group === group.id);
+                  if (rows.length === 0) return null;
+                  return (
+                    <Fragment key={group.id}>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                        {rows.map((row) => (
+                          <DropdownMenuItem key={row.id} onClick={() => setModelId(row.id)}>
+                            <span className="flex-1">
+                              <span className="block font-medium">{row.displayName}</span>
+                              <span className="block text-xs text-muted-foreground">
+                                {row.hint}
+                                {row.configured ? "" : " · Not configured yet"}
+                              </span>
                             </span>
-                          </span>
-                          {modelId === row.id ? <Check className="size-4" /> : null}
-                        </DropdownMenuItem>
-                      ))}
-                  </div>
-                ))}
+                            {modelId === row.id ? <Check className="size-4" /> : null}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    </Fragment>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -719,52 +815,20 @@ export function ChatApp({
                 <ChevronDown className="size-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuLabel>Reply language</DropdownMenuLabel>
-                {CHAT_LANGUAGE_MODES.map((mode) => (
-                  <DropdownMenuItem
-                    key={mode}
-                    onClick={() => setLanguageMode(mode)}
-                  >
-                    <span className="flex-1">{CHAT_LANGUAGE_LABELS[mode]}</span>
-                    {languageMode === mode ? <Check className="size-4" /> : null}
-                  </DropdownMenuItem>
-                ))}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Reply language</DropdownMenuLabel>
+                  {CHAT_LANGUAGE_MODES.map((mode) => (
+                    <DropdownMenuItem
+                      key={mode}
+                      onClick={() => setLanguageMode(mode)}
+                    >
+                      <span className="flex-1">{CHAT_LANGUAGE_LABELS[mode]}</span>
+                      {languageMode === mode ? <Check className="size-4" /> : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link
-              href="/studio"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-            >
-              <Sparkles className="size-4" />
-              <span className="hidden sm:inline">Studio</span>
-            </Link>
-            <Link
-              href="/connectors"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-            >
-              <Plug className="size-4" />
-              <span className="hidden sm:inline">Connectors</span>
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMemoryOpen(true)}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-            >
-              <Brain className="size-4" />
-              <span className="hidden sm:inline">Memory</span>
-            </button>
-            <Link
-              href="/desk"
-              className="hidden text-sm text-muted-foreground transition hover:text-foreground sm:block"
-            >
-              Open desk
-            </Link>
-            <span
-              className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
-              title={`${userName} · ${userEmail}`}
-            >
-              {(userName || userEmail || "?").slice(0, 1).toUpperCase()}
-            </span>
           </div>
         </header>
 
@@ -908,7 +972,6 @@ export function ChatApp({
                   ))}
                 </div>
               ) : null}
-              <div className="flex items-end gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -922,46 +985,6 @@ export function ChatApp({
                   event.target.value = "";
                 }}
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-9 shrink-0 rounded-full"
-                aria-label="Attach photos or files"
-                disabled={streaming || pendingAttachments.length >= COMPOSER_MAX_ATTACHMENTS}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Paperclip className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant={recording ? "destructive" : "ghost"}
-                className="size-9 shrink-0 rounded-full"
-                aria-label={recording ? "Stop recording" : "Record a voice note"}
-                disabled={streaming || transcribing}
-                onClick={() => void toggleRecording()}
-              >
-                {transcribing ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Mic className={`size-4 ${recording ? "animate-pulse" : ""}`} />
-                )}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={webSearch ? "secondary" : "ghost"}
-                className="h-9 shrink-0 gap-1.5 rounded-full px-3 text-xs"
-                aria-pressed={webSearch}
-                aria-label="Toggle web search"
-                title="Search the web for current information"
-                disabled={streaming}
-                onClick={() => setWebSearch((current) => !current)}
-              >
-                <Globe className="size-4" />
-                Search
-              </Button>
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -981,30 +1004,100 @@ export function ChatApp({
                       : "Ask anything"
                 }
                 aria-label="Message"
-                className="max-h-[200px] resize-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0"
+                className="max-h-[200px] w-full resize-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0"
               />
-              {streaming ? (
+              <div className="flex items-center gap-1.5 px-1 pt-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-muted"
+                    aria-label="Composer tools"
+                  >
+                    <Plus className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="start" className="w-64">
+                    <DropdownMenuCheckboxItem
+                      checked={webSearch}
+                      onCheckedChange={(checked) => setWebSearch(checked)}
+                      disabled={streaming}
+                    >
+                      <Globe className="size-4" />
+                      Search the web
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuItem
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={
+                        streaming ||
+                        pendingAttachments.length >= COMPOSER_MAX_ATTACHMENTS
+                      }
+                    >
+                      <Paperclip className="size-4" />
+                      Attach photo or file
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => void toggleRecording()}
+                      disabled={streaming || transcribing}
+                    >
+                      <Mic className="size-4" />
+                      {recording ? "Stop recording" : "Record audio"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/studio")}>
+                      <ImagePlus className="size-4" />
+                      Make an image
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   type="button"
                   size="icon"
-                  variant="secondary"
+                  variant={recording ? "destructive" : "ghost"}
                   className="size-9 shrink-0 rounded-full"
-                  aria-label="Stop generating"
-                  onClick={() => abortRef.current?.abort()}
+                  aria-label={recording ? "Stop recording" : "Record a voice note"}
+                  disabled={streaming || transcribing}
+                  onClick={() => void toggleRecording()}
                 >
-                  <Square className="size-4" />
+                  {transcribing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Mic className={`size-4 ${recording ? "animate-pulse" : ""}`} />
+                  )}
                 </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  size="icon"
-                  className="size-9 shrink-0 rounded-full"
-                  aria-label="Send message"
-                  disabled={!input.trim() && !hasUsableAttachment}
-                >
-                  <ArrowUp className="size-4" />
-                </Button>
-              )}
+                {webSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => setWebSearch(false)}
+                    disabled={streaming}
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-medium text-secondary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    aria-label="Turn off web search"
+                    title="Web search is on — tap to turn it off"
+                  >
+                    <Globe className="size-3.5" />
+                    Search on
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
+                <div className="flex-1" />
+                {streaming ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="size-9 shrink-0 rounded-full"
+                    aria-label="Stop generating"
+                    onClick={() => abortRef.current?.abort()}
+                  >
+                    <Square className="size-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="size-9 shrink-0 rounded-full"
+                    aria-label="Send message"
+                    disabled={!input.trim() && !hasUsableAttachment}
+                  >
+                    <ArrowUp className="size-4" />
+                  </Button>
+                )}
               </div>
             </div>
             <p className="mt-2 text-center text-xs text-muted-foreground">

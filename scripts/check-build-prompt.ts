@@ -46,10 +46,10 @@ assert.equal(content.action, "ad_angles_from_url");
 console.log("ok: every category maps to a real playbook (Content → Ads)");
 
 assert.equal(composerPlaceholder({ disabled: true }), "Create an agent first");
-assert.match(composerPlaceholder({}), /pick a job from \+/i);
+assert.match(composerPlaceholder({}), /add a message/i);
 assert.match(composerPlaceholder({ categoryId: "website" }), /landing page/i);
 assert.match(composerPlaceholder({ categoryId: "content" }), /ad angles/i);
-console.log("ok: default placeholder points at the + menu");
+console.log("ok: default placeholder is a plain message prompt");
 
 assert.deepEqual(resolveBuildPromptIntent({ categoryId: "website" }), {
   action: "build_website",

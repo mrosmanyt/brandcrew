@@ -7,7 +7,7 @@ export const BUILD_PROMPT_HEADLINE = "What should this desk make?";
 export const BUILD_PROMPT_SUBCOPY =
   "Name the job. The crew drafts it — you approve what leaves.";
 
-export const BUILD_PROMPT_DEFAULT_PLACEHOLDER = "Add a message, or pick a job from +.";
+export const BUILD_PROMPT_DEFAULT_PLACEHOLDER = "Add a message.";
 
 export type BuildPromptCategoryId =
   | "website"
