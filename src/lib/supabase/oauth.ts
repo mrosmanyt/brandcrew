@@ -1,7 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { appOrigin } from "@/lib/crypto-secret";
 import { sessionSecretBytes } from "@/lib/session-secret";
-import { safeNextPath, type GoogleLoginIntent } from "@/lib/google-auth-shared";
+import {
+  GOOGLE_WEB_CLIENT_ID,
+  safeNextPath,
+  type GoogleLoginIntent,
+} from "@/lib/google-auth-shared";
 import {
   isSupabaseAuthEnabled,
   supabaseAnonKey,
@@ -154,6 +158,7 @@ export async function supabaseGooglePublicStatus() {
       ? supabaseGoogleSetupHint()
       : "Google sign-in coming soon",
     redirectUri: `${appOrigin()}/auth/callback`,
+    clientId: GOOGLE_WEB_CLIENT_ID,
     scopes: ["openid", "email", "profile"],
     purpose: "user_login" as const,
     provider: "supabase" as const,

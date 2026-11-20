@@ -1,6 +1,17 @@
 export const GOOGLE_LOGIN_SCOPES = ["openid", "email", "profile"] as const;
 export const GOOGLE_LOGIN_CALLBACK_PATH = "/api/auth/google/callback";
 export const GOOGLE_LOGIN_START_PATH = "/api/auth/google";
+export const GOOGLE_ID_TOKEN_PATH = "/api/auth/google/id-token";
+
+/**
+ * Public Google OAuth Web client id ("Cinem Tech Web") for the on-page
+ * Google Identity Services flow. Client ids are public identifiers — they
+ * appear in every Google sign-in URL — and this flow never uses the client
+ * secret. NEXT_PUBLIC_GOOGLE_CLIENT_ID overrides the built-in client.
+ */
+export const GOOGLE_WEB_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ||
+  "1033190355059-bvgqpnan0tpbfncaoelcpn9fnik4ntvc.apps.googleusercontent.com";
 
 export type GoogleLoginIntent = "login" | "signup";
 
