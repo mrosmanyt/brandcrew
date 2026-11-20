@@ -1,36 +1,24 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { forbidden, redirect } from "next/navigation";
-import { BrandMark } from "@/components/brand/logo";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { DeskThemeToggle } from "@/components/desk/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { notFound, redirect } from "next/navigation";
+import { PanelShell } from "@/components/admin/panel/panel-shell";
 import { isAdminEmail } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
+
+/** Owner-only panel: never indexed, never advertised. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin");
-  if (!isAdminEmail(user.email)) forbidden();
+  // 404 (not 403) for signed-in non-admins: the panel stays invisible.
+  if (!isAdminEmail(user.email)) notFound();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <header className="flex h-12 items-center justify-between gap-3 border-b border-border px-4">
-        <Link href="/admin" className="flex items-center gap-2">
-          <BrandMark />
-          <span className="hidden text-xs text-muted-foreground sm:inline">Admin HQ</span>
-          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-            Internal
-          </span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/desk" />}>
-            Desk
-          </Button>
-          <DeskThemeToggle />
-        </div>
-      </header>
-      <AdminShell actorEmail={user.email}>{children}</AdminShell>
-    </div>
+    <PanelShell actorEmail={user.email} actorName={user.name}>
+      {children}
+    </PanelShell>
   );
 }
