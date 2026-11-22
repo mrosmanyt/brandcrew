@@ -29,6 +29,7 @@
     "test:console": "tsx scripts/check-console-site.ts",
     "test:usage": "tsx scripts/check-usage-series.ts",
     "test:limits": "tsx scripts/check-limits.ts",
+    "test:site-builder": "tsx scripts/check-site-builder.ts",
     "test:streaming-chat": "tsx scripts/check-streaming-chat.ts",
     "test:google-auth": "tsx scripts/check-google-auth.ts",
     "test:desk-theme": "tsx scripts/check-desk-theme.ts",

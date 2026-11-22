@@ -704,6 +704,10 @@ export function ChatApp({
               <Sparkles className="size-4" />
               Studio
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/build")}>
+              <Globe className="size-4" />
+              Website Builder
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/connectors")}>
               <Plug className="size-4" />
               Connectors

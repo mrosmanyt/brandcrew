@@ -54,6 +54,7 @@ model User {
   inviteRedemptionsSent   InviteRedemption[] @relation("InviterRedemptions")
   inviteRedemptionReceived InviteRedemption? @relation("InviteeRedemption")
   mobileCompanionPairs    MobileCompanionPair[]
+  siteProjects            SiteProject[]
   assistantWhatsAppLink   AssistantWhatsAppLink?
   assistantRemoteCommands AssistantRemoteCommand[]
   invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
@@ -118,6 +119,7 @@ model Workspace {
   supports           BrandSupport[]
   helpThreads        SupportThread[]
   mobileCompanionPairs MobileCompanionPair[]
+  siteProjects       SiteProject[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -261,14 +263,66 @@ model ChatConversation {
   title       String        @default("New chat")
   /// Last display-model id picked in the chat model picker.
   modelId     String?
+  /// Set when this conversation is the builder chat of a website project
+  /// (Package 11b). Null for ordinary chats.
+  siteProjectId String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  siteProject SiteProject?  @relation(fields: [siteProjectId], references: [id], onDelete: SetNull)
   messages    ChatMessage[]
 
   @@index([userId, updatedAt])
   @@index([workspaceId])
+  @@index([siteProjectId])
+}
+
+/// One website in the chat-product website builder (Package 11b).
+/// Publishing fields (subdomain, publishedVersionId) arrive with 11d.
+model SiteProject {
+  id               String        @id @default(cuid())
+  userId           String
+  workspaceId      String
+  title            String        @default("Untitled website")
+  /// restaurant | salon | shop | hotel | portfolio | blank (null = blank)
+  template         String?
+  /// draft — publishing states arrive with 11d.
+  status           String        @default("draft")
+  currentVersionId String?       @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace        Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  currentVersion   SiteVersion?  @relation("CurrentSiteVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions         SiteVersion[] @relation("ProjectVersions")
+  conversations    ChatConversation[]
+
+  @@index([userId, updatedAt])
+  @@index([workspaceId])
+}
+
+/// One saved generation/edit/restore of a SiteProject's single-page site.
+model SiteVersion {
+  id          String      @id @default(cuid())
+  projectId   String
+  version     Int
+  /// generate | edit | restore
+  kind        String      @default("generate")
+  /// The full self-contained HTML page.
+  html        String
+  /// The user instruction that produced this version ("" for restores
+  /// carries the restored-from note instead).
+  instruction String      @default("")
+  model       String      @default("")
+  provider    String      @default("")
+  tokens      Int         @default(0)
+  createdAt   DateTime    @default(now())
+  project     SiteProject @relation("ProjectVersions", fields: [projectId], references: [id], onDelete: Cascade)
+  currentOf   SiteProject? @relation("CurrentSiteVersion")
+
+  @@unique([projectId, version])
+  @@index([projectId, createdAt])
 }
 
 model ChatMessage {

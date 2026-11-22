@@ -57,6 +57,10 @@ import * as composioCallback from "./composio/callback";
 import * as crashReports from "./crash-reports";
 import * as funnel from "./funnel";
 import * as purchaseRequests from "./purchase-requests";
+import * as builderProjects from "./builder/projects";
+import * as builderProject from "./builder/project";
+import * as builderGenerate from "./builder/generate";
+import * as builderRestore from "./builder/restore";
 import * as imageGenerate from "./image/generate";
 import * as imageHistory from "./image/history";
 import * as imageShare from "./image/share";
@@ -141,6 +145,19 @@ export const API_ROUTES: RouteSpec[] = [
   { pattern: ["api", "crash-reports"], handlers: asHandlers(crashReports) },
   { pattern: ["api", "funnel"], handlers: asHandlers(funnel) },
   { pattern: ["api", "purchase-requests"], handlers: asHandlers(purchaseRequests) },
+  { pattern: ["api", "builder", "projects"], handlers: asHandlers(builderProjects) },
+  {
+    pattern: ["api", "builder", "projects", ":projectId"],
+    handlers: asHandlers(builderProject),
+  },
+  {
+    pattern: ["api", "builder", "projects", ":projectId", "generate"],
+    handlers: asHandlers(builderGenerate),
+  },
+  {
+    pattern: ["api", "builder", "projects", ":projectId", "restore"],
+    handlers: asHandlers(builderRestore),
+  },
   { pattern: ["api", "image", "generate"], handlers: asHandlers(imageGenerate) },
   { pattern: ["api", "image", "history"], handlers: asHandlers(imageHistory) },
   { pattern: ["api", "image", "share"], handlers: asHandlers(imageShare) },
