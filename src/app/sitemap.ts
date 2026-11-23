@@ -1,9 +1,18 @@
 import type { MetadataRoute } from "next";
 import { siteOrigin } from "@/lib/site";
+import { listPublishedSiteUrlsSafe } from "@/lib/site-builder";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteOrigin();
   const lastModified = new Date();
+  // Published builder sites (Package G) join the sitemap on their
+  // canonical subdomains. Fail-safe: no entries until tables exist.
+  const publishedSites = (await listPublishedSiteUrlsSafe()).map((entry) => ({
+    url: entry.url,
+    lastModified: entry.lastModified,
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
   return [
     { url: base, lastModified, changeFrequency: "weekly", priority: 1 },
     {
@@ -72,5 +81,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.4,
     },
+    ...publishedSites,
   ];
 }

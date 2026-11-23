@@ -113,6 +113,8 @@ type SiteSettings = {
   whatsappEnabled: boolean;
   language: string;
   products: SiteProduct[];
+  metaTitle: string | null;
+  metaDescription: string | null;
   whatsappLink: string | null;
 };
 
@@ -188,6 +190,8 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [waEnabled, setWaEnabled] = useState(true);
   const [siteLang, setSiteLang] = useState<string>("en");
   const [productsDraft, setProductsDraft] = useState<SiteProduct[]>([]);
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [creating, setCreating] = useState(false);
@@ -207,6 +211,8 @@ export function SiteBuilder({ userName }: { userName: string }) {
     setWaEnabled(data.settings?.whatsappEnabled ?? true);
     setSiteLang(data.settings?.language ?? "en");
     setProductsDraft(data.settings?.products ?? []);
+    setMetaTitle(data.settings?.metaTitle ?? "");
+    setMetaDescription(data.settings?.metaDescription ?? "");
     return data;
   }, []);
 
@@ -405,6 +411,9 @@ export function SiteBuilder({ userName }: { userName: string }) {
               imageAssetId: product.imageAssetId || undefined,
               note: product.note?.trim() ? product.note.trim() : undefined,
             })),
+          metaTitle: metaTitle.trim() === "" ? null : metaTitle.trim(),
+          metaDescription:
+            metaDescription.trim() === "" ? null : metaDescription.trim(),
         }),
       });
       await loadDetail(projectId);
@@ -422,6 +431,8 @@ export function SiteBuilder({ userName }: { userName: string }) {
     waEnabled,
     siteLang,
     productsDraft,
+    metaTitle,
+    metaDescription,
     loadDetail,
   ]);
 
@@ -1205,6 +1216,50 @@ export function SiteBuilder({ userName }: { userName: string }) {
                       Save settings
                     </Button>
                   </div>
+                </div>
+                <div className="mt-5 border-t border-border pt-4">
+                  <p className="text-sm font-medium">Google / SEO</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    How your site appears in Google search. Leave blank —
+                    we generate these from your site automatically. Your
+                    published site is also added to the sitemap on its
+                    own.
+                  </p>
+                  <label className="mt-3 block text-xs font-medium text-muted-foreground">
+                    Search title (max 70 characters)
+                    <input
+                      value={metaTitle}
+                      onChange={(event) => setMetaTitle(event.target.value)}
+                      maxLength={70}
+                      placeholder="e.g. Green Leaf Salon — Best Haircuts in Lahore"
+                      className="mt-1 w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none transition focus:border-ring"
+                    />
+                  </label>
+                  <label className="mt-3 block text-xs font-medium text-muted-foreground">
+                    Search description (max 200 characters)
+                    <textarea
+                      value={metaDescription}
+                      onChange={(event) =>
+                        setMetaDescription(event.target.value)
+                      }
+                      maxLength={200}
+                      rows={3}
+                      placeholder="One or two lines a customer sees under your title in Google."
+                      className="mt-1 w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none transition focus:border-ring"
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="mt-3"
+                    disabled={savingSettings || !projectId}
+                    onClick={() => void saveSettings()}
+                  >
+                    {savingSettings ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : null}
+                    Save settings
+                  </Button>
                 </div>
               </aside>
             ) : null}

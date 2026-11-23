@@ -758,6 +758,85 @@ export function siteProductsPromptBlock(input: {
   return lines.join("\n");
 }
 
+/* ------------------------------------------------------------------ */
+/* SEO basics (Package G). Generated pages already carry a title and   */
+/* meta description (design system rule); at serve time we normalize   */
+/* the full set — title, description, Open Graph, canonical — from     */
+/* the owner's overrides or sensible derivations, and published sites  */
+/* join the app sitemap.                                               */
+/* ------------------------------------------------------------------ */
+
+export function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+export function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Fallback meta description when the owner hasn't written one. */
+export function defaultSeoDescription(input: {
+  title: string;
+  templateLabel?: string;
+}): string {
+  const kind = input.templateLabel
+    ? ` — ${input.templateLabel.toLowerCase()} website`
+    : "";
+  return `${input.title}${kind}. Visit us online, see what we offer and get in touch — ordering and booking on WhatsApp.`.slice(
+    0,
+    200,
+  );
+}
+
+const MANAGED_META_PATTERN =
+  /<meta[^>]+(?:name\s*=\s*["']description["']|property\s*=\s*["']og:(?:title|description|type|url)["']|name\s*=\s*["']twitter:card["'])[^>]*>\s*/gi;
+
+/**
+ * Normalize a served page's SEO head: set the <title>, replace any
+ * existing managed meta tags with the canonical set (description,
+ * Open Graph, twitter card, canonical URL). Inserted right after the
+ * opening <head> tag; documents without a head get one prepended.
+ */
+export function injectSeoMeta(
+  html: string,
+  input: { title: string; description: string; canonicalUrl: string },
+): string {
+  const title = input.title.trim().slice(0, 70) || "Website";
+  const description = input.description.trim().slice(0, 200);
+  let out = html.replace(MANAGED_META_PATTERN, "");
+  const titleTag = `<title>${escapeHtmlText(title)}</title>`;
+  if (/<title>[\s\S]*?<\/title>/i.test(out)) {
+    out = out.replace(/<title>[\s\S]*?<\/title>/i, titleTag);
+  }
+  const meta = [
+    titleTag && !/<title>/i.test(out) ? titleTag : "",
+    description
+      ? `<meta name="description" content="${escapeHtmlAttr(description)}">`
+      : "",
+    `<meta property="og:title" content="${escapeHtmlAttr(title)}">`,
+    description
+      ? `<meta property="og:description" content="${escapeHtmlAttr(description)}">`
+      : "",
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:url" content="${escapeHtmlAttr(input.canonicalUrl)}">`,
+    `<meta name="twitter:card" content="summary">`,
+    `<link rel="canonical" href="${escapeHtmlAttr(input.canonicalUrl)}">`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  if (/<head[^>]*>/i.test(out)) {
+    return out.replace(/<head[^>]*>/i, (head) => `${head}\n${meta}`);
+  }
+  return `${meta}\n${out}`;
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

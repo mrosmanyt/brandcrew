@@ -15,7 +15,10 @@ import {
   applyWhatsAppButton,
   base64ByteSize,
   buildMultiPageDocument,
+  defaultSeoDescription,
   detectWhatsAppToggle,
+  escapeHtmlAttr,
+  injectSeoMeta,
   isSiteLanguage,
   normalizeWhatsAppNumber,
   parseSiteProducts,
@@ -353,5 +356,38 @@ assert.equal(
   JSON.parse(serializeSiteProducts([{ name: "Cap", price: "Rs 500" }]))[0].name,
   "Cap",
 );
+
+// --- SEO basics (Package G) ---
+assert.equal(escapeHtmlAttr('a"b&c<d>'), "a&quot;b&amp;c&lt;d&gt;");
+assert.ok(
+  defaultSeoDescription({ title: "Green Leaf", templateLabel: "Salon / Spa" })
+    .includes("Green Leaf"),
+);
+{
+  const page =
+    '<html><head><meta charset="utf-8"><title>Old</title><meta name="description" content="old desc"></head><body>Hi</body></html>';
+  const out = injectSeoMeta(page, {
+    title: "New Title",
+    description: "Fresh description",
+    canonicalUrl: "https://green-leaf.cinem.tech/",
+  });
+  assert.ok(out.includes("<title>New Title</title>"));
+  assert.ok(!out.includes("<title>Old</title>"));
+  assert.ok(out.includes('content="Fresh description"'));
+  assert.ok(!out.includes("old desc"));
+  assert.ok(out.includes('property="og:title" content="New Title"'));
+  assert.ok(
+    out.includes('<link rel="canonical" href="https://green-leaf.cinem.tech/">'),
+  );
+  assert.equal((out.match(/name="description"/g) ?? []).length, 1);
+  // No head at all → meta still lands at the top.
+  const bare = injectSeoMeta("<p>Hello</p>", {
+    title: "Bare",
+    description: "d",
+    canonicalUrl: "https://x.cinem.tech/",
+  });
+  assert.ok(bare.includes("<title>Bare</title>"));
+  assert.ok(bare.indexOf("<title>") < bare.indexOf("<p>Hello</p>"));
+}
 
 console.log("check-site-builder: all assertions passed");

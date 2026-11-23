@@ -345,6 +345,9 @@ model SiteSettings {
   /// Shop product list as JSON (Package F):
   /// [{ name, price, imageAssetId?, note? }] — orders go to WhatsApp.
   productsJson    String?
+  /// SEO overrides (Package G); blank = derived from the site itself.
+  metaTitle       String?
+  metaDescription String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   project         SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)

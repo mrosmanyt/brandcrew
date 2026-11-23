@@ -25,6 +25,8 @@ const patchSchema = z.object({
     )
     .max(30)
     .optional(),
+  metaTitle: z.string().trim().max(70).nullable().optional(),
+  metaDescription: z.string().trim().max(200).nullable().optional(),
 });
 
 export async function GET(_request: Request, context: Ctx) {
@@ -56,6 +58,8 @@ export async function PATCH(request: Request, context: Ctx) {
       whatsappEnabled: body.whatsappEnabled,
       language: body.language,
       products: body.products,
+      metaTitle: body.metaTitle,
+      metaDescription: body.metaDescription,
     });
     return jsonOk({ settings: serializeSiteSettings(settings) });
   } catch (error) {

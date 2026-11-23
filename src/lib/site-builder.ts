@@ -44,6 +44,7 @@ import {
   detectWhatsAppToggle,
   injectPreviewNav,
   SITE_PRODUCTS_MAX,
+  defaultSeoDescription,
   isSiteLanguage,
   normalizeWhatsAppNumber,
   parseMultiPageOutput,
@@ -510,6 +511,60 @@ export async function deleteSiteAsset(input: {
   }
 }
 
+/**
+ * Published-site URLs for the app sitemap (Package G): each live site's
+ * canonical subdomain home + its published pages. Fully fail-safe —
+ * any missing table just yields no entries.
+ */
+export async function listPublishedSiteUrlsSafe(): Promise<
+  { url: string; lastModified: Date }[]
+> {
+  try {
+    const publications = await prisma.sitePublication.findMany({
+      where: { isLive: true },
+      select: {
+        slug: true,
+        updatedAt: true,
+        versionId: true,
+      },
+    });
+    const entries: { url: string; lastModified: Date }[] = [];
+    for (const publication of publications) {
+      const base = publishedSiteUrl(publication.slug);
+      entries.push({ url: base, lastModified: publication.updatedAt });
+      const pages = await loadVersionPagesSafe(publication.versionId);
+      for (const page of pages) {
+        entries.push({
+          url: `${base}${page.path}`,
+          lastModified: publication.updatedAt,
+        });
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
+/** The SEO head values for a published page (Package G). */
+export function publishedPageSeo(input: {
+  settings: SiteSettingsData | null;
+  title: string;
+  templateLabel?: string;
+  canonicalUrl: string;
+}) {
+  return {
+    title: input.settings?.metaTitle?.trim() || input.title,
+    description:
+      input.settings?.metaDescription?.trim() ||
+      defaultSeoDescription({
+        title: input.title,
+        templateLabel: input.templateLabel,
+      }),
+    canonicalUrl: input.canonicalUrl,
+  };
+}
+
 /** Public raw read for the /site-assets/<id> route. Fail-safe null. */
 export async function getSiteAssetRaw(assetId: string) {
   try {
@@ -537,6 +592,8 @@ export type SiteSettingsData = {
   whatsappEnabled: boolean;
   language: SiteLanguage;
   products: SiteProduct[];
+  metaTitle: string | null;
+  metaDescription: string | null;
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
@@ -544,6 +601,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   whatsappEnabled: true,
   language: "en",
   products: [],
+  metaTitle: null,
+  metaDescription: null,
 };
 
 export function serializeSiteSettings(settings: SiteSettingsData) {
@@ -552,6 +611,8 @@ export function serializeSiteSettings(settings: SiteSettingsData) {
     whatsappEnabled: settings.whatsappEnabled,
     language: settings.language,
     products: settings.products,
+    metaTitle: settings.metaTitle,
+    metaDescription: settings.metaDescription,
     whatsappLink: settings.whatsappNumber
       ? whatsAppLink(settings.whatsappNumber)
       : null,
@@ -603,6 +664,22 @@ export async function getSiteSettingsSafe(
   } catch {
     /* column not applied yet — empty product list stands */
   }
+  // And the SEO columns (Package G).
+  try {
+    const row = await prisma.siteSettings.findUnique({
+      where: { projectId },
+      select: { metaTitle: true, metaDescription: true },
+    });
+    if (row) {
+      base = {
+        ...base,
+        metaTitle: row.metaTitle,
+        metaDescription: row.metaDescription,
+      };
+    }
+  } catch {
+    /* columns not applied yet — derived SEO stands */
+  }
   return base;
 }
 
@@ -613,6 +690,8 @@ export async function updateSiteSettings(input: {
   whatsappEnabled?: boolean;
   language?: SiteLanguage;
   products?: SiteProduct[];
+  metaTitle?: string | null;
+  metaDescription?: string | null;
 }): Promise<SiteSettingsData> {
   const project = await loadOwnedProject(input.userId, input.projectId);
   const data: {
@@ -620,6 +699,8 @@ export async function updateSiteSettings(input: {
     whatsappEnabled?: boolean;
     language?: string;
     productsJson?: string;
+    metaTitle?: string | null;
+    metaDescription?: string | null;
   } = {};
   if (input.whatsappNumber !== undefined) {
     if (input.whatsappNumber === null || input.whatsappNumber.trim() === "") {
@@ -654,6 +735,16 @@ export async function updateSiteSettings(input: {
     data.productsJson = serializeSiteProducts(
       parseSiteProducts(JSON.stringify(input.products)),
     );
+  }
+  if (input.metaTitle !== undefined) {
+    data.metaTitle = input.metaTitle?.trim()
+      ? input.metaTitle.trim().slice(0, 70)
+      : null;
+  }
+  if (input.metaDescription !== undefined) {
+    data.metaDescription = input.metaDescription?.trim()
+      ? input.metaDescription.trim().slice(0, 200)
+      : null;
   }
   try {
     const row = await prisma.siteSettings.upsert({
@@ -788,6 +879,20 @@ export async function generateSiteVersion(input: {
   });
   if (productsBlock) {
     promptBlocks.push("", productsBlock);
+  }
+  if (settings.metaTitle || settings.metaDescription) {
+    promptBlocks.push(
+      "",
+      [
+        "SEO: the owner set these exact search-engine values — use them verbatim:",
+        settings.metaTitle ? `<title>${settings.metaTitle}</title>` : "",
+        settings.metaDescription
+          ? `meta description: ${settings.metaDescription}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
   }
   if (!settings.whatsappEnabled) {
     promptBlocks.push(

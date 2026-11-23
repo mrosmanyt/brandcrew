@@ -1,11 +1,14 @@
 import { sanitizeBuilderPreviewHtml } from "@/lib/html-preview";
 import {
   applyWhatsAppButton,
+  injectSeoMeta,
   normalizeSitePagePath,
   publishedSitePath,
+  publishedSiteUrl,
   rewriteSiteLinks,
+  siteTemplateById,
 } from "@/lib/site-builder-pure";
-import { resolvePublishedSite } from "@/lib/site-builder";
+import { publishedPageSeo, resolvePublishedSite } from "@/lib/site-builder";
 
 /**
  * Serving for published builder sites (Package 11d). One entry point
@@ -61,13 +64,18 @@ export async function servePublishedSitePage(
   if (rawHtml === null) return siteNotFoundPage();
   const knownPaths = new Set(["", ...pages.map((page) => page.path)]);
   const base = publishedSitePath(slug);
-  const withButton = applyWhatsAppButton(
-    sanitizeBuilderPreviewHtml(rawHtml),
-    {
-      number: site.settings?.whatsappNumber ?? null,
-      enabled: site.settings?.whatsappEnabled ?? true,
-    },
-  );
+  const canonicalBase = publishedSiteUrl(slug);
+  const seo = publishedPageSeo({
+    settings: site.settings ?? null,
+    title: site.title,
+    templateLabel: siteTemplateById(site.template)?.label,
+    canonicalUrl: pagePath ? `${canonicalBase}${pagePath}` : canonicalBase,
+  });
+  const withSeo = injectSeoMeta(sanitizeBuilderPreviewHtml(rawHtml), seo);
+  const withButton = applyWhatsAppButton(withSeo, {
+    number: site.settings?.whatsappNumber ?? null,
+    enabled: site.settings?.whatsappEnabled ?? true,
+  });
   const html = rewriteSiteLinks(
     withButton,
     (path) => (path ? `${base}/${path}` : base),
