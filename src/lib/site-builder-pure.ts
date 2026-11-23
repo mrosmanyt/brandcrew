@@ -837,6 +837,19 @@ export function injectSeoMeta(
   return `${meta}\n${out}`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Visitor counter (Package H). Deliberately simple: one row per       */
+/* served page view, obvious bots excluded, nothing personal stored.   */
+/* ------------------------------------------------------------------ */
+
+const BOT_UA_PATTERN =
+  /(bot|crawler|spider|crawling|preview|headless|lighthouse|pingdom|uptimerobot|statuscake|facebookexternalhit|whatsapp\/|telegrambot|slackbot|discordbot)/i;
+
+export function isBotUserAgent(userAgent: string | null | undefined): boolean {
+  if (!userAgent) return true;
+  return BOT_UA_PATTERN.test(userAgent);
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

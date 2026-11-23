@@ -299,6 +299,7 @@ model SiteProject {
   publication      SitePublication?
   assets           SiteAsset[]
   settings         SiteSettings?
+  visits           SiteVisit[]
   conversations    ChatConversation[]
 
   @@index([userId, updatedAt])
@@ -410,6 +411,20 @@ model SiteAsset {
   dataBase64 String
   createdAt  DateTime    @default(now())
   project    SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
+
+/// One row per served page view of a published site (Package H) — the
+/// simple visitor counter the owner sees in the builder. Bots are
+/// filtered at insert time; no personal data is stored.
+model SiteVisit {
+  id        String      @id @default(cuid())
+  projectId String
+  /// Site-relative page path ("" = home).
+  path      String      @default("")
+  createdAt DateTime    @default(now())
+  project   SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
 }

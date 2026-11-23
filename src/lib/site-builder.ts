@@ -45,6 +45,7 @@ import {
   injectPreviewNav,
   SITE_PRODUCTS_MAX,
   defaultSeoDescription,
+  isBotUserAgent,
   isSiteLanguage,
   normalizeWhatsAppNumber,
   parseMultiPageOutput,
@@ -243,9 +244,11 @@ export async function getSiteProjectDetail(userId: string, projectId: string) {
   const currentPages = current ? await loadVersionPagesSafe(current.id) : [];
   const assets = await listSiteAssetsSafe(project.id);
   const settings = await getSiteSettingsSafe(project.id);
+  const visits = await countSiteVisitsSafe(project.id);
   return {
     project: serializeSiteProject(project),
     publication,
+    visits,
     settings: serializeSiteSettings(settings),
     assets: assets.map(serializeSiteAsset),
     versions: versions.map(serializeSiteVersion),
@@ -563,6 +566,34 @@ export function publishedPageSeo(input: {
       }),
     canonicalUrl: input.canonicalUrl,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Visitor counter (Package H). Recording never fails a page serve;    */
+/* counting degrades to 0 until the table lands on the runtime DB.     */
+/* ------------------------------------------------------------------ */
+
+export async function recordSiteVisitSafe(input: {
+  projectId: string;
+  path: string;
+  userAgent: string | null;
+}): Promise<void> {
+  if (isBotUserAgent(input.userAgent)) return;
+  try {
+    await prisma.siteVisit.create({
+      data: { projectId: input.projectId, path: input.path.slice(0, 200) },
+    });
+  } catch {
+    /* table not applied yet / transient — a serve must never fail */
+  }
+}
+
+export async function countSiteVisitsSafe(projectId: string): Promise<number> {
+  try {
+    return await prisma.siteVisit.count({ where: { projectId } });
+  } catch {
+    return 0;
+  }
 }
 
 /** Public raw read for the /site-assets/<id> route. Fail-safe null. */

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ExternalLink,
+  Eye,
   Globe,
   History,
   ImagePlus,
@@ -137,6 +138,7 @@ type SiteAsset = {
 type ProjectDetail = {
   project: SiteProject;
   publication: SitePublication | null;
+  visits: number;
   settings: SiteSettings;
   assets: SiteAsset[];
   versions: SiteVersion[];
@@ -817,6 +819,14 @@ export function SiteBuilder({ userName }: { userName: string }) {
                     Live · {detail.publication.slug}.cinem.tech
                     <ExternalLink className="size-3" />
                   </a>
+                  <span
+                    className="hidden items-center gap-1 text-xs text-muted-foreground md:inline-flex"
+                    title="Total visits to your published site"
+                  >
+                    <Eye className="size-3.5" />
+                    {detail.visits} {detail.visits === 1 ? "visit" : "visits"}{" "}
+                    so far
+                  </span>
                   {!detail.publication.liveIsCurrent ? (
                     <Button
                       type="button"

@@ -19,6 +19,7 @@ import {
   detectWhatsAppToggle,
   escapeHtmlAttr,
   injectSeoMeta,
+  isBotUserAgent,
   isSiteLanguage,
   normalizeWhatsAppNumber,
   parseSiteProducts,
@@ -389,5 +390,18 @@ assert.ok(
   assert.ok(bare.includes("<title>Bare</title>"));
   assert.ok(bare.indexOf("<title>") < bare.indexOf("<p>Hello</p>"));
 }
+
+// --- Visitor counter (Package H) ---
+assert.equal(
+  isBotUserAgent(
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+  ),
+  false,
+);
+assert.equal(isBotUserAgent("Mozilla/5.0 (compatible; Googlebot/2.1)"), true);
+assert.equal(isBotUserAgent("facebookexternalhit/1.1"), true);
+assert.equal(isBotUserAgent("WhatsApp/2.24.1.78 A"), true);
+assert.equal(isBotUserAgent(""), true);
+assert.equal(isBotUserAgent(null), true);
 
 console.log("check-site-builder: all assertions passed");
