@@ -9,8 +9,10 @@ import {
   sanitizePreviewHtml,
 } from "../src/lib/html-preview";
 import {
+  SITE_ASSET_MAX_BYTES,
   SITE_PROJECT_CAPS,
   SITE_TEMPLATES,
+  base64ByteSize,
   buildMultiPageDocument,
   buildPreviewShellHtml,
   injectPreviewNav,
@@ -23,6 +25,8 @@ import {
   publishedSitePath,
   publishedSiteUrl,
   rewriteSiteLinks,
+  siteAssetUrl,
+  siteAssetValidationError,
   siteProjectCapForPlan,
   siteSlugFromHost,
   siteTemplateById,
@@ -213,5 +217,26 @@ assert.ok(shell.includes('sandbox="allow-scripts"'));
 assert.ok(shell.includes("About"));
 assert.ok(shell.includes("cinemGoto"));
 assert.ok(!shell.includes("</script>\n\"/about\""), "payload is escaped");
+
+// --- Uploaded photos/logos (Package C) ---
+assert.equal(siteAssetUrl("abc123"), "/site-assets/abc123");
+assert.equal(base64ByteSize(""), 0);
+assert.equal(base64ByteSize("AAAA"), 3);
+assert.equal(base64ByteSize("AAA="), 2);
+assert.equal(base64ByteSize("AA=="), 1);
+assert.equal(
+  siteAssetValidationError({ mimeType: "image/png", sizeBytes: 1000 }),
+  null,
+);
+assert.ok(
+  siteAssetValidationError({ mimeType: "image/svg+xml", sizeBytes: 1000 }),
+);
+assert.ok(siteAssetValidationError({ mimeType: "image/png", sizeBytes: 0 }));
+assert.ok(
+  siteAssetValidationError({
+    mimeType: "image/png",
+    sizeBytes: SITE_ASSET_MAX_BYTES + 1,
+  }),
+);
 
 console.log("check-site-builder: all assertions passed");

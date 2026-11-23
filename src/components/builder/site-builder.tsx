@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Globe,
   History,
+  ImagePlus,
   Loader2,
   Monitor,
   Plus,
@@ -15,6 +16,7 @@ import {
   Send,
   Smartphone,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,9 +99,19 @@ type BuilderMessage = {
   createdAt: string;
 };
 
+type SiteAsset = {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+  createdAt: string;
+};
+
 type ProjectDetail = {
   project: SiteProject;
   publication: SitePublication | null;
+  assets: SiteAsset[];
   versions: SiteVersion[];
   currentVersionId: string | null;
   pages: Array<{ path: string; title: string }>;
@@ -143,6 +155,9 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [draft, setDraft] = useState("");
   const [device, setDevice] = useState<"desktop" | "phone">("desktop");
   const [showVersions, setShowVersions] = useState(false);
+  const [showAssets, setShowAssets] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const assetInputRef = useRef<HTMLInputElement>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [creating, setCreating] = useState(false);
   const [activePage, setActivePage] = useState("/");
@@ -272,6 +287,51 @@ export function SiteBuilder({ userName }: { userName: string }) {
     if (details.length) lines.push(`Details from the owner: ${details.join(" ")}`);
     void send(lines.join("\n\n"));
   }, [activeTemplate, bizName, colour, contact, send]);
+
+  const uploadAsset = useCallback(
+    async (file: File) => {
+      if (!projectId || uploading) return;
+      setUploading(true);
+      setError("");
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("Could not read that file."));
+          reader.readAsDataURL(file);
+        });
+        const base64 = dataUrl.split(",")[1] ?? "";
+        await api(`/api/builder/projects/${projectId}/assets`, {
+          method: "POST",
+          body: JSON.stringify({
+            name: file.name,
+            mimeType: file.type,
+            dataBase64: base64,
+          }),
+        });
+        await loadDetail(projectId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed. Try again.");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [projectId, uploading, loadDetail],
+  );
+
+  const deleteAsset = useCallback(
+    async (assetId: string) => {
+      if (!projectId || busy) return;
+      setError("");
+      try {
+        await api(`/api/builder/assets/${assetId}`, { method: "DELETE" });
+        await loadDetail(projectId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Delete failed. Try again.");
+      }
+    },
+    [projectId, busy, loadDetail],
+  );
 
   const [publishing, setPublishing] = useState(false);
 
@@ -686,14 +746,30 @@ export function SiteBuilder({ userName }: { userName: string }) {
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowVersions((value) => !value)}
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              <History className="size-4" /> Versions
-              {detail ? ` (${detail.versions.length})` : ""}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAssets((value) => !value);
+                  setShowVersions(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <ImagePlus className="size-4" /> Photos
+                {detail ? ` (${detail.assets.length})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVersions((value) => !value);
+                  setShowAssets(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <History className="size-4" /> Versions
+                {detail ? ` (${detail.versions.length})` : ""}
+              </button>
+            </div>
           </div>
 
           {(detail?.pages.length ?? 0) > 1 ? (
@@ -742,6 +818,81 @@ export function SiteBuilder({ userName }: { userName: string }) {
                 </div>
               )}
             </div>
+
+            {showAssets ? (
+              <aside className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-border p-3">
+                <h3 className="text-sm font-semibold">Photos &amp; logo</h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Upload your logo and photos, then mention them in the
+                  chat — “use my logo in the header”, “put the shop photo
+                  on the home page”. JPG, PNG, WebP or GIF, up to 3.5 MB
+                  each.
+                </p>
+                <input
+                  ref={assetInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void uploadAsset(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  disabled={uploading || !projectId}
+                  onClick={() => assetInputRef.current?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <ImagePlus className="size-3.5" />
+                  )}
+                  Upload a photo
+                </Button>
+                <div className="mt-3 flex flex-col gap-2">
+                  {(detail?.assets ?? []).map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="flex items-center gap-2 rounded-lg border border-border p-2"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={asset.url}
+                        alt={asset.name}
+                        className="size-10 shrink-0 rounded object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium">
+                          {asset.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {Math.max(1, Math.round(asset.sizeBytes / 1024))} KB
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${asset.name}`}
+                        disabled={busy}
+                        onClick={() => void deleteAsset(asset.id)}
+                        className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:opacity-50"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {(detail?.assets ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No photos yet.
+                    </p>
+                  ) : null}
+                </div>
+              </aside>
+            ) : null}
 
             {showVersions ? (
               <aside className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-border p-3">

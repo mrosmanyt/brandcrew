@@ -297,6 +297,7 @@ model SiteProject {
   currentVersion   SiteVersion?  @relation("CurrentSiteVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
   versions         SiteVersion[] @relation("ProjectVersions")
   publication      SitePublication?
+  assets           SiteAsset[]
   conversations    ChatConversation[]
 
   @@index([userId, updatedAt])
@@ -367,6 +368,26 @@ model SitePage {
 
   @@unique([versionId, path])
   @@index([versionId, sort])
+}
+
+/// Uploaded photos/logos for a site (Package C). Storage follows the
+/// app's established attachment pattern — base64 in the database (cf.
+/// ChatMessage.attachments, ImageGenAsyncResult.imageData); no object
+/// storage is configured in this project. Served publicly at
+/// /site-assets/<id> (unguessable cuid) so generated pages and the
+/// published site can reference them.
+model SiteAsset {
+  id         String      @id @default(cuid())
+  projectId  String
+  userId     String
+  name       String
+  mimeType   String
+  sizeBytes  Int
+  dataBase64 String
+  createdAt  DateTime    @default(now())
+  project    SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
 }
 
 model ChatMessage {

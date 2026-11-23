@@ -499,6 +499,50 @@ render(${entry});
 </body></html>`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Uploaded site photos/logos (Package C). Caps mirror the chat        */
+/* attachment rules (single image ≤ 3.5 MB) so the whole app treats    */
+/* uploads one way.                                                    */
+/* ------------------------------------------------------------------ */
+
+export const SITE_ASSET_MAX_BYTES = 3_500_000;
+export const SITE_ASSET_MAX_PER_PROJECT = 12;
+export const SITE_ASSET_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
+
+export function siteAssetUrl(assetId: string): string {
+  return `/site-assets/${assetId}`;
+}
+
+/** Decoded byte size of a base64 payload (no decoding needed). */
+export function base64ByteSize(dataBase64: string): number {
+  const clean = dataBase64.replace(/\s+/g, "");
+  if (clean.length === 0) return 0;
+  const padding = clean.endsWith("==") ? 2 : clean.endsWith("=") ? 1 : 0;
+  return Math.floor((clean.length * 3) / 4) - padding;
+}
+
+/** Null when the upload is acceptable, otherwise the user-facing reason. */
+export function siteAssetValidationError(input: {
+  mimeType: string;
+  sizeBytes: number;
+}): string | null {
+  if (
+    !(SITE_ASSET_MIME_TYPES as readonly string[]).includes(input.mimeType)
+  ) {
+    return "That file type is not supported — use a JPG, PNG, WebP or GIF image.";
+  }
+  if (input.sizeBytes <= 0) return "That file looks empty.";
+  if (input.sizeBytes > SITE_ASSET_MAX_BYTES) {
+    return "That image is too large — the limit is 3.5 MB per photo.";
+  }
+  return null;
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

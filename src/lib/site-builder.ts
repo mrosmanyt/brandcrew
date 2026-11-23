@@ -31,17 +31,21 @@ export {
   type SiteTemplate,
 } from "@/lib/site-builder-pure";
 import {
+  SITE_ASSET_MAX_PER_PROJECT,
   SITE_BUILDER_NOT_CONFIGURED_MESSAGE,
   SITE_GENERATION_TOKEN_CEILING,
   SITE_HTML_MAX_CHARS,
   SITE_MULTIPAGE_MAX_CHARS,
   SITE_TEMPLATES,
+  base64ByteSize,
   buildMultiPageDocument,
   buildPreviewShellHtml,
   injectPreviewNav,
   parseMultiPageOutput,
   pickSiteSlug,
   publishedSiteUrl,
+  siteAssetUrl,
+  siteAssetValidationError,
   siteProjectCapForPlan,
   siteTemplateById,
   slugifySiteTitle,
@@ -224,9 +228,11 @@ export async function getSiteProjectDetail(userId: string, projectId: string) {
     project.currentVersionId,
   );
   const currentPages = current ? await loadVersionPagesSafe(current.id) : [];
+  const assets = await listSiteAssetsSafe(project.id);
   return {
     project: serializeSiteProject(project),
     publication,
+    assets: assets.map(serializeSiteAsset),
     versions: versions.map(serializeSiteVersion),
     currentVersionId: current?.id ?? null,
     pages:
@@ -368,6 +374,137 @@ async function saveVersionPages(
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Uploaded photos/logos (Package C). Reads are fail-safe like the     */
+/* other post-v1 tables; writes surface the honest setup error.        */
+/* ------------------------------------------------------------------ */
+
+const ASSETS_SETUP_MESSAGE =
+  "Photo uploads are still being set up on this server. Try again in a little while.";
+
+type SiteAssetRow = {
+  id: string;
+  projectId: string;
+  userId: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: Date;
+};
+
+export function serializeSiteAsset(row: SiteAssetRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
+    url: siteAssetUrl(row.id),
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export async function listSiteAssetsSafe(
+  projectId: string,
+): Promise<SiteAssetRow[]> {
+  try {
+    return (await prisma.siteAsset.findMany({
+      where: { projectId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        projectId: true,
+        userId: true,
+        name: true,
+        mimeType: true,
+        sizeBytes: true,
+        createdAt: true,
+      },
+    })) as SiteAssetRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function uploadSiteAsset(input: {
+  userId: string;
+  projectId: string;
+  name: string;
+  mimeType: string;
+  dataBase64: string;
+}) {
+  const project = await loadOwnedProject(input.userId, input.projectId);
+  const dataBase64 = input.dataBase64.replace(/\s+/g, "");
+  const sizeBytes = base64ByteSize(dataBase64);
+  const invalid = siteAssetValidationError({
+    mimeType: input.mimeType,
+    sizeBytes,
+  });
+  if (invalid) throw new ClientError(invalid, 400, "invalid_request");
+  try {
+    const count = await prisma.siteAsset.count({
+      where: { projectId: project.id },
+    });
+    if (count >= SITE_ASSET_MAX_PER_PROJECT) {
+      throw new ClientError(
+        `A website can keep up to ${SITE_ASSET_MAX_PER_PROJECT} uploaded photos. Delete one to add another.`,
+        400,
+        "invalid_request",
+      );
+    }
+    const row = (await prisma.siteAsset.create({
+      data: {
+        projectId: project.id,
+        userId: input.userId,
+        name: input.name.trim().slice(0, 120) || "Photo",
+        mimeType: input.mimeType,
+        sizeBytes,
+        dataBase64,
+      },
+    })) as SiteAssetRow;
+    return serializeSiteAsset(row);
+  } catch (error) {
+    if (error instanceof ClientError) throw error;
+    if (isMissingRelationError(error)) {
+      throw new ClientError(ASSETS_SETUP_MESSAGE, 503, "not_configured");
+    }
+    throw error;
+  }
+}
+
+export async function deleteSiteAsset(input: {
+  userId: string;
+  assetId: string;
+}) {
+  try {
+    const row = await prisma.siteAsset.findFirst({
+      where: { id: input.assetId, userId: input.userId },
+      select: { id: true },
+    });
+    if (!row) throw new ClientError("Photo not found.", 404, "not_found");
+    await prisma.siteAsset.delete({ where: { id: row.id } });
+    return { deleted: true };
+  } catch (error) {
+    if (error instanceof ClientError) throw error;
+    if (isMissingRelationError(error)) {
+      throw new ClientError(ASSETS_SETUP_MESSAGE, 503, "not_configured");
+    }
+    throw error;
+  }
+}
+
+/** Public raw read for the /site-assets/<id> route. Fail-safe null. */
+export async function getSiteAssetRaw(assetId: string) {
+  try {
+    const row = await prisma.siteAsset.findUnique({
+      where: { id: assetId },
+      select: { mimeType: true, dataBase64: true },
+    });
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateSiteVersion(input: {
   userId: string;
   userName: string;
@@ -426,13 +563,29 @@ export async function generateSiteVersion(input: {
       ? `${instruction}\n\nTemplate design direction (${template.label}) — follow it for palette, layout and section order: ${template.designDirection}`
       : instruction;
 
+  // Uploaded photos/logos (Package C): hand the model the exact URLs so
+  // "use my logo" works — generated pages reference /site-assets/<id>,
+  // which resolves in the preview and on the published site alike.
+  const assets = await listSiteAssetsSafe(project.id);
+  const finalPrompt =
+    assets.length > 0
+      ? [
+          prompt,
+          "",
+          "The owner has uploaded these images for this website — use these exact URLs in <img src> wherever the owner mentions them or they naturally fit (logo in the header, photos in the gallery, product photos):",
+          ...assets.map(
+            (asset) => `- ${asset.name}: ${siteAssetUrl(asset.id)}`,
+          ),
+        ].join("\n")
+      : prompt;
+
   const result = await runWithLlmRouting(
     { workspaceId: workspace.id, plan: workspace.plan, budgetMode: "llm" },
     () =>
       generateBuilderArtifact({
         kind: "website",
         kit,
-        prompt,
+        prompt: finalPrompt,
         agentInstructions: DESIGN_SYSTEM_INSTRUCTIONS,
       }),
   );
