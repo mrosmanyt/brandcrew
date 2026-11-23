@@ -607,6 +607,56 @@ export function detectWhatsAppToggle(
   return null;
 }
 
+/* ------------------------------------------------------------------ */
+/* Site content language (Package E). The owner describes the site in  */
+/* any language; the SITE's language is their explicit choice, built   */
+/* on the app's chat language modes (en / ur / roman-ur) plus a mixed  */
+/* option. Urdu means Urdu — Arabic script or Roman — never Hindi.     */
+/* ------------------------------------------------------------------ */
+
+export const SITE_LANGUAGES = [
+  { id: "en", label: "English" },
+  { id: "ur", label: "Urdu — اردو" },
+  { id: "roman-ur", label: "Roman Urdu" },
+  { id: "mixed", label: "Mixed — English + Urdu" },
+] as const;
+
+export type SiteLanguage = (typeof SITE_LANGUAGES)[number]["id"];
+
+export function isSiteLanguage(value: unknown): value is SiteLanguage {
+  return SITE_LANGUAGES.some((row) => row.id === value);
+}
+
+/**
+ * The generation instruction for the chosen site language; null for
+ * English (the base behaviour). Also steers the builder's own reply so
+ * the conversation stays in the owner's language.
+ */
+export function siteLanguagePromptBlock(language: SiteLanguage): string | null {
+  switch (language) {
+    case "ur":
+      return [
+        "Site language: Urdu. Write ALL visible website content — headings, paragraphs, buttons, labels, footer — in Urdu (Arabic script), right-to-left where appropriate (set dir=\"rtl\" lang=\"ur\" on the html element). Keep the business name, phone numbers and prices exactly as given.",
+        "Urdu means Urdu: never use Hindi or Devanagari script anywhere.",
+        "Write your short reply to the owner in Urdu (Arabic script) too.",
+      ].join("\n");
+    case "roman-ur":
+      return [
+        "Site language: Roman Urdu. Write ALL visible website content — headings, paragraphs, buttons, labels, footer — in Roman Urdu (Urdu written in Latin letters, the way Pakistanis type on WhatsApp, e.g. “Hamari dukaan mein khush aamdeed — behtareen quality, munasib qeemat”). Keep the business name, phone numbers and prices exactly as given.",
+        "Roman Urdu means Urdu in Latin letters: never use Hindi or Devanagari script anywhere.",
+        "Write your short reply to the owner in Roman Urdu too.",
+      ].join("\n");
+    case "mixed":
+      return [
+        "Site language: mixed. Main headings and navigation in English; supporting descriptions, offers and calls-to-action in Roman Urdu (Urdu in Latin letters) woven in naturally — the way Pakistani businesses actually write. Keep the business name, phone numbers and prices exactly as given.",
+        "Never use Hindi or Devanagari script anywhere.",
+        "Write your short reply to the owner in Roman Urdu mixed with English.",
+      ].join("\n");
+    default:
+      return null;
+  }
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

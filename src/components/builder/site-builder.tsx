@@ -104,8 +104,16 @@ type BuilderMessage = {
 type SiteSettings = {
   whatsappNumber: string | null;
   whatsappEnabled: boolean;
+  language: string;
   whatsappLink: string | null;
 };
+
+const SITE_LANGUAGE_OPTIONS = [
+  { id: "en", label: "English" },
+  { id: "ur", label: "Urdu — اردو" },
+  { id: "roman-ur", label: "Roman Urdu" },
+  { id: "mixed", label: "Mixed — English + Urdu" },
+] as const;
 
 type SiteAsset = {
   id: string;
@@ -170,6 +178,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [showSettings, setShowSettings] = useState(false);
   const [waNumber, setWaNumber] = useState("");
   const [waEnabled, setWaEnabled] = useState(true);
+  const [siteLang, setSiteLang] = useState<string>("en");
   const [savingSettings, setSavingSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [creating, setCreating] = useState(false);
@@ -187,6 +196,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
     setDetail(data);
     setWaNumber(data.settings?.whatsappNumber ?? "");
     setWaEnabled(data.settings?.whatsappEnabled ?? true);
+    setSiteLang(data.settings?.language ?? "en");
     return data;
   }, []);
 
@@ -276,6 +286,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [bizName, setBizName] = useState("");
   const [colour, setColour] = useState<string>(COLOUR_CHOICES[0]);
   const [contact, setContact] = useState("");
+  const [detailsLang, setDetailsLang] = useState<string>("en");
 
   const activeTemplate = (status?.templates ?? []).find(
     (row) => row.id === detail?.project.template,
@@ -308,9 +319,17 @@ export function SiteBuilder({ userName }: { userName: string }) {
         }).catch(() => undefined);
       }
     }
+    if (detailsLang !== "en" && projectId) {
+      // Persist the site language (Package E) so every later build and
+      // edit keeps it; the language block in generation does the rest.
+      void api(`/api/builder/projects/${projectId}/settings`, {
+        method: "PATCH",
+        body: JSON.stringify({ language: detailsLang }),
+      }).catch(() => undefined);
+    }
     if (details.length) lines.push(`Details from the owner: ${details.join(" ")}`);
     void send(lines.join("\n\n"));
-  }, [activeTemplate, bizName, colour, contact, send, projectId]);
+  }, [activeTemplate, bizName, colour, contact, detailsLang, send, projectId]);
 
   const uploadAsset = useCallback(
     async (file: File) => {
@@ -367,6 +386,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
         body: JSON.stringify({
           whatsappNumber: waNumber.trim() === "" ? null : waNumber.trim(),
           whatsappEnabled: waEnabled,
+          language: siteLang,
         }),
       });
       await loadDetail(projectId);
@@ -377,7 +397,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
     } finally {
       setSavingSettings(false);
     }
-  }, [projectId, savingSettings, waNumber, waEnabled, loadDetail]);
+  }, [projectId, savingSettings, waNumber, waEnabled, siteLang, loadDetail]);
 
   const [publishing, setPublishing] = useState(false);
 
@@ -599,7 +619,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
                 <div className="shrink-0 border-t border-border bg-muted/40 p-3">
                   <p className="text-sm font-medium">
                     Before I build your {activeTemplate.label.toLowerCase()} site —
-                    three quick details
+                    a few quick details
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     These change the result more than anything else. Skip any
@@ -632,6 +652,18 @@ export function SiteBuilder({ userName }: { userName: string }) {
                       placeholder="WhatsApp / phone — for booking & call buttons"
                       className="rounded-md border border-border bg-background px-2.5 py-2 text-sm"
                     />
+                    <select
+                      value={detailsLang}
+                      onChange={(event) => setDetailsLang(event.target.value)}
+                      className="rounded-md border border-border bg-background px-2.5 py-2 text-sm"
+                      aria-label="Site language"
+                    >
+                      {SITE_LANGUAGE_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {`Site language — ${option.label}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="mt-2.5 flex items-center gap-2">
                     <Button
@@ -985,6 +1017,25 @@ export function SiteBuilder({ userName }: { userName: string }) {
                       className="mt-1 w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none transition focus:border-ring"
                     />
                   </label>
+                </div>
+                <div className="mt-5 border-t border-border pt-4">
+                  <p className="text-sm font-medium">Site language</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    The language your website itself is written in. You
+                    can describe changes in any language — Urdu, Roman
+                    Urdu or English.
+                  </p>
+                  <select
+                    value={siteLang}
+                    onChange={(event) => setSiteLang(event.target.value)}
+                    className="mt-2 w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none transition focus:border-ring"
+                  >
+                    {SITE_LANGUAGE_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                   <Button
                     type="button"
                     size="sm"
@@ -997,6 +1048,11 @@ export function SiteBuilder({ userName }: { userName: string }) {
                     ) : null}
                     Save settings
                   </Button>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    After saving, ask in the chat for a rebuild (e.g.
+                    “site ko isi language mein dobara banao”) to rewrite
+                    the current pages.
+                  </p>
                 </div>
               </aside>
             ) : null}

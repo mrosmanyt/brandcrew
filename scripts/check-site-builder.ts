@@ -16,6 +16,7 @@ import {
   base64ByteSize,
   buildMultiPageDocument,
   detectWhatsAppToggle,
+  isSiteLanguage,
   normalizeWhatsAppNumber,
   buildPreviewShellHtml,
   injectPreviewNav,
@@ -30,6 +31,7 @@ import {
   rewriteSiteLinks,
   siteAssetUrl,
   siteAssetValidationError,
+  siteLanguagePromptBlock,
   siteProjectCapForPlan,
   whatsAppLink,
   siteSlugFromHost,
@@ -281,5 +283,23 @@ assert.equal(detectWhatsAppToggle("WhatsApp button laga do"), "on");
 assert.equal(detectWhatsAppToggle("add a WhatsApp order button"), "on");
 assert.equal(detectWhatsAppToggle("make the hero section bigger"), null);
 assert.equal(detectWhatsAppToggle("WhatsApp number change kar do"), null);
+
+// --- Site language (Package E) ---
+assert.equal(isSiteLanguage("ur"), true);
+assert.equal(isSiteLanguage("roman-ur"), true);
+assert.equal(isSiteLanguage("mixed"), true);
+assert.equal(isSiteLanguage("hi"), false);
+assert.equal(isSiteLanguage("hindi"), false);
+assert.equal(siteLanguagePromptBlock("en"), null);
+{
+  const ur = siteLanguagePromptBlock("ur");
+  assert.ok(ur && ur.includes("Urdu"));
+  assert.ok(ur && /never use Hindi/i.test(ur));
+  const roman = siteLanguagePromptBlock("roman-ur");
+  assert.ok(roman && roman.includes("Roman Urdu"));
+  assert.ok(roman && /never use Hindi/i.test(roman));
+  const mixed = siteLanguagePromptBlock("mixed");
+  assert.ok(mixed && mixed.includes("Roman Urdu"));
+}
 
 console.log("check-site-builder: all assertions passed");

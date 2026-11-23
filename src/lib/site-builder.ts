@@ -43,16 +43,19 @@ import {
   buildPreviewShellHtml,
   detectWhatsAppToggle,
   injectPreviewNav,
+  isSiteLanguage,
   normalizeWhatsAppNumber,
   parseMultiPageOutput,
   pickSiteSlug,
   publishedSiteUrl,
   siteAssetUrl,
   siteAssetValidationError,
+  siteLanguagePromptBlock,
   siteProjectCapForPlan,
   siteTemplateById,
   slugifySiteTitle,
   whatsAppLink,
+  type SiteLanguage,
   type SitePageDraft,
 } from "@/lib/site-builder-pure";
 
@@ -527,17 +530,20 @@ const SETTINGS_SETUP_MESSAGE =
 export type SiteSettingsData = {
   whatsappNumber: string | null;
   whatsappEnabled: boolean;
+  language: SiteLanguage;
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   whatsappNumber: null,
   whatsappEnabled: true,
+  language: "en",
 };
 
 export function serializeSiteSettings(settings: SiteSettingsData) {
   return {
     whatsappNumber: settings.whatsappNumber,
     whatsappEnabled: settings.whatsappEnabled,
+    language: settings.language,
     whatsappLink: settings.whatsappNumber
       ? whatsAppLink(settings.whatsappNumber)
       : null,
@@ -547,19 +553,37 @@ export function serializeSiteSettings(settings: SiteSettingsData) {
 export async function getSiteSettingsSafe(
   projectId: string,
 ): Promise<SiteSettingsData> {
+  let base: SiteSettingsData = { ...DEFAULT_SITE_SETTINGS };
   try {
     const row = await prisma.siteSettings.findUnique({
       where: { projectId },
       select: { whatsappNumber: true, whatsappEnabled: true },
     });
-    if (!row) return { ...DEFAULT_SITE_SETTINGS };
-    return {
-      whatsappNumber: normalizeWhatsAppNumber(row.whatsappNumber),
-      whatsappEnabled: row.whatsappEnabled,
-    };
+    if (row) {
+      base = {
+        ...base,
+        whatsappNumber: normalizeWhatsAppNumber(row.whatsappNumber),
+        whatsappEnabled: row.whatsappEnabled,
+      };
+    }
   } catch {
-    return { ...DEFAULT_SITE_SETTINGS };
+    return base;
   }
+  // The language column arrived a package later than the table itself —
+  // read it separately so a not-yet-applied column can never poison the
+  // WhatsApp fields above.
+  try {
+    const row = await prisma.siteSettings.findUnique({
+      where: { projectId },
+      select: { language: true },
+    });
+    if (row && isSiteLanguage(row.language)) {
+      base = { ...base, language: row.language };
+    }
+  } catch {
+    /* column not applied yet — English default stands */
+  }
+  return base;
 }
 
 export async function updateSiteSettings(input: {
@@ -567,10 +591,14 @@ export async function updateSiteSettings(input: {
   projectId: string;
   whatsappNumber?: string | null;
   whatsappEnabled?: boolean;
+  language?: SiteLanguage;
 }): Promise<SiteSettingsData> {
   const project = await loadOwnedProject(input.userId, input.projectId);
-  const data: { whatsappNumber?: string | null; whatsappEnabled?: boolean } =
-    {};
+  const data: {
+    whatsappNumber?: string | null;
+    whatsappEnabled?: boolean;
+    language?: string;
+  } = {};
   if (input.whatsappNumber !== undefined) {
     if (input.whatsappNumber === null || input.whatsappNumber.trim() === "") {
       data.whatsappNumber = null;
@@ -589,6 +617,9 @@ export async function updateSiteSettings(input: {
   if (input.whatsappEnabled !== undefined) {
     data.whatsappEnabled = input.whatsappEnabled;
   }
+  if (input.language !== undefined) {
+    data.language = input.language;
+  }
   try {
     const row = await prisma.siteSettings.upsert({
       where: { projectId: project.id },
@@ -596,10 +627,9 @@ export async function updateSiteSettings(input: {
       update: data,
       select: { whatsappNumber: true, whatsappEnabled: true },
     });
-    return {
-      whatsappNumber: normalizeWhatsAppNumber(row.whatsappNumber),
-      whatsappEnabled: row.whatsappEnabled,
-    };
+    // Read back through the fail-safe path so a not-yet-applied language
+    // column degrades to the English default instead of failing the save.
+    return await getSiteSettingsSafe(project.id);
   } catch (error) {
     if (error instanceof ClientError) throw error;
     if (isMissingRelationError(error)) {
@@ -710,6 +740,10 @@ export async function generateSiteVersion(input: {
       "The owner has uploaded these images for this website — use these exact URLs in <img src> wherever the owner mentions them or they naturally fit (logo in the header, photos in the gallery, product photos):",
       ...assets.map((asset) => `- ${asset.name}: ${siteAssetUrl(asset.id)}`),
     );
+  }
+  const languageBlock = siteLanguagePromptBlock(settings.language);
+  if (languageBlock) {
+    promptBlocks.push("", languageBlock);
   }
   if (!settings.whatsappEnabled) {
     promptBlocks.push(

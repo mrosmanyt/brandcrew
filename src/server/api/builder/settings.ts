@@ -13,6 +13,7 @@ type Ctx = { params: Promise<{ projectId: string }> };
 const patchSchema = z.object({
   whatsappNumber: z.string().trim().max(32).nullable().optional(),
   whatsappEnabled: z.boolean().optional(),
+  language: z.enum(["en", "ur", "roman-ur", "mixed"]).optional(),
 });
 
 export async function GET(_request: Request, context: Ctx) {
@@ -42,6 +43,7 @@ export async function PATCH(request: Request, context: Ctx) {
       projectId,
       whatsappNumber: body.whatsappNumber,
       whatsappEnabled: body.whatsappEnabled,
+      language: body.language,
     });
     return jsonOk({ settings: serializeSiteSettings(settings) });
   } catch (error) {

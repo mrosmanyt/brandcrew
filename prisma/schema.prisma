@@ -340,6 +340,8 @@ model SiteSettings {
   /// Digits only, international format (e.g. 923001234567).
   whatsappNumber  String?
   whatsappEnabled Boolean     @default(true)
+  /// Site content language: en | ur | roman-ur | mixed (Package E).
+  language        String      @default("en")
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   project         SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
