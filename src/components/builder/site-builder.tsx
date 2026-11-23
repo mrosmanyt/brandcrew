@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  ExternalLink,
   Globe,
   History,
   Loader2,
   Monitor,
   Plus,
+  Rocket,
   RotateCcw,
   Send,
   Smartphone,
@@ -25,7 +27,9 @@ import { cn } from "@/lib/utils";
  * sandboxed iframe (allow-scripts, NO allow-same-origin — the page's own
  * small inline interactivity runs, but it can never reach the app).
  * Every generation/edit lands as a new SiteVersion; Restore brings any
- * older version back. Publishing is 11d — v1 is preview-only.
+ * older version back. Publish (11d) pins the current version to the
+ * project's free subdomain, served from inside the app; the live site
+ * only changes when the owner publishes again.
  */
 
 type SiteTemplate = {
@@ -56,6 +60,17 @@ type BuilderStatus = {
   templates: SiteTemplate[];
 };
 
+type SitePublication = {
+  slug: string;
+  url: string;
+  isLive: boolean;
+  publishedVersionId: string | null;
+  publishedVersion: number | null;
+  liveIsCurrent: boolean;
+  publishedAt: string;
+  updatedAt: string;
+};
+
 type SiteProject = {
   id: string;
   title: string;
@@ -63,6 +78,7 @@ type SiteProject = {
   status: string;
   currentVersionId: string | null;
   updatedAt: string;
+  publication?: SitePublication | null;
 };
 
 type SiteVersion = {
@@ -83,6 +99,7 @@ type BuilderMessage = {
 
 type ProjectDetail = {
   project: SiteProject;
+  publication: SitePublication | null;
   versions: SiteVersion[];
   currentVersionId: string | null;
   previewHtml: string | null;
@@ -243,6 +260,30 @@ export function SiteBuilder({ userName }: { userName: string }) {
     if (details.length) lines.push(`Details from the owner: ${details.join(" ")}`);
     void send(lines.join("\n\n"));
   }, [activeTemplate, bizName, colour, contact, send]);
+
+  const [publishing, setPublishing] = useState(false);
+
+  const publish = useCallback(
+    async (live: boolean) => {
+      if (!projectId || publishing) return;
+      setPublishing(true);
+      setError("");
+      try {
+        await api(`/api/builder/projects/${projectId}/publish`, {
+          method: live ? "POST" : "DELETE",
+        });
+        await loadDetail(projectId);
+        await loadProjects(projectId);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Publishing failed. Try again.",
+        );
+      } finally {
+        setPublishing(false);
+      }
+    },
+    [projectId, publishing, loadDetail, loadProjects],
+  );
 
   const restore = useCallback(
     async (versionId: string) => {
@@ -576,9 +617,63 @@ export function SiteBuilder({ userName }: { userName: string }) {
                 <Smartphone className="size-4" />
               </button>
             </div>
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              Preview only — publishing comes later
-            </span>
+            <div className="flex items-center gap-2">
+              {hasVersions && detail?.publication?.isLive ? (
+                <>
+                  <a
+                    href={`/sites/${detail.publication.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hidden items-center gap-1 text-xs font-medium text-emerald-600 hover:underline sm:inline-flex"
+                    title={detail.publication.url}
+                  >
+                    Live · {detail.publication.slug}.cinem.tech
+                    <ExternalLink className="size-3" />
+                  </a>
+                  {!detail.publication.liveIsCurrent ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={publishing}
+                      onClick={() => void publish(true)}
+                    >
+                      {publishing ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Rocket className="size-3.5" />
+                      )}
+                      Update live site
+                    </Button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={publishing}
+                    onClick={() => void publish(false)}
+                    className="text-xs text-muted-foreground underline-offset-2 transition hover:text-foreground disabled:opacity-50"
+                  >
+                    Unpublish
+                  </button>
+                </>
+              ) : hasVersions ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={publishing}
+                  onClick={() => void publish(true)}
+                >
+                  {publishing ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Rocket className="size-3.5" />
+                  )}
+                  Publish
+                </Button>
+              ) : (
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  Build a version, then publish it live
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setShowVersions((value) => !value)}

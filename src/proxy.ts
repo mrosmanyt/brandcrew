@@ -15,6 +15,7 @@ import {
   requestLooksHttps,
   strictCspReportOnlyValue,
 } from "@/lib/security-headers";
+import { siteSlugFromHost } from "@/lib/site-builder-pure";
 import { hasSupabaseAuthCookie } from "@/lib/supabase/env";
 import { refreshSupabaseSession } from "@/lib/supabase/middleware";
 
@@ -70,6 +71,18 @@ export async function proxy(request: NextRequest) {
   const authed = requestIsAuthed(request);
   const host = request.headers.get("host");
   const consoleHost = isConsoleHostname(host);
+
+  // Published builder sites (Package 11d): a <slug>.cinem.tech host is a
+  // customer's live website, served from inside this app. Rewrite to the
+  // /sites/<slug> route; the app's own hosts and reserved names never
+  // match (siteSlugFromHost excludes them), and the path form keeps
+  // working on app.cinem.tech itself.
+  const siteSlug = siteSlugFromHost(host);
+  if (siteSlug && !pathname.startsWith("/sites/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/sites/${siteSlug}${pathname === "/" ? "" : pathname}`;
+    return withSecurity(NextResponse.rewrite(url), request, nonce);
+  }
 
   if (consoleHost && (pathname === "/" || pathname === "")) {
     const url = request.nextUrl.clone();

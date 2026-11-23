@@ -61,6 +61,7 @@ import * as builderProjects from "./builder/projects";
 import * as builderProject from "./builder/project";
 import * as builderGenerate from "./builder/generate";
 import * as builderRestore from "./builder/restore";
+import * as builderPublish from "./builder/publish";
 import * as imageGenerate from "./image/generate";
 import * as imageHistory from "./image/history";
 import * as imageShare from "./image/share";
@@ -157,6 +158,10 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "builder", "projects", ":projectId", "restore"],
     handlers: asHandlers(builderRestore),
+  },
+  {
+    pattern: ["api", "builder", "projects", ":projectId", "publish"],
+    handlers: asHandlers(builderPublish),
   },
   { pattern: ["api", "image", "generate"], handlers: asHandlers(imageGenerate) },
   { pattern: ["api", "image", "history"], handlers: asHandlers(imageHistory) },

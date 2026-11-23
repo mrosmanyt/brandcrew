@@ -35,8 +35,11 @@ import {
   SITE_GENERATION_TOKEN_CEILING,
   SITE_HTML_MAX_CHARS,
   SITE_TEMPLATES,
+  pickSiteSlug,
+  publishedSiteUrl,
   siteProjectCapForPlan,
   siteTemplateById,
+  slugifySiteTitle,
 } from "@/lib/site-builder-pure";
 
 const DESIGN_SYSTEM_INSTRUCTIONS = `House design system — follow it exactly:
@@ -119,7 +122,27 @@ export async function listSiteProjects(userId: string) {
     orderBy: { updatedAt: "desc" },
     take: 100,
   });
-  return rows.map(serializeSiteProject);
+  // Publication summaries ride along fail-safe (the table may not exist
+  // in a database yet — the list must still load exactly as v1).
+  let publications = new Map<string, PublicationRow>();
+  try {
+    const pubs = await prisma.sitePublication.findMany({
+      where: { projectId: { in: rows.map((row: { id: string }) => row.id) } },
+    });
+    publications = new Map(
+      pubs.map((pub: PublicationRow) => [pub.projectId, pub] as const),
+    );
+  } catch {
+    publications = new Map();
+  }
+  return rows.map((row: (typeof rows)[number]) => ({
+    ...serializeSiteProject(row),
+    publication: serializePublication(
+      publications.get(row.id) ?? null,
+      row.currentVersionId,
+      null,
+    ),
+  }));
 }
 
 export async function createSiteProject(input: {
@@ -189,8 +212,13 @@ export async function getSiteProjectDetail(userId: string, projectId: string) {
     versions.find((row: { id: string }) => row.id === project.currentVersionId) ??
     versions[0] ??
     null;
+  const publication = await getProjectPublicationSummary(
+    project.id,
+    project.currentVersionId,
+  );
   return {
     project: serializeSiteProject(project),
+    publication,
     versions: versions.map(serializeSiteVersion),
     currentVersionId: current?.id ?? null,
     previewHtml: current ? sanitizeBuilderPreviewHtml(current.html) : null,
@@ -388,6 +416,224 @@ export async function generateSiteVersion(input: {
     previewHtml: sanitizeBuilderPreviewHtml(version.html),
     reply,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Publishing (Package 11d)                                            */
+/*                                                                     */
+/* A publication pins one version to a free subdomain served from      */
+/* inside this app. Every read of the SitePublication table is wrapped */
+/* fail-safe: until the migration SQL reaches a given database, the    */
+/* builder keeps working exactly as v1 and publishing reports an       */
+/* honest "being set up" error instead of breaking the page.           */
+/* ------------------------------------------------------------------ */
+
+export function isMissingRelationError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: unknown }).code;
+  if (code === "P2021" || code === "P2022") return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /does not exist/i.test(message) && /(table|column|relation)/i.test(message);
+}
+
+const PUBLISHING_SETUP_MESSAGE =
+  "Publishing is still being set up on this server. Try again in a little while — your website and versions are safe.";
+
+type PublicationRow = {
+  id: string;
+  projectId: string;
+  slug: string;
+  versionId: string | null;
+  isLive: boolean;
+  publishedAt: Date;
+  updatedAt: Date;
+};
+
+export function serializePublication(
+  row: PublicationRow | null,
+  currentVersionId: string | null,
+  publishedVersionNumber: number | null,
+) {
+  if (!row) return null;
+  return {
+    slug: row.slug,
+    url: publishedSiteUrl(row.slug),
+    isLive: row.isLive && Boolean(row.versionId),
+    publishedVersionId: row.versionId,
+    publishedVersion: publishedVersionNumber,
+    liveIsCurrent: Boolean(row.versionId) && row.versionId === currentVersionId,
+    publishedAt: row.publishedAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function getPublicationSafe(projectId: string): Promise<PublicationRow | null> {
+  try {
+    return await prisma.sitePublication.findUnique({ where: { projectId } });
+  } catch {
+    return null;
+  }
+}
+
+async function publishedVersionNumber(
+  publication: PublicationRow | null,
+): Promise<number | null> {
+  if (!publication?.versionId) return null;
+  try {
+    const version = await prisma.siteVersion.findUnique({
+      where: { id: publication.versionId },
+      select: { version: true },
+    });
+    return version?.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getProjectPublicationSummary(
+  projectId: string,
+  currentVersionId: string | null,
+) {
+  const publication = await getPublicationSafe(projectId);
+  const versionNumber = await publishedVersionNumber(publication);
+  return serializePublication(publication, currentVersionId, versionNumber);
+}
+
+export async function publishSiteProject(input: {
+  userId: string;
+  projectId: string;
+}) {
+  const project = await loadOwnedProject(input.userId, input.projectId);
+  if (!project.currentVersionId) {
+    throw new ClientError(
+      "Build your website first — there is no version to publish yet.",
+      400,
+      "invalid_request",
+    );
+  }
+  let publication: PublicationRow;
+  try {
+    const existing = await prisma.sitePublication.findUnique({
+      where: { projectId: project.id },
+    });
+    if (existing) {
+      publication = await prisma.sitePublication.update({
+        where: { id: existing.id },
+        data: {
+          versionId: project.currentVersionId,
+          isLive: true,
+          publishedAt: new Date(),
+        },
+      });
+    } else {
+      const slugRows = (await prisma.sitePublication.findMany({
+        select: { slug: true },
+      })) as Array<{ slug: string }>;
+      const taken = new Set<string>(slugRows.map((row) => row.slug));
+      const slug = pickSiteSlug(slugifySiteTitle(project.title), taken);
+      publication = await prisma.sitePublication.create({
+        data: {
+          projectId: project.id,
+          slug,
+          versionId: project.currentVersionId,
+          isLive: true,
+        },
+      });
+    }
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      throw new ClientError(PUBLISHING_SETUP_MESSAGE, 503, "not_configured");
+    }
+    throw error;
+  }
+  const updated = await prisma.siteProject.update({
+    where: { id: project.id },
+    data: { status: "published" },
+  });
+  const versionNumber = await publishedVersionNumber(publication);
+  const conversationId = await builderConversationId(
+    project.id,
+    input.userId,
+    project.workspaceId,
+    updated.title,
+  );
+  await appendBuilderMessages(
+    conversationId,
+    "Publish my website",
+    `Your website is live at ${publishedSiteUrl(publication.slug)} — version ${versionNumber ?? ""} is what visitors see now. Keep editing here whenever you like; the live site only changes when you publish again.`,
+    "",
+    0,
+  );
+  return {
+    project: serializeSiteProject(updated),
+    publication: serializePublication(
+      publication,
+      updated.currentVersionId,
+      versionNumber,
+    ),
+  };
+}
+
+export async function unpublishSiteProject(input: {
+  userId: string;
+  projectId: string;
+}) {
+  const project = await loadOwnedProject(input.userId, input.projectId);
+  let publication: PublicationRow | null;
+  try {
+    publication = await getPublicationSafe(project.id);
+    if (publication) {
+      publication = await prisma.sitePublication.update({
+        where: { id: publication.id },
+        data: { isLive: false },
+      });
+    }
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      throw new ClientError(PUBLISHING_SETUP_MESSAGE, 503, "not_configured");
+    }
+    throw error;
+  }
+  const updated = await prisma.siteProject.update({
+    where: { id: project.id },
+    data: { status: "draft" },
+  });
+  return {
+    project: serializeSiteProject(updated),
+    publication: serializePublication(
+      publication,
+      updated.currentVersionId,
+      await publishedVersionNumber(publication),
+    ),
+  };
+}
+
+/**
+ * Public resolution for the published-site routes. Returns the pinned
+ * version's HTML, or null when the slug is unknown, not live, or the
+ * publication table is not in this database yet (fail-safe 404).
+ */
+export async function resolvePublishedSite(slug: string) {
+  try {
+    const publication = await prisma.sitePublication.findUnique({
+      where: { slug },
+      include: {
+        project: { select: { id: true, title: true, template: true } },
+        version: { select: { id: true, html: true, version: true } },
+      },
+    });
+    if (!publication?.isLive || !publication.version) return null;
+    return {
+      projectId: publication.projectId,
+      title: publication.project.title,
+      template: publication.project.template,
+      versionId: publication.version.id,
+      version: publication.version.version,
+      html: publication.version.html,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function restoreSiteVersion(input: {

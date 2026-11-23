@@ -227,6 +227,93 @@ export function siteProjectCapForPlan(plan?: string | null): number {
   return SITE_PROJECT_CAPS[normalizeSitePlanId(plan)];
 }
 
+/**
+ * Publishing (Package 11d) — subdomain slugs. A published site lives at
+ * https://<slug>.cinem.tech, served from inside this app (no per-site
+ * deploy). Slugs come from the project title; reserved names can never
+ * be claimed because they belong to CINEM itself or to infrastructure.
+ */
+export const SITE_SLUG_MAX_LENGTH = 40;
+
+export const RESERVED_SITE_SLUGS = new Set([
+  "app", "www", "console", "api", "admin", "mail", "email", "ftp",
+  "staging", "stage", "dev", "test", "demo", "blog", "news", "help",
+  "support", "status", "cdn", "assets", "static", "files", "media",
+  "images", "img", "login", "signup", "register", "account", "accounts",
+  "billing", "pay", "payments", "shop", "store", "cinem", "cinempro",
+  "malik", "malikdatacentre", "dashboard", "desk", "chat", "build",
+  "builder", "sites", "site", "home", "about", "contact", "privacy",
+  "terms", "legal", "security", "docs", "download", "downloads",
+  "invite", "auth", "oauth", "callback", "webhook", "webhooks",
+  "internal", "system", "root", "null", "undefined", "true", "false",
+]);
+
+export function isReservedSiteSlug(slug: string): boolean {
+  return RESERVED_SITE_SLUGS.has(slug);
+}
+
+/** Turn a project title into a valid subdomain slug ("" when nothing usable). */
+export function slugifySiteTitle(title: string): string {
+  const slug = title
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    // (combining diacritics stripped so "Café" → "cafe")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-")
+    .slice(0, SITE_SLUG_MAX_LENGTH)
+    .replace(/-+$/g, "");
+  // A subdomain label cannot be all digits or a single character.
+  if (slug.length < 2 || /^\d+$/.test(slug)) return "";
+  return slug;
+}
+
+export function isValidSiteSlug(slug: string): boolean {
+  return (
+    slug.length >= 2 &&
+    slug.length <= SITE_SLUG_MAX_LENGTH &&
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) &&
+    !isReservedSiteSlug(slug)
+  );
+}
+
+/** First free slug for a base: base, base-2, base-3, … */
+export function pickSiteSlug(base: string, taken: ReadonlySet<string>): string {
+  const root = base || "my-website";
+  if (!taken.has(root) && !isReservedSiteSlug(root)) return root;
+  for (let n = 2; n < 1000; n += 1) {
+    const suffix = `-${n}`;
+    const candidate =
+      root.slice(0, SITE_SLUG_MAX_LENGTH - suffix.length).replace(/-+$/g, "") +
+      suffix;
+    if (!taken.has(candidate) && !isReservedSiteSlug(candidate)) return candidate;
+  }
+  return `${root.slice(0, SITE_SLUG_MAX_LENGTH - 5)}-${Date.now() % 10000}`;
+}
+
+export function publishedSiteUrl(slug: string): string {
+  return `https://${slug}.cinem.tech`;
+}
+
+export function publishedSitePath(slug: string): string {
+  return `/sites/${slug}`;
+}
+
+/** Extract the site slug from a Host header, or null when the host is not
+ * a builder-site subdomain (the app's own hosts, reserved names, apex). */
+export function siteSlugFromHost(host: string | null | undefined): string | null {
+  const hostname = String(host || "")
+    .split(":")[0]
+    .trim()
+    .toLowerCase();
+  const match = hostname.match(/^([a-z0-9-]+)\.cinem\.tech$/);
+  if (!match) return null;
+  const slug = match[1];
+  if (!isValidSiteSlug(slug)) return null;
+  return slug;
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

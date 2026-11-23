@@ -11,8 +11,15 @@ import {
 import {
   SITE_PROJECT_CAPS,
   SITE_TEMPLATES,
+  isReservedSiteSlug,
+  isValidSiteSlug,
+  pickSiteSlug,
+  publishedSitePath,
+  publishedSiteUrl,
   siteProjectCapForPlan,
+  siteSlugFromHost,
   siteTemplateById,
+  slugifySiteTitle,
 } from "../src/lib/site-builder-pure";
 
 // --- Project caps per plan (design note §6; prices untouched) ---
@@ -90,5 +97,40 @@ assert.ok(!cleaned.includes("javascript:"), "javascript: URLs stripped");
 const deskCleaned = sanitizePreviewHtml(page);
 assert.ok(!deskCleaned.includes("<script"), "desk sanitizer still strips all scripts");
 assert.ok(!deskCleaned.includes("onclick"), "desk sanitizer still strips handlers");
+
+// --- Publishing slugs (Package 11d) ---
+assert.equal(slugifySiteTitle("Green Leaf Salon"), "green-leaf-salon");
+assert.equal(slugifySiteTitle("Café Délice!"), "cafe-delice");
+assert.equal(slugifySiteTitle("  My   Shop -- 2026  "), "my-shop-2026");
+assert.equal(slugifySiteTitle("12345"), "");
+assert.equal(slugifySiteTitle("!!!"), "");
+assert.equal(slugifySiteTitle("A"), "");
+assert.ok(slugifySiteTitle("x".repeat(80)).length <= 40);
+assert.equal(isValidSiteSlug("green-leaf-salon"), true);
+assert.equal(isValidSiteSlug("app"), false);
+assert.equal(isValidSiteSlug("-lead"), false);
+assert.equal(isValidSiteSlug("trail-"), false);
+assert.equal(isValidSiteSlug("double--dash"), false);
+assert.equal(isValidSiteSlug("Upper"), false);
+assert.equal(isReservedSiteSlug("console"), true);
+assert.equal(isReservedSiteSlug("my-shop"), false);
+assert.equal(pickSiteSlug("my-shop", new Set()), "my-shop");
+assert.equal(pickSiteSlug("my-shop", new Set(["my-shop"])), "my-shop-2");
+assert.equal(
+  pickSiteSlug("my-shop", new Set(["my-shop", "my-shop-2"])),
+  "my-shop-3",
+);
+assert.equal(pickSiteSlug("", new Set()), "my-website");
+assert.equal(pickSiteSlug("app", new Set()), "app-2");
+assert.equal(publishedSiteUrl("my-shop"), "https://my-shop.cinem.tech");
+assert.equal(publishedSitePath("my-shop"), "/sites/my-shop");
+assert.equal(siteSlugFromHost("my-shop.cinem.tech"), "my-shop");
+assert.equal(siteSlugFromHost("my-shop.cinem.tech:443"), "my-shop");
+assert.equal(siteSlugFromHost("app.cinem.tech"), null);
+assert.equal(siteSlugFromHost("console.cinem.tech"), null);
+assert.equal(siteSlugFromHost("cinem.tech"), null);
+assert.equal(siteSlugFromHost("www.cinem.tech"), null);
+assert.equal(siteSlugFromHost("brandcrew.vercel.app"), null);
+assert.equal(siteSlugFromHost(null), null);
 
 console.log("check-site-builder: all assertions passed");

@@ -296,6 +296,7 @@ model SiteProject {
   workspace        Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   currentVersion   SiteVersion?  @relation("CurrentSiteVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
   versions         SiteVersion[] @relation("ProjectVersions")
+  publication      SitePublication?
   conversations    ChatConversation[]
 
   @@index([userId, updatedAt])
@@ -320,9 +321,30 @@ model SiteVersion {
   createdAt   DateTime    @default(now())
   project     SiteProject @relation("ProjectVersions", fields: [projectId], references: [id], onDelete: Cascade)
   currentOf   SiteProject? @relation("CurrentSiteVersion")
+  publication SitePublication?
 
   @@unique([projectId, version])
   @@index([projectId, createdAt])
+}
+
+/// Publishing (Package 11d): the live face of a SiteProject. Publishing
+/// pins one version to a free subdomain (<slug>.cinem.tech) served from
+/// inside this app — no per-site deploy. Draft edits keep landing as new
+/// versions; the live site only changes when the owner publishes again.
+model SitePublication {
+  id          String      @id @default(cuid())
+  projectId   String      @unique
+  /// Subdomain label: the site answers at https://<slug>.cinem.tech
+  slug        String      @unique
+  /// The version currently live. Null = nothing live right now.
+  versionId   String?     @unique
+  isLive      Boolean     @default(true)
+  publishedAt DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  project     SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version     SiteVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  @@index([slug])
 }
 
 model ChatMessage {
