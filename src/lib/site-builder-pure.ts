@@ -543,6 +543,70 @@ export function siteAssetValidationError(input: {
   return null;
 }
 
+/* ------------------------------------------------------------------ */
+/* WhatsApp commerce (Package D). The number the owner gives is the    */
+/* single source of truth: generation is told to use exactly it, and   */
+/* serving guarantees a floating order/contact button when the page    */
+/* itself has none.                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Digits-only international number, or null when the input is unusable. */
+export function normalizeWhatsAppNumber(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let digits = raw.replace(/[^\d]/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.length < 7 || digits.length > 15) return null;
+  return digits;
+}
+
+export function whatsAppLink(number: string, text?: string): string {
+  const base = `https://wa.me/${number}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+const WHATSAPP_BUTTON_SVG =
+  '<svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22c5.46 0 9.9-4.45 9.9-9.91C21.95 6.45 17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.2 8.2 0 0 1 8.24 8.25c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.13-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.13-1.05-.38-2-1.23-.73-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.13-.56-1.35-.77-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.13.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.6.19 1.13.16 1.56.1.48-.07 1.47-.6 1.81-1.18.35-.58.35-1.07.25-1.18-.1-.1-.23-.16-.48-.29z"/></svg>';
+
+/**
+ * Guarantee the floating WhatsApp button on a served page: when the
+ * feature is on and a number is set, a page that already links to that
+ * number is left alone; otherwise the button is injected before
+ * </body>. When off (or no number), the page is returned unchanged —
+ * removing in-page buttons is the generator's job on the next edit.
+ */
+export function applyWhatsAppButton(
+  html: string,
+  input: { number: string | null; enabled: boolean },
+): string {
+  if (!input.enabled || !input.number) return html;
+  if (html.includes(`wa.me/${input.number}`)) return html;
+  const button = `<a href="${whatsAppLink(input.number)}" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" style="position:fixed;right:18px;bottom:18px;z-index:9999;width:58px;height:58px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.28);text-decoration:none">${WHATSAPP_BUTTON_SVG}</a>`;
+  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${button}</body>`);
+  return `${html}${button}`;
+}
+
+/**
+ * Chat toggle detection (English + Roman Urdu): "WhatsApp button hata
+ * do", "remove the WhatsApp button", "WhatsApp button laga do", …
+ * Returns the owner's intent, or null when the instruction is not a
+ * toggle (the generator then handles the wording itself).
+ */
+export function detectWhatsAppToggle(
+  instruction: string,
+): "on" | "off" | null {
+  const text = instruction.toLowerCase();
+  if (!/whats\s?app/.test(text)) return null;
+  // Boundaries on BOTH sides: "button" itself ends in "on".
+  // A negation wins outright: "nahi chahiye" means DON'T want it.
+  if (/\b(nahi|no|not)\b/.test(text)) return "off";
+  const offWords =
+    /\b(hata|hataa|nikaal|band|remove|delete|disable|off|hide)\b/;
+  const onWords = /\b(laga|lagaa|add|enable|on|show|chahiye)\b/;
+  if (offWords.test(text) && !onWords.test(text)) return "off";
+  if (onWords.test(text)) return "on";
+  return null;
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

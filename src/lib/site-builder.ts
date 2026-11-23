@@ -37,10 +37,13 @@ import {
   SITE_HTML_MAX_CHARS,
   SITE_MULTIPAGE_MAX_CHARS,
   SITE_TEMPLATES,
+  applyWhatsAppButton,
   base64ByteSize,
   buildMultiPageDocument,
   buildPreviewShellHtml,
+  detectWhatsAppToggle,
   injectPreviewNav,
+  normalizeWhatsAppNumber,
   parseMultiPageOutput,
   pickSiteSlug,
   publishedSiteUrl,
@@ -49,6 +52,7 @@ import {
   siteProjectCapForPlan,
   siteTemplateById,
   slugifySiteTitle,
+  whatsAppLink,
   type SitePageDraft,
 } from "@/lib/site-builder-pure";
 
@@ -229,9 +233,11 @@ export async function getSiteProjectDetail(userId: string, projectId: string) {
   );
   const currentPages = current ? await loadVersionPagesSafe(current.id) : [];
   const assets = await listSiteAssetsSafe(project.id);
+  const settings = await getSiteSettingsSafe(project.id);
   return {
     project: serializeSiteProject(project),
     publication,
+    settings: serializeSiteSettings(settings),
     assets: assets.map(serializeSiteAsset),
     versions: versions.map(serializeSiteVersion),
     currentVersionId: current?.id ?? null,
@@ -246,7 +252,11 @@ export async function getSiteProjectDetail(userId: string, projectId: string) {
           ]
         : [],
     previewHtml: current
-      ? buildVersionPreviewHtml(current.html, currentPages)
+      ? buildVersionPreviewHtml(
+          current.html,
+          currentPages,
+          whatsAppTransform(settings),
+        )
       : null,
     messages: (conversation?.messages ?? []).map(
       (row: { id: string; role: string; content: string; createdAt: Date }) => ({
@@ -505,6 +515,114 @@ export async function getSiteAssetRaw(assetId: string) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Per-project settings (Package D+). One row per project; reads are   */
+/* fail-safe (defaults until the table exists), writes surface the    */
+/* honest setup error.                                                 */
+/* ------------------------------------------------------------------ */
+
+const SETTINGS_SETUP_MESSAGE =
+  "Site settings are still being set up on this server. Try again in a little while.";
+
+export type SiteSettingsData = {
+  whatsappNumber: string | null;
+  whatsappEnabled: boolean;
+};
+
+export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
+  whatsappNumber: null,
+  whatsappEnabled: true,
+};
+
+export function serializeSiteSettings(settings: SiteSettingsData) {
+  return {
+    whatsappNumber: settings.whatsappNumber,
+    whatsappEnabled: settings.whatsappEnabled,
+    whatsappLink: settings.whatsappNumber
+      ? whatsAppLink(settings.whatsappNumber)
+      : null,
+  };
+}
+
+export async function getSiteSettingsSafe(
+  projectId: string,
+): Promise<SiteSettingsData> {
+  try {
+    const row = await prisma.siteSettings.findUnique({
+      where: { projectId },
+      select: { whatsappNumber: true, whatsappEnabled: true },
+    });
+    if (!row) return { ...DEFAULT_SITE_SETTINGS };
+    return {
+      whatsappNumber: normalizeWhatsAppNumber(row.whatsappNumber),
+      whatsappEnabled: row.whatsappEnabled,
+    };
+  } catch {
+    return { ...DEFAULT_SITE_SETTINGS };
+  }
+}
+
+export async function updateSiteSettings(input: {
+  userId: string;
+  projectId: string;
+  whatsappNumber?: string | null;
+  whatsappEnabled?: boolean;
+}): Promise<SiteSettingsData> {
+  const project = await loadOwnedProject(input.userId, input.projectId);
+  const data: { whatsappNumber?: string | null; whatsappEnabled?: boolean } =
+    {};
+  if (input.whatsappNumber !== undefined) {
+    if (input.whatsappNumber === null || input.whatsappNumber.trim() === "") {
+      data.whatsappNumber = null;
+    } else {
+      const normalized = normalizeWhatsAppNumber(input.whatsappNumber);
+      if (!normalized) {
+        throw new ClientError(
+          "That WhatsApp number doesn't look right — use the full international format, e.g. 92 300 1234567.",
+          400,
+          "invalid_request",
+        );
+      }
+      data.whatsappNumber = normalized;
+    }
+  }
+  if (input.whatsappEnabled !== undefined) {
+    data.whatsappEnabled = input.whatsappEnabled;
+  }
+  try {
+    const row = await prisma.siteSettings.upsert({
+      where: { projectId: project.id },
+      create: { projectId: project.id, ...data },
+      update: data,
+      select: { whatsappNumber: true, whatsappEnabled: true },
+    });
+    return {
+      whatsappNumber: normalizeWhatsAppNumber(row.whatsappNumber),
+      whatsappEnabled: row.whatsappEnabled,
+    };
+  } catch (error) {
+    if (error instanceof ClientError) throw error;
+    if (isMissingRelationError(error)) {
+      throw new ClientError(SETTINGS_SETUP_MESSAGE, 503, "not_configured");
+    }
+    throw error;
+  }
+}
+
+export async function getSiteSettingsForUser(userId: string, projectId: string) {
+  const project = await loadOwnedProject(userId, projectId);
+  return serializeSiteSettings(await getSiteSettingsSafe(project.id));
+}
+
+/** The serving-time page transform for the WhatsApp button (Package D). */
+export function whatsAppTransform(settings: SiteSettingsData) {
+  return (html: string) =>
+    applyWhatsAppButton(html, {
+      number: settings.whatsappNumber,
+      enabled: settings.whatsappEnabled,
+    });
+}
+
 export async function generateSiteVersion(input: {
   userId: string;
   userName: string;
@@ -523,6 +641,24 @@ export async function generateSiteVersion(input: {
     where: { id: project.workspaceId },
   });
   if (!workspace) throw new ClientError("Workspace not found.", 404, "not_found");
+
+  // WhatsApp settings (Package D): a plain chat toggle ("WhatsApp
+  // button hata do / laga do") flips the setting first; the build then
+  // runs with the number + on/off state as a hard instruction, and the
+  // preview/published serving guarantees the floating button.
+  let settings = await getSiteSettingsSafe(project.id);
+  const toggle = detectWhatsAppToggle(instruction);
+  if (toggle && settings.whatsappEnabled !== (toggle === "on")) {
+    try {
+      settings = await updateSiteSettings({
+        userId: input.userId,
+        projectId: project.id,
+        whatsappEnabled: toggle === "on",
+      });
+    } catch {
+      settings = { ...settings, whatsappEnabled: toggle === "on" };
+    }
+  }
 
   await assertLlmCallBudget(workspace.id, "llm");
   await assertBuilderHourlyCap(workspace.id, workspace.plan);
@@ -567,17 +703,26 @@ export async function generateSiteVersion(input: {
   // "use my logo" works — generated pages reference /site-assets/<id>,
   // which resolves in the preview and on the published site alike.
   const assets = await listSiteAssetsSafe(project.id);
-  const finalPrompt =
-    assets.length > 0
-      ? [
-          prompt,
-          "",
-          "The owner has uploaded these images for this website — use these exact URLs in <img src> wherever the owner mentions them or they naturally fit (logo in the header, photos in the gallery, product photos):",
-          ...assets.map(
-            (asset) => `- ${asset.name}: ${siteAssetUrl(asset.id)}`,
-          ),
-        ].join("\n")
-      : prompt;
+  const promptBlocks: string[] = [prompt];
+  if (assets.length > 0) {
+    promptBlocks.push(
+      "",
+      "The owner has uploaded these images for this website — use these exact URLs in <img src> wherever the owner mentions them or they naturally fit (logo in the header, photos in the gallery, product photos):",
+      ...assets.map((asset) => `- ${asset.name}: ${siteAssetUrl(asset.id)}`),
+    );
+  }
+  if (!settings.whatsappEnabled) {
+    promptBlocks.push(
+      "",
+      "WhatsApp: the owner has switched WhatsApp OFF for this site — do not include any WhatsApp button or wa.me link anywhere.",
+    );
+  } else if (settings.whatsappNumber) {
+    promptBlocks.push(
+      "",
+      `WhatsApp: every WhatsApp button on the site must link to ${whatsAppLink(settings.whatsappNumber)} — use exactly this number, no other.`,
+    );
+  }
+  const finalPrompt = promptBlocks.join("\n");
 
   const result = await runWithLlmRouting(
     { workspaceId: workspace.id, plan: workspace.plan, budgetMode: "llm" },
@@ -685,7 +830,11 @@ export async function generateSiteVersion(input: {
   return {
     project: serializeSiteProject(updated),
     version: serializeSiteVersion(version),
-    previewHtml: buildVersionPreviewHtml(version.html, savedPages),
+    previewHtml: buildVersionPreviewHtml(
+      version.html,
+      savedPages,
+      whatsAppTransform(settings),
+    ),
     reply,
   };
 }
@@ -699,17 +848,19 @@ export async function generateSiteVersion(input: {
 export function buildVersionPreviewHtml(
   homeHtml: string,
   pages: SitePageDraft[],
+  transform?: (html: string) => string,
 ): string {
-  if (pages.length === 0) return sanitizeBuilderPreviewHtml(homeHtml);
+  const apply = (html: string) => {
+    const sanitized = sanitizeBuilderPreviewHtml(html);
+    return transform ? transform(sanitized) : sanitized;
+  };
+  if (pages.length === 0) return apply(homeHtml);
   const known = ["/", ...pages.map((page) => `/${page.path}`)];
   const all = [
-    {
-      path: "/",
-      html: injectPreviewNav(sanitizeBuilderPreviewHtml(homeHtml), known),
-    },
+    { path: "/", html: injectPreviewNav(apply(homeHtml), known) },
     ...pages.map((page) => ({
       path: `/${page.path}`,
-      html: injectPreviewNav(sanitizeBuilderPreviewHtml(page.html), known),
+      html: injectPreviewNav(apply(page.html), known),
     })),
   ];
   return buildPreviewShellHtml({ entryPath: "/", pages: all });
@@ -921,6 +1072,7 @@ export async function resolvePublishedSite(slug: string) {
     });
     if (!publication?.isLive || !publication.version) return null;
     const pages = await loadVersionPagesSafe(publication.version.id);
+    const settings = await getSiteSettingsSafe(publication.projectId);
     return {
       projectId: publication.projectId,
       title: publication.project.title,
@@ -929,6 +1081,7 @@ export async function resolvePublishedSite(slug: string) {
       version: publication.version.version,
       html: publication.version.html,
       pages,
+      settings,
     };
   } catch {
     return null;
@@ -984,9 +1137,14 @@ export async function restoreSiteVersion(input: {
     "",
     0,
   );
+  const settings = await getSiteSettingsSafe(project.id);
   return {
     project: serializeSiteProject(updated),
     version: serializeSiteVersion(version),
-    previewHtml: buildVersionPreviewHtml(version.html, restoredPages),
+    previewHtml: buildVersionPreviewHtml(
+      version.html,
+      restoredPages,
+      whatsAppTransform(settings),
+    ),
   };
 }

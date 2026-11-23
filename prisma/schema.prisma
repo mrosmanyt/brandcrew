@@ -298,6 +298,7 @@ model SiteProject {
   versions         SiteVersion[] @relation("ProjectVersions")
   publication      SitePublication?
   assets           SiteAsset[]
+  settings         SiteSettings?
   conversations    ChatConversation[]
 
   @@index([userId, updatedAt])
@@ -327,6 +328,21 @@ model SiteVersion {
 
   @@unique([projectId, version])
   @@index([projectId, createdAt])
+}
+
+/// Per-project builder settings (Package D onwards): one row per
+/// project holding the owner's own choices — WhatsApp commerce first
+/// (number + on/off), later packages add language, products and SEO
+/// fields to this same table.
+model SiteSettings {
+  id              String      @id @default(cuid())
+  projectId       String      @unique
+  /// Digits only, international format (e.g. 923001234567).
+  whatsappNumber  String?
+  whatsappEnabled Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  project         SiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 /// Publishing (Package 11d): the live face of a SiteProject. Publishing

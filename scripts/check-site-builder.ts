@@ -12,8 +12,11 @@ import {
   SITE_ASSET_MAX_BYTES,
   SITE_PROJECT_CAPS,
   SITE_TEMPLATES,
+  applyWhatsAppButton,
   base64ByteSize,
   buildMultiPageDocument,
+  detectWhatsAppToggle,
+  normalizeWhatsAppNumber,
   buildPreviewShellHtml,
   injectPreviewNav,
   isReservedSiteSlug,
@@ -28,6 +31,7 @@ import {
   siteAssetUrl,
   siteAssetValidationError,
   siteProjectCapForPlan,
+  whatsAppLink,
   siteSlugFromHost,
   siteTemplateById,
   slugifySiteTitle,
@@ -238,5 +242,44 @@ assert.ok(
     sizeBytes: SITE_ASSET_MAX_BYTES + 1,
   }),
 );
+
+// --- WhatsApp commerce (Package D) ---
+assert.equal(normalizeWhatsAppNumber("+92 300 1234567"), "923001234567");
+assert.equal(normalizeWhatsAppNumber("0092 300 1234567"), "923001234567");
+assert.equal(normalizeWhatsAppNumber("123"), null);
+assert.equal(normalizeWhatsAppNumber(""), null);
+assert.equal(normalizeWhatsAppNumber(null), null);
+assert.equal(whatsAppLink("923001234567"), "https://wa.me/923001234567");
+assert.equal(
+  whatsAppLink("923001234567", "I want 2 burgers"),
+  "https://wa.me/923001234567?text=I%20want%202%20burgers",
+);
+{
+  const page = "<html><body><p>Menu</p></body></html>";
+  const withBtn = applyWhatsAppButton(page, {
+    number: "923001234567",
+    enabled: true,
+  });
+  assert.ok(withBtn.includes("https://wa.me/923001234567"));
+  assert.ok(withBtn.indexOf("wa.me") < withBtn.indexOf("</body>"));
+  // Already links to the number → untouched.
+  assert.equal(
+    applyWhatsAppButton(withBtn, { number: "923001234567", enabled: true }),
+    withBtn,
+  );
+  // Off or no number → untouched.
+  assert.equal(
+    applyWhatsAppButton(page, { number: "923001234567", enabled: false }),
+    page,
+  );
+  assert.equal(applyWhatsAppButton(page, { number: null, enabled: true }), page);
+}
+assert.equal(detectWhatsAppToggle("WhatsApp button hata do"), "off");
+assert.equal(detectWhatsAppToggle("remove the WhatsApp button please"), "off");
+assert.equal(detectWhatsAppToggle("WhatsApp button nahi chahiye"), "off");
+assert.equal(detectWhatsAppToggle("WhatsApp button laga do"), "on");
+assert.equal(detectWhatsAppToggle("add a WhatsApp order button"), "on");
+assert.equal(detectWhatsAppToggle("make the hero section bigger"), null);
+assert.equal(detectWhatsAppToggle("WhatsApp number change kar do"), null);
 
 console.log("check-site-builder: all assertions passed");

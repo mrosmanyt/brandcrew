@@ -9,11 +9,13 @@ import {
   History,
   ImagePlus,
   Loader2,
+  MessageCircle,
   Monitor,
   Plus,
   Rocket,
   RotateCcw,
   Send,
+  SlidersHorizontal,
   Smartphone,
   Sparkles,
   Trash2,
@@ -99,6 +101,12 @@ type BuilderMessage = {
   createdAt: string;
 };
 
+type SiteSettings = {
+  whatsappNumber: string | null;
+  whatsappEnabled: boolean;
+  whatsappLink: string | null;
+};
+
 type SiteAsset = {
   id: string;
   name: string;
@@ -111,6 +119,7 @@ type SiteAsset = {
 type ProjectDetail = {
   project: SiteProject;
   publication: SitePublication | null;
+  settings: SiteSettings;
   assets: SiteAsset[];
   versions: SiteVersion[];
   currentVersionId: string | null;
@@ -158,6 +167,10 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [showAssets, setShowAssets] = useState(false);
   const [uploading, setUploading] = useState(false);
   const assetInputRef = useRef<HTMLInputElement>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [waNumber, setWaNumber] = useState("");
+  const [waEnabled, setWaEnabled] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [creating, setCreating] = useState(false);
   const [activePage, setActivePage] = useState("/");
@@ -172,6 +185,8 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const loadDetail = useCallback(async (id: string) => {
     const data = await api<ProjectDetail>(`/api/builder/projects/${id}`);
     setDetail(data);
+    setWaNumber(data.settings?.whatsappNumber ?? "");
+    setWaEnabled(data.settings?.whatsappEnabled ?? true);
     return data;
   }, []);
 
@@ -283,10 +298,19 @@ export function SiteBuilder({ userName }: { userName: string }) {
       details.push(
         `Contact number: ${contact.trim()} — use tel:${contact.trim()} for tap-to-call and https://wa.me/${digits} for every WhatsApp button.`,
       );
+      // Save it as the site's WhatsApp number (Package D) so the
+      // floating button + every later build use exactly this number.
+      // Best-effort: the prompt above already carries the number.
+      if (projectId) {
+        void api(`/api/builder/projects/${projectId}/settings`, {
+          method: "PATCH",
+          body: JSON.stringify({ whatsappNumber: digits }),
+        }).catch(() => undefined);
+      }
     }
     if (details.length) lines.push(`Details from the owner: ${details.join(" ")}`);
     void send(lines.join("\n\n"));
-  }, [activeTemplate, bizName, colour, contact, send]);
+  }, [activeTemplate, bizName, colour, contact, send, projectId]);
 
   const uploadAsset = useCallback(
     async (file: File) => {
@@ -332,6 +356,28 @@ export function SiteBuilder({ userName }: { userName: string }) {
     },
     [projectId, busy, loadDetail],
   );
+
+  const saveSettings = useCallback(async () => {
+    if (!projectId || savingSettings) return;
+    setSavingSettings(true);
+    setError("");
+    try {
+      await api(`/api/builder/projects/${projectId}/settings`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          whatsappNumber: waNumber.trim() === "" ? null : waNumber.trim(),
+          whatsappEnabled: waEnabled,
+        }),
+      });
+      await loadDetail(projectId);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Saving settings failed.",
+      );
+    } finally {
+      setSavingSettings(false);
+    }
+  }, [projectId, savingSettings, waNumber, waEnabled, loadDetail]);
 
   const [publishing, setPublishing] = useState(false);
 
@@ -752,6 +798,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
                 onClick={() => {
                   setShowAssets((value) => !value);
                   setShowVersions(false);
+                  setShowSettings(false);
                 }}
                 className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
@@ -763,11 +810,23 @@ export function SiteBuilder({ userName }: { userName: string }) {
                 onClick={() => {
                   setShowVersions((value) => !value);
                   setShowAssets(false);
+                  setShowSettings(false);
                 }}
                 className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 <History className="size-4" /> Versions
                 {detail ? ` (${detail.versions.length})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings((value) => !value);
+                  setShowAssets(false);
+                  setShowVersions(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <SlidersHorizontal className="size-4" /> Settings
               </button>
             </div>
           </div>
@@ -890,6 +949,54 @@ export function SiteBuilder({ userName }: { userName: string }) {
                       No photos yet.
                     </p>
                   ) : null}
+                </div>
+              </aside>
+            ) : null}
+
+            {showSettings ? (
+              <aside className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-border p-3">
+                <h3 className="text-sm font-semibold">Site settings</h3>
+                <div className="mt-3">
+                  <p className="inline-flex items-center gap-1.5 text-sm font-medium">
+                    <MessageCircle className="size-4" /> WhatsApp button
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    A floating WhatsApp button on your site so customers
+                    can message and order. Changes apply to the live site
+                    right away — or just say “WhatsApp button hata do /
+                    laga do” in the chat.
+                  </p>
+                  <label className="mt-3 flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={waEnabled}
+                      onChange={(event) => setWaEnabled(event.target.checked)}
+                      className="size-4 accent-primary"
+                    />
+                    Show the WhatsApp button
+                  </label>
+                  <label className="mt-3 block text-xs font-medium text-muted-foreground">
+                    WhatsApp number (with country code)
+                    <input
+                      value={waNumber}
+                      onChange={(event) => setWaNumber(event.target.value)}
+                      placeholder="92 300 1234567"
+                      inputMode="tel"
+                      className="mt-1 w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none transition focus:border-ring"
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="mt-3"
+                    disabled={savingSettings || !projectId}
+                    onClick={() => void saveSettings()}
+                  >
+                    {savingSettings ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : null}
+                    Save settings
+                  </Button>
                 </div>
               </aside>
             ) : null}

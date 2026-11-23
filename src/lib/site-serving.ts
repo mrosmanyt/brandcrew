@@ -1,5 +1,6 @@
 import { sanitizeBuilderPreviewHtml } from "@/lib/html-preview";
 import {
+  applyWhatsAppButton,
   normalizeSitePagePath,
   publishedSitePath,
   rewriteSiteLinks,
@@ -60,8 +61,15 @@ export async function servePublishedSitePage(
   if (rawHtml === null) return siteNotFoundPage();
   const knownPaths = new Set(["", ...pages.map((page) => page.path)]);
   const base = publishedSitePath(slug);
-  const html = rewriteSiteLinks(
+  const withButton = applyWhatsAppButton(
     sanitizeBuilderPreviewHtml(rawHtml),
+    {
+      number: site.settings?.whatsappNumber ?? null,
+      enabled: site.settings?.whatsappEnabled ?? true,
+    },
+  );
+  const html = rewriteSiteLinks(
+    withButton,
     (path) => (path ? `${base}/${path}` : base),
     knownPaths,
   );
