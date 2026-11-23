@@ -11,11 +11,18 @@ import {
 import {
   SITE_PROJECT_CAPS,
   SITE_TEMPLATES,
+  buildMultiPageDocument,
+  buildPreviewShellHtml,
+  injectPreviewNav,
   isReservedSiteSlug,
   isValidSiteSlug,
+  normalizeSitePagePath,
+  parseMultiPageOutput,
   pickSiteSlug,
+  previewNavScript,
   publishedSitePath,
   publishedSiteUrl,
+  rewriteSiteLinks,
   siteProjectCapForPlan,
   siteSlugFromHost,
   siteTemplateById,
@@ -132,5 +139,79 @@ assert.equal(siteSlugFromHost("cinem.tech"), null);
 assert.equal(siteSlugFromHost("www.cinem.tech"), null);
 assert.equal(siteSlugFromHost("brandcrew.vercel.app"), null);
 assert.equal(siteSlugFromHost(null), null);
+
+// --- Multi-page sites (Package 11c) ---
+assert.equal(normalizeSitePagePath("/About/"), "about");
+assert.equal(normalizeSitePagePath(""), "");
+assert.equal(normalizeSitePagePath("/"), "");
+assert.equal(normalizeSitePagePath("menu/lunch"), "menu/lunch");
+assert.equal(normalizeSitePagePath("../etc"), null);
+assert.equal(normalizeSitePagePath("a b"), null);
+assert.equal(normalizeSitePagePath("café"), null);
+
+const multiDoc = [
+  '<<<PAGE path="/" title="Home">>>',
+  "<!DOCTYPE html><html><head><title>Home</title></head><body>Home page</body></html>",
+  '<<<PAGE path="/about" title="About us">>>',
+  "<!DOCTYPE html><html><head><title>About</title></head><body>About page</body></html>",
+  '<<<PAGE path="/menu">>>',
+  "<html><body>Menu page</body></html>",
+].join("\n");
+const parsed = parseMultiPageOutput(multiDoc);
+assert.ok(parsed, "multi-page output parses");
+assert.ok(parsed.home.includes("Home page"));
+assert.equal(parsed.pages.length, 2);
+assert.equal(parsed.pages[0].path, "about");
+assert.equal(parsed.pages[0].title, "About us");
+assert.equal(parsed.pages[1].path, "menu");
+assert.equal(parsed.pages[1].title, "menu");
+assert.equal(
+  parseMultiPageOutput("<html><body>single</body></html>"),
+  null,
+  "no markers = single page",
+);
+assert.equal(
+  parseMultiPageOutput('<<<PAGE path="/about">>>\n<html><body>x</body></html>'),
+  null,
+  "sub-page without a home page is not multi-page",
+);
+const rebuilt = buildMultiPageDocument(parsed.home, parsed.pages);
+const reparsed = parseMultiPageOutput(rebuilt);
+assert.ok(reparsed && reparsed.pages.length === 2, "round-trip keeps pages");
+
+const linkPage =
+  '<a href="/about">About</a> <a href="/">Home</a> <a href="https://wa.me/123">WA</a> ' +
+  '<a href="/unknown">?</a> <a href="#top">top</a> <a href="menu">Menu</a>';
+const rewritten = rewriteSiteLinks(
+  linkPage,
+  (path) => (path ? `/sites/my-shop/${path}` : "/sites/my-shop"),
+  new Set(["", "about", "menu"]),
+);
+assert.ok(rewritten.includes('href="/sites/my-shop/about"'));
+assert.ok(rewritten.includes('href="/sites/my-shop"'));
+assert.ok(rewritten.includes('href="/sites/my-shop/menu"'));
+assert.ok(rewritten.includes('href="https://wa.me/123"'));
+assert.ok(rewritten.includes('href="/unknown"'));
+assert.ok(rewritten.includes('href="#top"'));
+
+const nav = previewNavScript(["/", "/about"]);
+assert.ok(nav.includes('"/about"'));
+assert.ok(nav.includes("cinemPage"));
+const injected = injectPreviewNav("<html><body>Hi</body></html>", ["/", "/about"]);
+assert.ok(injected.includes("cinemPage"));
+assert.ok(injected.indexOf("cinemPage") < injected.indexOf("</body>"));
+
+const shell = buildPreviewShellHtml({
+  entryPath: "/",
+  pages: [
+    { path: "/", html: "<html><body>Home</body></html>" },
+    { path: "/about", html: "<html><body>About</body></html>" },
+  ],
+});
+assert.ok(shell.includes('id="pg"'));
+assert.ok(shell.includes('sandbox="allow-scripts"'));
+assert.ok(shell.includes("About"));
+assert.ok(shell.includes("cinemGoto"));
+assert.ok(!shell.includes("</script>\n\"/about\""), "payload is escaped");
 
 console.log("check-site-builder: all assertions passed");

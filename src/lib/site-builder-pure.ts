@@ -314,6 +314,191 @@ export function siteSlugFromHost(host: string | null | undefined): string | null
   return slug;
 }
 
+/* ------------------------------------------------------------------ */
+/* Multi-page sites (Package 11c)                                      */
+/*                                                                     */
+/* A multi-page build comes back from the model as one document per    */
+/* page, separated by markers:                                         */
+/*   <<<PAGE path="/" title="Home">>>                                  */
+/*   ...full HTML...                                                   */
+/*   <<<PAGE path="/about" title="About us">>>                         */
+/* The home page stays in SiteVersion.html; the rest become SitePage   */
+/* rows. No markers = a v1 single-page site, handled exactly as        */
+/* before.                                                             */
+/* ------------------------------------------------------------------ */
+
+export type SitePageDraft = { path: string; title: string; html: string };
+
+export const SITE_MAX_PAGES = 12;
+/** Total size cap for a whole multi-page site (home + all pages). */
+export const SITE_MULTIPAGE_MAX_CHARS = 900_000;
+
+const PAGE_MARKER = /<<<PAGE\s+path="([^"]*)"(?:\s+title="([^"]*)")?\s*>>>/gi;
+
+/**
+ * Normalize a raw page path to its stored form: no leading/trailing
+ * slash, lowercase ("About/" → "about"). "" means the home page.
+ * Returns null for anything that is not a safe in-site path.
+ */
+export function normalizeSitePagePath(raw: string): string | null {
+  const cleaned = raw
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/\/{2,}/g, "/");
+  if (cleaned === "") return "";
+  if (cleaned.length > 80) return null;
+  if (!/^[a-z0-9][a-z0-9-_]*(\/[a-z0-9][a-z0-9-_]*)*$/.test(cleaned)) return null;
+  return cleaned;
+}
+
+export function extractSitePageTitle(html: string, fallback: string): string {
+  const match = html.match(/<title[^>]*>([^<]{1,120})<\/title>/i);
+  const title = match?.[1]?.trim().replace(/\s+/g, " ");
+  return title || fallback;
+}
+
+function looksLikePageHtml(html: string): boolean {
+  return /<!doctype html|<html[\s>]|<body[\s>]|<main[\s>]|<div[\s>]/i.test(html);
+}
+
+export type ParsedMultiPage = { home: string; pages: SitePageDraft[] };
+
+/**
+ * Split a model result into home + sub-pages. Returns null when the
+ * output is not a valid multi-page document (the caller then treats it
+ * as a single-page result, exactly like v1).
+ */
+export function parseMultiPageOutput(content: string): ParsedMultiPage | null {
+  const markers = [...content.matchAll(PAGE_MARKER)];
+  if (markers.length === 0) return null;
+  let home: string | null = null;
+  const pages: SitePageDraft[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < markers.length; i += 1) {
+    const marker = markers[i];
+    const start = (marker.index ?? 0) + marker[0].length;
+    const end = i + 1 < markers.length ? markers[i + 1].index ?? content.length : content.length;
+    const html = content.slice(start, end).trim();
+    if (!looksLikePageHtml(html)) continue;
+    const path = normalizeSitePagePath(marker[1] ?? "");
+    if (path === null) continue;
+    if (path === "") {
+      if (home === null) home = html;
+      continue;
+    }
+    if (seen.has(path) || pages.length >= SITE_MAX_PAGES) continue;
+    seen.add(path);
+    pages.push({
+      path,
+      title:
+        (marker[2] ?? "").trim() ||
+        extractSitePageTitle(html, path.replace(/[-/]/g, " ")),
+      html,
+    });
+  }
+  if (home === null) {
+    // No explicit home marker: a full HTML preamble before the first
+    // marker can serve as the home page.
+    const preamble = content.slice(0, markers[0].index ?? 0).trim();
+    if (looksLikePageHtml(preamble)) home = preamble;
+  }
+  if (home === null || pages.length === 0) return null;
+  return { home, pages };
+}
+
+/** Join home + pages back into the marker format (for edit prompts). */
+export function buildMultiPageDocument(home: string, pages: SitePageDraft[]): string {
+  const parts = [`<<<PAGE path="/" title="Home">>>\n${home}`];
+  for (const page of pages) {
+    parts.push(`<<<PAGE path="/${page.path}" title="${page.title.replace(/"/g, "")}">>>\n${page.html}`);
+  }
+  return parts.join("\n\n");
+}
+
+/**
+ * Rewrite in-site links so they stay inside the surface serving the
+ * site (published /sites/<slug> base, or any other base the caller
+ * chooses). External links, anchors, tel:/mailto: and unknown paths are
+ * left exactly as they are. `knownPaths` uses stored form ("", "about").
+ */
+export function rewriteSiteLinks(
+  html: string,
+  makeUrl: (path: string) => string,
+  knownPaths: ReadonlySet<string>,
+): string {
+  return html.replace(
+    /(\bhref\s*=\s*)("([^"]*)"|'([^']*)')/gi,
+    (whole, prefix: string, _quoted: string, dq?: string, sq?: string) => {
+      const value = dq ?? sq ?? "";
+      const quote = dq !== undefined ? '"' : "'";
+      if (
+        !value ||
+        value.startsWith("#") ||
+        /^(https?:)?\/\//i.test(value) ||
+        /^(mailto|tel|data|javascript):/i.test(value)
+      ) {
+        return whole;
+      }
+      const pathPart = value.split("#")[0].split("?")[0];
+      const normalized = normalizeSitePagePath(pathPart);
+      if (normalized === null || !knownPaths.has(normalized)) return whole;
+      return `${prefix}${quote}${makeUrl(normalized)}${quote}`;
+    },
+  );
+}
+
+/**
+ * The click interceptor injected into preview pages: a click on a link
+ * to a known in-site page is reported to the preview shell instead of
+ * navigating (a srcdoc iframe has nowhere real to navigate to).
+ * `knownPaths` uses root form ("/", "/about").
+ */
+export function previewNavScript(knownPaths: string[]): string {
+  const list = JSON.stringify(knownPaths);
+  return `<script>(function(){var K=${list};document.addEventListener("click",function(e){var t=e.target;var a=t&&t.closest?t.closest("a[href]"):null;if(!a)return;var h=a.getAttribute("href")||"";if(!h||h.charAt(0)==="#")return;if(/^(https?:)?\\/\\//i.test(h)||/^(mailto|tel|data):/i.test(h))return;var p=h.split("#")[0].split("?")[0];if(p.charAt(0)!=="/")p="/"+p;p=p.replace(/\\/+$/,"")||"/";if(K.indexOf(p)===-1)return;e.preventDefault();if(window.parent&&window.parent!==window)window.parent.postMessage({cinemPage:p},"*");});})();</script>`;
+}
+
+export function injectPreviewNav(html: string, knownPaths: string[]): string {
+  const script = previewNavScript(knownPaths);
+  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${script}</body>`);
+  return `${html}${script}`;
+}
+
+/**
+ * The preview shell document for a multi-page site: an inner sandboxed
+ * iframe plus the page map. Page clicks inside arrive as postMessages
+ * ({cinemPage}) from the page's injected interceptor; the builder UI can
+ * jump pages with {cinemGoto}. `pages` uses root-form paths and must
+ * include the home page at "/".
+ */
+export function buildPreviewShellHtml(input: {
+  entryPath: string;
+  pages: Array<{ path: string; html: string }>;
+}): string {
+  const map: Record<string, string> = {};
+  for (const page of input.pages) map[page.path] = page.html;
+  const json = JSON.stringify(map).replace(/<\//g, "<\\/");
+  const entry = JSON.stringify(
+    Object.prototype.hasOwnProperty.call(map, input.entryPath)
+      ? input.entryPath
+      : "/",
+  );
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#fff}iframe{border:0;width:100%;height:100%;display:block}</style>
+</head><body>
+<iframe id="pg" sandbox="allow-scripts" title="Website preview"></iframe>
+<script>
+var PAGES = ${json};
+var frame = document.getElementById("pg");
+function render(p){ if(!Object.prototype.hasOwnProperty.call(PAGES, p)) p = "/"; frame.srcdoc = PAGES[p]; }
+window.addEventListener("message", function(e){ var d = e.data || {}; var p = d.cinemPage || d.cinemGoto; if (typeof p === "string") render(p); });
+render(${entry});
+</script>
+</body></html>`;
+}
+
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
 export const SITE_GENERATION_TOKEN_CEILING = 120_000;
 

@@ -34,12 +34,18 @@ import {
   SITE_BUILDER_NOT_CONFIGURED_MESSAGE,
   SITE_GENERATION_TOKEN_CEILING,
   SITE_HTML_MAX_CHARS,
+  SITE_MULTIPAGE_MAX_CHARS,
   SITE_TEMPLATES,
+  buildMultiPageDocument,
+  buildPreviewShellHtml,
+  injectPreviewNav,
+  parseMultiPageOutput,
   pickSiteSlug,
   publishedSiteUrl,
   siteProjectCapForPlan,
   siteTemplateById,
   slugifySiteTitle,
+  type SitePageDraft,
 } from "@/lib/site-builder-pure";
 
 const DESIGN_SYSTEM_INSTRUCTIONS = `House design system — follow it exactly:
@@ -48,6 +54,7 @@ const DESIGN_SYSTEM_INSTRUCTIONS = `House design system — follow it exactly:
 - Basic SEO by default: a proper <title>, a meta description, one <h1>, headings in order, readable contrast.
 - For business sites, include a WhatsApp contact button block (a link to https://wa.me/ with a placeholder number the owner can change).
 - Small inline JavaScript is allowed only for in-page interactivity (menus, filters, sliders, galleries). No external scripts, no trackers, no external stylesheets or fonts — everything inline in the one file.
+- Multi-page: when the site naturally splits into pages (Home plus About, Menu, Services, Gallery, Contact…), return one complete self-contained HTML document per page, each preceded by its own marker line: <<<PAGE path="/" title="Home">>> for the home page, <<<PAGE path="/about" title="About">>> for the others. Link between pages with root-relative links (href="/about"). Repeat the shared header/nav/footer on every page so each page stands on its own. When the business is simple, one rich page (with the home marker) is better than several thin ones.
 - Never claim the site is published or live; it is a preview inside CINEM Pro.`;
 
 export function builderConfigured(): boolean {
@@ -216,12 +223,25 @@ export async function getSiteProjectDetail(userId: string, projectId: string) {
     project.id,
     project.currentVersionId,
   );
+  const currentPages = current ? await loadVersionPagesSafe(current.id) : [];
   return {
     project: serializeSiteProject(project),
     publication,
     versions: versions.map(serializeSiteVersion),
     currentVersionId: current?.id ?? null,
-    previewHtml: current ? sanitizeBuilderPreviewHtml(current.html) : null,
+    pages:
+      currentPages.length > 0
+        ? [
+            { path: "/", title: "Home" },
+            ...currentPages.map((page) => ({
+              path: `/${page.path}`,
+              title: page.title || page.path,
+            })),
+          ]
+        : [],
+    previewHtml: current
+      ? buildVersionPreviewHtml(current.html, currentPages)
+      : null,
     messages: (conversation?.messages ?? []).map(
       (row: { id: string; role: string; content: string; createdAt: Date }) => ({
         id: row.id,
@@ -292,6 +312,62 @@ async function assertBuilderHourlyCap(workspaceId: string, plan: string) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Multi-page storage (Package 11c). All SitePage access is fail-safe: */
+/* until the migration SQL lands in a database, versions behave       */
+/* exactly like v1 single-page sites.                                  */
+/* ------------------------------------------------------------------ */
+
+type SitePageRow = {
+  id: string;
+  versionId: string;
+  path: string;
+  title: string;
+  html: string;
+  sort: number;
+};
+
+export async function loadVersionPagesSafe(
+  versionId: string | null | undefined,
+): Promise<SitePageDraft[]> {
+  if (!versionId) return [];
+  try {
+    const rows = (await prisma.sitePage.findMany({
+      where: { versionId },
+      orderBy: { sort: "asc" },
+    })) as SitePageRow[];
+    return rows.map((row) => ({
+      path: row.path,
+      title: row.title,
+      html: row.html,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Persist a version's sub-pages. False when the table is unavailable. */
+async function saveVersionPages(
+  versionId: string,
+  pages: SitePageDraft[],
+): Promise<boolean> {
+  if (pages.length === 0) return true;
+  try {
+    await prisma.sitePage.createMany({
+      data: pages.map((page, index) => ({
+        versionId,
+        path: page.path,
+        title: page.title,
+        html: page.html,
+        sort: index,
+      })),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function generateSiteVersion(input: {
   userId: string;
   userName: string;
@@ -318,6 +394,7 @@ export async function generateSiteVersion(input: {
     ? await prisma.siteVersion.findUnique({ where: { id: project.currentVersionId } })
     : null;
   const isEdit = Boolean(current);
+  const currentPages = isEdit ? await loadVersionPagesSafe(current!.id) : [];
   const kit = parseBrandKit(workspace.brandKit);
   // First build of a template project carries the template's design
   // direction (palette / layout / sections) so output quality stays high
@@ -325,15 +402,26 @@ export async function generateSiteVersion(input: {
   // "remix a finished brief" idea, applied to generation.
   const template = !isEdit && project.template ? siteTemplateById(project.template) : null;
   const prompt = isEdit
-    ? [
-        "Here is the current one-page website HTML:",
-        "```html",
-        current!.html.slice(0, SITE_HTML_MAX_CHARS),
-        "```",
-        "",
-        `Apply this change and return the complete updated page: ${instruction}`,
-        "Keep everything the user did not ask to change. Return the full page, not a diff.",
-      ].join("\n")
+    ? currentPages.length > 0
+      ? [
+          "Here is the current website — it has several pages, one document per page, each preceded by its page marker:",
+          buildMultiPageDocument(current!.html, currentPages).slice(
+            0,
+            SITE_MULTIPAGE_MAX_CHARS,
+          ),
+          "",
+          `Apply this change and return the COMPLETE updated set of pages, every page with its marker line, even the pages you did not change: ${instruction}`,
+          "Keep everything the user did not ask to change. Return full pages, not diffs.",
+        ].join("\n")
+      : [
+          "Here is the current one-page website HTML:",
+          "```html",
+          current!.html.slice(0, SITE_HTML_MAX_CHARS),
+          "```",
+          "",
+          `Apply this change and return the complete updated page: ${instruction}`,
+          "Keep everything the user did not ask to change. Return the full page, not a diff.",
+        ].join("\n")
     : template?.designDirection
       ? `${instruction}\n\nTemplate design direction (${template.label}) — follow it for palette, layout and section order: ${template.designDirection}`
       : instruction;
@@ -361,9 +449,32 @@ export async function generateSiteVersion(input: {
       "generation_too_large",
     );
   }
-  if (result.content.length > SITE_HTML_MAX_CHARS) {
+  // Multi-page (11c): split the result when it carries page markers.
+  // An edit that comes back as a single document against a multi-page
+  // site replaces the home page and carries the other pages forward —
+  // a small change never silently deletes pages.
+  const parsed = parseMultiPageOutput(result.content);
+  let homeHtml: string;
+  let nextPages: SitePageDraft[];
+  if (parsed) {
+    homeHtml = parsed.home;
+    nextPages = parsed.pages;
+  } else if (isEdit && currentPages.length > 0) {
+    homeHtml = result.content;
+    nextPages = currentPages;
+  } else {
+    homeHtml = result.content;
+    nextPages = [];
+  }
+  const totalChars =
+    homeHtml.length + nextPages.reduce((sum, page) => sum + page.html.length, 0);
+  if (
+    homeHtml.length > SITE_HTML_MAX_CHARS ||
+    nextPages.some((page) => page.html.length > SITE_HTML_MAX_CHARS) ||
+    totalChars > SITE_MULTIPAGE_MAX_CHARS
+  ) {
     throw new ClientError(
-      "That build came back larger than a one-page site allows and was not saved. Try a smaller change.",
+      "That build came back larger than a website allows and was not saved. Try a smaller change.",
       400,
       "generation_too_large",
     );
@@ -384,13 +495,15 @@ export async function generateSiteVersion(input: {
       projectId: project.id,
       version: versionCount + 1,
       kind: isEdit ? "edit" : "generate",
-      html: result.content,
+      html: homeHtml,
       instruction,
       model: result.model,
       provider: result.provider,
       tokens: result.tokens,
     },
   });
+  const pagesSaved = await saveVersionPages(version.id, nextPages);
+  const savedPages = pagesSaved ? nextPages : [];
   const updated = await prisma.siteProject.update({
     where: { id: project.id },
     data: {
@@ -405,17 +518,48 @@ export async function generateSiteVersion(input: {
     workspace.id,
     updated.title,
   );
+  const pageNote =
+    savedPages.length > 0
+      ? ` It has ${savedPages.length + 1} pages — use the page buttons above the preview to look through them.`
+      : nextPages.length > 0
+        ? " The extra pages are saved with the build and will appear once page storage finishes setting up on this server."
+        : "";
   const reply = isEdit
-    ? `Done — version ${version.version} is in the preview. ${result.summary || "Ask for any other change, or restore an older version any time."}`
-    : `Your website is ready — version 1 is in the preview. ${result.summary || "Tell me what to change: colours, prices, sections, anything."}`;
+    ? `Done — version ${version.version} is in the preview.${pageNote} ${result.summary || "Ask for any other change, or restore an older version any time."}`
+    : `Your website is ready — version 1 is in the preview.${pageNote} ${result.summary || "Tell me what to change: colours, prices, sections, anything."}`;
   await appendBuilderMessages(conversationId, instruction, reply, result.model, result.tokens);
 
   return {
     project: serializeSiteProject(updated),
     version: serializeSiteVersion(version),
-    previewHtml: sanitizeBuilderPreviewHtml(version.html),
+    previewHtml: buildVersionPreviewHtml(version.html, savedPages),
     reply,
   };
+}
+
+/**
+ * The preview document for one version: the sanitized home page for a
+ * single-page site (v1 behaviour), or the multi-page preview shell —
+ * every page sanitized, nav interceptor injected, pages in the shell
+ * map — when the version has sub-pages.
+ */
+export function buildVersionPreviewHtml(
+  homeHtml: string,
+  pages: SitePageDraft[],
+): string {
+  if (pages.length === 0) return sanitizeBuilderPreviewHtml(homeHtml);
+  const known = ["/", ...pages.map((page) => `/${page.path}`)];
+  const all = [
+    {
+      path: "/",
+      html: injectPreviewNav(sanitizeBuilderPreviewHtml(homeHtml), known),
+    },
+    ...pages.map((page) => ({
+      path: `/${page.path}`,
+      html: injectPreviewNav(sanitizeBuilderPreviewHtml(page.html), known),
+    })),
+  ];
+  return buildPreviewShellHtml({ entryPath: "/", pages: all });
 }
 
 /* ------------------------------------------------------------------ */
@@ -623,6 +767,7 @@ export async function resolvePublishedSite(slug: string) {
       },
     });
     if (!publication?.isLive || !publication.version) return null;
+    const pages = await loadVersionPagesSafe(publication.version.id);
     return {
       projectId: publication.projectId,
       title: publication.project.title,
@@ -630,6 +775,7 @@ export async function resolvePublishedSite(slug: string) {
       versionId: publication.version.id,
       version: publication.version.version,
       html: publication.version.html,
+      pages,
     };
   } catch {
     return null;
@@ -664,6 +810,10 @@ export async function restoreSiteVersion(input: {
       tokens: 0,
     },
   });
+  // Multi-page: a restore brings the source version's pages along too.
+  const sourcePages = await loadVersionPagesSafe(source.id);
+  const pagesSaved = await saveVersionPages(version.id, sourcePages);
+  const restoredPages = pagesSaved ? sourcePages : [];
   const updated = await prisma.siteProject.update({
     where: { id: project.id },
     data: { currentVersionId: version.id },
@@ -684,6 +834,6 @@ export async function restoreSiteVersion(input: {
   return {
     project: serializeSiteProject(updated),
     version: serializeSiteVersion(version),
-    previewHtml: sanitizeBuilderPreviewHtml(version.html),
+    previewHtml: buildVersionPreviewHtml(version.html, restoredPages),
   };
 }

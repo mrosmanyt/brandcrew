@@ -322,6 +322,7 @@ model SiteVersion {
   project     SiteProject @relation("ProjectVersions", fields: [projectId], references: [id], onDelete: Cascade)
   currentOf   SiteProject? @relation("CurrentSiteVersion")
   publication SitePublication?
+  pages       SitePage[]
 
   @@unique([projectId, version])
   @@index([projectId, createdAt])
@@ -345,6 +346,27 @@ model SitePublication {
   version     SiteVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
 
   @@index([slug])
+}
+
+/// Multi-page sites (Package 11c): the extra pages of one SiteVersion.
+/// The home page stays in SiteVersion.html (v1 shape, unchanged); each
+/// row here is one more full self-contained page at a root-relative
+/// path ("about", "menu", …). A version with no rows is a v1
+/// single-page site.
+model SitePage {
+  id        String      @id @default(cuid())
+  versionId String
+  /// Path inside the site, no leading slash ("about"); home is never here.
+  path      String
+  title     String      @default("")
+  /// The full self-contained HTML page.
+  html      String
+  sort      Int         @default(0)
+  createdAt DateTime    @default(now())
+  version   SiteVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, path])
+  @@index([versionId, sort])
 }
 
 model ChatMessage {

@@ -1,4 +1,9 @@
 import { sanitizeBuilderPreviewHtml } from "@/lib/html-preview";
+import {
+  normalizeSitePagePath,
+  publishedSitePath,
+  rewriteSiteLinks,
+} from "@/lib/site-builder-pure";
 import { resolvePublishedSite } from "@/lib/site-builder";
 
 /**
@@ -33,8 +38,9 @@ export function siteNotFoundPage(): ServedSitePage {
 
 /**
  * Resolve and render one page of a published site. `pagePath` is the
- * path inside the site ("" or "/" = home). Multi-page sites arrive with
- * Package 11c — until then any sub-path is a 404.
+ * path inside the site ("" = home). In-site links are rewritten to the
+ * /sites/<slug> base so the same HTML works on the site's subdomain
+ * (via the proxy rewrite) and on the app host's path form alike.
  */
 export async function servePublishedSitePage(
   slug: string,
@@ -42,11 +48,22 @@ export async function servePublishedSitePage(
 ): Promise<ServedSitePage> {
   const site = await resolvePublishedSite(slug);
   if (!site) return siteNotFoundPage();
-  const normalized = pagePath.replace(/^\/+|\/+$/g, "");
-  if (normalized !== "") return siteNotFoundPage();
-  return {
-    status: 200,
-    html: sanitizeBuilderPreviewHtml(site.html),
-    projectId: site.projectId,
-  };
+  const normalized = normalizeSitePagePath(pagePath);
+  if (normalized === null) return siteNotFoundPage();
+  const pages = site.pages ?? [];
+  let rawHtml: string | null = null;
+  if (normalized === "") {
+    rawHtml = site.html;
+  } else {
+    rawHtml = pages.find((page) => page.path === normalized)?.html ?? null;
+  }
+  if (rawHtml === null) return siteNotFoundPage();
+  const knownPaths = new Set(["", ...pages.map((page) => page.path)]);
+  const base = publishedSitePath(slug);
+  const html = rewriteSiteLinks(
+    sanitizeBuilderPreviewHtml(rawHtml),
+    (path) => (path ? `${base}/${path}` : base),
+    knownPaths,
+  );
+  return { status: 200, html, projectId: site.projectId };
 }

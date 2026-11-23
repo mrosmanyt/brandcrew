@@ -102,6 +102,7 @@ type ProjectDetail = {
   publication: SitePublication | null;
   versions: SiteVersion[];
   currentVersionId: string | null;
+  pages: Array<{ path: string; title: string }>;
   previewHtml: string | null;
   messages: BuilderMessage[];
 };
@@ -144,7 +145,14 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [showVersions, setShowVersions] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [creating, setCreating] = useState(false);
+  const [activePage, setActivePage] = useState("/");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const gotoPage = useCallback((path: string) => {
+    setActivePage(path);
+    iframeRef.current?.contentWindow?.postMessage({ cinemGoto: path }, "*");
+  }, []);
 
   const loadDetail = useCallback(async (id: string) => {
     const data = await api<ProjectDetail>(`/api/builder/projects/${id}`);
@@ -180,6 +188,10 @@ export function SiteBuilder({ userName }: { userName: string }) {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [detail?.messages.length, busy]);
+
+  useEffect(() => {
+    setActivePage("/");
+  }, [detail?.currentVersionId]);
 
   const createProject = useCallback(
     async (template: SiteTemplate) => {
@@ -684,10 +696,32 @@ export function SiteBuilder({ userName }: { userName: string }) {
             </button>
           </div>
 
+          {(detail?.pages.length ?? 0) > 1 ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-border px-3 py-2">
+              <span className="text-xs text-muted-foreground">Pages:</span>
+              {detail!.pages.map((page) => (
+                <button
+                  key={page.path}
+                  type="button"
+                  onClick={() => gotoPage(page.path)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs transition",
+                    activePage === page.path
+                      ? "border-primary/60 bg-primary/10 font-medium text-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {page.title}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="flex min-h-0 flex-1">
             <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto bg-muted/40 p-3">
               {detail?.previewHtml ? (
                 <iframe
+                  ref={iframeRef}
                   key={detail.currentVersionId ?? "preview"}
                   title={detail.project.title}
                   srcDoc={detail.previewHtml}
