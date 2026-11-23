@@ -18,6 +18,8 @@ import {
   detectWhatsAppToggle,
   isSiteLanguage,
   normalizeWhatsAppNumber,
+  parseSiteProducts,
+  productOrderLink,
   buildPreviewShellHtml,
   injectPreviewNav,
   isReservedSiteSlug,
@@ -29,9 +31,11 @@ import {
   publishedSitePath,
   publishedSiteUrl,
   rewriteSiteLinks,
+  serializeSiteProducts,
   siteAssetUrl,
   siteAssetValidationError,
   siteLanguagePromptBlock,
+  siteProductsPromptBlock,
   siteProjectCapForPlan,
   whatsAppLink,
   siteSlugFromHost,
@@ -301,5 +305,53 @@ assert.equal(siteLanguagePromptBlock("en"), null);
   const mixed = siteLanguagePromptBlock("mixed");
   assert.ok(mixed && mixed.includes("Roman Urdu"));
 }
+
+// --- Shop products (Package F) ---
+assert.deepEqual(parseSiteProducts(null), []);
+assert.deepEqual(parseSiteProducts("not json"), []);
+assert.deepEqual(parseSiteProducts('{"a":1}'), []);
+assert.deepEqual(
+  parseSiteProducts(
+    JSON.stringify([
+      { name: "Leather Wallet", price: "Rs 1,499", note: "Free delivery" },
+      { name: "  ", price: "Rs 5" },
+      { name: "Cap", price: "" },
+      "junk",
+    ]),
+  ),
+  [
+    { name: "Leather Wallet", price: "Rs 1,499", note: "Free delivery", imageAssetId: undefined },
+    { name: "Cap", price: "", imageAssetId: undefined, note: undefined },
+  ],
+);
+assert.equal(
+  productOrderLink("923001234567", { name: "Leather Wallet", price: "Rs 1,499" }),
+  "https://wa.me/923001234567?text=I%20want%20to%20order%3A%20Leather%20Wallet%20(Rs%201%2C499)",
+);
+{
+  const block = siteProductsPromptBlock({
+    products: [
+      { name: "Leather Wallet", price: "Rs 1,499", imageAssetId: "asset1" },
+    ],
+    whatsappNumber: "923001234567",
+  });
+  assert.ok(block && block.includes("Leather Wallet — Rs 1,499"));
+  assert.ok(block && block.includes("/site-assets/asset1"));
+  assert.ok(block && block.includes("wa.me/923001234567"));
+  assert.ok(block && /No checkout/.test(block));
+  assert.equal(
+    siteProductsPromptBlock({ products: [], whatsappNumber: "923001234567" }),
+    null,
+  );
+  const noNumber = siteProductsPromptBlock({
+    products: [{ name: "Cap", price: "Rs 500" }],
+    whatsappNumber: null,
+  });
+  assert.ok(noNumber && noNumber.includes("contact section"));
+}
+assert.equal(
+  JSON.parse(serializeSiteProducts([{ name: "Cap", price: "Rs 500" }]))[0].name,
+  "Cap",
+);
 
 console.log("check-site-builder: all assertions passed");

@@ -101,10 +101,18 @@ type BuilderMessage = {
   createdAt: string;
 };
 
+type SiteProduct = {
+  name: string;
+  price: string;
+  imageAssetId?: string;
+  note?: string;
+};
+
 type SiteSettings = {
   whatsappNumber: string | null;
   whatsappEnabled: boolean;
   language: string;
+  products: SiteProduct[];
   whatsappLink: string | null;
 };
 
@@ -179,6 +187,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
   const [waNumber, setWaNumber] = useState("");
   const [waEnabled, setWaEnabled] = useState(true);
   const [siteLang, setSiteLang] = useState<string>("en");
+  const [productsDraft, setProductsDraft] = useState<SiteProduct[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [creating, setCreating] = useState(false);
@@ -197,6 +206,7 @@ export function SiteBuilder({ userName }: { userName: string }) {
     setWaNumber(data.settings?.whatsappNumber ?? "");
     setWaEnabled(data.settings?.whatsappEnabled ?? true);
     setSiteLang(data.settings?.language ?? "en");
+    setProductsDraft(data.settings?.products ?? []);
     return data;
   }, []);
 
@@ -387,6 +397,14 @@ export function SiteBuilder({ userName }: { userName: string }) {
           whatsappNumber: waNumber.trim() === "" ? null : waNumber.trim(),
           whatsappEnabled: waEnabled,
           language: siteLang,
+          products: productsDraft
+            .filter((product) => product.name.trim() !== "")
+            .map((product) => ({
+              name: product.name.trim(),
+              price: product.price.trim(),
+              imageAssetId: product.imageAssetId || undefined,
+              note: product.note?.trim() ? product.note.trim() : undefined,
+            })),
         }),
       });
       await loadDetail(projectId);
@@ -397,7 +415,15 @@ export function SiteBuilder({ userName }: { userName: string }) {
     } finally {
       setSavingSettings(false);
     }
-  }, [projectId, savingSettings, waNumber, waEnabled, siteLang, loadDetail]);
+  }, [
+    projectId,
+    savingSettings,
+    waNumber,
+    waEnabled,
+    siteLang,
+    productsDraft,
+    loadDetail,
+  ]);
 
   const [publishing, setPublishing] = useState(false);
 
@@ -1053,6 +1079,132 @@ export function SiteBuilder({ userName }: { userName: string }) {
                     “site ko isi language mein dobara banao”) to rewrite
                     the current pages.
                   </p>
+                </div>
+                <div className="mt-5 border-t border-border pt-4">
+                  <p className="text-sm font-medium">Products (for shops)</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Your real products — name, price and a photo from the
+                    Photos panel. Each product gets its own WhatsApp
+                    order button; orders come straight to your WhatsApp.
+                    Save, then ask in the chat: “products wala grid dobara
+                    banao”.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-3">
+                    {productsDraft.map((product, index) => (
+                      <div
+                        key={index}
+                        className="rounded-lg border border-border p-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={product.name}
+                            onChange={(event) =>
+                              setProductsDraft((rows) =>
+                                rows.map((row, i) =>
+                                  i === index
+                                    ? { ...row, name: event.target.value }
+                                    : row,
+                                ),
+                              )
+                            }
+                            placeholder="Product name"
+                            className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-ring"
+                          />
+                          <button
+                            type="button"
+                            aria-label="Remove product"
+                            onClick={() =>
+                              setProductsDraft((rows) =>
+                                rows.filter((_, i) => i !== index),
+                              )
+                            }
+                            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          value={product.price}
+                          onChange={(event) =>
+                            setProductsDraft((rows) =>
+                              rows.map((row, i) =>
+                                i === index
+                                  ? { ...row, price: event.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          placeholder="Price — e.g. Rs 1,499"
+                          className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-ring"
+                        />
+                        <select
+                          value={product.imageAssetId ?? ""}
+                          onChange={(event) =>
+                            setProductsDraft((rows) =>
+                              rows.map((row, i) =>
+                                i === index
+                                  ? {
+                                      ...row,
+                                      imageAssetId:
+                                        event.target.value || undefined,
+                                    }
+                                  : row,
+                              ),
+                            )
+                          }
+                          className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-ring"
+                        >
+                          <option value="">Photo — none</option>
+                          {(detail?.assets ?? []).map((asset) => (
+                            <option key={asset.id} value={asset.id}>
+                              {`Photo — ${asset.name}`}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={product.note ?? ""}
+                          onChange={(event) =>
+                            setProductsDraft((rows) =>
+                              rows.map((row, i) =>
+                                i === index
+                                  ? { ...row, note: event.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          placeholder="Note (optional) — e.g. Free delivery"
+                          className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-ring"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={productsDraft.length >= 30}
+                      onClick={() =>
+                        setProductsDraft((rows) => [
+                          ...rows,
+                          { name: "", price: "" },
+                        ])
+                      }
+                    >
+                      <Plus className="size-3.5" /> Add product
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={savingSettings || !projectId}
+                      onClick={() => void saveSettings()}
+                    >
+                      {savingSettings ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : null}
+                      Save settings
+                    </Button>
+                  </div>
                 </div>
               </aside>
             ) : null}

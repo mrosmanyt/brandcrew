@@ -43,20 +43,25 @@ import {
   buildPreviewShellHtml,
   detectWhatsAppToggle,
   injectPreviewNav,
+  SITE_PRODUCTS_MAX,
   isSiteLanguage,
   normalizeWhatsAppNumber,
   parseMultiPageOutput,
+  parseSiteProducts,
   pickSiteSlug,
   publishedSiteUrl,
+  serializeSiteProducts,
   siteAssetUrl,
   siteAssetValidationError,
   siteLanguagePromptBlock,
+  siteProductsPromptBlock,
   siteProjectCapForPlan,
   siteTemplateById,
   slugifySiteTitle,
   whatsAppLink,
   type SiteLanguage,
   type SitePageDraft,
+  type SiteProduct,
 } from "@/lib/site-builder-pure";
 
 const DESIGN_SYSTEM_INSTRUCTIONS = `House design system — follow it exactly:
@@ -531,12 +536,14 @@ export type SiteSettingsData = {
   whatsappNumber: string | null;
   whatsappEnabled: boolean;
   language: SiteLanguage;
+  products: SiteProduct[];
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   whatsappNumber: null,
   whatsappEnabled: true,
   language: "en",
+  products: [],
 };
 
 export function serializeSiteSettings(settings: SiteSettingsData) {
@@ -544,6 +551,7 @@ export function serializeSiteSettings(settings: SiteSettingsData) {
     whatsappNumber: settings.whatsappNumber,
     whatsappEnabled: settings.whatsappEnabled,
     language: settings.language,
+    products: settings.products,
     whatsappLink: settings.whatsappNumber
       ? whatsAppLink(settings.whatsappNumber)
       : null,
@@ -583,6 +591,18 @@ export async function getSiteSettingsSafe(
   } catch {
     /* column not applied yet — English default stands */
   }
+  // Same story for the products column (Package F).
+  try {
+    const row = await prisma.siteSettings.findUnique({
+      where: { projectId },
+      select: { productsJson: true },
+    });
+    if (row) {
+      base = { ...base, products: parseSiteProducts(row.productsJson) };
+    }
+  } catch {
+    /* column not applied yet — empty product list stands */
+  }
   return base;
 }
 
@@ -592,12 +612,14 @@ export async function updateSiteSettings(input: {
   whatsappNumber?: string | null;
   whatsappEnabled?: boolean;
   language?: SiteLanguage;
+  products?: SiteProduct[];
 }): Promise<SiteSettingsData> {
   const project = await loadOwnedProject(input.userId, input.projectId);
   const data: {
     whatsappNumber?: string | null;
     whatsappEnabled?: boolean;
     language?: string;
+    productsJson?: string;
   } = {};
   if (input.whatsappNumber !== undefined) {
     if (input.whatsappNumber === null || input.whatsappNumber.trim() === "") {
@@ -619,6 +641,19 @@ export async function updateSiteSettings(input: {
   }
   if (input.language !== undefined) {
     data.language = input.language;
+  }
+  if (input.products !== undefined) {
+    if (input.products.length > SITE_PRODUCTS_MAX) {
+      throw new ClientError(
+        `A site can list up to ${SITE_PRODUCTS_MAX} products.`,
+        400,
+        "invalid_request",
+      );
+    }
+    // Re-run the stored-shape parser so only clean rows are persisted.
+    data.productsJson = serializeSiteProducts(
+      parseSiteProducts(JSON.stringify(input.products)),
+    );
   }
   try {
     const row = await prisma.siteSettings.upsert({
@@ -744,6 +779,15 @@ export async function generateSiteVersion(input: {
   const languageBlock = siteLanguagePromptBlock(settings.language);
   if (languageBlock) {
     promptBlocks.push("", languageBlock);
+  }
+  const productsBlock = siteProductsPromptBlock({
+    products: settings.products,
+    whatsappNumber: settings.whatsappEnabled
+      ? settings.whatsappNumber
+      : null,
+  });
+  if (productsBlock) {
+    promptBlocks.push("", productsBlock);
   }
   if (!settings.whatsappEnabled) {
     promptBlocks.push(

@@ -70,9 +70,9 @@ export const SITE_TEMPLATES: SiteTemplate[] = [
     blurb: "Products, prices and WhatsApp enquiries",
     defaultTitle: "My shop website",
     starterPrompt:
-      "Build a one-page website for my shop: a bold hero, a product grid with categories visitors can filter and prices, why customers trust us, reviews, and a contact section with a WhatsApp enquiry button on every product.",
+      "Build a one-page website for my shop: a bold hero, a product grid with categories visitors can filter and prices, why customers trust us, reviews, and a contact section. Every product card shows the product name, its price, its photo when one is provided, and its own WhatsApp order button (each button orders that exact product). If the owner has saved a product list in the site settings, build the grid from exactly that list — real names, real prices, real photos, real order links.",
     designDirection:
-      "Clean retail layout, bright palette with one strong accent colour. Sections: hero with a featured offer, filterable product grid with prices, trust points (delivery, returns, genuine products), reviews, contact with WhatsApp enquiry buttons.",
+      "Clean retail layout, bright palette with one strong accent colour. Sections: hero with a featured offer, filterable product grid with prices and a per-product WhatsApp order button, trust points (delivery, returns, genuine products), reviews, contact with WhatsApp enquiry buttons. Orders happen on WhatsApp — no checkout, no payment forms.",
   },
   {
     id: "hotel",
@@ -655,6 +655,107 @@ export function siteLanguagePromptBlock(language: SiteLanguage): string | null {
     default:
       return null;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Shop products (Package F). The owner's real product list lives in   */
+/* settings as JSON; generation builds the grid from exactly it, with  */
+/* a per-product WhatsApp order button. No payment gateway — orders    */
+/* are WhatsApp messages, by the owner's explicit decision.            */
+/* ------------------------------------------------------------------ */
+
+export type SiteProduct = {
+  name: string;
+  price: string;
+  imageAssetId?: string;
+  note?: string;
+};
+
+export const SITE_PRODUCTS_MAX = 30;
+
+export function parseSiteProducts(
+  json: string | null | undefined,
+): SiteProduct[] {
+  if (!json) return [];
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    const products: SiteProduct[] = [];
+    for (const row of parsed) {
+      if (!row || typeof row !== "object") continue;
+      const record = row as Record<string, unknown>;
+      const name = typeof record.name === "string" ? record.name.trim() : "";
+      if (!name) continue;
+      products.push({
+        name: name.slice(0, 80),
+        price:
+          typeof record.price === "string" ? record.price.trim().slice(0, 40) : "",
+        imageAssetId:
+          typeof record.imageAssetId === "string" && record.imageAssetId
+            ? record.imageAssetId
+            : undefined,
+        note:
+          typeof record.note === "string" && record.note.trim()
+            ? record.note.trim().slice(0, 120)
+            : undefined,
+      });
+      if (products.length >= SITE_PRODUCTS_MAX) break;
+    }
+    return products;
+  } catch {
+    return [];
+  }
+}
+
+export function serializeSiteProducts(products: SiteProduct[]): string {
+  return JSON.stringify(products.slice(0, SITE_PRODUCTS_MAX));
+}
+
+/** The exact per-product WhatsApp order link (prefilled message). */
+export function productOrderLink(
+  number: string,
+  product: SiteProduct,
+): string {
+  const label = product.price
+    ? `${product.name} (${product.price})`
+    : product.name;
+  return whatsAppLink(number, `I want to order: ${label}`);
+}
+
+/**
+ * The generation block carrying the owner's real products. Order links
+ * are precomputed so the model copies them verbatim instead of
+ * inventing numbers; photos resolve through the uploaded-asset URLs.
+ */
+export function siteProductsPromptBlock(input: {
+  products: SiteProduct[];
+  whatsappNumber: string | null;
+}): string | null {
+  if (input.products.length === 0) return null;
+  const lines = [
+    "The owner's real product list — build the product grid from EXACTLY these products (real names, real prices; do not invent extra products or change prices):",
+  ];
+  for (const product of input.products) {
+    const parts = [`- ${product.name} — ${product.price || "price on request"}`];
+    if (product.note) parts.push(`(${product.note})`);
+    if (product.imageAssetId) {
+      parts.push(`photo: ${siteAssetUrl(product.imageAssetId)}`);
+    }
+    if (input.whatsappNumber) {
+      parts.push(`order button link: ${productOrderLink(input.whatsappNumber, product)}`);
+    }
+    lines.push(parts.join(" "));
+  }
+  if (input.whatsappNumber) {
+    lines.push(
+      "Each product card gets its own order button using exactly its order link above (a WhatsApp message prefilled with that product). No checkout, no payment forms — ordering happens on WhatsApp.",
+    );
+  } else {
+    lines.push(
+      "The owner has not set a WhatsApp number yet: give each product card an order button that jumps to the contact section. No checkout, no payment forms.",
+    );
+  }
+  return lines.join("\n");
 }
 
 /** Hard ceiling for one build/edit, in returned tokens (design note §6). */
