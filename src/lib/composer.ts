@@ -8,7 +8,7 @@ export const COMPOSER_PLUS_ITEMS = [
   { id: "plugins", label: "Add plugins" },
 ] as const;
 
-export type ComposerAttachmentKind = "text" | "image" | "audio" | "video";
+export type ComposerAttachmentKind = "text" | "image" | "audio" | "video" | "document";
 
 export type ComposerAttachment = {
   name: string;
@@ -34,8 +34,17 @@ export function formatAttachedFiles(files: ComposerAttachment[]) {
   if (!files.length) return "";
   return files
     .map((file) => {
+      if (file.error) {
+        return `Attached file ${file.name} could not be read: ${file.error}`;
+      }
       if (file.kind === "image") {
-        return `Attached image: ${file.name}. Analyze the picture — do not ignore it.`;
+        return `Attached image: ${file.name}. Analyze the picture — do not ignore it. If the picture shows a document, card, sign, or any written text — especially Urdu text — transcribe all of the visible text exactly as written (keep Urdu in Urdu script) before answering.`;
+      }
+      if (file.kind === "document") {
+        if (file.text?.trim()) {
+          return `Attached document ${file.name} (extracted text):\n${file.text.trim()}`;
+        }
+        return `Attached document: ${file.name}. Its text could not be extracted — do not invent its contents; tell the user it could not be read.`;
       }
       if (file.kind === "audio") {
         const transcript = file.transcript?.trim()

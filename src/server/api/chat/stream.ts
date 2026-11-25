@@ -19,6 +19,7 @@ import {
   chatContentWithAttachments,
   composerAttachmentsSchema,
 } from "@/lib/composer-media";
+import { enrichDocumentAttachments } from "@/lib/document-extract";
 import { jsonError, jsonFail } from "@/lib/http";
 import {
   llm,
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
   let prepared: PreparedChatTurn;
   let routes: LlmRoute[];
   let searchContext = "";
+  let documentNote = "";
   let searchSources: ChatSearchSource[] = [];
   let systemPrompt = CHAT_SYSTEM_PROMPT;
   try {
@@ -92,6 +94,24 @@ export async function POST(request: Request) {
     const last = body.messages[body.messages.length - 1];
     if (!last || last.role !== "user") {
       return jsonFail("The last message must be from you.", 400);
+    }
+    // Document intelligence: extract text from PDF/Word/Excel attachments
+    // server-side BEFORE the turn is persisted, so the stored attachment
+    // carries the extracted text (not the raw bytes) and failures surface
+    // as an honest note to the model instead of a fake success.
+    const documentFailures: string[] = [];
+    for (const message of body.messages) {
+      if (message.role !== "user" || !message.attachments.length) continue;
+      const enriched = await enrichDocumentAttachments(message.attachments);
+      message.attachments = enriched.files;
+      documentFailures.push(...enriched.failures);
+    }
+    if (documentFailures.length) {
+      documentNote = [
+        "Some attached documents could not be read:",
+        ...documentFailures.map((failure) => `- ${failure}`),
+        "Tell the user plainly which file(s) failed and why. Do not invent their contents.",
+      ].join("\n");
     }
     prepared = await prepareChatTurn({
       userId: user.id,
@@ -174,6 +194,9 @@ export async function POST(request: Request) {
     { role: "system", content: systemPrompt },
     ...(searchContext
       ? [{ role: "system", content: searchContext } as LlmChatMessage]
+      : []),
+    ...(documentNote
+      ? [{ role: "system", content: documentNote } as LlmChatMessage]
       : []),
     ...body.messages.map((message) => ({
       role: message.role,
