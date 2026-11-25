@@ -164,6 +164,8 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "chat", "higgsfield"],
     handlers: asHandlers(chatHiggsfield),
+  },
+  {
     pattern: ["api", "chat", "scheduled-tasks"],
     handlers: asHandlers(chatScheduledTasks),
   },
