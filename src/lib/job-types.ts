@@ -21,6 +21,7 @@ export const JOB_TOOLS = [
   "native_file_read",
   "native_file_write",
   "composio_execute",
+  "mcp_execute",
   "browser_tabs",
   "write_artifact",
   "ask_user",
@@ -122,6 +123,7 @@ export type JobContext = {
   workspaceKind?: string;
   clientName?: string;
   composio?: { toolkit: string; tool: string; ok: boolean; text: string };
+  mcp?: { server: string; tool: string; ok: boolean; text: string };
   maxPages?: number;
   /** Off-domain hops allowed when the job started on a search engine (Google → results). */
   researchHopCount?: number;

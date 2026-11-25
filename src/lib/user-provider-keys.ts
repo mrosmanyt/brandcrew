@@ -15,6 +15,8 @@ export type ByokPublicSnapshot = {
   hasDeepgramKey: boolean;
   hasImageGenWorker: boolean;
   hasGeminigenKey: boolean;
+  /** Both halves of the Higgsfield key ID + secret pair are stored. */
+  hasHiggsfieldKey: boolean;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -44,6 +46,8 @@ export function publicByokSnapshot(row: {
   imageGenUrlEnc: string;
   imageGenApiKeyEnc: string;
   geminigenApiKeyEnc: string;
+  higgsfieldKeyIdEnc: string;
+  higgsfieldKeySecretEnc: string;
   geminiTokensUsed: number;
   deepgramCharsUsed: number;
   spendCapUsd: number;
@@ -56,6 +60,7 @@ export function publicByokSnapshot(row: {
     hasDeepgramKey: Boolean(row.deepgramKeyEnc),
     hasImageGenWorker: Boolean(row.imageGenUrlEnc && row.imageGenApiKeyEnc),
     hasGeminigenKey: Boolean(row.geminigenApiKeyEnc),
+    hasHiggsfieldKey: Boolean(row.higgsfieldKeyIdEnc && row.higgsfieldKeySecretEnc),
     geminiTokensUsed: row.geminiTokensUsed,
     deepgramCharsUsed: row.deepgramCharsUsed,
     spendCapUsd: row.spendCapUsd,
@@ -78,6 +83,8 @@ export async function patchProviderKeys(
     imageGenUrl?: string | null;
     imageGenApiKey?: string | null;
     geminigenApiKey?: string | null;
+    higgsfieldKeyId?: string | null;
+    higgsfieldKeySecret?: string | null;
     spendCapUsd?: number;
   },
 ) {
@@ -87,6 +94,8 @@ export async function patchProviderKeys(
     imageGenUrlEnc?: string;
     imageGenApiKeyEnc?: string;
     geminigenApiKeyEnc?: string;
+    higgsfieldKeyIdEnc?: string;
+    higgsfieldKeySecretEnc?: string;
     spendCapUsd?: number;
   } = {};
   if (input.geminiKey !== undefined) {
@@ -109,6 +118,14 @@ export async function patchProviderKeys(
     const trimmed = (input.geminigenApiKey || "").trim();
     data.geminigenApiKeyEnc = trimmed ? encryptSecret(trimmed) : "";
   }
+  if (input.higgsfieldKeyId !== undefined) {
+    const trimmed = (input.higgsfieldKeyId || "").trim();
+    data.higgsfieldKeyIdEnc = trimmed ? encryptSecret(trimmed) : "";
+  }
+  if (input.higgsfieldKeySecret !== undefined) {
+    const trimmed = (input.higgsfieldKeySecret || "").trim();
+    data.higgsfieldKeySecretEnc = trimmed ? encryptSecret(trimmed) : "";
+  }
   if (input.spendCapUsd !== undefined) {
     data.spendCapUsd = Math.max(1, Math.min(500, input.spendCapUsd));
   }
@@ -118,6 +135,22 @@ export async function patchProviderKeys(
     update: data,
   });
   return publicByokSnapshot(row);
+}
+
+/** Higgsfield API credential pair, decrypted server-side only. Null when either half is missing. */
+export async function readHiggsfieldCredentials(
+  userId: string,
+): Promise<{ keyId: string; secret: string } | null> {
+  const row = await prisma.userProviderKey.findUnique({ where: { userId } });
+  if (!row?.higgsfieldKeyIdEnc || !row?.higgsfieldKeySecretEnc) return null;
+  try {
+    return {
+      keyId: decryptSecret(row.higgsfieldKeyIdEnc),
+      secret: decryptSecret(row.higgsfieldKeySecretEnc),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function readGeminiKeyForUser(userId: string): Promise<string> {
