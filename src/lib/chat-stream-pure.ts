@@ -18,7 +18,19 @@ export const CHAT_TITLE_MAX = 48;
 export const CHAT_MESSAGE_MAX = 8000;
 export const CHAT_HISTORY_MAX = 100;
 
-export type ChatSseEventName = "start" | "delta" | "sources" | "done" | "error";
+export type ChatSseEventName =
+  | "start"
+  | "delta"
+  | "sources"
+  | "progress"
+  | "done"
+  | "error";
+
+/** Deep-research progress stage shown while a report is being built. */
+export type ChatProgressData = {
+  stage: "planning" | "searching" | "writing";
+  label: string;
+};
 
 export type ChatStartData = {
   conversationId: string;

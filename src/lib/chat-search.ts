@@ -12,6 +12,9 @@ export type ChatSearchResult = {
   sources: ChatSearchSource[];
   /** Numbered context block for the system prompt. */
   contextText: string;
+  /** Raw result excerpts, parallel to `sources` (deep research rebuilds
+   * its own globally-numbered context from these). */
+  excerpts: string[];
   error?: string;
 };
 
@@ -31,10 +34,10 @@ export async function searchForChat(queryRaw: string): Promise<ChatSearchResult>
   const apiKey = process.env.TAVILY_API_KEY?.trim() || "";
   const query = queryRaw.trim().slice(0, 400);
   if (!apiKey) {
-    return { ok: false, sources: [], contextText: "", error: SEARCH_NOT_CONFIGURED_MESSAGE };
+    return { ok: false, sources: [], contextText: "", excerpts: [], error: SEARCH_NOT_CONFIGURED_MESSAGE };
   }
   if (!query) {
-    return { ok: false, sources: [], contextText: "", error: "Nothing to search for." };
+    return { ok: false, sources: [], contextText: "", excerpts: [], error: "Nothing to search for." };
   }
   let res: Response;
   try {
@@ -51,7 +54,7 @@ export async function searchForChat(queryRaw: string): Promise<ChatSearchResult>
       }),
     });
   } catch {
-    return { ok: false, sources: [], contextText: "", error: "Could not reach the search service. Try again." };
+    return { ok: false, sources: [], contextText: "", excerpts: [], error: "Could not reach the search service. Try again." };
   }
   const data = (await res.json().catch(() => ({}))) as {
     answer?: string;
@@ -63,6 +66,7 @@ export async function searchForChat(queryRaw: string): Promise<ChatSearchResult>
       ok: false,
       sources: [],
       contextText: "",
+      excerpts: [],
       error:
         res.status === 401 || res.status === 403
           ? "The search API key was rejected. Web search stays off until a working key is added."
@@ -71,7 +75,7 @@ export async function searchForChat(queryRaw: string): Promise<ChatSearchResult>
   }
   const hits = (data.results ?? []).filter((hit) => hit.url?.trim());
   if (!hits.length) {
-    return { ok: false, sources: [], contextText: "", error: "The search returned no results. Try rephrasing." };
+    return { ok: false, sources: [], contextText: "", excerpts: [], error: "The search returned no results. Try rephrasing." };
   }
   const sources: ChatSearchSource[] = hits.map((hit) => ({
     title: hit.title?.trim() || hit.url!.trim(),
@@ -89,5 +93,6 @@ export async function searchForChat(queryRaw: string): Promise<ChatSearchResult>
     ok: true,
     sources,
     contextText: lines.join("\n\n").slice(0, 10_000),
+    excerpts: hits.map((hit) => (hit.content ?? "").trim().slice(0, 2000)),
   };
 }
