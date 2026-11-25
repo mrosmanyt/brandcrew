@@ -91,6 +91,12 @@ import {
 } from "@/lib/composio";
 import { memoryBriefForWorkspace } from "@/lib/learning-memory";
 import {
+  callMcpToolForUser,
+  classifyMcpToolForUser,
+  getEnabledMcpTools,
+  resolveWorkspaceOwnerUserId,
+} from "@/lib/chat-mcp";
+import {
   MAX_RESEARCH_TABS,
   MULTI_TAB_PLAYBOOKS,
   parseUrlList,
@@ -728,6 +734,32 @@ async function planSteps(input: {
   ).steps;
   if (!llm.status().configured) return fallback;
   const connected = await connectedToolNames(input.workspaceId);
+  // Package 8: the workspace owner's enabled MCP servers contribute their
+  // tools (proven by a live tools/list per server). Unreachable servers
+  // contribute nothing — their tools are never presented as available.
+  let mcpTools: {
+    serverName: string;
+    toolName: string;
+    description?: string;
+    write: boolean;
+  }[] = [];
+  try {
+    const ownerUserId = await resolveWorkspaceOwnerUserId(input.workspaceId);
+    if (ownerUserId) {
+      const available = await getEnabledMcpTools(ownerUserId);
+      mcpTools = available.map((tool) => ({
+        serverName: tool.serverName,
+        toolName: tool.name,
+        description: tool.description,
+        write: tool.write,
+      }));
+      if (mcpTools.length && !connected.includes("mcp_execute")) {
+        connected.push("mcp_execute");
+      }
+    }
+  } catch {
+    mcpTools = [];
+  }
   try {
     const result = await llm.complete({
       mode: "draft",
@@ -743,6 +775,7 @@ async function planSteps(input: {
             agentInstructions: input.agentInstructions,
             connectedTools: connected,
             allowedTools: input.allowedTools,
+            mcpTools,
           }),
         },
         {
@@ -1608,6 +1641,67 @@ async function executeTool(input: {
       summary: executed.ok
         ? `composio_execute ${toolSlug} (read via Composio)`
         : `composio_execute ${toolSlug} — ${executed.error}`,
+      context,
+      excerpt: text.slice(0, 280),
+    };
+  }
+
+  if (step.tool === "mcp_execute") {
+    const serverRef = String(step.args.server || step.args.serverName || "");
+    const toolName = String(step.args.tool || step.args.toolName || "");
+    const ownerUserId = await resolveWorkspaceOwnerUserId(input.workspaceId);
+    if (!ownerUserId || !serverRef || !toolName) {
+      return {
+        summary:
+          "mcp_execute needs the name of a connected MCP server and one of its tools (see Connectors → MCP servers). Nothing was called.",
+        context,
+      };
+    }
+    // Gate on the server's own live annotations: explicitly read-only
+    // tools run; everything else (including unannotated or vanished
+    // tools) pauses for approval — the same rule as composio_execute.
+    const classified = await classifyMcpToolForUser({
+      userId: ownerUserId,
+      serverRef,
+      toolName,
+    });
+    const gateLabel = `${toolName} on ${classified.serverName || serverRef}`;
+    if (classified.write && !priorAskUserCompleted(planSteps, step.id)) {
+      return {
+        summary: writeGatePrompt("mcp_execute", gateLabel),
+        context,
+        pause: true,
+        askPrompt: writeGatePrompt("mcp_execute", gateLabel),
+        askKind: "approve",
+      };
+    }
+    await appendEvent({
+      jobId: input.jobId,
+      type: "tool_call",
+      message: `mcp_execute ${classified.serverName || serverRef} ${toolName}`,
+      stepId: step.id,
+      data: { tool: "mcp_execute", server: classified.serverName || serverRef, slug: toolName },
+    });
+    const executed = await callMcpToolForUser({
+      userId: ownerUserId,
+      serverRef,
+      toolName,
+      arguments:
+        (step.args.arguments as Record<string, unknown> | undefined) || {},
+    });
+    const text = executed.ok
+      ? executed.text
+      : executed.error || "MCP tool call failed.";
+    context.mcp = {
+      server: executed.serverName || serverRef,
+      tool: toolName,
+      ok: executed.ok,
+      text,
+    };
+    return {
+      summary: executed.ok
+        ? `mcp_execute ${toolName} (via MCP server ${executed.serverName || serverRef})`
+        : `mcp_execute ${toolName} — ${executed.error}`,
       context,
       excerpt: text.slice(0, 280),
     };

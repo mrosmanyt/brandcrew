@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Loader2, Plug, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HiggsfieldCard } from "@/components/chat/higgsfield-card";
+import { McpSection } from "@/components/chat/mcp-section";
 import { cn } from "@/lib/utils";
 
 type Connector = {
@@ -337,6 +339,9 @@ export function ConnectorsApp({ userName }: { userName: string }) {
             })}
           </ul>
         )}
+
+        <McpSection />
+        <HiggsfieldCard />
       </main>
     </div>
   );

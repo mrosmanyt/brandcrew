@@ -55,6 +55,79 @@ export const COMPOSIO_AGENCY_TOOLKITS: ComposioToolkitDef[] = [
     docsUrl: "https://docs.composio.dev/toolkits/googlecalendar",
   },
   {
+    id: "composio-googledrive",
+    slug: "googledrive",
+    name: "Google Drive (Composio)",
+    description:
+      "List, find, create and share Drive files via Composio. Connected only after Composio returns an ACTIVE account. Creates, uploads and deletes wait for approval.",
+    category: "Productivity",
+    featured: true,
+    auth: "oauth",
+    letter: "GD",
+    color: "#34a853",
+    probeTool: "GOOGLEDRIVE_LIST_FILES",
+    writeTools: [
+      "GOOGLEDRIVE_CREATE_FILE",
+      "GOOGLEDRIVE_CREATE_FOLDER",
+      "GOOGLEDRIVE_UPLOAD_FILE",
+      "GOOGLEDRIVE_DELETE_FILE",
+    ],
+    docsUrl: "https://docs.composio.dev/toolkits/googledrive",
+  },
+  {
+    id: "composio-googlesheets",
+    slug: "googlesheets",
+    name: "Google Sheets (Composio)",
+    description:
+      "Search spreadsheets and read or update values via Composio. Connected only after Composio returns an ACTIVE account. Value writes wait for approval.",
+    category: "Productivity",
+    featured: true,
+    auth: "oauth",
+    letter: "GS",
+    color: "#0f9d58",
+    probeTool: "GOOGLESHEETS_SEARCH_SPREADSHEETS",
+    writeTools: [
+      "GOOGLESHEETS_CREATE_GOOGLE_SHEET1",
+      "GOOGLESHEETS_VALUES_UPDATE",
+      "GOOGLESHEETS_SPREADSHEETS_VALUES_APPEND",
+    ],
+    docsUrl: "https://docs.composio.dev/toolkits/googlesheets",
+  },
+  {
+    id: "composio-notion",
+    slug: "notion",
+    name: "Notion (Composio)",
+    description:
+      "Search pages and databases and create or update pages via Composio. Connected only after Composio returns an ACTIVE account. Page writes wait for approval.",
+    category: "Productivity",
+    featured: true,
+    auth: "oauth",
+    letter: "NO",
+    color: "#111111",
+    probeTool: "NOTION_SEARCH_NOTION_PAGE",
+    writeTools: [
+      "NOTION_CREATE_NOTION_PAGE",
+      "NOTION_UPDATE_PAGE",
+      "NOTION_ARCHIVE_NOTION_PAGE",
+    ],
+    docsUrl: "https://docs.composio.dev/toolkits/notion",
+  },
+  {
+    id: "composio-slack",
+    slug: "slack",
+    name: "Slack (Composio)",
+    description:
+      "List channels and read or post messages via Composio. Connected only after Composio returns an ACTIVE account. Sending a message always waits for approval.",
+    category: "Outreach",
+    featured: true,
+    auth: "oauth",
+    letter: "SL",
+    color: "#611f69",
+    probeTool: "SLACK_LIST_ALL_CHANNELS",
+    writeTools: ["SLACK_SEND_MESSAGE"],
+    docsUrl: "https://docs.composio.dev/toolkits/slack",
+  },
+  {
     id: "composio-hackernews",
     slug: "hackernews",
     name: "Hacker News",
@@ -228,5 +301,7 @@ export function composioUserId(workspaceId: string) {
 
 /** Write-looking Composio slugs always pause. Safe to import from client write-gate. */
 export function composioToolLooksLikeWrite(slug: string) {
-  return /CREATE|UPDATE|DELETE|SEND|POST_|UPSERT|REMOVE|WRITE|PUBLISH/i.test(slug);
+  return /CREATE|UPDATE|DELETE|SEND|POST_|UPSERT|REMOVE|WRITE|PUBLISH|APPEND|ARCHIVE|INSERT|ADD_|EDIT|MODIFY/i.test(
+    slug,
+  );
 }

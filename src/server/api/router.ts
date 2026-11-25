@@ -53,6 +53,10 @@ import * as chatMemory from "./chat/memory";
 import * as chatMemoryFact from "./chat/memory-fact";
 import * as chatConnectors from "./chat/connectors";
 import * as chatConnectorProbe from "./chat/connector-probe";
+import * as chatMcpServers from "./chat/mcp-servers";
+import * as chatMcpServer from "./chat/mcp-server";
+import * as chatMcpServerTest from "./chat/mcp-server-test";
+import * as chatHiggsfield from "./chat/higgsfield";
 import * as composioCallback from "./composio/callback";
 import * as crashReports from "./crash-reports";
 import * as funnel from "./funnel";
@@ -140,6 +144,22 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "chat", "connectors", "probe"],
     handlers: asHandlers(chatConnectorProbe),
+  },
+  {
+    pattern: ["api", "chat", "mcp-servers"],
+    handlers: asHandlers(chatMcpServers),
+  },
+  {
+    pattern: ["api", "chat", "mcp-servers", ":serverId"],
+    handlers: asHandlers(chatMcpServer),
+  },
+  {
+    pattern: ["api", "chat", "mcp-servers", ":serverId", "test"],
+    handlers: asHandlers(chatMcpServerTest),
+  },
+  {
+    pattern: ["api", "chat", "higgsfield"],
+    handlers: asHandlers(chatHiggsfield),
   },
   {
     pattern: ["api", "composio", "callback"],

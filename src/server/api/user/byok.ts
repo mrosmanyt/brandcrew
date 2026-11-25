@@ -21,6 +21,8 @@ const patchSchema = z.object({
   imageGenUrl: z.string().max(500).optional().nullable(),
   imageGenApiKey: z.string().max(200).optional().nullable(),
   geminigenApiKey: z.string().max(200).optional().nullable(),
+  higgsfieldKeyId: z.string().max(200).optional().nullable(),
+  higgsfieldKeySecret: z.string().max(300).optional().nullable(),
   spendCapUsd: z.number().min(1).max(500).optional(),
 });
 

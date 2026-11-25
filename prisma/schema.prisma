@@ -64,6 +64,7 @@ model User {
   chatConversations ChatConversation[]
   chatMemoryFacts ChatMemoryFact[]
   chatSettings ChatUserSettings?
+  mcpServers    McpServer[]
 
   @@index([supporter])
   @@index([assistantFoundingMember])
@@ -481,6 +482,26 @@ model ChatUserSettings {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A user's own MCP server (chat product, Package 8): a remote
+/// Streamable-HTTP endpoint the MCP client connects to on demand.
+/// Auth headers are a JSON map stored encrypted at rest
+/// (AES-256-GCM via src/lib/crypto-secret.ts); "" means no headers.
+/// A server counts as Connected only after a real initialize +
+/// tools/list succeeds — nothing about status is persisted as fact.
+model McpServer {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  url        String
+  headersEnc String   @default("")
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Artifact {
@@ -1062,6 +1083,10 @@ model UserProviderKey {
   imageGenUrlEnc   String   @default("")
   imageGenApiKeyEnc String  @default("")
   geminigenApiKeyEnc String @default("")
+  /// Higgsfield API credentials (console.higgsfield.ai): key ID + secret,
+  /// each encrypted at rest. Empty = not configured (honest state).
+  higgsfieldKeyIdEnc String @default("")
+  higgsfieldKeySecretEnc String @default("")
   geminiTokensUsed Int      @default(0)
   deepgramCharsUsed Int     @default(0)
   spendCapUsd      Float    @default(25)

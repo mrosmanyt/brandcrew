@@ -48,6 +48,12 @@ export function parseAutoApproveSafe(value: unknown): boolean {
 export type ApprovalExtras = {
   clientNamedEmail?: boolean;
   composioTool?: string;
+  /**
+   * MCP gate fact, classified live from the server's own tool
+   * annotations (readOnlyHint). Anything not explicitly read-only —
+   * including "unknown" — is passed as true by callers.
+   */
+  mcpWrite?: boolean;
 };
 
 function extrasFromStep(step: { tool?: string; args?: Record<string, unknown> }): ApprovalExtras {
@@ -72,13 +78,16 @@ export function approvalClass(tool: string, extras?: ApprovalExtras): ApprovalCl
   if (tool === "composio_execute" && extras?.composioTool && composioToolLooksLikeWrite(extras.composioTool)) {
     return "always";
   }
+  if (tool === "mcp_execute" && extras?.mcpWrite) {
+    return "always";
+  }
   if (ALWAYS_SET.has(tool)) return "always";
   if (SAFE_SET.has(tool)) return "safe";
   return "none";
 }
 
 export function isWriteExternalTool(tool: string): boolean {
-  return WRITE_SET.has(tool) || tool === "composio_execute";
+  return WRITE_SET.has(tool) || tool === "composio_execute" || tool === "mcp_execute";
 }
 
 export function isAlwaysGatedTool(tool: string): boolean {
@@ -145,6 +154,8 @@ export function writeGatePrompt(tool: JobTool | string, label: string): string {
       return `Approve this client-named email draft (${label})? CINEM Pro will not create the Gmail draft until you say yes. It still will not send. Generic Gmail drafts (not client-named) do not pause.`;
     case "composio_execute":
       return `Approve this Composio write (${label})? CINEM Pro will not call a write tool until you say yes. Always approved does not skip writes.`;
+    case "mcp_execute":
+      return `Approve this MCP tool call (${label})? The tool is not marked read-only by its server, so CINEM Pro will not run it until you say yes. Always approved does not skip MCP writes.`;
     case "slack_post_message":
       return `Approve posting to Slack (${label})? Nothing posts until you say yes. Always approved does not skip Slack posts.`;
     case "native_file_write":
