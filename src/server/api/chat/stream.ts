@@ -40,6 +40,7 @@ import {
   buildMemorySystemBlock,
   getResponseLanguage,
 } from "@/lib/chat-memory";
+import { expertSystemBlock, getExpert } from "@/lib/experts";
 import {
   CHAT_LANGUAGE_MODES,
   type ChatLanguageMode,
@@ -56,6 +57,9 @@ const postSchema = z.object({
   webSearch: z.boolean().optional(),
   /** Reply language mode: auto mirrors the user; any other code pins that language. */
   languageMode: z.enum(CHAT_LANGUAGE_MODES).optional(),
+  /** Expert for a conversation created by this turn (Package 5); an
+   * existing conversation keeps the expert persisted on it. */
+  expertId: z.string().trim().max(60).nullable().optional(),
   messages: z
     .array(
       z
@@ -114,6 +118,7 @@ export async function POST(request: Request) {
       userName: user.name,
       conversationId: body.conversationId,
       modelId: body.modelId,
+      expertId: body.expertId,
       messages: body.messages,
     });
     // Safety gate (owner directive, 2026-11-25): classify the new user
@@ -175,6 +180,13 @@ export async function POST(request: Request) {
         if (memoryBlock) systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${memoryBlock}`;
       } catch {
         // No memory this turn; the chat continues without it.
+      }
+      // Expert persona (Package 5) rides the same assembly, layered after
+      // memory/custom instructions and before the language pin so the
+      // language mode still wins on reply language.
+      const activeExpert = getExpert(prepared.conversation.expertId);
+      if (activeExpert) {
+        systemPrompt = `${systemPrompt}\n\n${expertSystemBlock(activeExpert)}`;
       }
       // Reply language: the client's per-request mode wins; when it sends
       // none, the user's saved Settings choice applies. Auto resolves

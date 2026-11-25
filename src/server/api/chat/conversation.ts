@@ -13,6 +13,8 @@ type Ctx = { params: Promise<{ conversationId: string }> };
 const patchSchema = z.object({
   title: z.string().trim().max(120).optional(),
   modelId: z.enum(LLM_ROUTING_PREFERENCES).nullable().optional(),
+  /** Set or clear (null) the conversation's expert (Package 5). */
+  expertId: z.string().trim().max(60).nullable().optional(),
 });
 
 export async function GET(_request: Request, context: Ctx) {

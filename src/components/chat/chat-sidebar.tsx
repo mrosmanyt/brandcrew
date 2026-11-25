@@ -4,12 +4,15 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, MessageSquare, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getExpert } from "@/lib/experts";
 import { cn } from "@/lib/utils";
 
 export type ChatConversationSummary = {
   id: string;
   title: string;
   modelId: string | null;
+  /** Curated expert id (Package 5) active on this conversation, or null. */
+  expertId: string | null;
   updatedAt: string;
 };
 
@@ -130,7 +133,19 @@ export function ChatSidebar({
                           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                       )}
                     >
-                      <MessageSquare className="size-4 shrink-0 opacity-60" />
+                      {getExpert(row.expertId) ? (
+                        <span
+                          aria-hidden
+                          className="flex size-5 shrink-0 items-center justify-center rounded-md text-[9px] font-bold text-white"
+                          style={{
+                            backgroundColor: getExpert(row.expertId)?.color,
+                          }}
+                        >
+                          {getExpert(row.expertId)?.letter}
+                        </span>
+                      ) : (
+                        <MessageSquare className="size-4 shrink-0 opacity-60" />
+                      )}
                       <button
                         type="button"
                         className="min-w-0 flex-1 truncate text-left"

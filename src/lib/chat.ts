@@ -32,6 +32,7 @@ import {
   reconcileChatMessages,
   type ChatMessageLike,
 } from "@/lib/chat-stream-pure";
+import { isExpertId } from "@/lib/experts";
 import { recordUsage } from "@/lib/usage";
 import { createDemoWorkspace, listUserWorkspaces } from "@/lib/workspace";
 
@@ -42,6 +43,8 @@ export type ChatConversationDTO = {
   id: string;
   title: string;
   modelId: string | null;
+  /** Curated expert id (Package 5) active on this conversation, or null. */
+  expertId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,6 +67,7 @@ type ConversationRow = {
   id: string;
   title: string;
   modelId: string | null;
+  expertId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -119,6 +123,7 @@ export function serializeChatConversation(row: ConversationRow): ChatConversatio
     id: row.id,
     title: row.title,
     modelId: row.modelId,
+    expertId: row.expertId ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -159,6 +164,7 @@ export async function createChatConversation(input: {
   userName: string;
   title?: string;
   modelId?: string | null;
+  expertId?: string | null;
 }) {
   const workspace = await resolveChatWorkspace(input.userId, input.userName);
   const row = await prisma.chatConversation.create({
@@ -167,6 +173,8 @@ export async function createChatConversation(input: {
       workspaceId: workspace.id,
       title: input.title?.trim() || "New chat",
       modelId: input.modelId ? normalizeModelRouting(input.modelId) : null,
+      // Only curated expert ids persist; anything else reads as no expert.
+      expertId: isExpertId(input.expertId) ? input.expertId : null,
     },
   });
   return serializeChatConversation(row);
@@ -187,7 +195,7 @@ export async function getChatConversation(userId: string, conversationId: string
 export async function renameChatConversation(
   userId: string,
   conversationId: string,
-  patch: { title?: string; modelId?: string | null },
+  patch: { title?: string; modelId?: string | null; expertId?: string | null },
 ) {
   const existing = await prisma.chatConversation.findFirst({
     where: { id: conversationId, userId },
@@ -200,6 +208,9 @@ export async function renameChatConversation(
       ...(patch.title !== undefined ? { title: patch.title.trim() || "New chat" } : {}),
       ...(patch.modelId !== undefined
         ? { modelId: patch.modelId ? normalizeModelRouting(patch.modelId) : null }
+        : {}),
+      ...(patch.expertId !== undefined
+        ? { expertId: isExpertId(patch.expertId) ? patch.expertId : null }
         : {}),
     },
   });
@@ -281,6 +292,9 @@ export async function prepareChatTurn(input: {
   userName: string;
   conversationId?: string | null;
   modelId: string;
+  /** Expert for a conversation created by this turn; an existing
+   * conversation always keeps the expert already persisted on it. */
+  expertId?: string | null;
   messages: ChatMessageLike[];
 }): Promise<PreparedChatTurn> {
   const workspace = await resolveChatWorkspace(input.userId, input.userName);
@@ -307,6 +321,7 @@ export async function prepareChatTurn(input: {
         workspaceId: workspace.id,
         title: generateConversationTitle(titleSeed),
         modelId: modelPref,
+        expertId: isExpertId(input.expertId) ? input.expertId : null,
       },
     });
     conversationId = created.id;
