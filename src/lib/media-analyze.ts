@@ -11,6 +11,7 @@ import {
   normalizeComposerAttachments,
   type LlmMessageContent,
 } from "@/lib/composer-media";
+import { enrichDocumentAttachments } from "@/lib/document-extract";
 import { createGeminiClient, createOpenAIClient, geminiKey, hasGemini, hasOpenAI, openaiKey } from "@/lib/llm";
 import { geminiFlashModelId } from "@/lib/model-catalog";
 
@@ -89,7 +90,10 @@ export async function prepareComposerMedia(input: {
   message: string;
   attachments?: ComposerAttachment[] | null;
 }): Promise<PreparedComposerMedia> {
-  const attachments = normalizeComposerAttachments(input.attachments);
+  const normalized = normalizeComposerAttachments(input.attachments);
+  // Extract PDF/Word/Excel text server-side so the job message carries the
+  // document contents (failures ride the attachment's honest error state).
+  const { files: attachments } = await enrichDocumentAttachments(normalized);
   const transcripts: { name: string; text: string }[] = [];
   for (const file of attachments) {
     if (file.kind !== "audio" || !file.data || file.error) continue;

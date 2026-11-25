@@ -11,6 +11,7 @@ export const COMPOSER_MAX_ATTACHMENTS = 4;
 export const COMPOSER_MAX_IMAGE_BYTES = 3_500_000;
 export const COMPOSER_MAX_AUDIO_BYTES = 4_000_000;
 export const COMPOSER_MAX_VIDEO_BYTES = 6_000_000;
+export const COMPOSER_MAX_DOCUMENT_BYTES = 6_000_000;
 export const COMPOSER_MAX_TOTAL_BYTES = 8_000_000;
 
 export const COMPOSER_IMAGE_MIMES = [
@@ -34,10 +35,16 @@ export const COMPOSER_AUDIO_MIMES = [
 
 export const COMPOSER_VIDEO_MIMES = ["video/mp4", "video/webm"] as const;
 
-export const COMPOSER_ACCEPT =
-  "image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,video/mp4,video/webm,.txt,.md,.csv,.json,.html,.css,.js,.ts,.tsx,.jsx";
+export const COMPOSER_DOCUMENT_MIMES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+] as const;
 
-export type ComposerMediaKind = "text" | "image" | "audio" | "video";
+export const COMPOSER_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,video/mp4,video/webm,.txt,.md,.csv,.json,.html,.css,.js,.ts,.tsx,.jsx,.pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+export type ComposerMediaKind = "text" | "image" | "audio" | "video" | "document";
 
 export type LlmTextPart = { type: "text"; text: string };
 export type LlmInlineMediaPart = {
@@ -52,11 +59,12 @@ const IMAGE_EXT = /\.(jpe?g|png|webp|gif)$/i;
 const AUDIO_EXT = /\.(webm|mp3|wav|m4a)$/i;
 const VIDEO_EXT = /\.(mp4|webm)$/i;
 const TEXT_EXT = /\.(md|txt|csv|json|html|css|js|ts|tsx|jsx)$/i;
+const DOCUMENT_EXT = /\.(pdf|docx|xlsx)$/i;
 
 export const composerAttachmentSchema = z.object({
   name: z.string().min(1).max(200),
   size: z.number().int().nonnegative().max(COMPOSER_MAX_VIDEO_BYTES),
-  kind: z.enum(["text", "image", "audio", "video"]).optional(),
+  kind: z.enum(["text", "image", "audio", "video", "document"]).optional(),
   mime: z.string().max(80).optional(),
   text: z.string().max(20_000).optional(),
   data: z.string().max(12_000_000).optional(),
@@ -83,6 +91,11 @@ export function guessMimeFromName(name: string, fallback = ""): string {
   if (lower.endsWith(".mp3")) return "audio/mpeg";
   if (lower.endsWith(".wav")) return "audio/wav";
   if (lower.endsWith(".m4a")) return "audio/mp4";
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".docx"))
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (lower.endsWith(".xlsx"))
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   if (lower.endsWith(".mp4")) return "video/mp4";
   if (lower.endsWith(".webm")) {
     return fallback.startsWith("audio/") ? "audio/webm" : "video/webm";
@@ -110,6 +123,22 @@ export function classifyComposerFile(file: {
     return { ok: true, kind: "text", mime: mime || "text/plain" };
   }
   if (
+    COMPOSER_DOCUMENT_MIMES.includes(
+      mime as (typeof COMPOSER_DOCUMENT_MIMES)[number],
+    ) ||
+    DOCUMENT_EXT.test(file.name)
+  ) {
+    return {
+      ok: true,
+      kind: "document",
+      mime: COMPOSER_DOCUMENT_MIMES.includes(
+        mime as (typeof COMPOSER_DOCUMENT_MIMES)[number],
+      )
+        ? mime
+        : guessMimeFromName(file.name),
+    };
+  }
+  if (
     COMPOSER_IMAGE_MIMES.includes(mime as (typeof COMPOSER_IMAGE_MIMES)[number]) ||
     IMAGE_EXT.test(file.name)
   ) {
@@ -135,7 +164,7 @@ export function classifyComposerFile(file: {
   }
   return {
     ok: false,
-    error: `${file.name} is not a supported attachment. Use JPEG, PNG, WebP, GIF, a voice note (WebM, MP3, WAV, M4A), a short clip (MP4, WebM), or a text file.`,
+    error: `${file.name} is not a supported attachment. Use JPEG, PNG, WebP, GIF, a voice note (WebM, MP3, WAV, M4A), a short clip (MP4, WebM), a text file, or a document (PDF, Word .docx, Excel .xlsx).`,
   };
 }
 
@@ -143,12 +172,19 @@ export function maxBytesForKind(kind: ComposerMediaKind): number {
   if (kind === "image") return COMPOSER_MAX_IMAGE_BYTES;
   if (kind === "audio") return COMPOSER_MAX_AUDIO_BYTES;
   if (kind === "video") return COMPOSER_MAX_VIDEO_BYTES;
+  if (kind === "document") return COMPOSER_MAX_DOCUMENT_BYTES;
   return 20_000;
 }
 
 export function attachmentTooLargeError(name: string, kind: ComposerMediaKind, size: number): string {
   return `${name} is too large (${formatByteSize(size)}). Keep ${
-    kind === "video" ? "clips" : kind === "audio" ? "voice notes" : "images"
+    kind === "video"
+      ? "clips"
+      : kind === "audio"
+        ? "voice notes"
+        : kind === "document"
+          ? "documents"
+          : "images"
   } under ${formatByteSize(maxBytesForKind(kind))}.`;
 }
 
@@ -206,7 +242,9 @@ export function normalizeComposerAttachments(
             ? "audio/webm"
             : file.kind === "video"
               ? "video/mp4"
-              : ""),
+              : file.kind === "document"
+                ? guessMimeFromName(file.name)
+                : ""),
       size: file.size,
     });
     if (!classified.ok) {
@@ -238,7 +276,12 @@ export function normalizeComposerAttachments(
       size: file.size,
       kind: classified.kind,
       mime: classified.mime,
-      text: classified.kind === "text" ? file.text : undefined,
+      // Documents keep their server-extracted text (on resend of a stored
+      // message the client sends the text back instead of the raw bytes).
+      text:
+        classified.kind === "text" || classified.kind === "document"
+          ? file.text
+          : undefined,
       data: classified.kind === "text" ? undefined : data,
       transcript: file.transcript,
     });
@@ -263,7 +306,10 @@ export function toWireAttachments(files: ComposerAttachment[]): ComposerAttachme
 export function formatMediaCaption(file: ComposerAttachment): string {
   const size = formatByteSize(file.size);
   if (file.kind === "image") {
-    return `Attached image: ${file.name} (${size}). Analyze the picture — do not ignore it.`;
+    return `Attached image: ${file.name} (${size}). Analyze the picture — do not ignore it. If the picture shows a document, card, sign, or any written text — especially Urdu text — transcribe all of the visible text exactly as written (keep Urdu in Urdu script) before answering.`;
+  }
+  if (file.kind === "document") {
+    return `Attached document: ${file.name} (${size}).`;
   }
   if (file.kind === "audio") {
     const transcript = file.transcript?.trim()
@@ -333,6 +379,19 @@ export function chatContentWithAttachments(
   for (const file of usable) {
     if (file.kind === "text" && file.text?.trim()) {
       textBlocks.push(`Attached file ${file.name}:\n${file.text.trim()}`);
+    }
+    if (file.kind === "document") {
+      if (file.text?.trim()) {
+        textBlocks.push(
+          `Attached document ${file.name} (extracted text):\n${file.text.trim()}`,
+        );
+      } else {
+        // No extracted text reached this turn (e.g. an API path that does
+        // not run server extraction). Never let the model invent contents.
+        textBlocks.push(
+          `Attached document: ${file.name}. No extracted text is available for it — do not invent its contents; tell the user it could not be read.`,
+        );
+      }
     }
   }
   if (!mediaParts.length) return textBlocks.join("\n\n");

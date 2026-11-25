@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: "16mb",
     authInterrupts: true,
   },
-  serverExternalPackages: ["@prisma/client", "prisma", "playwright-core", "@composio/core"],
+  serverExternalPackages: ["@prisma/client", "prisma", "playwright-core", "@composio/core", "mammoth", "exceljs"],
   // Static metadata PNGs live at /apple-icon.png etc. Alias the
   // extensionless Metadata API paths so crawlers and old bookmarks 200.
   async redirects() {

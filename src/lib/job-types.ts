@@ -128,7 +128,7 @@ export type JobContext = {
   attachments?: {
     name: string;
     size: number;
-    kind?: "text" | "image" | "audio" | "video";
+    kind?: "text" | "image" | "audio" | "video" | "document";
     mime?: string;
     data?: string;
     text?: string;
