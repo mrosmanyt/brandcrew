@@ -1,1 +1,1 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","buildCommand":"node scripts/prisma-generate.mjs --with-migrate && npx next build","crons":[{"path":"/api/cron/chat-scheduled-tasks","schedule":"0 * * * *"}],"framework":"nextjs"}
+{"$schema":"https://openapi.vercel.sh/vercel.json","buildCommand":"node scripts/prisma-generate.mjs --with-migrate && npx next build","crons":[{"path":"/api/cron/chat-scheduled-tasks","schedule":"0 0 * * *"}],"framework":"nextjs"}

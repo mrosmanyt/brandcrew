@@ -10,6 +10,11 @@ import { runDueChatScheduledTasks } from "@/lib/chat-scheduled-tasks";
  *
  * Deploy-time requirements (merge step): set CRON_SECRET in the Vercel
  * project env and keep the matching cron entry in vercel.json.
+ *
+ * The vercel.json entry fires once daily (00:00 UTC) because the project
+ * is on the Vercel Hobby plan, which rejects sub-daily cron expressions
+ * at deploy time. Due tasks catch up on that daily hit; on a Pro plan the
+ * schedule can be raised (e.g. hourly) with no code change.
  */
 async function handle(request: Request) {
   const secret = process.env.CRON_SECRET?.trim() || "";
