@@ -5,22 +5,33 @@ import { useTheme } from "next-themes";
 import { Brain, Moon, Sun, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  CHAT_LANGUAGE_MODES,
+  RESPONSE_LANGUAGE_BY_CODE,
+  type ChatLanguageMode,
+} from "@/lib/chat-language";
 
 /**
  * Settings panel for the chat product. Appearance (light/dark) lives here;
  * the theme itself is owned by next-themes in the root layout, which
  * persists the choice to localStorage — this panel only flips it.
  * Custom instructions and remembered facts stay in the Memory panel;
- * this panel links to it instead of duplicating that state.
+ * this panel links to it instead of duplicating that state. The reply
+ * language is owned by the chat app (persisted to the account) and only
+ * rendered here.
  */
 export function ChatSettingsPanel({
   open,
   onClose,
   onOpenMemory,
+  languageMode,
+  onLanguageModeChange,
 }: {
   open: boolean;
   onClose: () => void;
   onOpenMemory: () => void;
+  languageMode: ChatLanguageMode;
+  onLanguageModeChange: (mode: ChatLanguageMode) => void;
 }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -92,6 +103,36 @@ export function ChatSettingsPanel({
                 Dark
               </button>
             </div>
+          </section>
+
+          <section className="mt-8">
+            <h3 className="text-sm font-medium">Response language</h3>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Auto replies in whatever language you write in. Pick a
+              language to pin every reply to it. Saved to your account and
+              used on all your devices.
+            </p>
+            <select
+              aria-label="Response language"
+              value={languageMode}
+              onChange={(event) =>
+                onLanguageModeChange(event.target.value as ChatLanguageMode)
+              }
+              className="mt-3 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {CHAT_LANGUAGE_MODES.map((mode) =>
+                mode === "auto" ? (
+                  <option key={mode} value={mode}>
+                    Auto — match my language
+                  </option>
+                ) : (
+                  <option key={mode} value={mode}>
+                    {RESPONSE_LANGUAGE_BY_CODE[mode].englishName} —{" "}
+                    {RESPONSE_LANGUAGE_BY_CODE[mode].nativeName}
+                  </option>
+                ),
+              )}
+            </select>
           </section>
 
           <section className="mt-8">

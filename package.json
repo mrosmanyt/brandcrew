@@ -2,7 +2,7 @@
   "name": "brandcrew",
   "version": "0.3.6",
   "private": true,
-  "description": "CINEM Pro — AI employee desk. Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
+  "description": "CINEM Pro \u2014 AI employee desk. Mission Control for agents you create. Jobs plan, use tools, and wait for you to approve.",
   "author": "CINEM",
   "scripts": {
     "predev": "node scripts/ensure-dev.mjs",
@@ -31,6 +31,7 @@
     "test:limits": "tsx scripts/check-limits.ts",
     "test:site-builder": "tsx scripts/check-site-builder.ts",
     "test:streaming-chat": "tsx scripts/check-streaming-chat.ts",
+    "test:languages": "tsx scripts/check-chat-languages.ts",
     "test:google-auth": "tsx scripts/check-google-auth.ts",
     "test:desk-theme": "tsx scripts/check-desk-theme.ts",
     "test:desk-modes": "tsx scripts/check-desk-modes.ts",

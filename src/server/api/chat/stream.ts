@@ -36,18 +36,22 @@ import {
   SEARCH_USAGE_TOKENS,
   type ChatSearchSource,
 } from "@/lib/chat-search";
-import { buildMemorySystemBlock } from "@/lib/chat-memory";
+import {
+  buildMemorySystemBlock,
+  getResponseLanguage,
+} from "@/lib/chat-memory";
 import {
   CHAT_LANGUAGE_MODES,
-  languageModeSystemBlock,
+  type ChatLanguageMode,
 } from "@/lib/chat-language";
+import { resolveLanguageSystemBlock } from "@/lib/chat-language-detect";
 
 const postSchema = z.object({
   conversationId: z.string().min(1).nullable().optional(),
   modelId: z.enum(LLM_ROUTING_PREFERENCES),
   /** When true, the latest question is web-searched (Tavily) before the turn. */
   webSearch: z.boolean().optional(),
-  /** Reply language mode: auto mirrors the user; ur / roman-ur pin Urdu. */
+  /** Reply language mode: auto mirrors the user; any other code pins that language. */
   languageMode: z.enum(CHAT_LANGUAGE_MODES).optional(),
   messages: z
     .array(
@@ -129,9 +133,20 @@ export async function POST(request: Request) {
     } catch {
       // No memory this turn; the chat continues without it.
     }
-    const languageBlock = body.languageMode
-      ? languageModeSystemBlock(body.languageMode)
-      : null;
+    // Reply language: the client's per-request mode wins; when it sends
+    // none, the user's saved Settings choice applies. Auto resolves
+    // against the latest message — detection names the language and
+    // keeps Roman Urdu out of Hindi. A settings read failure degrades
+    // to Auto and never breaks the chat.
+    let languageMode: ChatLanguageMode = body.languageMode ?? "auto";
+    if (!body.languageMode) {
+      try {
+        languageMode = await getResponseLanguage(user.id);
+      } catch {
+        languageMode = "auto";
+      }
+    }
+    const languageBlock = resolveLanguageSystemBlock(languageMode, last.content);
     if (languageBlock) systemPrompt = `${systemPrompt}\n\n${languageBlock}`;
     if (body.webSearch) {
       // Search runs before the stream opens so a missing/rejected key or a
