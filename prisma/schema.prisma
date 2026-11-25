@@ -63,6 +63,7 @@ model User {
   chatConversations ChatConversation[]
   chatMemoryFacts ChatMemoryFact[]
   chatSettings ChatUserSettings?
+  chatScheduledTasks ChatScheduledTask[]
 
   @@index([supporter])
   @@index([assistantFoundingMember])
@@ -120,6 +121,7 @@ model Workspace {
   helpThreads        SupportThread[]
   mobileCompanionPairs MobileCompanionPair[]
   siteProjects       SiteProject[]
+  chatScheduledTasks ChatScheduledTask[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -475,6 +477,60 @@ model ChatUserSettings {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Scheduled AI tasks for the CHAT product (Package 9). User-scoped on
+/// purpose: the desk-era ScheduledJob is workspace + Agent + playbook
+/// scoped and spawns desk Jobs, which does not fit per-user chat tasks.
+/// A task is a read-only / research instruction run on a cadence through
+/// the chat completion path; every execution lands in ChatScheduledTaskRun.
+/// v1 performs NO write actions (no email sends, no posts).
+model ChatScheduledTask {
+  id           String    @id @default(cuid())
+  userId       String
+  /// Primary workspace the runs meter against (same rule as chat turns).
+  workspaceId  String
+  title        String
+  instruction  String
+  /// daily | weekly
+  cadence      String    @default("daily")
+  /// "HH:MM" 24h wall-clock in `timezone`.
+  timeOfDay    String    @default("09:00")
+  /// 0 (Sun) – 6 (Sat); only used when cadence = weekly.
+  dayOfWeek    Int       @default(1)
+  timezone     String    @default("UTC")
+  /// When true the run web-searches the instruction first (Tavily).
+  useWebSearch Boolean   @default(false)
+  enabled      Boolean   @default(true)
+  nextRunAt    DateTime
+  lastRunAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  runs         ChatScheduledTaskRun[]
+
+  @@index([userId, enabled])
+  @@index([enabled, nextRunAt])
+}
+
+/// One execution of a ChatScheduledTask. `status` is running | succeeded |
+/// failed. A failed run always carries a truthful `error` (e.g. model not
+/// configured) and never a fabricated report.
+model ChatScheduledTaskRun {
+  id         String    @id @default(cuid())
+  taskId     String
+  status     String    @default("running")
+  /// The generated report (markdown) on success; empty on failure.
+  report     String    @default("")
+  /// Web-search sources the report was grounded on ([{title, url}]).
+  sources    Json?
+  error      String    @default("")
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  task       ChatScheduledTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, startedAt])
 }
 
 model Artifact {

@@ -53,6 +53,10 @@ import * as chatMemory from "./chat/memory";
 import * as chatMemoryFact from "./chat/memory-fact";
 import * as chatConnectors from "./chat/connectors";
 import * as chatConnectorProbe from "./chat/connector-probe";
+import * as chatScheduledTasks from "./chat/scheduled-tasks";
+import * as chatScheduledTask from "./chat/scheduled-task";
+import * as chatScheduledTaskRun from "./chat/scheduled-task-run";
+import * as cronChatScheduledTasks from "./cron/chat-scheduled-tasks";
 import * as composioCallback from "./composio/callback";
 import * as crashReports from "./crash-reports";
 import * as funnel from "./funnel";
@@ -140,6 +144,22 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "chat", "connectors", "probe"],
     handlers: asHandlers(chatConnectorProbe),
+  },
+  {
+    pattern: ["api", "chat", "scheduled-tasks"],
+    handlers: asHandlers(chatScheduledTasks),
+  },
+  {
+    pattern: ["api", "chat", "scheduled-tasks", ":taskId"],
+    handlers: asHandlers(chatScheduledTask),
+  },
+  {
+    pattern: ["api", "chat", "scheduled-tasks", ":taskId", "run"],
+    handlers: asHandlers(chatScheduledTaskRun),
+  },
+  {
+    pattern: ["api", "cron", "chat-scheduled-tasks"],
+    handlers: asHandlers(cronChatScheduledTasks),
   },
   {
     pattern: ["api", "composio", "callback"],
