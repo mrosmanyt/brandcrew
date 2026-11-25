@@ -16,6 +16,7 @@ import {
   BadgeAlert,
   BookOpen,
   Brain,
+  CalendarClock,
   Check,
   ChevronDown,
   ChevronsUpDown,
@@ -807,6 +808,10 @@ export function ChatApp({
             <DropdownMenuItem onClick={() => router.push("/connectors")}>
               <Plug className="size-4" />
               Connectors
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/tasks")}>
+              <CalendarClock className="size-4" />
+              Scheduled Tasks
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {

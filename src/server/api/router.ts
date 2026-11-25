@@ -57,6 +57,10 @@ import * as chatMcpServers from "./chat/mcp-servers";
 import * as chatMcpServer from "./chat/mcp-server";
 import * as chatMcpServerTest from "./chat/mcp-server-test";
 import * as chatHiggsfield from "./chat/higgsfield";
+import * as chatScheduledTasks from "./chat/scheduled-tasks";
+import * as chatScheduledTask from "./chat/scheduled-task";
+import * as chatScheduledTaskRun from "./chat/scheduled-task-run";
+import * as cronChatScheduledTasks from "./cron/chat-scheduled-tasks";
 import * as composioCallback from "./composio/callback";
 import * as crashReports from "./crash-reports";
 import * as funnel from "./funnel";
@@ -160,6 +164,20 @@ export const API_ROUTES: RouteSpec[] = [
   {
     pattern: ["api", "chat", "higgsfield"],
     handlers: asHandlers(chatHiggsfield),
+    pattern: ["api", "chat", "scheduled-tasks"],
+    handlers: asHandlers(chatScheduledTasks),
+  },
+  {
+    pattern: ["api", "chat", "scheduled-tasks", ":taskId"],
+    handlers: asHandlers(chatScheduledTask),
+  },
+  {
+    pattern: ["api", "chat", "scheduled-tasks", ":taskId", "run"],
+    handlers: asHandlers(chatScheduledTaskRun),
+  },
+  {
+    pattern: ["api", "cron", "chat-scheduled-tasks"],
+    handlers: asHandlers(cronChatScheduledTasks),
   },
   {
     pattern: ["api", "composio", "callback"],
