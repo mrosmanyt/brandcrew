@@ -10,6 +10,7 @@ import {
   LogOut,
   ScrollText,
   Settings,
+  ShieldAlert,
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -19,7 +20,13 @@ import { cn } from "@/lib/utils";
 
 const SECTIONS: {
   label: string;
-  items: { href: string; label: string; icon: typeof LayoutDashboard }[];
+  items: {
+    href: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    /** "safety" renders the NEW safety-alert count badge next to the label. */
+    badge?: "safety";
+  }[];
 }[] = [
   {
     label: "Overview",
@@ -31,6 +38,7 @@ const SECTIONS: {
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/billing", label: "Plans & billing", icon: CreditCard },
       { href: "/admin/support", label: "Support", icon: LifeBuoy },
+      { href: "/admin/safety-alerts", label: "Safety alerts", icon: ShieldAlert, badge: "safety" },
       { href: "/admin/audit", label: "Activity log", icon: ScrollText },
     ],
   },
@@ -54,10 +62,13 @@ function initials(name: string, email: string) {
 export function PanelShell({
   actorEmail,
   actorName,
+  safetyNewCount = 0,
   children,
 }: {
   actorEmail: string;
   actorName: string;
+  /** NEW safety alerts count, fetched server-side by the admin layout. */
+  safetyNewCount?: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -109,6 +120,11 @@ export function PanelShell({
                   >
                     <Icon className="size-4 shrink-0" />
                     {item.label}
+                    {item.badge === "safety" && safetyNewCount > 0 ? (
+                      <span className="ml-auto rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {safetyNewCount}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}
@@ -190,6 +206,11 @@ export function PanelShell({
               >
                 <Icon className="size-3.5" />
                 {item.label}
+                {item.badge === "safety" && safetyNewCount > 0 ? (
+                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {safetyNewCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}

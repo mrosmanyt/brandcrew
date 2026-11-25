@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import { PanelShell } from "@/components/admin/panel/panel-shell";
-import { isAdminEmail } from "@/lib/admin";
+import { countNewSafetyAlerts, isAdminEmail } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
 
 /** Owner-only panel: never indexed, never advertised. */
@@ -16,8 +16,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // 404 (not 403) for signed-in non-admins: the panel stays invisible.
   if (!isAdminEmail(user.email)) notFound();
 
+  // Safety alarm badge: a failed count must never break the panel.
+  const safetyNewCount = await countNewSafetyAlerts().catch(() => 0);
+
   return (
-    <PanelShell actorEmail={user.email} actorName={user.name}>
+    <PanelShell actorEmail={user.email} actorName={user.name} safetyNewCount={safetyNewCount}>
       {children}
     </PanelShell>
   );
