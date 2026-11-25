@@ -10,6 +10,8 @@ import { LLM_ROUTING_PREFERENCES } from "@/lib/llm-routing";
 const createSchema = z.object({
   title: z.string().trim().max(120).optional(),
   modelId: z.enum(LLM_ROUTING_PREFERENCES).optional(),
+  /** Curated expert id (Package 5); validated against src/lib/experts.ts in the service. */
+  expertId: z.string().trim().max(60).optional(),
 });
 
 export async function GET() {
@@ -30,6 +32,7 @@ export async function POST(request: Request) {
       userName: user.name,
       title: body.title,
       modelId: body.modelId,
+      expertId: body.expertId,
     });
     return jsonOk({ conversation }, 201);
   } catch (error) {

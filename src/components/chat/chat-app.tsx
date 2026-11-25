@@ -32,6 +32,7 @@ import {
   Settings,
   Sparkles,
   Square,
+  Users,
   X,
 } from "lucide-react";
 import type { ComposerAttachment } from "@/lib/composer";
@@ -80,6 +81,7 @@ import {
   isChatLanguageMode,
   type ChatLanguageMode,
 } from "@/lib/chat-language";
+import { getExpert } from "@/lib/experts";
 
 const LANGUAGE_STORAGE_KEY = "cinem-chat-language";
 
@@ -169,6 +171,7 @@ export function ChatApp({
   const [conversations, setConversations] = useState<ChatConversationSummary[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeExpertId, setActiveExpertId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatUiMessage[]>([]);
   const [threadLoading, setThreadLoading] = useState(false);
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -266,6 +269,19 @@ export function ChatApp({
     };
   }, []);
 
+  // Experts gallery (Package 5) starts a chat by linking here with
+  // ?conversation=<id>; open it once, then clean the URL so a refresh
+  // does not keep re-selecting it.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("conversation");
+    if (id) {
+      void selectConversation(id);
+      window.history.replaceState(null, "", "/chat");
+    }
+    // Mount-only: selectConversation is a stable useCallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (el && stickToBottomRef.current) {
@@ -313,6 +329,7 @@ export function ChatApp({
         })),
       );
       if (data.conversation.modelId) setModelId(data.conversation.modelId);
+      setActiveExpertId(data.conversation.expertId ?? null);
       stickToBottomRef.current = true;
     } catch {
       setError({ message: "Could not load that chat. Try again.", notConfigured: false });
@@ -324,6 +341,7 @@ export function ChatApp({
   const startNewChat = useCallback(() => {
     abortRef.current?.abort();
     setActiveId(null);
+    setActiveExpertId(null);
     setMessages([]);
     setPendingAttachments([]);
     setError(null);
@@ -366,6 +384,7 @@ export function ChatApp({
             conversationId: activeId,
             modelId,
             languageMode,
+            ...(activeExpertId ? { expertId: activeExpertId } : {}),
             ...(webSearch ? { webSearch: true } : {}),
             messages: history.map((row) => ({
               role: row.role,
@@ -451,7 +470,7 @@ export function ChatApp({
         abortRef.current = null;
       }
     },
-    [activeId, modelId, webSearch, languageMode, refreshConversations],
+    [activeId, modelId, webSearch, languageMode, activeExpertId, refreshConversations],
   );
 
   const hasUsableAttachment = pendingAttachments.some((file) => !file.error);
@@ -654,6 +673,26 @@ export function ChatApp({
 
   const router = useRouter();
 
+  const activeExpert = getExpert(activeExpertId);
+
+  /** Remove the expert from the open conversation (persisted via PATCH). */
+  const clearExpert = async () => {
+    setActiveExpertId(null);
+    if (!activeId) return;
+    setConversations((current) =>
+      current.map((row) => (row.id === activeId ? { ...row, expertId: null } : row)),
+    );
+    try {
+      await fetch(`/api/chat/conversations/${activeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expertId: null }),
+      });
+    } catch {
+      void refreshConversations();
+    }
+  };
+
   const selectedModel = models.find((row) => row.id === modelId);
   const pickerLabel = modelId === "auto" ? "Auto" : selectedModel?.displayName ?? "Auto";
 
@@ -707,6 +746,10 @@ export function ChatApp({
             <DropdownMenuItem onClick={() => router.push("/build")}>
               <Globe className="size-4" />
               Website Builder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/experts")}>
+              <Users className="size-4" />
+              Experts
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/connectors")}>
               <Plug className="size-4" />
@@ -845,6 +888,29 @@ export function ChatApp({
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
+            {activeExpert ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-border py-1 pl-1 pr-2 text-sm">
+                <span
+                  aria-hidden
+                  className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                  style={{ backgroundColor: activeExpert.color }}
+                >
+                  {activeExpert.letter}
+                </span>
+                <span className="max-w-36 truncate font-medium sm:max-w-none">
+                  {activeExpert.name}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Remove expert ${activeExpert.name}`}
+                  title="Remove expert"
+                  className="rounded-full p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  onClick={() => void clearExpert()}
+                >
+                  <X className="size-3.5" />
+                </button>
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             <DropdownMenu>
@@ -886,6 +952,39 @@ export function ChatApp({
           <div className="mx-auto w-full max-w-3xl px-4 py-6">
             {threadLoading ? (
               <p className="py-16 text-center text-sm text-muted-foreground">Loading chat…</p>
+            ) : messages.length === 0 && activeExpert ? (
+              <div className="flex flex-col items-center justify-center py-14 text-center">
+                <span
+                  aria-hidden
+                  className="flex size-14 items-center justify-center rounded-3xl text-base font-bold text-white"
+                  style={{ backgroundColor: activeExpert.color }}
+                >
+                  {activeExpert.letter}
+                </span>
+                <h1 className="mt-4 font-heading text-3xl tracking-tight md:text-4xl">
+                  {activeExpert.name}
+                </h1>
+                <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                  {activeExpert.tagline} This expert stays active for the whole
+                  conversation — tap a starter or just type your question.
+                </p>
+                <div className="mt-8 grid w-full max-w-xl gap-2 sm:grid-cols-2">
+                  {activeExpert.starters.map((starter) => (
+                    <button
+                      key={starter}
+                      type="button"
+                      className="rounded-2xl border border-border px-4 py-3 text-left text-sm text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                      onClick={() => {
+                        if (!streaming) {
+                          void sendTurn([{ id: null, role: "user", content: starter }]);
+                        }
+                      }}
+                    >
+                      {starter}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14 text-center">
                 <h1 className="font-heading text-3xl tracking-tight md:text-4xl">

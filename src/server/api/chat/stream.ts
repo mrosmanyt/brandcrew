@@ -37,6 +37,7 @@ import {
   type ChatSearchSource,
 } from "@/lib/chat-search";
 import { buildMemorySystemBlock } from "@/lib/chat-memory";
+import { expertSystemBlock, getExpert } from "@/lib/experts";
 import {
   CHAT_LANGUAGE_MODES,
   languageModeSystemBlock,
@@ -49,6 +50,9 @@ const postSchema = z.object({
   webSearch: z.boolean().optional(),
   /** Reply language mode: auto mirrors the user; ur / roman-ur pin Urdu. */
   languageMode: z.enum(CHAT_LANGUAGE_MODES).optional(),
+  /** Expert for a conversation created by this turn (Package 5); an
+   * existing conversation keeps the expert persisted on it. */
+  expertId: z.string().trim().max(60).nullable().optional(),
   messages: z
     .array(
       z
@@ -98,6 +102,7 @@ export async function POST(request: Request) {
       userName: user.name,
       conversationId: body.conversationId,
       modelId: body.modelId,
+      expertId: body.expertId,
       messages: body.messages,
     });
     const resolution = resolveChatRoutes(body.modelId, prepared.plan);
@@ -128,6 +133,13 @@ export async function POST(request: Request) {
       if (memoryBlock) systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${memoryBlock}`;
     } catch {
       // No memory this turn; the chat continues without it.
+    }
+    // Expert persona (Package 5) rides the same assembly, layered after
+    // memory/custom instructions and before the language pin so the
+    // language mode still wins on reply language.
+    const activeExpert = getExpert(prepared.conversation.expertId);
+    if (activeExpert) {
+      systemPrompt = `${systemPrompt}\n\n${expertSystemBlock(activeExpert)}`;
     }
     const languageBlock = body.languageMode
       ? languageModeSystemBlock(body.languageMode)
