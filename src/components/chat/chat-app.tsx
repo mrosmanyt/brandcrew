@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ArrowUpRight,
   BadgeAlert,
+  BookOpen,
   Brain,
   Check,
   ChevronDown,
@@ -63,6 +64,7 @@ import {
   type ChatDeltaData,
   type ChatDoneData,
   type ChatErrorData,
+  type ChatProgressData,
   type ChatSourcesData,
   type ChatStartData,
 } from "@/lib/chat-stream-pure";
@@ -186,6 +188,7 @@ export function ChatApp({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
+  const [deepResearch, setDeepResearch] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [languageMode, setLanguageMode] = useState<ChatLanguageMode>(() => {
@@ -426,6 +429,11 @@ export function ChatApp({
             languageMode,
             ...(activeExpertId ? { expertId: activeExpertId } : {}),
             ...(webSearch ? { webSearch: true } : {}),
+            ...(deepResearch
+              ? { deepResearch: true }
+              : webSearch
+                ? { webSearch: true }
+                : {}),
             messages: history.map((row) => ({
               role: row.role,
               content: row.content,
@@ -455,6 +463,11 @@ export function ChatApp({
             if (event.event === "start") {
               const data = parseSseData<ChatStartData>(event.data);
               if (data?.conversationId) setActiveId(data.conversationId);
+            } else if (event.event === "progress") {
+              const data = parseSseData<ChatProgressData>(event.data);
+              if (data?.label) {
+                patchAssistant({ status: data.label });
+              }
             } else if (event.event === "sources") {
               const data = parseSseData<ChatSourcesData>(event.data);
               if (data?.sources?.length) {
@@ -510,7 +523,7 @@ export function ChatApp({
         abortRef.current = null;
       }
     },
-    [activeId, modelId, webSearch, languageMode, activeExpertId, refreshConversations],
+    [activeId, modelId, webSearch, deepResearch, languageMode, activeExpertId, refreshConversations],
   );
 
   const hasUsableAttachment = pendingAttachments.some((file) => !file.error);
@@ -1185,7 +1198,9 @@ export function ChatApp({
                     ? "Listening… tap the mic again to stop"
                     : transcribing
                       ? "Transcribing your voice note…"
-                      : "Ask anything"
+                      : deepResearch
+                        ? "Ask a research question — get a cited report"
+                        : "Ask anything"
                 }
                 aria-label="Message"
                 className="max-h-[200px] w-full resize-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0"
@@ -1201,11 +1216,25 @@ export function ChatApp({
                   <DropdownMenuContent side="top" align="start" className="w-64">
                     <DropdownMenuCheckboxItem
                       checked={webSearch}
-                      onCheckedChange={(checked) => setWebSearch(checked)}
+                      onCheckedChange={(checked) => {
+                        setWebSearch(checked);
+                        if (checked) setDeepResearch(false);
+                      }}
                       disabled={streaming}
                     >
                       <Globe className="size-4" />
                       Search the web
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={deepResearch}
+                      onCheckedChange={(checked) => {
+                        setDeepResearch(checked);
+                        if (checked) setWebSearch(false);
+                      }}
+                      disabled={streaming}
+                    >
+                      <BookOpen className="size-4" />
+                      Deep research
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuItem
                       onClick={() => fileInputRef.current?.click()}
@@ -1256,6 +1285,20 @@ export function ChatApp({
                   >
                     <Globe className="size-3.5" />
                     Search on
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
+                {deepResearch ? (
+                  <button
+                    type="button"
+                    onClick={() => setDeepResearch(false)}
+                    disabled={streaming}
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-medium text-secondary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    aria-label="Turn off deep research"
+                    title="Deep research is on — tap to turn it off"
+                  >
+                    <BookOpen className="size-3.5" />
+                    Deep research on
                     <X className="size-3.5" />
                   </button>
                 ) : null}

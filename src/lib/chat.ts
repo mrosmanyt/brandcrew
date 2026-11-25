@@ -101,7 +101,9 @@ export function parseStoredSources(
       });
     }
   }
-  return out.slice(0, 10);
+  // Deep-research reports legitimately carry more sources than a single
+  // web search (max 5); the cap stays bounded either way.
+  return out.slice(0, 40);
 }
 
 /** Stored JSON → wire attachments. Anything unexpected reads as "none". */

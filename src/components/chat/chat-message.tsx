@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import {
   Check,
   Copy,
+  Download,
   FileText,
   Loader2,
   Pencil,
+  Printer,
   RotateCcw,
   Square,
   Volume2,
 } from "lucide-react";
+import { researchReportMarkdown } from "@/lib/deep-research";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { ComposerAttachment } from "@/lib/composer";
@@ -26,6 +29,8 @@ export type ChatUiMessage = {
   provider?: string | null;
   displayName?: string | null;
   streaming?: boolean;
+  /** Deep-research progress label while a report is being built. */
+  status?: string;
   attachments?: ComposerAttachment[];
   sources?: { title: string; url: string }[];
 };
@@ -213,6 +218,70 @@ function SpeakButton({ text }: { text: string }) {
   );
 }
 
+/** Session-storage key the print view reads its report payload from. */
+export const RESEARCH_PRINT_STORAGE_KEY = "cinem-research-print";
+
+/**
+ * Export actions for a sourced assistant reply (deep-research reports):
+ * a markdown download generated client-side from the stored message, and
+ * a print/PDF-friendly view of the same content + source list.
+ */
+function ReportExportButtons({
+  content,
+  sources,
+}: {
+  content: string;
+  sources: { title: string; url: string }[];
+}) {
+  const downloadMarkdown = () => {
+    const markdown = researchReportMarkdown({ content, sources });
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "deep-research-report.md";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const openPrintView = () => {
+    try {
+      window.sessionStorage.setItem(
+        RESEARCH_PRINT_STORAGE_KEY,
+        JSON.stringify({ content, sources }),
+      );
+    } catch {
+      // Storage unavailable (private mode) — the print view will say so.
+    }
+    window.open("/chat/print", "_blank", "noopener");
+  };
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Download report as markdown"
+        title="Download as markdown"
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        onClick={downloadMarkdown}
+      >
+        <Download className="size-4" />
+        .md
+      </button>
+      <button
+        type="button"
+        aria-label="Open print and PDF view"
+        title="Print / save as PDF"
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        onClick={openPrintView}
+      >
+        <Printer className="size-4" />
+        Print / PDF
+      </button>
+    </>
+  );
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -322,9 +391,15 @@ export function ChatMessageItem({
   return (
     <li className="group">
       <div className="min-w-0">
+        {message.streaming && message.status ? (
+          <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="size-4 shrink-0 animate-spin" />
+            <span className="truncate text-sm">{message.status}</span>
+          </div>
+        ) : null}
         {message.content ? (
           <ChatMarkdown content={message.content} />
-        ) : message.streaming ? (
+        ) : message.streaming && !message.status ? (
           <div className="flex items-center gap-2 py-2 text-muted-foreground">
             <span className="size-2 animate-pulse rounded-full bg-foreground/60" />
             <span className="text-sm">Thinking…</span>
@@ -340,6 +415,12 @@ export function ChatMessageItem({
           <div className="mt-1 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
             <CopyButton text={message.content} />
             <SpeakButton text={message.content} />
+            {message.sources?.length ? (
+              <ReportExportButtons
+                content={message.content}
+                sources={message.sources}
+              />
+            ) : null}
             {isLastAssistant && !busy ? (
               <button
                 type="button"
