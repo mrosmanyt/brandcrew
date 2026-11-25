@@ -60,6 +60,7 @@ model User {
   invitedBy     User?              @relation("UserInvites", fields: [invitedByUserId], references: [id], onDelete: SetNull)
   invitees      User[]             @relation("UserInvites")
   crashReports  CrashReport[]
+  safetyAlerts  SafetyAlert[]
   chatConversations ChatConversation[]
   chatMemoryFacts ChatMemoryFact[]
   chatSettings ChatUserSettings?
@@ -1132,4 +1133,39 @@ model CrashReport {
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+}
+
+/// Safety alarm (owner directive, 2026-11-25): one row per chat message the
+/// safety classifier (src/lib/safety-moderation.ts) refused before it reached
+/// a model. Surfaced in /admin/safety-alerts. Guests have no User row, so
+/// they are identified by guestId (their guest-chat key) + IP instead.
+/// excerpt is the user's message truncated to ~300 chars — enough for the
+/// owner to judge the attempt, never a full conversation dump.
+model SafetyAlert {
+  id         String   @id @default(cuid())
+  userId     String?
+  /// Email snapshot at attempt time (survives account deletion).
+  userEmail  String?
+  /// Guest-chat key when the attempt came from a signed-out guest.
+  guestId    String?
+  /// violence_harm | weapons_explosives | poisoning_substances |
+  /// arson_destruction | self_harm | csam (src/lib/safety-moderation.ts).
+  category   String
+  /// medium | high | critical.
+  severity   String
+  /// Classifier score, 0–100.
+  score      Int      @default(0)
+  /// Rule labels that fired, joined with "; ".
+  signals    String   @default("")
+  excerpt    String
+  ipAddress  String?
+  userAgent  String?
+  /// NEW | REVIEWED | DISMISSED.
+  status     String   @default("NEW")
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([guestId])
 }

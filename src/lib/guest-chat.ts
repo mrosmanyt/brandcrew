@@ -10,6 +10,8 @@ import {
 } from "@/lib/guest-chat-pure";
 import { normalizeModelRouting, type LlmRoutingPreference } from "@/lib/llm-routing";
 import { clientIp, takeTokenShared } from "@/lib/rate-limit";
+import { classifySafety, safetyRefusal } from "@/lib/safety-moderation";
+import { recordSafetyAlert } from "@/lib/safety-alerts";
 
 type GuestSession = {
   userMessages: number;
@@ -119,6 +121,34 @@ export async function answerGuestChat(input: {
 
   const routing = normalizeModelRouting(input.modelRouting) as LlmRoutingPreference;
   const prior = (input.history || []).slice(-8);
+
+  // Safety gate (owner directive, 2026-11-25): the same classifier as the
+  // signed-in chat. A flagged guest message is refused and logged as a
+  // SafetyAlert keyed by guest key + IP; it never reaches a model.
+  const verdict = classifySafety(message);
+  if (verdict.flagged && verdict.category) {
+    await recordSafetyAlert({
+      verdict,
+      message,
+      guestId: guestKey,
+      ipAddress: ip,
+      userAgent: input.request.headers.get("user-agent"),
+    }).catch(() => undefined);
+    const assistantMsg: GuestChatMessage = {
+      id: randomUUID(),
+      role: "assistant",
+      content: safetyRefusal(verdict.category, message),
+      createdAt: new Date().toISOString(),
+    };
+    return {
+      guestKey,
+      messages: [...prior, userMsg, assistantMsg],
+      userMessageCount: nextCount,
+      limit: GUEST_CHAT_MESSAGE_LIMIT,
+      authRequired: false,
+      demo: !llm.status().configured,
+    };
+  }
   const transcript = [
     ...prior.map((row) => ({
       role: row.role as "user" | "assistant",

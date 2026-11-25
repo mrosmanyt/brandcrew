@@ -17,6 +17,8 @@ import {
   getAdminFlags,
   getAdminFunnel,
   getAdminModels,
+  getAdminSafetyAlerts,
+  adminSetSafetyAlertStatus,
   getAdminTrust,
   exportAdminAudit,
   parseAdminSection,
@@ -75,6 +77,14 @@ export async function GET(request: Request) {
     if (section === "crashreports") {
       return jsonOk(await getAdminCrashReports());
     }
+    if (section === "safetyalerts") {
+      return jsonOk(
+        await getAdminSafetyAlerts({
+          status: url.searchParams.get("status"),
+          category: url.searchParams.get("category"),
+        }),
+      );
+    }
     if (section === "funnel") {
       return jsonOk(await getAdminFunnel());
     }
@@ -93,6 +103,7 @@ const mutateSchema = z.object({
     "flag",
     "budget",
     "purchase_request",
+    "safety_alert_status",
   ]),
   plan: z.enum(["demo", "starter", "pro", "ultra", "growth"]).optional(),
   workspaceId: z.string().min(1).optional(),
@@ -103,6 +114,8 @@ const mutateSchema = z.object({
   tokenBudget: z.number().int().min(1).max(5_000_000).optional(),
   purchaseRequestId: z.string().min(1).optional(),
   approved: z.boolean().optional(),
+  alertId: z.string().min(1).optional(),
+  alertStatus: z.enum(["NEW", "REVIEWED", "DISMISSED"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -110,6 +123,21 @@ export async function POST(request: Request) {
     const actor = await requireAdmin();
     const body = mutateSchema.parse(await request.json());
     const actorEmail = actor.email;
+
+    if (body.action === "safety_alert_status") {
+      if (!body.alertId || !body.alertStatus) {
+        return NextResponse.json(
+          { error: "alertId and alertStatus are required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const status = await adminSetSafetyAlertStatus({
+        actorEmail,
+        id: body.alertId,
+        status: body.alertStatus,
+      });
+      return jsonOk({ ok: true, action: "safety_alert_status" as const, status });
+    }
 
     if (body.action === "purchase_request") {
       if (!body.purchaseRequestId || typeof body.approved !== "boolean") {

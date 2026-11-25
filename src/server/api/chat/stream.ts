@@ -41,6 +41,9 @@ import {
   CHAT_LANGUAGE_MODES,
   languageModeSystemBlock,
 } from "@/lib/chat-language";
+import { classifySafety, safetyRefusal } from "@/lib/safety-moderation";
+import { recordSafetyAlert } from "@/lib/safety-alerts";
+import { clientIp } from "@/lib/rate-limit";
 
 const postSchema = z.object({
   conversationId: z.string().min(1).nullable().optional(),
@@ -82,10 +85,19 @@ type ChatStreamBody = z.infer<typeof postSchema>;
 export async function POST(request: Request) {
   let body: ChatStreamBody;
   let prepared: PreparedChatTurn;
-  let routes: LlmRoute[];
+  let routes: LlmRoute[] = [];
   let searchContext = "";
   let searchSources: ChatSearchSource[] = [];
   let systemPrompt = CHAT_SYSTEM_PROMPT;
+  // Set when the safety classifier refuses the turn: the refusal reply is
+  // persisted inside the try block and replayed as a short SSE stream
+  // after it. The harmful message never reaches a model.
+  let safetyBlock: {
+    refusal: string;
+    messageId: string;
+    conversationId: string;
+    userMessageId: string | null;
+  } | null = null;
   try {
     const user = await requireUser();
     body = postSchema.parse(await request.json());
@@ -100,73 +112,148 @@ export async function POST(request: Request) {
       modelId: body.modelId,
       messages: body.messages,
     });
-    const resolution = resolveChatRoutes(body.modelId, prepared.plan);
-    if (!resolution.ok) {
-      const who = resolution.provider
-        ? chatProviderLabel(resolution.provider)
-        : "any AI provider";
-      const what = resolution.displayName
-        ? `"${resolution.displayName}" is not configured yet`
-        : "No AI model is configured yet";
-      return NextResponse.json(
-        {
-          error: `${what} — the ${who} API key has not been added to the server environment. Other models may still work.`,
-          code: "model_not_configured",
-          provider: resolution.provider,
-        },
-        { status: 503 },
-      );
+    // Safety gate (owner directive, 2026-11-25): classify the new user
+    // message BEFORE any model routing, budget spend or web search. A
+    // flagged message is refused, logged as a SafetyAlert for the admin
+    // panel, and never sent to a provider.
+    const verdict = classifySafety(last.content);
+    if (verdict.flagged && verdict.category) {
+      await recordSafetyAlert({
+        verdict,
+        message: last.content,
+        userId: user.id,
+        userEmail: user.email,
+        ipAddress: clientIp(request),
+        userAgent: request.headers.get("user-agent"),
+      }).catch(() => undefined);
+      const refusal = safetyRefusal(verdict.category, last.content);
+      const saved = await persistChatReply({
+        conversationId: prepared.conversation.id,
+        workspaceId: prepared.workspaceId,
+        content: refusal,
+        model: "safety-moderation",
+        provider: "cinem-safety",
+        tokens: 0,
+      });
+      safetyBlock = {
+        refusal,
+        messageId: saved.id,
+        conversationId: prepared.conversation.id,
+        userMessageId: prepared.userMessageId,
+      };
     }
-    routes = resolution.routes;
-    // Pre-flight budget check: an exhausted plan fails as a clean 429 JSON
-    // response instead of an SSE stream that dies on its first event.
-    await assertLlmCallBudget(prepared.workspaceId, "chat");
-    // Memory + custom instructions ride the system prompt. A memory read
-    // failure must never break the chat itself, so it degrades to none.
-    try {
-      const memoryBlock = await buildMemorySystemBlock(user.id);
-      if (memoryBlock) systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${memoryBlock}`;
-    } catch {
-      // No memory this turn; the chat continues without it.
-    }
-    const languageBlock = body.languageMode
-      ? languageModeSystemBlock(body.languageMode)
-      : null;
-    if (languageBlock) systemPrompt = `${systemPrompt}\n\n${languageBlock}`;
-    if (body.webSearch) {
-      // Search runs before the stream opens so a missing/rejected key or a
-      // failed search is an honest JSON error, not a mid-stream surprise.
-      if (!chatSearchConfigured()) {
+    if (!safetyBlock) {
+      const resolution = resolveChatRoutes(body.modelId, prepared.plan);
+      if (!resolution.ok) {
+        const who = resolution.provider
+          ? chatProviderLabel(resolution.provider)
+          : "any AI provider";
+        const what = resolution.displayName
+          ? `"${resolution.displayName}" is not configured yet`
+          : "No AI model is configured yet";
         return NextResponse.json(
-          { error: SEARCH_NOT_CONFIGURED_MESSAGE, code: "search_not_configured" },
+          {
+            error: `${what} — the ${who} API key has not been added to the server environment. Other models may still work.`,
+            code: "model_not_configured",
+            provider: resolution.provider,
+          },
           { status: 503 },
         );
       }
-      const searched = await searchForChat(last.content);
-      if (!searched.ok) {
-        return NextResponse.json(
-          {
-            error: searched.error || "Web search failed. Try again.",
-            code: "search_failed",
-          },
-          { status: 502 },
-        );
+      routes = resolution.routes;
+      // Pre-flight budget check: an exhausted plan fails as a clean 429 JSON
+      // response instead of an SSE stream that dies on its first event.
+      await assertLlmCallBudget(prepared.workspaceId, "chat");
+      // Memory + custom instructions ride the system prompt. A memory read
+      // failure must never break the chat itself, so it degrades to none.
+      try {
+        const memoryBlock = await buildMemorySystemBlock(user.id);
+        if (memoryBlock) systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${memoryBlock}`;
+      } catch {
+        // No memory this turn; the chat continues without it.
       }
-      searchContext = searched.contextText;
-      searchSources = searched.sources;
-      await recordUsage({
-        workspaceId: prepared.workspaceId,
-        tokens: SEARCH_USAGE_TOKENS,
-        model: "tavily-search",
-        agentRole: "chat-search",
-        bucket: "chat",
-      });
+      const languageBlock = body.languageMode
+        ? languageModeSystemBlock(body.languageMode)
+        : null;
+      if (languageBlock) systemPrompt = `${systemPrompt}\n\n${languageBlock}`;
+      if (body.webSearch) {
+        // Search runs before the stream opens so a missing/rejected key or a
+        // failed search is an honest JSON error, not a mid-stream surprise.
+        if (!chatSearchConfigured()) {
+          return NextResponse.json(
+            { error: SEARCH_NOT_CONFIGURED_MESSAGE, code: "search_not_configured" },
+            { status: 503 },
+          );
+        }
+        const searched = await searchForChat(last.content);
+        if (!searched.ok) {
+          return NextResponse.json(
+            {
+              error: searched.error || "Web search failed. Try again.",
+              code: "search_failed",
+            },
+            { status: 502 },
+          );
+        }
+        searchContext = searched.contextText;
+        searchSources = searched.sources;
+        await recordUsage({
+          workspaceId: prepared.workspaceId,
+          tokens: SEARCH_USAGE_TOKENS,
+          model: "tavily-search",
+          agentRole: "chat-search",
+          bucket: "chat",
+        });
+      }
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return jsonFail("Write a message to start the chat.", 400);
     }
     return jsonError(error);
+  }
+
+  if (safetyBlock) {
+    // Refused turn: replay the already-persisted refusal as a complete
+    // SSE turn so the client renders it like any other assistant reply.
+    const encoder = new TextEncoder();
+    const block = safetyBlock;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            encodeSseEvent("start", {
+              conversationId: block.conversationId,
+              userMessageId: block.userMessageId,
+            }),
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(encodeSseEvent("delta", { text: block.refusal })),
+        );
+        controller.enqueue(
+          encoder.encode(
+            encodeSseEvent("done", {
+              conversationId: block.conversationId,
+              messageId: block.messageId,
+              model: "safety-moderation",
+              provider: "cinem-safety",
+              displayName: "CINEM Pro Safety",
+              tokens: 0,
+            }),
+          ),
+        );
+        controller.close();
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
   }
 
   const { workspaceId, conversation } = prepared;

@@ -29,6 +29,7 @@ export const ADMIN_SECTIONS = [
   "flags",
   "crashreports",
   "funnel",
+  "safetyalerts",
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
@@ -326,6 +327,32 @@ export type AdminCrashReportsPayload = {
   section: "crashreports";
   reports: AdminCrashReportRow[];
 };
+
+export type AdminSafetyAlertRow = {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  userName: string | null;
+  guestId: string | null;
+  category: string;
+  severity: string;
+  score: number;
+  signals: string;
+  excerpt: string;
+  ipAddress: string | null;
+  status: string;
+  createdAt: string;
+  /** Total alerts ever recorded for this identity (user or guest). */
+  identityAlertTotal: number;
+};
+
+export type AdminSafetyAlertsPayload = {
+  section: "safetyalerts";
+  alerts: AdminSafetyAlertRow[];
+  newCount: number;
+};
+
+export const SAFETY_ALERT_STATUSES = ["NEW", "REVIEWED", "DISMISSED"] as const;
 
 export type AdminFunnelDayRow = {
   date: string;
@@ -1340,6 +1367,109 @@ export async function getAdminCrashReports(): Promise<AdminCrashReportsPayload> 
       createdAt: row.createdAt.toISOString(),
     })),
   };
+}
+
+/** NEW safety alerts waiting for the owner — drives the admin nav badge. */
+export async function countNewSafetyAlerts(): Promise<number> {
+  return prisma.safetyAlert.count({ where: { status: "NEW" } });
+}
+
+export async function getAdminSafetyAlerts(input: {
+  status?: string | null;
+  category?: string | null;
+}): Promise<AdminSafetyAlertsPayload> {
+  const status = (input.status ?? "").trim().toUpperCase();
+  const category = (input.category ?? "").trim();
+  const rows = await prisma.safetyAlert.findMany({
+    where: {
+      ...(SAFETY_ALERT_STATUSES.includes(status as (typeof SAFETY_ALERT_STATUSES)[number])
+        ? { status }
+        : {}),
+      ...(category ? { category } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { user: { select: { email: true, name: true } } },
+  });
+
+  // Repeat-offender totals: every alert ever recorded for each identity
+  // on this page (signed-in user id, else guest key), across all statuses.
+  const userIds = [...new Set(rows.map((row) => row.userId).filter(Boolean))] as string[];
+  const guestIds = [...new Set(rows.map((row) => row.guestId).filter(Boolean))] as string[];
+  const [userTotals, guestTotals, newCount] = await Promise.all([
+    userIds.length
+      ? prisma.safetyAlert.groupBy({
+          by: ["userId"],
+          where: { userId: { in: userIds } },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+    guestIds.length
+      ? prisma.safetyAlert.groupBy({
+          by: ["guestId"],
+          where: { guestId: { in: guestIds } },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+    countNewSafetyAlerts(),
+  ]);
+  const totalFor = (row: (typeof rows)[number]): number => {
+    if (row.userId) {
+      return userTotals.find((total) => total.userId === row.userId)?._count._all ?? 1;
+    }
+    if (row.guestId) {
+      return guestTotals.find((total) => total.guestId === row.guestId)?._count._all ?? 1;
+    }
+    return 1;
+  };
+
+  return {
+    section: "safetyalerts",
+    newCount,
+    alerts: rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      userEmail: row.user?.email ?? row.userEmail,
+      userName: row.user?.name ?? null,
+      guestId: row.guestId,
+      category: row.category,
+      severity: row.severity,
+      score: row.score,
+      signals: row.signals,
+      excerpt: row.excerpt,
+      ipAddress: row.ipAddress,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+      identityAlertTotal: totalFor(row),
+    })),
+  };
+}
+
+export async function adminSetSafetyAlertStatus(input: {
+  actorEmail: string;
+  id: string;
+  status: string;
+}): Promise<AdminSafetyAlertRow["status"]> {
+  const status = input.status.trim().toUpperCase();
+  if (!SAFETY_ALERT_STATUSES.includes(status as (typeof SAFETY_ALERT_STATUSES)[number])) {
+    throw new ClientError("Unknown safety alert status.", 400, "invalid_request");
+  }
+  const existing = await prisma.safetyAlert.findUnique({
+    where: { id: input.id },
+    select: { id: true, status: true },
+  });
+  if (!existing) throw new ClientError("Safety alert not found.", 404, "not_found");
+  await prisma.safetyAlert.update({
+    where: { id: input.id },
+    data: { status },
+  });
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "safety_alert_status",
+    targetId: input.id,
+    meta: { from: existing.status, to: status },
+  });
+  return status;
 }
 
 export async function getAdminFunnel(): Promise<AdminFunnelPayload> {
