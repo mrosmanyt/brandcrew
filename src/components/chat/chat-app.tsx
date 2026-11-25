@@ -78,6 +78,7 @@ import {
   CHAT_LANGUAGE_MODES,
   PAKISTANI_TEMPLATES,
   isChatLanguageMode,
+  isRtlChatLanguage,
   type ChatLanguageMode,
 } from "@/lib/chat-language";
 
@@ -197,6 +198,45 @@ export function ChatApp({
       // Private mode etc. — the mode still applies to this session.
     }
   }, [languageMode]);
+
+  // The saved account setting is the source of truth across devices:
+  // adopt it on load, then persist every change back. Failures (signed
+  // out, offline) leave the on-device choice in place for this session.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/chat/memory");
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          responseLanguage?: unknown;
+        };
+        if (!cancelled && isChatLanguageMode(data.responseLanguage)) {
+          setLanguageMode(data.responseLanguage);
+        }
+      } catch {
+        // Keep the local choice.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const changeLanguageMode = useCallback((mode: ChatLanguageMode) => {
+    setLanguageMode(mode);
+    void (async () => {
+      try {
+        await fetch("/api/chat/memory", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ responseLanguage: mode }),
+        });
+      } catch {
+        // The choice still applies on this device via localStorage.
+      }
+    })();
+  }, []);
 
   const abortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -764,6 +804,8 @@ export function ChatApp({
       <ChatSettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        languageMode={languageMode}
+        onLanguageModeChange={changeLanguageMode}
         onOpenMemory={() => {
           setSettingsOpen(false);
           setMemoryOpen(true);
@@ -856,13 +898,13 @@ export function ChatApp({
                 {CHAT_LANGUAGE_LABELS[languageMode]}
                 <ChevronDown className="size-3.5" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent align="end" className="max-h-80 w-56 overflow-y-auto">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>Reply language</DropdownMenuLabel>
                   {CHAT_LANGUAGE_MODES.map((mode) => (
                     <DropdownMenuItem
                       key={mode}
-                      onClick={() => setLanguageMode(mode)}
+                      onClick={() => changeLanguageMode(mode)}
                     >
                       <span className="flex-1">{CHAT_LANGUAGE_LABELS[mode]}</span>
                       {languageMode === mode ? <Check className="size-4" /> : null}
@@ -876,7 +918,7 @@ export function ChatApp({
 
         <div
           ref={scrollRef}
-          dir={languageMode === "ur" ? "rtl" : undefined}
+          dir={isRtlChatLanguage(languageMode) ? "rtl" : undefined}
           className="min-h-0 flex-1 overflow-y-auto"
           onScroll={(event) => {
             const el = event.currentTarget;
@@ -963,7 +1005,7 @@ export function ChatApp({
 
         <div
           className="shrink-0 px-4 pb-5 pt-1"
-          dir={languageMode === "ur" ? "rtl" : undefined}
+          dir={isRtlChatLanguage(languageMode) ? "rtl" : undefined}
         >
           {error ? (
             <ChatErrorNotice

@@ -8,6 +8,10 @@
  */
 import { prisma } from "@/lib/db";
 import { ClientError } from "@/lib/http";
+import {
+  isChatLanguageMode,
+  type ChatLanguageMode,
+} from "@/lib/chat-language";
 
 export const CUSTOM_INSTRUCTIONS_MAX = 2000;
 export const MEMORY_FACT_MAX = 500;
@@ -15,8 +19,15 @@ export const MEMORY_FACTS_MAX_PER_USER = 100;
 
 export type ChatMemoryDTO = {
   customInstructions: string;
+  /** Saved reply-language mode ("auto" mirrors the user's language). */
+  responseLanguage: ChatLanguageMode;
   facts: { id: string; fact: string; createdAt: string }[];
 };
+
+/** A stored mode that predates the registry (or is corrupt) reads as auto. */
+function toChatLanguageMode(value: string | null | undefined): ChatLanguageMode {
+  return isChatLanguageMode(value) ? value : "auto";
+}
 
 export async function getChatMemory(userId: string): Promise<ChatMemoryDTO> {
   const [settings, facts] = await Promise.all([
@@ -29,6 +40,7 @@ export async function getChatMemory(userId: string): Promise<ChatMemoryDTO> {
   ]);
   return {
     customInstructions: settings?.customInstructions ?? "",
+    responseLanguage: toChatLanguageMode(settings?.responseLanguage),
     facts: facts.map(
       (row: { id: string; fact: string; createdAt: Date }) => ({
         id: row.id,
@@ -47,6 +59,29 @@ export async function setCustomInstructions(userId: string, text: string) {
     update: { customInstructions },
   });
   return customInstructions;
+}
+
+/** The user's saved reply-language mode; "auto" when never set. */
+export async function getResponseLanguage(
+  userId: string,
+): Promise<ChatLanguageMode> {
+  const settings = await prisma.chatUserSettings.findUnique({
+    where: { userId },
+    select: { responseLanguage: true },
+  });
+  return toChatLanguageMode(settings?.responseLanguage);
+}
+
+export async function setResponseLanguage(
+  userId: string,
+  mode: ChatLanguageMode,
+) {
+  await prisma.chatUserSettings.upsert({
+    where: { userId },
+    create: { userId, responseLanguage: mode },
+    update: { responseLanguage: mode },
+  });
+  return mode;
 }
 
 export async function addMemoryFact(userId: string, factRaw: string) {

@@ -1,28 +1,130 @@
 /**
- * Chat language modes: Auto (mirror the user), English, Urdu (Arabic
- * script) and Roman Urdu (Urdu in Latin letters — how most Pakistanis
- * type). A mode is a chat behaviour, not a site translation: it adds one
- * system-prompt block and swaps the empty-state starter chips for
- * ready-made Pakistani templates. Pure module — safe on client + server.
+ * Chat language modes: Auto (mirror the user) plus a registry of the
+ * world's major languages. A mode is a chat behaviour, not a site
+ * translation: it adds one system-prompt block and — for Urdu / Roman
+ * Urdu — swaps the empty-state starter chips for ready-made Pakistani
+ * templates. Pure module — safe on client + server.
+ *
+ * Urdu rules are load-bearing (owner directive): Urdu script input is
+ * answered in Urdu, Roman Urdu (Latin letters) is answered in Roman
+ * Urdu, and neither is ever answered in Hindi / Devanagari. The
+ * detection helper in chat-language-detect.ts exists to keep Auto mode
+ * honest about that distinction.
  */
 
-export const CHAT_LANGUAGE_MODES = ["auto", "en", "ur", "roman-ur"] as const;
+export const CHAT_LANGUAGE_MODES = [
+  "auto",
+  "en",
+  "ur",
+  "roman-ur",
+  "ar",
+  "fa",
+  "ps",
+  "sd",
+  "pa",
+  "hi",
+  "bn",
+  "ta",
+  "te",
+  "tr",
+  "es",
+  "fr",
+  "de",
+  "it",
+  "pt",
+  "ru",
+  "uk",
+  "zh",
+  "ja",
+  "ko",
+  "id",
+  "ms",
+  "vi",
+  "th",
+  "nl",
+  "pl",
+  "sw",
+  "ha",
+  "am",
+] as const;
 export type ChatLanguageMode = (typeof CHAT_LANGUAGE_MODES)[number];
+
+/** Every mode except "auto" is a concrete reply language. */
+export type ResponseLanguageCode = Exclude<ChatLanguageMode, "auto">;
+
+export type ResponseLanguage = {
+  code: ResponseLanguageCode;
+  /** Name used in system-prompt directives and detection results. */
+  englishName: string;
+  /** Name shown in pickers — the language's own name for itself. */
+  nativeName: string;
+  /** Replies in this language read right-to-left. */
+  rtl?: boolean;
+};
+
+export const RESPONSE_LANGUAGES: ResponseLanguage[] = [
+  { code: "en", englishName: "English", nativeName: "English" },
+  { code: "ur", englishName: "Urdu", nativeName: "اردو", rtl: true },
+  { code: "roman-ur", englishName: "Roman Urdu", nativeName: "Roman Urdu" },
+  { code: "ar", englishName: "Arabic", nativeName: "العربية", rtl: true },
+  { code: "fa", englishName: "Persian", nativeName: "فارسی", rtl: true },
+  { code: "ps", englishName: "Pashto", nativeName: "پښتو", rtl: true },
+  { code: "sd", englishName: "Sindhi", nativeName: "سنڌي", rtl: true },
+  { code: "pa", englishName: "Punjabi", nativeName: "ਪੰਜਾਬੀ" },
+  { code: "hi", englishName: "Hindi", nativeName: "हिन्दी" },
+  { code: "bn", englishName: "Bengali", nativeName: "বাংলা" },
+  { code: "ta", englishName: "Tamil", nativeName: "தமிழ்" },
+  { code: "te", englishName: "Telugu", nativeName: "తెలుగు" },
+  { code: "tr", englishName: "Turkish", nativeName: "Türkçe" },
+  { code: "es", englishName: "Spanish", nativeName: "Español" },
+  { code: "fr", englishName: "French", nativeName: "Français" },
+  { code: "de", englishName: "German", nativeName: "Deutsch" },
+  { code: "it", englishName: "Italian", nativeName: "Italiano" },
+  { code: "pt", englishName: "Portuguese", nativeName: "Português" },
+  { code: "ru", englishName: "Russian", nativeName: "Русский" },
+  { code: "uk", englishName: "Ukrainian", nativeName: "Українська" },
+  { code: "zh", englishName: "Chinese (Simplified)", nativeName: "简体中文" },
+  { code: "ja", englishName: "Japanese", nativeName: "日本語" },
+  { code: "ko", englishName: "Korean", nativeName: "한국어" },
+  { code: "id", englishName: "Indonesian", nativeName: "Bahasa Indonesia" },
+  { code: "ms", englishName: "Malay", nativeName: "Bahasa Melayu" },
+  { code: "vi", englishName: "Vietnamese", nativeName: "Tiếng Việt" },
+  { code: "th", englishName: "Thai", nativeName: "ไทย" },
+  { code: "nl", englishName: "Dutch", nativeName: "Nederlands" },
+  { code: "pl", englishName: "Polish", nativeName: "Polski" },
+  { code: "sw", englishName: "Swahili", nativeName: "Kiswahili" },
+  { code: "ha", englishName: "Hausa", nativeName: "Hausa" },
+  { code: "am", englishName: "Amharic", nativeName: "አማርኛ" },
+];
+
+export const RESPONSE_LANGUAGE_BY_CODE: Record<
+  ResponseLanguageCode,
+  ResponseLanguage
+> = Object.fromEntries(
+  RESPONSE_LANGUAGES.map((language) => [language.code, language]),
+) as Record<ResponseLanguageCode, ResponseLanguage>;
 
 export const CHAT_LANGUAGE_LABELS: Record<ChatLanguageMode, string> = {
   auto: "Auto",
-  en: "English",
-  ur: "اردو",
-  "roman-ur": "Roman Urdu",
-};
+  ...Object.fromEntries(
+    RESPONSE_LANGUAGES.map((language) => [language.code, language.nativeName]),
+  ),
+} as Record<ChatLanguageMode, string>;
 
 export function isChatLanguageMode(value: unknown): value is ChatLanguageMode {
   return (
-    value === "auto" || value === "en" || value === "ur" || value === "roman-ur"
+    typeof value === "string" &&
+    (CHAT_LANGUAGE_MODES as readonly string[]).includes(value)
   );
 }
 
-/** The system-prompt block for a mode; null for Auto (base prompt mirrors). */
+/** True when replies in this mode read right-to-left (Urdu, Arabic, …). */
+export function isRtlChatLanguage(mode: ChatLanguageMode): boolean {
+  if (mode === "auto") return false;
+  return RESPONSE_LANGUAGE_BY_CODE[mode].rtl === true;
+}
+
+/** The system-prompt block for an explicit mode; null for Auto. */
 export function languageModeSystemBlock(mode: ChatLanguageMode): string | null {
   switch (mode) {
     case "ur":
@@ -31,8 +133,12 @@ export function languageModeSystemBlock(mode: ChatLanguageMode): string | null {
       return "Language mode: Roman Urdu. Reply entirely in Roman Urdu (Urdu written in Latin letters, the way Pakistanis type on WhatsApp), whatever language the user's message is in, unless the user explicitly asks for another language in that message. Keep code, URLs, numbers and proper names as they are.";
     case "en":
       return "Language mode: English. Reply in English unless the user explicitly asks for another language in that message.";
-    default:
+    case "auto":
       return null;
+    default: {
+      const language = RESPONSE_LANGUAGE_BY_CODE[mode];
+      return `Language mode: ${language.englishName}. Reply entirely in ${language.englishName}, whatever language the user's message is in, unless the user explicitly asks for another language in that message. Keep code, URLs, numbers and proper names as they are.`;
+    }
   }
 }
 
