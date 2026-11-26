@@ -102,6 +102,54 @@ export function getPhotoStudioPreset(id: string): PhotoStudioPreset | null {
   return PHOTO_STUDIO_PRESETS.find((preset) => preset.id === id) ?? null;
 }
 
+/**
+ * A named group of presets as rendered by the studios. The built-in code
+ * presets form the always-on "core" pack; seasonal packs are admin-curated
+ * rows (StudioPresetPack) resolved server-side in
+ * src/lib/studio-preset-packs.ts and passed down in this shape.
+ */
+export type StudioPresetPackData = {
+  slug: string;
+  name: string;
+  description: string;
+  /** Seasonal packs render with a "Seasonal" treatment and a heading. */
+  seasonal: boolean;
+  presets: PhotoStudioPreset[];
+};
+
+export const CORE_STUDIO_PACK_SLUG = "core";
+
+/**
+ * Merge admin-curated seasonal packs with the built-in default pack.
+ * A curated preset shadows a built-in with the same id, so once the owner
+ * seeds/activates a seasonal pack (e.g. Eid, PSL) its data — not the code
+ * constant — is what renders, inside its date window only. Built-ins that
+ * are not shadowed always render, so nothing regresses when no seasonal
+ * pack exists.
+ */
+export function resolveStudioPresetPacks(
+  curated: readonly StudioPresetPackData[],
+): StudioPresetPackData[] {
+  const shadowed = new Set(
+    curated.flatMap((pack) => pack.presets.map((preset) => preset.id)),
+  );
+  const fallback = PHOTO_STUDIO_PRESETS.filter(
+    (preset) => !shadowed.has(preset.id),
+  );
+  const packs: StudioPresetPackData[] = [];
+  if (fallback.length > 0) {
+    packs.push({
+      slug: CORE_STUDIO_PACK_SLUG,
+      name: "Everyday styles",
+      description: "",
+      seasonal: false,
+      presets: [...fallback],
+    });
+  }
+  packs.push(...curated);
+  return packs;
+}
+
 export function photoStudioPresetsForMode(
   mode: PhotoStudioMode,
 ): PhotoStudioPreset[] {

@@ -32,7 +32,7 @@ import {
   imageGenSupportsVariation,
   type ImageGenProviderId,
 } from "@/lib/image-generation-pure";
-import { PHOTO_STUDIO_PRESETS } from "@/lib/photo-studio-presets";
+import type { StudioPresetPackData } from "@/lib/photo-studio-presets";
 
 const MAX_SOURCE_BYTES = 3.5 * 1024 * 1024;
 
@@ -131,7 +131,13 @@ function providerLabel(status: ImageGenStatus | null, id: string): string {
  * Nothing here is mocked: without a configured provider the studio says
  * so and disables generation instead of faking results.
  */
-export function ImageStudio({ userName }: { userName: string }) {
+export function ImageStudio({
+  userName,
+  packs,
+}: {
+  userName: string;
+  packs: StudioPresetPackData[];
+}) {
   const [status, setStatus] = useState<ImageGenStatus | null>(null);
   const [provider, setProvider] = useState<ImageGenProviderId | "">("");
   const [model, setModel] = useState("");
@@ -174,9 +180,14 @@ export function ImageStudio({ userName }: { userName: string }) {
     return merged;
   }, [results, history]);
 
+  // Style variants come from the same resolved preset packs as the
+  // Photo Studio (core pack + any live seasonal packs).
   const styleVariants = useMemo(
-    () => PHOTO_STUDIO_PRESETS.filter((p) => p.modes.includes("edit")),
-    [],
+    () =>
+      packs
+        .flatMap((pack) => pack.presets)
+        .filter((p) => p.modes.includes("edit")),
+    [packs],
   );
 
   const loadStatus = useCallback(async () => {

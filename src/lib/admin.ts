@@ -12,6 +12,17 @@ import {
   providerModelIdFor,
   type DisplayModelId,
 } from "@/lib/model-catalog";
+import type { PhotoStudioPreset } from "@/lib/photo-studio-presets";
+import {
+  coerceStudioPreset,
+  createStudioPresetPack,
+  deleteStudioPresetPack,
+  ensureStudioPresetPackSeeds,
+  listStudioPresetPacks,
+  parseStudioPresets,
+  updateStudioPresetPack,
+  type StudioPresetPackRow,
+} from "@/lib/studio-preset-packs";
 
 export const DEFAULT_ADMIN_EMAIL = "cinemtech@gmail.com";
 /** Founder inbox — always allowed even if omitted from ADMIN_EMAILS. */
@@ -30,6 +41,7 @@ export const ADMIN_SECTIONS = [
   "crashreports",
   "funnel",
   "safetyalerts",
+  "studiopacks",
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
@@ -311,6 +323,25 @@ export type AdminFlagRow = {
 export type AdminFlagsPayload = {
   section: "flags";
   flags: AdminFlagRow[];
+};
+
+export type AdminStudioPackRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  sortOrder: number;
+  presets: PhotoStudioPreset[];
+  updatedAt: string;
+  updatedBy: string;
+};
+
+export type AdminStudioPacksPayload = {
+  section: "studiopacks";
+  packs: AdminStudioPackRow[];
 };
 
 export type AdminCrashReportRow = {
@@ -1470,6 +1501,164 @@ export async function adminSetSafetyAlertStatus(input: {
     meta: { from: existing.status, to: status },
   });
   return status;
+}
+
+function toAdminStudioPackRow(row: StudioPresetPackRow): AdminStudioPackRow {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    startsAt: row.startsAt ? row.startsAt.toISOString() : null,
+    endsAt: row.endsAt ? row.endsAt.toISOString() : null,
+    active: row.active,
+    sortOrder: row.sortOrder,
+    presets: parseStudioPresets(row.presets),
+    updatedAt: row.updatedAt.toISOString(),
+    updatedBy: row.updatedBy,
+  };
+}
+
+export async function getAdminStudioPacks(
+  actorEmail: string,
+): Promise<AdminStudioPacksPayload> {
+  await ensureStudioPresetPackSeeds(actorEmail);
+  const rows = await listStudioPresetPacks();
+  return { section: "studiopacks", packs: rows.map(toAdminStudioPackRow) };
+}
+
+export type AdminStudioPackSaveInput = {
+  actorEmail: string;
+  id?: string | null;
+  slug: string;
+  name: string;
+  description?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  active: boolean;
+  sortOrder?: number | null;
+  presets: unknown[];
+};
+
+function parsePackDate(value: string | null | undefined, label: string): Date | null {
+  if (value === null || value === undefined || value.trim() === "") return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new ClientError(`${label} is not a valid date.`, 400, "invalid_request");
+  }
+  return date;
+}
+
+export async function adminSaveStudioPack(
+  input: AdminStudioPackSaveInput,
+): Promise<AdminStudioPackRow> {
+  const slug = input.slug.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 64) {
+    throw new ClientError(
+      "Use a short pack slug (lowercase letters, numbers, dashes).",
+      400,
+      "invalid_request",
+    );
+  }
+  const name = input.name.trim();
+  if (!name || name.length > 120) {
+    throw new ClientError("Give the pack a name (up to 120 characters).", 400, "invalid_request");
+  }
+  const startsAt = parsePackDate(input.startsAt, "Start date");
+  const endsAt = parsePackDate(input.endsAt, "End date");
+  if (startsAt && endsAt && endsAt.getTime() <= startsAt.getTime()) {
+    throw new ClientError("The end date must be after the start date.", 400, "invalid_request");
+  }
+  if (!Array.isArray(input.presets) || input.presets.length === 0) {
+    throw new ClientError("A pack needs at least one preset.", 400, "invalid_request");
+  }
+  if (input.presets.length > 24) {
+    throw new ClientError("A pack can hold at most 24 presets.", 400, "invalid_request");
+  }
+  const presets: PhotoStudioPreset[] = [];
+  const presetIds = new Set<string>();
+  for (const entry of input.presets) {
+    const preset = coerceStudioPreset(entry);
+    if (!preset) {
+      throw new ClientError(
+        "Every preset needs a valid id (lowercase, dashes), a label, at least one mode, an edit prompt for Edit mode and a style suffix for Create mode.",
+        400,
+        "invalid_request",
+      );
+    }
+    if (presetIds.has(preset.id)) {
+      throw new ClientError(`Preset id "${preset.id}" is used twice in this pack.`, 400, "invalid_request");
+    }
+    presetIds.add(preset.id);
+    presets.push(preset);
+  }
+
+  const rows = await listStudioPresetPacks();
+  const slugOwner = rows.find((row) => row.slug === slug);
+  if (slugOwner && slugOwner.id !== input.id) {
+    throw new ClientError(`A pack with slug "${slug}" already exists.`, 400, "invalid_request");
+  }
+  for (const row of rows) {
+    if (row.id === input.id) continue;
+    const clash = parseStudioPresets(row.presets).find((preset) => presetIds.has(preset.id));
+    if (clash) {
+      throw new ClientError(
+        `Preset id "${clash.id}" already belongs to pack "${row.slug}". Preset ids must be unique across packs.`,
+        400,
+        "invalid_request",
+      );
+    }
+  }
+
+  const data = {
+    slug,
+    name,
+    description: (input.description ?? "").trim().slice(0, 500),
+    startsAt,
+    endsAt,
+    active: input.active,
+    sortOrder: Math.min(999, Math.max(0, Math.trunc(input.sortOrder ?? 0))),
+    presets,
+    updatedBy: input.actorEmail,
+  };
+  const existing = input.id ? rows.find((row) => row.id === input.id) : undefined;
+  if (input.id && !existing) {
+    throw new ClientError("Studio pack not found.", 404, "not_found");
+  }
+  const saved = existing
+    ? await updateStudioPresetPack(existing.id, data)
+    : await createStudioPresetPack(data);
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: existing ? "save_studio_pack" : "create_studio_pack",
+    targetId: saved.slug,
+    meta: {
+      active: saved.active,
+      startsAt: data.startsAt ? data.startsAt.toISOString() : null,
+      endsAt: data.endsAt ? data.endsAt.toISOString() : null,
+      presetIds: presets.map((preset) => preset.id),
+    },
+  });
+  return toAdminStudioPackRow(saved);
+}
+
+export async function adminDeleteStudioPack(input: {
+  actorEmail: string;
+  id: string;
+}): Promise<{ slug: string }> {
+  const rows = await listStudioPresetPacks();
+  const existing = rows.find((row) => row.id === input.id);
+  if (!existing) {
+    throw new ClientError("Studio pack not found.", 404, "not_found");
+  }
+  await deleteStudioPresetPack(existing.id);
+  await writeAudit({
+    actorEmail: input.actorEmail,
+    action: "delete_studio_pack",
+    targetId: existing.slug,
+    meta: { name: existing.name },
+  });
+  return { slug: existing.slug };
 }
 
 export async function getAdminFunnel(): Promise<AdminFunnelPayload> {
