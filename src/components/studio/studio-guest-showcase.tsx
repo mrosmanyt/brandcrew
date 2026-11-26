@@ -73,12 +73,20 @@ export function StudioGuestShowcase() {
             <Sparkles className="size-4" /> AI Photo Studio
           </h1>
         </div>
-        <Link
-          href="/login"
-          className="text-sm text-muted-foreground transition hover:text-foreground"
-        >
-          Sign in
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/image-studio"
+            className="text-sm text-muted-foreground transition hover:text-foreground"
+          >
+            Image Studio
+          </Link>
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground transition hover:text-foreground"
+          >
+            Sign in
+          </Link>
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
