@@ -568,7 +568,15 @@ export function PhotoStudio({ userName }: { userName: string }) {
             <Sparkles className="size-4" /> AI Photo Studio
           </h1>
         </div>
-        <span className="text-sm text-muted-foreground">{userName}</span>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/image-studio"
+            className="text-sm text-muted-foreground transition hover:text-foreground"
+          >
+            Image Studio
+          </Link>
+          <span className="text-sm text-muted-foreground">{userName}</span>
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
