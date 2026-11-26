@@ -13,6 +13,19 @@ type InvitePayload = {
   inviterCap?: number;
   inviterCapReached?: boolean;
   perk?: string;
+  imagePerk?: string;
+  imageCredits?: {
+    dailyFreeLimit: number;
+    dailyFreeLeft: number;
+    bonusCredits: number;
+    bonusImages: number;
+    referralGrantImages: number;
+    referralEarnedCredits: number;
+    referralGrantedInvites: number;
+    referralInviterCap: number;
+    referralCapReached: boolean;
+    referralPendingUnlock: boolean;
+  };
 };
 
 /** Surfaces the existing /api/user/invite referral backend in the desk. */
@@ -75,6 +88,32 @@ export function ReferralPanel() {
           {data.inviterCap ? ` / ${data.inviterCap}` : ""}
           {data.inviterCapReached ? " (cap reached)" : ""}
         </p>
+      ) : null}
+      {data?.imageCredits ? (
+        <div className="mt-3 border-t border-border pt-3">
+          <p className="text-xs leading-5 text-muted-foreground">
+            {data.imagePerk ??
+              "You both earn image credits when a friend you invite creates their first image."}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Free images today: {data.imageCredits.dailyFreeLeft} of{" "}
+            {data.imageCredits.dailyFreeLimit} left · Bonus image credits:{" "}
+            {data.imageCredits.bonusCredits.toLocaleString()} (covers{" "}
+            {data.imageCredits.bonusImages}{" "}
+            {data.imageCredits.bonusImages === 1 ? "image" : "images"}) ·
+            Referral image credits earned:{" "}
+            {data.imageCredits.referralEarnedCredits.toLocaleString()} from{" "}
+            {data.imageCredits.referralGrantedInvites} /{" "}
+            {data.imageCredits.referralInviterCap} friends
+            {data.imageCredits.referralCapReached ? " (cap reached)" : ""}
+          </p>
+          {data.imageCredits.referralPendingUnlock ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              You were invited — create your first image to unlock your
+              referral image credits.
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );
