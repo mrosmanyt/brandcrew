@@ -37,6 +37,10 @@ model User {
   invitedByUserId        String?
   /// Bonus assistant months from successful referrals (500 turns/month each).
   referralBonusMonths    Int      @default(0)
+  /// Bonus image credits earned from referrals (Package 3). Denominated in
+  /// the same credits as plan budgets (1 image = IMAGE_GEN_CREDIT_COST);
+  /// spent on image generation before the workspace plan budget is touched.
+  bonusImageCredits      Int      @default(0)
   /// Set at signup when founding spots were full — assistant needs paid plan.
   assistantRequiresPaid  Boolean  @default(false)
   /// Session JWTs carry this as the `sv` claim; bumping it (password change,
@@ -53,6 +57,7 @@ model User {
   providerKeys  UserProviderKey?
   inviteRedemptionsSent   InviteRedemption[] @relation("InviterRedemptions")
   inviteRedemptionReceived InviteRedemption? @relation("InviteeRedemption")
+  dailyFreeImageUses      DailyFreeImageUse[]
   mobileCompanionPairs    MobileCompanionPair[]
   siteProjects            SiteProject[]
   assistantWhatsAppLink   AssistantWhatsAppLink?
@@ -954,12 +959,33 @@ model InviteRedemption {
   inviteeId          String   @unique
   inviterBonusMonths Int      @default(1)
   inviteeBonusMonths Int      @default(1)
+  /// Package 3 image credits granted to each side once the invitee creates
+  /// their first image. 0 = not granted yet.
+  inviterImageCredits Int     @default(0)
+  inviteeImageCredits Int     @default(0)
   createdAt          DateTime @default(now())
   inviter            User     @relation("InviterRedemptions", fields: [inviterId], references: [id], onDelete: Cascade)
   invitee            User     @relation("InviteeRedemption", fields: [inviteeId], references: [id], onDelete: Cascade)
 
   @@index([inviterId])
   @@index([inviteCode])
+}
+
+/// Package 3 — daily free image allowance ledger. One row per user per UTC
+/// day; `count` is how many of today's free images the user has used. The
+/// allowance itself lives in src/lib/image-credits.ts and is charged inside
+/// the shared usage pipeline (UsageEvent rows with tokens = 0).
+model DailyFreeImageUse {
+  id        String   @id @default(cuid())
+  userId    String
+  /// UTC day key, YYYY-MM-DD.
+  day       String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@index([day])
 }
 
 /// Phone ↔ desk pairing for remote research/reminder commands.

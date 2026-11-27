@@ -7,7 +7,6 @@ import { randomUUID } from "node:crypto";
 import {
   GEMINI_IMAGE_MODELS,
   GEMINIGEN_IMAGE_MODELS,
-  IMAGE_GEN_CREDIT_COST,
   IMAGE_GEN_HISTORY_LIMIT,
   IMAGE_GEN_HISTORY_TTL_MS,
   OPENAI_IMAGE_MODELS,
@@ -49,7 +48,14 @@ import {
 import { decryptSecret } from "@/lib/crypto-secret";
 import { prisma } from "@/lib/db";
 import { listUserWorkspaces } from "@/lib/workspace";
-import { assertLlmCallBudget, recordUsage } from "@/lib/usage";
+import { assertLlmCallBudget, BudgetError } from "@/lib/usage";
+import {
+  chargeImageGeneration,
+  getImageCreditsSnapshot,
+  maybeGrantReferralImageCredits,
+  resolveImageFunding,
+  type ImageCreditsSnapshot,
+} from "@/lib/image-credits";
 
 export type ImageGenResult = {
   imageBase64: string;
@@ -234,9 +240,17 @@ function pickProvider(
   return provider;
 }
 
-export async function getImageGenStatusForUser(userId: string): Promise<ImageGenPublicStatus> {
+export type ImageGenStatusWithCredits = ImageGenPublicStatus & {
+  credits: ImageCreditsSnapshot;
+};
+
+export async function getImageGenStatusForUser(
+  userId: string,
+): Promise<ImageGenStatusWithCredits> {
   const secrets = await readUserImageGenSecrets(userId);
-  return buildImageGenPublicStatus(providerOptions(resolveProviders(secrets)));
+  const status = buildImageGenPublicStatus(providerOptions(resolveProviders(secrets)));
+  const credits = await getImageCreditsSnapshot(userId);
+  return { ...status, credits };
 }
 
 /** Primary workspace for budget + metering; null when the user has none. */
@@ -249,19 +263,42 @@ async function primaryWorkspaceId(userId: string): Promise<string | null> {
  * Hard budget stop before provider spend, mirroring chat: when the user has
  * a workspace, its plan credit budget must have room. Users without a
  * workspace are only rate-limited (route level), as before this change.
+ *
+ * Package 3: a generation the daily free allowance or the user's bonus
+ * credits will fund is NOT blocked by an exhausted plan budget — the plan
+ * check only runs when the plan is the funding source. A suspended
+ * workspace stays blocked on every funding source.
  */
 async function assertImageGenBudget(userId: string): Promise<string | null> {
   const workspaceId = await primaryWorkspaceId(userId);
   if (workspaceId) {
-    await assertLlmCallBudget(workspaceId, "llm");
+    const funding = await resolveImageFunding(userId);
+    if (funding === "plan") {
+      await assertLlmCallBudget(workspaceId, "llm");
+    } else {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { suspended: true },
+      });
+      if (workspace?.suspended) {
+        throw new BudgetError(
+          "This workspace is suspended. New jobs are blocked until an admin unsuspends it.",
+          403,
+          "SUSPENDED",
+        );
+      }
+    }
   }
   return workspaceId;
 }
 
 /**
- * Post-generation bookkeeping: studio history (ImageGenAsyncResult) plus a
- * flat credit charge via the shared usage pipeline. Best-effort — a paid
- * generation must not fail because bookkeeping did.
+ * Post-generation bookkeeping: studio history (ImageGenAsyncResult) plus
+ * the credit charge via the shared usage pipeline — Package 3 funding
+ * order (daily free allowance → bonus credits → plan budget) lives in
+ * chargeImageGeneration. A first image by a referred user also unlocks
+ * the two-sided referral credit grant. Best-effort — a paid generation
+ * must not fail because bookkeeping did.
  */
 async function recordImageGenSuccess(
   userId: string,
@@ -302,17 +339,19 @@ async function recordImageGenSuccess(
     /* history is best-effort */
   }
 
-  if (workspaceId) {
-    try {
-      await recordUsage({
-        workspaceId,
-        tokens: IMAGE_GEN_CREDIT_COST,
-        model: result.model ?? result.provider,
-        agentRole: "image-gen",
-      });
-    } catch {
-      /* metering is best-effort after a successful generation */
-    }
+  try {
+    await chargeImageGeneration({
+      userId,
+      workspaceId,
+      model: result.model ?? result.provider,
+    });
+  } catch {
+    /* metering is best-effort after a successful generation */
+  }
+  try {
+    await maybeGrantReferralImageCredits(userId);
+  } catch {
+    /* referral unlock is best-effort after a successful generation */
   }
   return uuid;
 }

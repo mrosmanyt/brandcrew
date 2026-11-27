@@ -10,6 +10,7 @@ import {
   RESPONSE_LANGUAGE_BY_CODE,
   type ChatLanguageMode,
 } from "@/lib/chat-language";
+import { InviteCreditsSection } from "@/components/chat/invite-credits-section";
 
 /**
  * Settings panel for the chat product. Appearance (light/dark) lives here;
@@ -134,6 +135,8 @@ export function ChatSettingsPanel({
               )}
             </select>
           </section>
+
+          <InviteCreditsSection />
 
           <section className="mt-8">
             <h3 className="text-sm font-medium">Memory & instructions</h3>
