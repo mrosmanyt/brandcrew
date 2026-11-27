@@ -57,6 +57,10 @@ import * as chatMcpServers from "./chat/mcp-servers";
 import * as chatMcpServer from "./chat/mcp-server";
 import * as chatMcpServerTest from "./chat/mcp-server-test";
 import * as chatHiggsfield from "./chat/higgsfield";
+import * as chatCanvas from "./chat/canvas";
+import * as chatCanvasItem from "./chat/canvas-item";
+import * as chatCanvasAiEdit from "./chat/canvas-ai-edit";
+import * as chatCanvasRestore from "./chat/canvas-restore";
 import * as chatScheduledTasks from "./chat/scheduled-tasks";
 import * as chatScheduledTask from "./chat/scheduled-task";
 import * as chatScheduledTaskRun from "./chat/scheduled-task-run";
@@ -128,6 +132,19 @@ export const API_ROUTES: RouteSpec[] = [
     handlers: asHandlers(chatConversation),
   },
   { pattern: ["api", "chat", "stream"], handlers: asHandlers(chatStream) },
+  { pattern: ["api", "chat", "canvas"], handlers: asHandlers(chatCanvas) },
+  {
+    pattern: ["api", "chat", "canvas", ":canvasId"],
+    handlers: asHandlers(chatCanvasItem),
+  },
+  {
+    pattern: ["api", "chat", "canvas", ":canvasId", "ai-edit"],
+    handlers: asHandlers(chatCanvasAiEdit),
+  },
+  {
+    pattern: ["api", "chat", "canvas", ":canvasId", "restore"],
+    handlers: asHandlers(chatCanvasRestore),
+  },
   {
     pattern: ["api", "chat", "voice", "transcribe"],
     handlers: asHandlers(chatVoiceTranscribe),
