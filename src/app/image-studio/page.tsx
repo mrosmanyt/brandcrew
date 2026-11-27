@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ImageStudio } from "@/components/studio/image-studio";
 import { ImageStudioGuestShowcase } from "@/components/studio/image-studio-guest-showcase";
 import { getCurrentUser } from "@/lib/auth";
+import { getActiveStudioPresetPacks } from "@/lib/studio-preset-packs";
 
 export const dynamic = "force-dynamic";
 
@@ -16,5 +17,6 @@ export default async function ImageStudioPage() {
   if (!user) {
     return <ImageStudioGuestShowcase />;
   }
-  return <ImageStudio userName={user.name} />;
+  const packs = await getActiveStudioPresetPacks();
+  return <ImageStudio userName={user.name} packs={packs} />;
 }

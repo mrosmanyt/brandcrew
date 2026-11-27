@@ -11,6 +11,7 @@ import {
   ScrollText,
   Settings,
   ShieldAlert,
+  Sparkles,
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -39,6 +40,7 @@ const SECTIONS: {
       { href: "/admin/billing", label: "Plans & billing", icon: CreditCard },
       { href: "/admin/support", label: "Support", icon: LifeBuoy },
       { href: "/admin/safety-alerts", label: "Safety alerts", icon: ShieldAlert, badge: "safety" },
+      { href: "/admin/studio-packs", label: "Studio packs", icon: Sparkles },
       { href: "/admin/audit", label: "Activity log", icon: ScrollText },
     ],
   },

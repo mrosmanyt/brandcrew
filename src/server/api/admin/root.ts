@@ -19,6 +19,9 @@ import {
   getAdminModels,
   getAdminSafetyAlerts,
   adminSetSafetyAlertStatus,
+  getAdminStudioPacks,
+  adminSaveStudioPack,
+  adminDeleteStudioPack,
   getAdminTrust,
   exportAdminAudit,
   parseAdminSection,
@@ -85,6 +88,9 @@ export async function GET(request: Request) {
         }),
       );
     }
+    if (section === "studiopacks") {
+      return jsonOk(await getAdminStudioPacks(admin.email));
+    }
     if (section === "funnel") {
       return jsonOk(await getAdminFunnel());
     }
@@ -93,6 +99,27 @@ export async function GET(request: Request) {
     return jsonError(error);
   }
 }
+
+const studioPresetSchema = z.object({
+  id: z.string().min(1).max(64),
+  label: z.string().min(1).max(80),
+  blurb: z.string().max(240),
+  modes: z.array(z.enum(["edit", "generate"])).min(1).max(2),
+  editPrompt: z.string().max(4000),
+  generateSuffix: z.string().max(2000),
+  seasonal: z.boolean().optional(),
+});
+
+const studioPackSchema = z.object({
+  slug: z.string().min(1).max(64),
+  name: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
+  startsAt: z.string().max(40).nullable().optional(),
+  endsAt: z.string().max(40).nullable().optional(),
+  active: z.boolean(),
+  sortOrder: z.number().int().min(0).max(999).optional(),
+  presets: z.array(studioPresetSchema).min(1).max(24),
+});
 
 const mutateSchema = z.object({
   action: z.enum([
@@ -104,6 +131,8 @@ const mutateSchema = z.object({
     "budget",
     "purchase_request",
     "safety_alert_status",
+    "studio_pack_save",
+    "studio_pack_delete",
   ]),
   plan: z.enum(["demo", "starter", "pro", "ultra", "growth"]).optional(),
   workspaceId: z.string().min(1).optional(),
@@ -116,6 +145,8 @@ const mutateSchema = z.object({
   approved: z.boolean().optional(),
   alertId: z.string().min(1).optional(),
   alertStatus: z.enum(["NEW", "REVIEWED", "DISMISSED"]).optional(),
+  packId: z.string().min(1).optional(),
+  pack: studioPackSchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -137,6 +168,42 @@ export async function POST(request: Request) {
         status: body.alertStatus,
       });
       return jsonOk({ ok: true, action: "safety_alert_status" as const, status });
+    }
+
+    if (body.action === "studio_pack_save") {
+      if (!body.pack) {
+        return NextResponse.json(
+          { error: "Pack details are required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const pack = await adminSaveStudioPack({
+        actorEmail,
+        id: body.packId ?? null,
+        slug: body.pack.slug,
+        name: body.pack.name,
+        description: body.pack.description,
+        startsAt: body.pack.startsAt,
+        endsAt: body.pack.endsAt,
+        active: body.pack.active,
+        sortOrder: body.pack.sortOrder,
+        presets: body.pack.presets,
+      });
+      return jsonOk({ ok: true, action: "studio_pack_save" as const, pack });
+    }
+
+    if (body.action === "studio_pack_delete") {
+      if (!body.packId) {
+        return NextResponse.json(
+          { error: "packId is required.", code: "invalid_request" },
+          { status: 400 },
+        );
+      }
+      const deleted = await adminDeleteStudioPack({
+        actorEmail,
+        id: body.packId,
+      });
+      return jsonOk({ ok: true, action: "studio_pack_delete" as const, deleted });
     }
 
     if (body.action === "purchase_request") {

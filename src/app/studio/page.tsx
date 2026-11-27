@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PhotoStudio } from "@/components/studio/photo-studio";
 import { StudioGuestShowcase } from "@/components/studio/studio-guest-showcase";
 import { getCurrentUser } from "@/lib/auth";
+import { getActiveStudioPresetPacks } from "@/lib/studio-preset-packs";
 
 export const dynamic = "force-dynamic";
 
@@ -16,5 +17,6 @@ export default async function StudioPage() {
   if (!user) {
     return <StudioGuestShowcase />;
   }
-  return <PhotoStudio userName={user.name} />;
+  const packs = await getActiveStudioPresetPacks();
+  return <PhotoStudio userName={user.name} packs={packs} />;
 }

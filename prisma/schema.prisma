@@ -730,6 +730,31 @@ model FeatureFlag {
   updatedBy String   @default("")
 }
 
+/// Seasonal Photo Studio preset packs (Package 4 — seasonal trend packs).
+/// Admin-curated rows, edited in /admin/studio-packs without a code deploy.
+/// `presets` is a JSON array of PhotoStudioPreset objects
+/// (src/lib/photo-studio-presets.ts). The studio renders a pack only when
+/// `active` is true and today falls inside [startsAt, endsAt] (null = open
+/// bound). The built-in code presets stay the always-on default pack; a
+/// curated preset shadows a built-in with the same id, so curation takes
+/// over the seasonal built-ins (Eid card, PSL fan poster) once seeded.
+model StudioPresetPack {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String    @default("")
+  startsAt    DateTime?
+  endsAt      DateTime?
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  presets     String    @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  updatedBy   String    @default("")
+
+  @@index([active, startsAt, endsAt])
+}
+
 /// Paired Chrome MV3 extension + native messaging host (on-device CDP).
 model LocalDevice {
   id               String          @id @default(cuid())

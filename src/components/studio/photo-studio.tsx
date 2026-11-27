@@ -25,8 +25,8 @@ import {
   type ImageGenProviderId,
 } from "@/lib/image-generation-pure";
 import {
-  photoStudioPresetsForMode,
   type PhotoStudioMode,
+  type StudioPresetPackData,
 } from "@/lib/photo-studio-presets";
 
 const MAX_SOURCE_BYTES = 3.5 * 1024 * 1024;
@@ -104,7 +104,13 @@ function providerLabel(status: ImageGenStatus | null, id: string): string {
  * a public CINEM Pro link, sent to WhatsApp, or exported as a branded
  * "Made with CINEM Pro" share card rendered locally on a canvas.
  */
-export function PhotoStudio({ userName }: { userName: string }) {
+export function PhotoStudio({
+  userName,
+  packs,
+}: {
+  userName: string;
+  packs: StudioPresetPackData[];
+}) {
   const [status, setStatus] = useState<ImageGenStatus | null>(null);
   const [provider, setProvider] = useState<ImageGenProviderId | "">("");
   const [model, setModel] = useState("");
@@ -122,7 +128,23 @@ export function PhotoStudio({ userName }: { userName: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shareUrlsRef = useRef<Map<string, string>>(new Map());
 
-  const presets = useMemo(() => photoStudioPresetsForMode(mode), [mode]);
+  // Presets arrive as packs (built-in core pack + any live seasonal
+  // packs), resolved server-side. Flattened for selection, grouped for
+  // rendering.
+  const packGroups = useMemo(
+    () =>
+      packs
+        .map((pack) => ({
+          pack,
+          presets: pack.presets.filter((p) => p.modes.includes(mode)),
+        }))
+        .filter((group) => group.presets.length > 0),
+    [packs, mode],
+  );
+  const presets = useMemo(
+    () => packGroups.flatMap((group) => group.presets),
+    [packGroups],
+  );
   const preset = presets.find((p) => p.id === presetId) ?? presets[0];
 
   const activeProvider = useMemo(() => {
@@ -203,7 +225,9 @@ export function PhotoStudio({ userName }: { userName: string }) {
   // Keep the selected preset valid when the mode switches.
   const switchMode = (next: PhotoStudioMode) => {
     setMode(next);
-    const nextPresets = photoStudioPresetsForMode(next);
+    const nextPresets = packs
+      .flatMap((pack) => pack.presets)
+      .filter((p) => p.modes.includes(next));
     if (!nextPresets.some((p) => p.id === presetId)) {
       setPresetId(nextPresets[0]?.id ?? "");
     }
@@ -641,37 +665,48 @@ export function PhotoStudio({ userName }: { userName: string }) {
             </Button>
           </div>
 
-          <div>
-            <p className="text-sm font-medium">Style</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {presets.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPresetId(p.id)}
-                  aria-pressed={preset?.id === p.id}
-                  className={cn(
-                    "rounded-xl border px-3.5 py-3 text-left transition",
-                    preset?.id === p.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:bg-muted/50",
-                  )}
-                >
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    {p.label}
-                    {p.seasonal ? (
-                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                        Seasonal
+          <div className="space-y-5">
+            {packGroups.map(({ pack, presets: groupPresets }) => (
+              <div key={pack.slug}>
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  {packGroups.length > 1 ? pack.name : "Style"}
+                  {pack.seasonal ? (
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                      Seasonal
+                    </span>
+                  ) : null}
+                </p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {groupPresets.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPresetId(p.id)}
+                      aria-pressed={preset?.id === p.id}
+                      className={cn(
+                        "rounded-xl border px-3.5 py-3 text-left transition",
+                        preset?.id === p.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-muted/50",
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        {p.label}
+                        {p.seasonal ? (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                            Seasonal
+                          </span>
+                        ) : null}
+                        {preset?.id === p.id ? <Check className="size-4" /> : null}
                       </span>
-                    ) : null}
-                    {preset?.id === p.id ? <Check className="size-4" /> : null}
-                  </span>
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    {p.blurb}
-                  </span>
-                </button>
-              ))}
-            </div>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        {p.blurb}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
