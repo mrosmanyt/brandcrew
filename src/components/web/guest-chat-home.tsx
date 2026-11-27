@@ -207,8 +207,8 @@ export function GuestChatHome() {
                   What can I help with?
                 </h1>
                 <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                  Ask anything — CINEM Pro answers instantly. Sign in to save your chats and generate
-                  images.
+                  Ask anything — CINEM Pro answers instantly. Sign in to save your chats, work in a
+                  canvas beside your chat, and generate images.
                 </p>
               </div>
             ) : (

@@ -7,6 +7,7 @@ import {
   Download,
   FileText,
   Loader2,
+  NotebookPen,
   Pencil,
   Printer,
   RotateCcw,
@@ -308,6 +309,7 @@ export function ChatMessageItem({
   busy,
   onRegenerate,
   onEdit,
+  onOpenInCanvas,
 }: {
   message: ChatUiMessage;
   isLastAssistant: boolean;
@@ -315,6 +317,8 @@ export function ChatMessageItem({
   busy: boolean;
   onRegenerate: () => void;
   onEdit: (content: string) => void;
+  /** Seed a canvas from this assistant reply (Canvas workspace). */
+  onOpenInCanvas?: (content: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -415,6 +419,17 @@ export function ChatMessageItem({
           <div className="mt-1 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
             <CopyButton text={message.content} />
             <SpeakButton text={message.content} />
+            {onOpenInCanvas ? (
+              <button
+                type="button"
+                aria-label="Open in canvas"
+                title="Open in canvas"
+                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                onClick={() => onOpenInCanvas(message.content)}
+              >
+                <NotebookPen className="size-4" />
+              </button>
+            ) : null}
             {message.sources?.length ? (
               <ReportExportButtons
                 content={message.content}

@@ -67,6 +67,7 @@ model User {
   crashReports  CrashReport[]
   safetyAlerts  SafetyAlert[]
   chatConversations ChatConversation[]
+  chatCanvases  ChatCanvas[]
   chatMemoryFacts ChatMemoryFact[]
   chatSettings ChatUserSettings?
   mcpServers    McpServer[]
@@ -129,6 +130,7 @@ model Workspace {
   mobileCompanionPairs MobileCompanionPair[]
   siteProjects       SiteProject[]
   chatScheduledTasks ChatScheduledTask[]
+  chatCanvases       ChatCanvas[]
 
   @@index([whopMembershipId])
   @@index([plan])
@@ -285,6 +287,7 @@ model ChatConversation {
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   siteProject SiteProject?  @relation(fields: [siteProjectId], references: [id], onDelete: SetNull)
   messages    ChatMessage[]
+  canvases    ChatCanvas[]
 
   @@index([userId, updatedAt])
   @@index([workspaceId])
@@ -465,6 +468,55 @@ model ChatMessage {
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+/// Canvas workspace (ChatGPT Canvas-style): a document or code file that
+/// lives beside a chat conversation. The user edits it directly in the
+/// panel; AI changes arrive as targeted block operations (never a full
+/// rewrite — see src/lib/chat-canvas-pure.ts) and every change — create,
+/// user save, AI edit, restore — is kept as a restorable version.
+model ChatCanvas {
+  id             String              @id @default(cuid())
+  userId         String
+  workspaceId    String
+  conversationId String
+  title          String              @default("Untitled canvas")
+  /// document | code
+  kind           String              @default("document")
+  /// Language tag for code canvases ("python", "tsx", …); "" for documents.
+  language       String              @default("")
+  content        String              @default("")
+  currentVersion Int                 @default(1)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversation   ChatConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  versions       ChatCanvasVersion[]
+
+  @@index([conversationId, updatedAt])
+  @@index([userId, updatedAt])
+}
+
+/// One saved state of a ChatCanvas: the creation seed, a user save, an AI
+/// targeted edit, or a restore of an older version.
+model ChatCanvasVersion {
+  id          String     @id @default(cuid())
+  canvasId    String
+  version     Int
+  /// create | user | ai | restore
+  kind        String     @default("user")
+  content     String
+  /// The instruction that produced this version (AI edits); "" otherwise.
+  instruction String     @default("")
+  model       String     @default("")
+  provider    String     @default("")
+  tokens      Int        @default(0)
+  createdAt   DateTime   @default(now())
+  canvas      ChatCanvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@unique([canvasId, version])
+  @@index([canvasId, createdAt])
 }
 
 /// Chat memory (per user): facts the user explicitly saved in the Memory

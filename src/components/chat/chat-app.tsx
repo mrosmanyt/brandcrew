@@ -27,8 +27,10 @@ import {
   Loader2,
   LogOut,
   Mic,
+  NotebookPen,
   Paperclip,
   PanelLeft,
+  PanelRight,
   Plug,
   Plus,
   Settings,
@@ -75,6 +77,11 @@ import {
   type ChatUiMessage,
 } from "./chat-message";
 import { ChatSidebar, type ChatConversationSummary } from "./chat-sidebar";
+import {
+  ChatCanvasPanel,
+  type ActiveCanvasSummary,
+  type CanvasSeedRequest,
+} from "./chat-canvas-panel";
 import { ChatMemoryPanel } from "./chat-memory-panel";
 import { ChatSettingsPanel } from "./chat-settings-panel";
 import {
@@ -88,6 +95,29 @@ import {
 import { getExpert } from "@/lib/experts";
 
 const LANGUAGE_STORAGE_KEY = "cinem-chat-language";
+
+type ThreadMessageRow = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  model: string | null;
+  provider: string | null;
+  attachments?: ComposerAttachment[];
+  sources?: { title: string; url: string }[];
+};
+
+function toUiMessages(rows: ThreadMessageRow[]): ChatUiMessage[] {
+  return rows.map((row) => ({
+    id: row.id,
+    role: row.role,
+    content: row.content,
+    model: row.model,
+    provider: row.provider,
+    displayName: row.model ? publicModelLabel(row.model) : null,
+    attachments: row.attachments?.length ? row.attachments : undefined,
+    sources: row.sources?.length ? row.sources : undefined,
+  }));
+}
 
 type ModelOption = {
   id: string;
@@ -192,6 +222,12 @@ export function ChatApp({
   const [deepResearch, setDeepResearch] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [canvasOpen, setCanvasOpen] = useState(false);
+  const [canvasSeed, setCanvasSeed] = useState<CanvasSeedRequest | null>(null);
+  const [canvasEditMode, setCanvasEditMode] = useState(false);
+  const [activeCanvas, setActiveCanvas] = useState<ActiveCanvasSummary>(null);
+  const [canvasReloadNonce, setCanvasReloadNonce] = useState(0);
+  const [canvasBusy, setCanvasBusy] = useState(false);
   const [languageMode, setLanguageMode] = useState<ChatLanguageMode>(() => {
     if (typeof window === "undefined") return "auto";
     const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -344,34 +380,18 @@ export function ChatApp({
     setActiveId(id);
     setError(null);
     setSidebarOpen(false);
+    setCanvasEditMode(false);
+    setActiveCanvas(null);
+    setCanvasSeed(null);
     setThreadLoading(true);
     try {
       const response = await fetch(`/api/chat/conversations/${id}`);
       if (!response.ok) throw new Error("load failed");
       const data = (await response.json()) as {
         conversation: ChatConversationSummary;
-        messages: Array<{
-          id: string;
-          role: "user" | "assistant";
-          content: string;
-          model: string | null;
-          provider: string | null;
-          attachments?: ComposerAttachment[];
-          sources?: { title: string; url: string }[];
-        }>;
+        messages: ThreadMessageRow[];
       };
-      setMessages(
-        data.messages.map((row) => ({
-          id: row.id,
-          role: row.role,
-          content: row.content,
-          model: row.model,
-          provider: row.provider,
-          displayName: row.model ? publicModelLabel(row.model) : null,
-          attachments: row.attachments?.length ? row.attachments : undefined,
-          sources: row.sources?.length ? row.sources : undefined,
-        })),
-      );
+      setMessages(toUiMessages(data.messages));
       if (data.conversation.modelId) setModelId(data.conversation.modelId);
       setActiveExpertId(data.conversation.expertId ?? null);
       stickToBottomRef.current = true;
@@ -382,6 +402,23 @@ export function ChatApp({
     }
   }, []);
 
+  /** Silent thread refresh (canvas edits persist messages server-side). */
+  const reloadThread = useCallback(async () => {
+    if (!activeId) return;
+    try {
+      const response = await fetch(`/api/chat/conversations/${activeId}`);
+      if (!response.ok) return;
+      const data = (await response.json()) as {
+        conversation: ChatConversationSummary;
+        messages: ThreadMessageRow[];
+      };
+      setMessages(toUiMessages(data.messages));
+      stickToBottomRef.current = true;
+    } catch {
+      // Best-effort; the thread reloads fully on the next selection.
+    }
+  }, [activeId]);
+
   const startNewChat = useCallback(() => {
     abortRef.current?.abort();
     setActiveId(null);
@@ -390,8 +427,85 @@ export function ChatApp({
     setPendingAttachments([]);
     setError(null);
     setSidebarOpen(false);
+    setCanvasEditMode(false);
+    setActiveCanvas(null);
+    setCanvasSeed(null);
     textareaRef.current?.focus();
   }, []);
+
+  /** Canvas attaches to a conversation; create one on demand if needed. */
+  const ensureConversation = useCallback(async (): Promise<string | null> => {
+    if (activeId) return activeId;
+    try {
+      const response = await fetch("/api/chat/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelId }),
+      });
+      if (!response.ok) return null;
+      const data = (await response.json()) as {
+        conversation: ChatConversationSummary;
+      };
+      setActiveId(data.conversation.id);
+      void refreshConversations();
+      return data.conversation.id;
+    } catch {
+      return null;
+    }
+  }, [activeId, modelId, refreshConversations]);
+
+  const openCanvas = useCallback(async () => {
+    await ensureConversation();
+    setCanvasOpen(true);
+  }, [ensureConversation]);
+
+  const openCanvasWithSeed = useCallback(
+    async (content: string) => {
+      await ensureConversation();
+      setCanvasSeed({ content, nonce: Date.now() });
+      setCanvasOpen(true);
+    },
+    [ensureConversation],
+  );
+
+  /**
+   * Composer-routed canvas edit: with "Chat edits canvas" on, a sent
+   * message becomes a targeted-edit instruction for the open canvas.
+   * The server persists the instruction + outcome as chat messages, so
+   * the thread is refreshed afterwards.
+   */
+  const sendCanvasEdit = useCallback(
+    async (instruction: string) => {
+      if (!activeCanvas) return;
+      setCanvasBusy(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `/api/chat/canvas/${activeCanvas.id}/ai-edit`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ instruction, modelId }),
+          },
+        );
+        if (!response.ok) {
+          setError(await readJsonError(response));
+          return;
+        }
+        await reloadThread();
+        setCanvasReloadNonce((nonce) => nonce + 1);
+        void refreshConversations();
+      } catch {
+        setError({
+          message: "The canvas edit failed. Try again.",
+          notConfigured: false,
+        });
+      } finally {
+        setCanvasBusy(false);
+      }
+    },
+    [activeCanvas, modelId, reloadThread, refreshConversations],
+  );
 
   const sendTurn = useCallback(
     async (history: ChatUiMessage[]) => {
@@ -532,7 +646,14 @@ export function ChatApp({
   const handleSend = (event?: FormEvent) => {
     event?.preventDefault();
     const content = input.trim();
-    if ((!content && !hasUsableAttachment) || streaming) return;
+    if ((!content && !hasUsableAttachment) || streaming || canvasBusy) return;
+    // Canvas edit mode: a plain message (no attachments) is a targeted
+    // edit instruction for the open canvas, not a normal chat turn.
+    if (canvasEditMode && activeCanvas && content && !pendingAttachments.length) {
+      setInput("");
+      void sendCanvasEdit(content);
+      return;
+    }
     const attachments = pendingAttachments.filter((file) => !file.error);
     setInput("");
     setPendingAttachments([]);
@@ -973,6 +1094,20 @@ export function ChatApp({
             ) : null}
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant={canvasOpen ? "secondary" : "ghost"}
+              size="icon"
+              className="size-9 rounded-full"
+              aria-label={canvasOpen ? "Close canvas" : "Open canvas"}
+              title={canvasOpen ? "Close canvas" : "Open canvas"}
+              onClick={() => {
+                if (canvasOpen) setCanvasOpen(false);
+                else void openCanvas();
+              }}
+            >
+              <PanelRight className="size-4" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
@@ -1113,6 +1248,7 @@ export function ChatApp({
                     busy={streaming}
                     onRegenerate={handleRegenerate}
                     onEdit={handleEdit}
+                    onOpenInCanvas={(content) => void openCanvasWithSeed(content)}
                   />
                 ))}
               </ul>
@@ -1262,6 +1398,13 @@ export function ChatApp({
                       <ImagePlus className="size-4" />
                       Make an image
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => void openCanvas()}
+                      disabled={streaming}
+                    >
+                      <NotebookPen className="size-4" />
+                      Open canvas
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -1307,8 +1450,33 @@ export function ChatApp({
                     <X className="size-3.5" />
                   </button>
                 ) : null}
+                {canvasEditMode && activeCanvas ? (
+                  <button
+                    type="button"
+                    onClick={() => setCanvasEditMode(false)}
+                    disabled={canvasBusy}
+                    className="inline-flex h-9 max-w-56 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-medium text-secondary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    aria-label="Turn off canvas editing"
+                    title={`Messages now edit the canvas “${activeCanvas.title}” — tap to turn off`}
+                  >
+                    <NotebookPen className="size-3.5 shrink-0" />
+                    <span className="truncate">Canvas: {activeCanvas.title}</span>
+                    <X className="size-3.5 shrink-0" />
+                  </button>
+                ) : null}
                 <div className="flex-1" />
-                {streaming ? (
+                {canvasBusy ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="size-9 shrink-0 rounded-full"
+                    aria-label="Applying canvas edit"
+                    disabled
+                  >
+                    <Loader2 className="size-4 animate-spin" />
+                  </Button>
+                ) : streaming ? (
                   <Button
                     type="button"
                     size="icon"
@@ -1338,6 +1506,23 @@ export function ChatApp({
           </form>
         </div>
       </div>
+      {canvasOpen ? (
+        <ChatCanvasPanel
+          key={activeId ?? "no-conversation"}
+          conversationId={activeId}
+          modelId={modelId}
+          seed={canvasSeed}
+          reloadNonce={canvasReloadNonce}
+          editMode={canvasEditMode}
+          onToggleEditMode={setCanvasEditMode}
+          onActiveCanvasChange={setActiveCanvas}
+          onClose={() => setCanvasOpen(false)}
+          onThreadChanged={() => {
+            void reloadThread();
+            void refreshConversations();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
